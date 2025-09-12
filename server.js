@@ -40,25 +40,23 @@ app.use(
 
 			const allowedOrigins = [
 				process.env.CLIENT_URL || "http://localhost:3000",
-				"http://localhost:3001", // Allow same origin for the HTML page
-				"https://frischly-server-1.onrender.com/", // Your Netlify frontend URL
-				"https://frischly-server.onrender.com/",
-				"https://amazing-name-123456.netlify.app", // Example Netlify URL format
+				"http://localhost:3001",
+				"https://frischly-server-1.onrender.com",
+				"https://frischly-server.onrender.com",
 			];
 
-			// Allow any Netlify subdomain
-			if (origin.includes(".com")) {
+			// Check if origin is in allowed list
+			if (allowedOrigins.includes(origin)) {
 				return callback(null, true);
 			}
 
-			// Check if origin is in allowed list
-			if (allowedOrigins.indexOf(origin) !== -1) {
-				callback(null, true);
-			} else {
-				callback(new Error("Not allowed by CORS"));
-			}
+			// For development only - log rejected origins
+			console.log(`CORS blocked origin: ${origin}`);
+			callback(null, false);
 		},
 		credentials: true,
+		methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+		allowedHeaders: ["Content-Type", "Authorization"],
 	})
 );
 
