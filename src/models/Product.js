@@ -1,0 +1,198 @@
+const mongoose = require("mongoose");
+
+const productSchema = new mongoose.Schema(
+	{
+		name: {
+			type: String,
+			required: [true, "Please provide a product name"],
+			trim: true,
+			maxlength: [200, "Product name cannot be more than 200 characters"],
+		},
+		barcode: {
+			type: String,
+			required: [true, "Please provide a barcode"],
+			unique: true,
+			trim: true,
+			validate: {
+				validator: function (v) {
+					// Basic barcode validation - alphanumeric, 6-50 characters
+					return /^[A-Za-z0-9]{6,50}$/.test(v);
+				},
+				message: "Barcode must be 6-50 alphanumeric characters",
+			},
+		},
+		shelfNumber: {
+			type: String,
+			required: [true, "Please provide a shelf number"],
+			trim: true,
+			maxlength: [20, "Shelf number cannot be more than 20 characters"],
+			validate: {
+				validator: function (v) {
+					// Allow alphanumeric with dashes and underscores (e.g., A-1, B2-3, SHELF_01)
+					return /^[A-Za-z0-9\-_]{1,20}$/.test(v);
+				},
+				message:
+					"Shelf number can only contain letters, numbers, dashes, and underscores",
+			},
+		},
+		description: {
+			type: String,
+			trim: true,
+			maxlength: [1000, "Description cannot be more than 1000 characters"],
+		},
+		picture: {
+			type: String,
+			trim: true,
+			validate: {
+				validator: function (v) {
+					if (!v) return true; // Optional field
+					// Validate URL format for image URLs or local file paths
+					return (
+						/^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?(\.(jpg|jpeg|png|gif|webp|bmp|svg))?$/i.test(
+							v
+						) ||
+						/^\/images\/[\w\-_.]+\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(v)
+					);
+				},
+				message: "Please provide a valid image URL or file path",
+			},
+		},
+		category: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Category",
+			required: [true, "Please provide a category"],
+		},
+		price: {
+			type: Number,
+			min: [0, "Price cannot be negative"],
+			validate: {
+				validator: function (v) {
+					// Allow up to 2 decimal places
+					return v === undefined || /^\d+(\.\d{1,2})?$/.test(v.toString());
+				},
+				message: "Price must have at most 2 decimal places",
+			},
+		},
+		stock: {
+			type: Number,
+			default: 0,
+			min: [0, "Stock cannot be negative"],
+			validate: {
+				validator: Number.isInteger,
+				message: "Stock must be a whole number",
+			},
+		},
+		isActive: {
+			type: Boolean,
+			default: true,
+		},
+		tags: [
+			{
+				type: String,
+				trim: true,
+				maxlength: [50, "Tag cannot be more than 50 characters"],
+			},
+		],
+		dimensions: {
+			length: {
+				type: Number,
+				min: [0, "Length cannot be negative"],
+			},
+			width: {
+				type: Number,
+				min: [0, "Width cannot be negative"],
+			},
+			height: {
+				type: Number,
+				min: [0, "Height cannot be negative"],
+			},
+			unit: {
+				type: String,
+				enum: ["mm", "cm", "m", "in", "ft"],
+				default: "cm",
+			},
+		},
+		weight: {
+			value: {
+				type: Number,
+				min: [0, "Weight cannot be negative"],
+			},
+			unit: {
+				type: String,
+				enum: ["g", "kg", "oz", "lb"],
+				default: "g",
+			},
+		},
+		supplier: {
+			name: String,
+			contact: String,
+			email: String,
+		},
+		lastRestocked: {
+			type: Date,
+		},
+		createdBy: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "User",
+		},
+	},
+	{
+		timestamps: true,
+	}
+);
+
+// Indexes for better query performance
+productSchema.index({ barcode: 1 }, { unique: true });
+productSchema.index({ shelfNumber: 1 });
+productSchema.index({ name: 1 });
+productSchema.index({ category: 1 });
+productSchema.index({ isActive: 1 });
+productSchema.index({ createdAt: -1 });
+
+// Virtual for formatted price
+productSchema.virtual("formattedPrice").get(function () {
+	if (this.price === undefined) return "N/A";
+	return `$${this.price.toFixed(2)}`;
+});
+
+// Virtual for stock status
+productSchema.virtual("stockStatus").get(function () {
+	if (this.stock === 0) return "Out of Stock";
+	if (this.stock <= 10) return "Low Stock";
+	return "In Stock";
+});
+
+// Static method to find by barcode
+productSchema.statics.findByBarcode = function (barcode) {
+	return this.findOne({ barcode, isActive: true });
+};
+
+// Static method to find by shelf number
+productSchema.statics.findByShelfNumber = function (shelfNumber) {
+	return this.find({ shelfNumber, isActive: true });
+};
+
+// Instance method to update stock
+productSchema.methods.updateStock = function (quantity, operation = "set") {
+	if (operation === "add") {
+		this.stock += quantity;
+	} else if (operation === "subtract") {
+		this.stock = Math.max(0, this.stock - quantity);
+	} else {
+		this.stock = Math.max(0, quantity);
+	}
+	return this.save();
+};
+
+// Pre-save middleware to format barcode and shelf number
+productSchema.pre("save", function (next) {
+	if (this.barcode) {
+		this.barcode = this.barcode.toUpperCase();
+	}
+	if (this.shelfNumber) {
+		this.shelfNumber = this.shelfNumber.toUpperCase();
+	}
+	next();
+});
+
+module.exports = mongoose.model("Product", productSchema);

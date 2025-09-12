@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>FRISCHLY Server - Welcome</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			body {
+				font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+				background: #000000;
+				min-height: 100vh;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
+
+			.container {
+				background: #ffffff;
+				border-radius: 15px;
+				box-shadow: 0 15px 35px rgba(255, 195, 0, 0.3);
+				text-align: center;
+				padding: 60px 40px;
+				width: 500px;
+				max-width: 90vw;
+				border: 3px solid #ffc300;
+			}
+
+			.header h1 {
+				color: #ffc300;
+				font-size: 36px;
+				margin-bottom: 10px;
+			}
+
+			.header p {
+				color: #000000;
+				font-size: 18px;
+				margin-bottom: 40px;
+			}
+
+			.features {
+				margin-bottom: 40px;
+			}
+
+			.feature {
+				margin-bottom: 25px;
+				padding: 20px;
+				background: rgba(255, 195, 0, 0.1);
+				border-radius: 10px;
+				border-left: 4px solid #ffc300;
+			}
+
+			.feature h3 {
+				color: #000000;
+				font-size: 18px;
+				margin-bottom: 8px;
+			}
+
+			.feature p {
+				color: #000000;
+				font-size: 14px;
+			}
+
+			.actions {
+				display: flex;
+				gap: 15px;
+				justify-content: center;
+				margin-bottom: 30px;
+			}
+
+			.btn {
+				padding: 15px 30px;
+				border: none;
+				border-radius: 8px;
+				font-size: 16px;
+				font-weight: 600;
+				cursor: pointer;
+				transition: transform 0.2s ease;
+				text-decoration: none;
+				display: inline-block;
+			}
+
+			.btn-primary {
+				background: #ffc300;
+				color: #000000;
+				border: 2px solid #ffc300;
+			}
+
+			.btn-secondary {
+				background: #000000;
+				color: #ffffff;
+				border: 2px solid #000000;
+			}
+
+			.btn:hover {
+				transform: translateY(-2px);
+			}
+
+			.footer {
+				border-top: 1px solid #ffc300;
+				padding-top: 20px;
+				color: #000000;
+				font-size: 14px;
+			}
+
+			.api-status {
+				margin-top: 10px;
+				font-size: 12px;
+			}
+
+			.status-online {
+				color: #28a745;
+			}
+
+			.status-offline {
+				color: #dc3545;
+			}
+
+			@media (max-width: 600px) {
+				.actions {
+					flex-direction: column;
+				}
+
+				.btn {
+					width: 100%;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<div class="header">
+				<h1>🚀 FRISCHLY Server</h1>
+				<p>Your Complete Authentication Solution</p>
+			</div>
+
+			<div class="features">
+				<div class="feature">
+					<h3>🔐 Secure Authentication</h3>
+					<p>JWT-based authentication with bcrypt password hashing</p>
+				</div>
+
+				<div class="feature">
+					<h3>📱 User Management</h3>
+					<p>Complete user profiles with address information</p>
+				</div>
+
+				<div class="feature">
+					<h3>🛡️ Enterprise Security</h3>
+					<p>Rate limiting, CORS, and comprehensive validation</p>
+				</div>
+			</div>
+
+			<div class="actions">
+				<a href="signin.html" class="btn btn-primary">Sign In</a>
+				<a href="signup.html" class="btn btn-secondary">Create Account</a>
+			</div>
+
+			<div class="footer">
+				<p>Built with Node.js, Express, and MongoDB</p>
+				<div class="api-status">
+					<span id="api-status">Checking API...</span>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			const API_BASE_URL = "http://localhost:3001/api";
+
+			// Check API status
+			async function checkApiStatus() {
+				try {
+					const response = await fetch("http://localhost:3001/api/health");
+					const data = await response.json();
+
+					if (data.success) {
+						document.getElementById("api-status").innerHTML =
+							'<span class="status-online">✅ API Server Online</span>';
+					} else {
+						throw new Error("API returned error");
+					}
+				} catch (error) {
+					document.getElementById("api-status").innerHTML =
+						'<span class="status-offline">❌ API Server Offline</span>';
+				}
+			}
+
+			// Check if user is already logged in
+			const currentToken = localStorage.getItem("authToken");
+			if (currentToken) {
+				checkUserAndShowActions();
+			}
+
+			async function checkUserAndShowActions() {
+				try {
+					const response = await fetch(`${API_BASE_URL}/auth/me`, {
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					if (response.ok) {
+						const data = await response.json();
+						const user = data.data.user;
+						const isManager = user.role === "manager" || user.role === "admin";
+
+						// Show appropriate link based on role
+						const actionsDiv = document.querySelector(".actions");
+						actionsDiv.innerHTML = `
+							<a href="${
+								isManager ? "dashboard.html" : "profile.html"
+							}" class="btn btn-primary">
+								${isManager ? "Go to Dashboard" : "Go to Profile"}
+							</a>
+							<button class="btn btn-secondary" onclick="logout()">Sign Out</button>
+						`;
+					} else {
+						// Token is invalid, remove it
+						localStorage.removeItem("authToken");
+					}
+				} catch (error) {
+					// Error fetching user data, remove token
+					localStorage.removeItem("authToken");
+				}
+			}
+
+			function logout() {
+				localStorage.removeItem("authToken");
+				// Show feedback message
+				const actionsDiv = document.querySelector(".actions");
+				actionsDiv.innerHTML = `
+					<div style="background: #d4edda; color: #155724; padding: 10px; border-radius: 8px; margin-bottom: 20px;">
+						✅ Signed out successfully!
+					</div>
+					<a href="signin.html" class="btn btn-primary">Sign In</a>
+					<a href="signup.html" class="btn btn-secondary">Create Account</a>
+				`;
+			}
+
+			// Check API status when page loads
+			document.addEventListener("DOMContentLoaded", checkApiStatus);
+		</script>
+	</body>
+</html>

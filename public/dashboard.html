@@ -1,0 +1,4188 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Dashboard - FRISCHLY Server</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			body {
+				font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+				background: #ffffff;
+				min-height: 100vh;
+				display: flex;
+			}
+
+			/* Side Menu Styles */
+			.sidebar {
+				width: 280px;
+				background: #ffffff;
+				box-shadow: 2px 0 10px rgba(255, 195, 0, 0.3);
+				height: 100vh;
+				position: fixed;
+				left: 0;
+				top: 0;
+				z-index: 1000;
+				overflow-y: auto;
+				transition: transform 0.3s ease;
+			}
+
+			.sidebar.collapsed {
+				transform: translateX(-280px);
+			}
+
+			.sidebar-header {
+				background: #ffc300;
+				color: #000000;
+				padding: 20px;
+				text-align: center;
+			}
+
+			.sidebar-header h2 {
+				font-size: 20px;
+				margin-bottom: 5px;
+			}
+
+			.sidebar-header p {
+				font-size: 14px;
+				opacity: 0.9;
+			}
+
+			.sidebar-menu {
+				padding: 0;
+				list-style: none;
+			}
+
+			.menu-item {
+				border-bottom: 1px solid #f0f0f0;
+			}
+
+			.menu-item a {
+				display: flex;
+				align-items: center;
+				padding: 15px 20px;
+				color: #000000;
+				text-decoration: none;
+				transition: all 0.3s ease;
+				font-weight: 500;
+			}
+
+			.menu-item a:hover {
+				background: #ffc300;
+				color: #000000;
+				border-right: 3px solid #000000;
+			}
+
+			.menu-item.active a {
+				background: #ffc300;
+				color: #000000;
+				border-right: 3px solid #000000;
+			}
+
+			.menu-icon {
+				margin-right: 12px;
+				font-size: 18px;
+				width: 20px;
+				text-align: center;
+			}
+
+			.menu-text {
+				flex: 1;
+			}
+
+			.menu-badge {
+				background: #dc3545;
+				color: white;
+				border-radius: 10px;
+				padding: 2px 8px;
+				font-size: 12px;
+				margin-left: 10px;
+			}
+
+			/* Main Content Area */
+			.main-content {
+				margin-left: 280px;
+				width: calc(100% - 280px);
+				min-height: 100vh;
+				padding: 40px 20px 20px 20px;
+				transition: margin-left 0.3s ease, width 0.3s ease;
+			}
+
+			.main-content.expanded {
+				margin-left: 0;
+				width: 100%;
+			}
+
+			/* Mobile Toggle Button */
+			.menu-toggle {
+				display: none;
+				position: fixed;
+				top: 20px;
+				left: 20px;
+				z-index: 1001;
+				background: #ffc300;
+				color: #000000;
+				border: none;
+				border-radius: 50%;
+				width: 50px;
+				height: 50px;
+				font-size: 20px;
+				cursor: pointer;
+				box-shadow: 0 4px 12px rgba(255, 195, 0, 0.3);
+			}
+
+			.menu-toggle:hover {
+				background: #000000;
+				color: #ffc300;
+			}
+
+			.container {
+				max-width: 1200px;
+				margin: 0 auto;
+				background: #ffffff;
+				border-radius: 15px;
+				box-shadow: 0 15px 35px rgba(255, 195, 0, 0.2);
+				overflow: hidden;
+			}
+
+			/* Content Sections */
+			.content-section {
+				display: none;
+			}
+
+			.content-section.active {
+				display: block;
+			}
+
+			.section-header {
+				background: #ffc300;
+				color: #000000;
+				padding: 20px 30px;
+				margin: -20px -40px 30px -20px;
+			}
+
+			.section-header h2 {
+				font-size: 24px;
+				margin-bottom: 5px;
+			}
+
+			.section-header p {
+				opacity: 0.9;
+				font-size: 14px;
+			}
+
+			.quick-stats {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+				gap: 20px;
+				margin-bottom: 30px;
+			}
+
+			.stat-box {
+				background: #ffffff;
+				padding: 20px;
+				border-radius: 10px;
+				border: 2px solid #ffc300;
+				text-align: center;
+				box-shadow: 0 2px 10px rgba(255, 195, 0, 0.1);
+			}
+
+			.stat-box h3 {
+				font-size: 28px;
+				color: #ffc300;
+				margin-bottom: 5px;
+			}
+
+			.stat-box p {
+				color: #666;
+				font-size: 14px;
+			}
+
+			.data-table {
+				background: white;
+				border-radius: 10px;
+				overflow: hidden;
+				box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+			}
+
+			.table-header {
+				background: #f8f9fa;
+				padding: 15px 20px;
+				border-bottom: 1px solid #e1e5e9;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+
+			.table-header h3 {
+				color: #333;
+				margin: 0;
+			}
+
+			.section-actions {
+				display: flex;
+				gap: 10px;
+				margin-bottom: 20px;
+				flex-wrap: wrap;
+			}
+
+			.header {
+				background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+				color: white;
+				padding: 30px;
+				text-align: center;
+			}
+
+			.header h1 {
+				font-size: 32px;
+				margin-bottom: 10px;
+			}
+
+			.header p {
+				font-size: 16px;
+				opacity: 0.9;
+			}
+
+			.content {
+				padding: 40px;
+			}
+
+			.user-card {
+				background: #f8f9fa;
+				border-radius: 10px;
+				padding: 30px;
+				margin-bottom: 30px;
+				border-left: 5px solid #667eea;
+			}
+
+			.user-info {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 20px;
+				margin-bottom: 20px;
+			}
+
+			.info-item {
+				background: white;
+				padding: 15px;
+				border-radius: 8px;
+				border: 1px solid #e1e5e9;
+			}
+
+			.info-item label {
+				font-weight: 600;
+				color: #333;
+				display: block;
+				margin-bottom: 5px;
+				font-size: 14px;
+			}
+
+			.info-item span {
+				color: #666;
+				font-size: 16px;
+			}
+
+			.address-card {
+				background: white;
+				padding: 20px;
+				border-radius: 8px;
+				border: 1px solid #e1e5e9;
+				margin-top: 20px;
+			}
+
+			.address-card h3 {
+				color: #333;
+				margin-bottom: 15px;
+				display: flex;
+				align-items: center;
+			}
+
+			.address-card h3::before {
+				content: "📍";
+				margin-right: 10px;
+			}
+
+			.actions {
+				display: flex;
+				gap: 15px;
+				flex-wrap: wrap;
+				margin-top: 30px;
+			}
+
+			.btn {
+				padding: 12px 24px;
+				border: none;
+				border-radius: 8px;
+				font-size: 14px;
+				font-weight: 600;
+				cursor: pointer;
+				transition: all 0.2s ease;
+				text-decoration: none;
+				display: inline-block;
+				text-align: center;
+			}
+
+			.btn-primary {
+				background: #ffc300;
+				color: #000000;
+				border: 2px solid #ffc300;
+			}
+
+			.btn-secondary {
+				background: #000000;
+				color: #ffffff;
+				border: 2px solid #000000;
+			}
+
+			.btn-danger {
+				background: #dc3545;
+				color: #ffffff;
+				border: 2px solid #dc3545;
+			}
+
+			.btn:hover {
+				transform: translateY(-2px);
+				box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+			}
+
+			.loading {
+				display: none;
+				text-align: center;
+				padding: 40px;
+			}
+
+			.spinner {
+				border: 4px solid #f3f3f3;
+				border-top: 4px solid #ffc300;
+				border-radius: 50%;
+				width: 40px;
+				height: 40px;
+				animation: spin 1s linear infinite;
+				margin: 0 auto 20px;
+			}
+
+			@keyframes spin {
+				0% {
+					transform: rotate(0deg);
+				}
+				100% {
+					transform: rotate(360deg);
+				}
+			}
+
+			#message {
+				position: fixed;
+				top: 20px;
+				right: 20px;
+				z-index: 9999;
+				max-width: 350px;
+				min-width: 250px;
+				pointer-events: none;
+			}
+
+			#message .message {
+				pointer-events: all;
+			}
+
+			.message {
+				margin-bottom: 0;
+				padding: 15px 20px;
+				border-radius: 8px;
+				font-size: 14px;
+				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+				animation: slideInFromRight 0.3s ease-out;
+				border-left: 4px solid;
+			}
+
+			.success {
+				background: #d4edda;
+				color: #155724;
+				border: 1px solid #c3e6cb;
+				border-left-color: #28a745;
+			}
+
+			.error {
+				background: #f8d7da;
+				color: #721c24;
+				border: 1px solid #f1b0b7;
+				border-left-color: #dc3545;
+			}
+
+			@keyframes slideInFromRight {
+				from {
+					transform: translateX(100%);
+					opacity: 0;
+				}
+				to {
+					transform: translateX(0);
+					opacity: 1;
+				}
+			}
+
+			.stats {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+				gap: 20px;
+				margin-bottom: 30px;
+			}
+
+			.stat-card {
+				background: white;
+				padding: 20px;
+				border-radius: 10px;
+				border: 1px solid #e1e5e9;
+				text-align: center;
+			}
+
+			.stat-value {
+				font-size: 24px;
+				font-weight: bold;
+				color: #667eea;
+				margin-bottom: 5px;
+			}
+
+			.stat-label {
+				color: #666;
+				font-size: 14px;
+			}
+
+			/* Pagination Styles */
+			.pagination-container {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				padding: 15px 20px;
+				background: #f8f9fa;
+				border-top: 1px solid #e1e5e9;
+			}
+
+			.pagination-info {
+				color: #666;
+				font-size: 14px;
+			}
+
+			.pagination-controls {
+				display: flex;
+				align-items: center;
+				gap: 5px;
+			}
+
+			.btn-pagination {
+				background: white;
+				border: 1px solid #ddd;
+				color: #666;
+				padding: 8px 12px;
+				border-radius: 4px;
+				cursor: pointer;
+				transition: all 0.2s ease;
+				font-size: 14px;
+				min-width: 40px;
+				height: 36px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
+
+			.btn-pagination:hover {
+				background: #f8f9fa;
+				border-color: #999;
+			}
+
+			.btn-pagination:disabled {
+				background: #f8f9fa;
+				color: #ccc;
+				cursor: not-allowed;
+				border-color: #ddd;
+			}
+
+			.btn-pagination.active {
+				background: #ffc300;
+				border-color: #ffc300;
+				color: #000;
+				font-weight: bold;
+			}
+
+			.pagination-numbers {
+				display: flex;
+				gap: 2px;
+			}
+
+			.table-header-controls {
+				display: flex;
+				align-items: center;
+				gap: 20px;
+			}
+
+			.page-size-selector {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				font-size: 14px;
+				color: #666;
+			}
+
+			.page-size-selector select {
+				padding: 4px 8px;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				background: white;
+				font-size: 14px;
+			}
+
+			/* Filter Controls Styles */
+			.filter-controls {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				flex-wrap: wrap;
+			}
+
+			.search-input {
+				padding: 8px 12px;
+				border: 2px solid #ddd;
+				border-radius: 6px;
+				font-size: 14px;
+				background: white;
+				color: #333;
+				min-width: 200px;
+				transition: border-color 0.3s ease;
+			}
+
+			.search-input:focus {
+				outline: none;
+				border-color: #ffc300;
+				box-shadow: 0 0 0 2px rgba(255, 195, 0, 0.2);
+			}
+
+			.search-input::placeholder {
+				color: #999;
+			}
+
+			.filter-select {
+				padding: 8px 12px;
+				border: 2px solid #ddd;
+				border-radius: 6px;
+				background: white;
+				color: #333;
+				font-size: 14px;
+				cursor: pointer;
+				transition: border-color 0.3s ease;
+			}
+
+			.filter-select:focus {
+				outline: none;
+				border-color: #ffc300;
+				box-shadow: 0 0 0 2px rgba(255, 195, 0, 0.2);
+			}
+
+			@media (max-width: 768px) {
+				.user-info {
+					grid-template-columns: 1fr;
+				}
+
+				.actions {
+					flex-direction: column;
+				}
+
+				.btn {
+					width: 100%;
+				}
+
+				.pagination-container {
+					flex-direction: column;
+					gap: 10px;
+					text-align: center;
+				}
+
+				.table-header-controls {
+					flex-direction: column;
+					gap: 10px;
+					align-items: flex-start;
+				}
+
+				.pagination-controls {
+					flex-wrap: wrap;
+					justify-content: center;
+				}
+
+				.filter-controls {
+					flex-direction: column;
+					align-items: stretch;
+					gap: 8px;
+				}
+
+				.search-input {
+					min-width: auto;
+					width: 100%;
+				}
+
+				.filter-select {
+					width: 100%;
+				}
+			}
+
+			/* User Management Styles */
+			.management-controls {
+				display: flex;
+				gap: 10px;
+				margin-bottom: 20px;
+				flex-wrap: wrap;
+			}
+
+			.users-container {
+				margin-top: 20px;
+			}
+
+			.users-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				margin-bottom: 15px;
+				padding-bottom: 10px;
+				border-bottom: 2px solid #f0f0f0;
+			}
+
+			.users-header h3 {
+				color: #333;
+				margin: 0;
+			}
+
+			.users-stats {
+				font-size: 14px;
+				color: #666;
+			}
+
+			.users-table-container {
+				overflow-x: auto;
+				border-radius: 8px;
+				border: 2px solid #ffc300;
+			}
+
+			.users-table {
+				width: 100%;
+				border-collapse: collapse;
+				background: #ffffff;
+			}
+
+			.users-table th,
+			.users-table td {
+				padding: 12px;
+				text-align: left;
+				border-bottom: 1px solid #ffc300;
+			}
+
+			.users-table th {
+				background: #ffc300;
+				font-weight: 600;
+				color: #000000;
+				font-size: 14px;
+			}
+
+			.users-table td {
+				font-size: 14px;
+				color: #000000;
+			}
+
+			.users-table tr:hover {
+				background: rgba(255, 195, 0, 0.1);
+			}
+
+			.role-badge {
+				padding: 4px 8px;
+				border-radius: 4px;
+				font-size: 12px;
+				font-weight: 600;
+				text-transform: uppercase;
+			}
+
+			.role-badge.admin {
+				background: #dc3545;
+				color: white;
+			}
+
+			.role-badge.manager {
+				background: #fd7e14;
+				color: white;
+			}
+
+			.role-badge.user {
+				background: #6c757d;
+				color: white;
+			}
+
+			.role-badge.rider {
+				background: #007bff;
+				color: white;
+			}
+
+			.status-badge {
+				padding: 4px 8px;
+				border-radius: 4px;
+				font-size: 12px;
+				font-weight: 600;
+			}
+
+			.status-badge.active {
+				background: #28a745;
+				color: white;
+			}
+
+			.status-badge.inactive {
+				background: #6c757d;
+				color: white;
+			}
+
+			.action-buttons {
+				display: flex;
+				gap: 5px;
+			}
+
+			.action-btn {
+				padding: 4px 8px;
+				border: none;
+				border-radius: 4px;
+				cursor: pointer;
+				font-size: 12px;
+				transition: all 0.3s ease;
+			}
+
+			.action-btn.edit {
+				background: #007bff;
+				color: white;
+			}
+
+			.action-btn.delete {
+				background: #dc3545;
+				color: white;
+			}
+
+			.action-btn:hover {
+				transform: translateY(-1px);
+				box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+			}
+
+			/* Modal Styles */
+			.modal {
+				display: none;
+				position: fixed;
+				z-index: 1000;
+				left: 0;
+				top: 0;
+				width: 100%;
+				height: 100%;
+				background-color: rgba(0, 0, 0, 0.5);
+			}
+
+			.modal-content {
+				background-color: white;
+				margin: 5% auto;
+				padding: 30px;
+				border-radius: 15px;
+				width: 90%;
+				max-width: 600px;
+				max-height: 90vh;
+				overflow-y: auto;
+				box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+			}
+
+			.modal-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				margin-bottom: 20px;
+				padding-bottom: 10px;
+				border-bottom: 2px solid #f0f0f0;
+			}
+
+			.modal-header h2 {
+				color: #333;
+				margin: 0;
+			}
+
+			.close {
+				color: #aaa;
+				font-size: 28px;
+				font-weight: bold;
+				cursor: pointer;
+				line-height: 1;
+			}
+
+			.close:hover {
+				color: #000;
+			}
+
+			.form-grid {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 20px;
+				margin-bottom: 20px;
+			}
+
+			.form-group {
+				margin-bottom: 20px;
+			}
+
+			.form-group.full-width {
+				grid-column: 1 / -1;
+			}
+
+			.form-group label {
+				display: block;
+				margin-bottom: 5px;
+				font-weight: 600;
+				color: #333;
+			}
+
+			.form-group input,
+			.form-group select {
+				width: 100%;
+				padding: 10px;
+				border: 2px solid #ffc300;
+				border-radius: 6px;
+				font-size: 14px;
+				background: #ffffff;
+				color: #000000;
+			}
+
+			.form-group input:focus,
+			.form-group select:focus {
+				outline: none;
+				border-color: #000000;
+				box-shadow: 0 0 5px rgba(255, 195, 0, 0.3);
+			}
+
+			@media (max-width: 768px) {
+				.menu-toggle {
+					display: block;
+				}
+
+				.sidebar {
+					transform: translateX(-280px);
+				}
+
+				.sidebar.show {
+					transform: translateX(0);
+				}
+
+				.main-content {
+					margin-left: 0;
+					width: 100%;
+					padding: 90px 20px 20px;
+				}
+
+				.form-grid {
+					grid-template-columns: 1fr;
+				}
+
+				#message {
+					top: 80px;
+					right: 10px;
+					left: 10px;
+					max-width: none;
+					min-width: auto;
+				}
+
+				.management-controls {
+					flex-direction: column;
+				}
+
+				.users-header {
+					flex-direction: column;
+					align-items: flex-start;
+					gap: 10px;
+				}
+
+				.action-buttons {
+					flex-direction: column;
+				}
+
+				.quick-stats {
+					grid-template-columns: 1fr;
+				}
+
+				.section-actions {
+					flex-direction: column;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<!-- Mobile Menu Toggle -->
+		<button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+
+		<!-- Sidebar -->
+		<div class="sidebar" id="sidebar">
+			<div class="sidebar-header">
+				<h2>FRISCHLY Admin</h2>
+				<p>Management Dashboard</p>
+			</div>
+			<ul class="sidebar-menu">
+				<li class="menu-item">
+					<a href="#" onclick="showSection('dashboard')" id="menu-dashboard">
+						<span class="menu-icon">🏠</span>
+						<span class="menu-text">Dashboard</span>
+					</a>
+				</li>
+				<li class="menu-item">
+					<a href="#" onclick="showSection('users')" id="menu-users">
+						<span class="menu-icon">👥</span>
+						<span class="menu-text">Users Management</span>
+						<span class="menu-badge" id="users-count">0</span>
+					</a>
+				</li>
+				<li class="menu-item">
+					<a href="#" onclick="showSection('categories')" id="menu-categories">
+						<span class="menu-icon">📂</span>
+						<span class="menu-text">Categories</span>
+						<span class="menu-badge" id="categories-count">0</span>
+					</a>
+				</li>
+				<li class="menu-item">
+					<a href="#" onclick="showSection('products')" id="menu-products">
+						<span class="menu-icon">📦</span>
+						<span class="menu-text">Products</span>
+						<span class="menu-badge" id="products-count">0</span>
+					</a>
+				</li>
+				<li class="menu-item">
+					<a href="#" onclick="showSection('orders')" id="menu-orders">
+						<span class="menu-icon">🛒</span>
+						<span class="menu-text">Orders</span>
+						<span class="menu-badge" id="orders-count">0</span>
+					</a>
+				</li>
+				<li class="menu-item">
+					<a href="#" onclick="showSection('riders')" id="menu-riders">
+						<span class="menu-icon">🏍️</span>
+						<span class="menu-text">Riders Management</span>
+						<span class="menu-badge" id="riders-count">0</span>
+					</a>
+				</li>
+				<li class="menu-item">
+					<a href="#" onclick="showSection('profile')" id="menu-profile">
+						<span class="menu-icon">👤</span>
+						<span class="menu-text">Profile</span>
+					</a>
+				</li>
+				<li class="menu-item">
+					<a href="#" onclick="logout()">
+						<span class="menu-icon">🚪</span>
+						<span class="menu-text">Sign Out</span>
+					</a>
+				</li>
+			</ul>
+		</div>
+
+		<!-- Main Content -->
+		<div class="main-content" id="mainContent">
+			<div class="container">
+				<div id="message"></div>
+
+				<div class="loading" id="loading">
+					<div class="spinner"></div>
+					<p>Loading your profile...</p>
+				</div>
+
+				<!-- Dashboard Section -->
+				<div id="dashboard-section" class="content-section active">
+					<div class="section-header">
+						<h2>Dashboard Overview</h2>
+						<p>
+							Welcome back, <span id="welcome-user-name">Admin</span>! Here's
+							your management dashboard
+						</p>
+					</div>
+
+					<div id="dashboard-content">
+						<div class="quick-stats">
+							<div class="stat-box">
+								<h3 id="total-users-stat">0</h3>
+								<p>Total Users</p>
+							</div>
+							<div class="stat-box">
+								<h3 id="total-products-stat">0</h3>
+								<p>Products</p>
+							</div>
+							<div class="stat-box">
+								<h3 id="total-orders-stat">0</h3>
+								<p>Orders</p>
+							</div>
+							<div class="stat-box">
+								<h3 id="total-riders-stat">0</h3>
+								<p>Active Riders</p>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Users Management Section -->
+				<div id="users-section" class="content-section">
+					<div class="section-header">
+						<h2>Users Management</h2>
+						<p>Manage all system users, roles, and permissions</p>
+					</div>
+
+					<div class="section-actions">
+						<button class="btn btn-primary" onclick="showAddUserModal()">
+							➕ Add New User
+						</button>
+						<button class="btn btn-secondary" onclick="refreshUsersList()">
+							🔄 Refresh List
+						</button>
+						<button class="btn btn-secondary" onclick="exportUsers()">
+							📊 Export Users
+						</button>
+					</div>
+
+					<!-- User Management Section (Admin Only) -->
+					<div id="user-management-section">
+						<div class="user-card">
+							<div class="users-container">
+								<div class="users-header">
+									<h3>All Users</h3>
+									<div class="users-stats">
+										<span id="total-users-count">0 users</span>
+									</div>
+								</div>
+
+								<div class="users-table-container">
+									<table class="users-table" id="users-table">
+										<thead>
+											<tr>
+												<th>Name</th>
+												<th>Email</th>
+												<th>Role</th>
+												<th>Status</th>
+												<th>Created</th>
+												<th>Actions</th>
+											</tr>
+										</thead>
+										<tbody id="users-table-body">
+											<!-- Users will be loaded here -->
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Categories Management Section -->
+				<div id="categories-section" class="content-section">
+					<div class="section-header">
+						<h2>Categories Management</h2>
+						<p>Organize and manage product categories</p>
+						<div
+							id="category-summary"
+							style="margin-top: 10px; font-size: 14px; color: #666"
+						></div>
+					</div>
+					<div class="section-actions">
+						<button class="btn btn-primary" onclick="showAddCategoryModal()">
+							➕ Add Category
+						</button>
+						<div class="filter-controls">
+							<input
+								type="text"
+								id="category-search"
+								placeholder="Search categories..."
+								oninput="filterCategories()"
+								class="search-input"
+							/>
+							<select
+								id="category-filter"
+								onchange="filterCategories()"
+								class="filter-select"
+							>
+								<option value="all">All Categories</option>
+								<option value="active">Active Only</option>
+								<option value="inactive">Inactive Only</option>
+							</select>
+							<button
+								class="btn btn-secondary"
+								onclick="clearCategoryFilters()"
+							>
+								🗑️ Clear
+							</button>
+						</div>
+						<button class="btn btn-secondary" onclick="refreshCategories()">
+							🔄 Refresh
+						</button>
+					</div>
+
+					<div class="data-table">
+						<div class="table-header">
+							<h3 id="categories-table-title">All Categories</h3>
+							<span id="categories-count-display">0 categories</span>
+						</div>
+						<div class="users-table-container">
+							<table class="users-table">
+								<thead>
+									<tr>
+										<th>#</th>
+										<th>Category Name</th>
+										<th>Description</th>
+										<th>Products Count</th>
+										<th>Status</th>
+										<th>Created</th>
+										<th>Actions</th>
+									</tr>
+								</thead>
+								<tbody id="categories-table-body">
+									<tr>
+										<td
+											colspan="7"
+											style="text-align: center; padding: 40px; color: #666"
+										>
+											No categories found. Click "Add Category" to create one.
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+
+				<!-- Products Management Section -->
+				<div id="products-section" class="content-section">
+					<div class="section-header">
+						<h2>Products Management</h2>
+						<p>Manage your product inventory and details</p>
+					</div>
+
+					<div class="section-actions">
+						<button class="btn btn-primary" onclick="showAddProductModal()">
+							➕ Add Product
+						</button>
+						<button class="btn btn-secondary" onclick="refreshProducts()">
+							🔄 Refresh
+						</button>
+						<button class="btn btn-secondary" onclick="importProducts()">
+							📤 Import Products
+						</button>
+					</div>
+
+					<div class="filter-controls">
+						<input
+							type="text"
+							id="product-search"
+							placeholder="Search products by name, barcode, or description..."
+							class="search-input"
+							style="flex: 1; min-width: 250px"
+						/>
+						<select
+							id="product-category-filter"
+							class="filter-select"
+							style="min-width: 150px"
+						>
+							<option value="all">All Categories</option>
+							<!-- Categories will be loaded dynamically -->
+						</select>
+						<select id="product-status-filter" class="filter-select">
+							<option value="all">All Status</option>
+							<option value="active">Active Only</option>
+							<option value="inactive">Inactive Only</option>
+						</select>
+						<button
+							class="btn btn-primary"
+							onclick="searchProducts()"
+							style="white-space: nowrap"
+						>
+							🔍 Search
+						</button>
+						<button class="btn btn-secondary" onclick="clearProductFilters()">
+							🗑️ Clear
+						</button>
+					</div>
+
+					<div class="data-table">
+						<div class="table-header">
+							<h3>All Products</h3>
+							<div class="table-header-controls">
+								<span id="products-count-display">0 products</span>
+								<div class="page-size-selector">
+									<label for="products-page-size">Show:</label>
+									<select
+										id="products-page-size"
+										onchange="changeProductsPageSize(this.value)"
+									>
+										<option value="10">10</option>
+										<option value="25" selected>25</option>
+										<option value="50">50</option>
+										<option value="100">100</option>
+									</select>
+									<span>per page</span>
+								</div>
+							</div>
+						</div>
+						<div class="users-table-container">
+							<table class="users-table">
+								<thead>
+									<tr>
+										<th>#</th>
+										<th>Product Name</th>
+										<th>Category</th>
+										<th>Price</th>
+										<th>Stock</th>
+										<th>Status</th>
+										<th>Actions</th>
+									</tr>
+								</thead>
+								<tbody id="products-table-body">
+									<tr>
+										<td
+											colspan="7"
+											style="text-align: center; padding: 40px; color: #666"
+										>
+											No products found. Click "Add Product" to create one.
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+
+						<!-- Pagination Controls -->
+						<div
+							class="pagination-container"
+							id="products-pagination"
+							style="display: none"
+						>
+							<div class="pagination-info">
+								<span id="products-pagination-info"
+									>Showing 1-25 of 100 products</span
+								>
+							</div>
+							<div class="pagination-controls">
+								<button
+									class="btn btn-pagination"
+									id="products-first-btn"
+									onclick="goToProductsPage(1)"
+									title="First page"
+								>
+									&laquo;
+								</button>
+								<button
+									class="btn btn-pagination"
+									id="products-prev-btn"
+									onclick="goToProductsPage(currentProductsPage - 1)"
+									title="Previous page"
+								>
+									&lsaquo;
+								</button>
+								<div
+									class="pagination-numbers"
+									id="products-pagination-numbers"
+								>
+									<!-- Page numbers will be dynamically generated -->
+								</div>
+								<button
+									class="btn btn-pagination"
+									id="products-next-btn"
+									onclick="goToProductsPage(currentProductsPage + 1)"
+									title="Next page"
+								>
+									&rsaquo;
+								</button>
+								<button
+									class="btn btn-pagination"
+									id="products-last-btn"
+									onclick="goToProductsPage(totalProductsPages)"
+									title="Last page"
+								>
+									&raquo;
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Orders Management Section -->
+				<div id="orders-section" class="content-section">
+					<div class="section-header">
+						<h2>Orders Management</h2>
+						<p>Track and manage customer orders</p>
+					</div>
+
+					<div class="section-actions">
+						<button class="btn btn-secondary" onclick="refreshOrders()">
+							🔄 Refresh Orders
+						</button>
+						<button class="btn btn-secondary" onclick="exportOrders()">
+							📊 Export Orders
+						</button>
+						<button class="btn btn-primary" onclick="showOrderFilters()">
+							🔍 Filter Orders
+						</button>
+					</div>
+
+					<div class="data-table">
+						<div class="table-header">
+							<h3>Recent Orders</h3>
+							<span id="orders-count-display">0 orders</span>
+						</div>
+						<div class="users-table-container">
+							<table class="users-table">
+								<thead>
+									<tr>
+										<th>Order ID</th>
+										<th>Customer</th>
+										<th>Items</th>
+										<th>Total</th>
+										<th>Status</th>
+										<th>Date</th>
+										<th>Actions</th>
+									</tr>
+								</thead>
+								<tbody id="orders-table-body">
+									<tr>
+										<td
+											colspan="7"
+											style="text-align: center; padding: 40px; color: #666"
+										>
+											No orders found.
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+
+				<!-- Riders Management Section -->
+				<div id="riders-section" class="content-section">
+					<div class="section-header">
+						<h2>Riders Management</h2>
+						<p>Manage delivery riders and their assignments</p>
+					</div>
+
+					<div class="section-actions">
+						<button class="btn btn-primary" onclick="showAddRiderModal()">
+							➕ Add Rider
+						</button>
+						<button class="btn btn-secondary" onclick="refreshRiders()">
+							🔄 Refresh
+						</button>
+						<button class="btn btn-secondary" onclick="showRiderMap()">
+							🗺️ View Map
+						</button>
+					</div>
+
+					<div class="data-table">
+						<div class="table-header">
+							<h3>All Riders</h3>
+							<span id="riders-count-display">0 riders</span>
+						</div>
+						<div class="users-table-container">
+							<table class="users-table">
+								<thead>
+									<tr>
+										<th>Rider Name</th>
+										<th>Phone</th>
+										<th>Vehicle</th>
+										<th>Status</th>
+										<th>Current Orders</th>
+										<th>Rating</th>
+										<th>Actions</th>
+									</tr>
+								</thead>
+								<tbody id="riders-table-body">
+									<tr>
+										<td
+											colspan="7"
+											style="text-align: center; padding: 40px; color: #666"
+										>
+											No riders found. Click "Add Rider" to register one.
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+
+				<!-- Profile Section -->
+				<div id="profile-section" class="content-section">
+					<div class="section-header">
+						<h2>Profile Settings</h2>
+						<p>Manage your personal information and preferences</p>
+					</div>
+
+					<div class="stats">
+						<div class="stat-card">
+							<div class="stat-value" id="member-since">-</div>
+							<div class="stat-label">Member Since</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-value" id="last-login">-</div>
+							<div class="stat-label">Last Login</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-value" id="account-status">-</div>
+							<div class="stat-label">Account Status</div>
+						</div>
+					</div>
+
+					<div class="user-card">
+						<h2 style="color: #333; margin-bottom: 20px">Your Profile</h2>
+
+						<div class="user-info">
+							<div class="info-item">
+								<label>Full Name</label>
+								<span id="user-name">-</span>
+							</div>
+							<div class="info-item">
+								<label>Email Address</label>
+								<span id="user-email">-</span>
+							</div>
+							<div class="info-item">
+								<label>Phone Number</label>
+								<span id="user-phone">-</span>
+							</div>
+							<div class="info-item">
+								<label>Account Role</label>
+								<span id="user-role">-</span>
+							</div>
+						</div>
+
+						<div class="address-card">
+							<h3>Address Information</h3>
+							<div id="user-address">-</div>
+						</div>
+
+						<div class="actions">
+							<button class="btn btn-primary" onclick="editProfile()">
+								Edit Profile
+							</button>
+							<button class="btn btn-secondary" onclick="changePassword()">
+								Change Password
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			const API_BASE_URL = "http://localhost:3001/api";
+			let currentToken = localStorage.getItem("authToken");
+
+			// Pagination variables
+			let currentProductsPage = 1;
+			let totalProductsPages = 1;
+			let productsPageSize = 25;
+			let totalProducts = 0;
+
+			// Check if user is logged in
+			if (!currentToken) {
+				window.location.href = "signin.html";
+			}
+
+			function showMessage(message, type) {
+				const messageDiv = document.getElementById("message");
+				messageDiv.innerHTML = `
+					<div class="message ${type}">
+						<span>${message}</span>
+						<button onclick="this.parentElement.parentElement.innerHTML=''" style="
+							background: none;
+							border: none;
+							color: inherit;
+							font-size: 16px;
+							font-weight: bold;
+							cursor: pointer;
+							float: right;
+							margin-left: 10px;
+							opacity: 0.7;
+							padding: 0;
+							line-height: 1;
+						">×</button>
+					</div>`;
+				setTimeout(() => {
+					messageDiv.innerHTML = "";
+				}, 7000);
+			}
+
+			function showLoading(show, message = "Loading your profile...") {
+				const loadingElement = document.getElementById("loading");
+				const loadingText = loadingElement.querySelector("p");
+
+				if (loadingText) {
+					loadingText.textContent = message;
+				}
+
+				loadingElement.style.display = show ? "block" : "none";
+				document.getElementById("dashboard-content").style.display = show
+					? "none"
+					: "block";
+			}
+
+			function showSectionLoading(
+				sectionId,
+				show,
+				message = "Loading data..."
+			) {
+				const section = document.getElementById(sectionId + "-section");
+				if (!section) return;
+
+				let loadingDiv = section.querySelector(".section-loading");
+
+				if (show && !loadingDiv) {
+					// Create loading element if it doesn't exist
+					loadingDiv = document.createElement("div");
+					loadingDiv.className = "section-loading";
+					loadingDiv.innerHTML = `
+						<div class="spinner"></div>
+						<p>${message}</p>
+					`;
+					loadingDiv.style.cssText = `
+						display: flex;
+						flex-direction: column;
+						align-items: center;
+						justify-content: center;
+						padding: 40px;
+						text-align: center;
+						color: #666;
+					`;
+
+					// Insert after section header
+					const sectionHeader = section.querySelector(".section-header");
+					if (sectionHeader) {
+						sectionHeader.parentNode.insertBefore(
+							loadingDiv,
+							sectionHeader.nextSibling
+						);
+					} else {
+						section.insertBefore(loadingDiv, section.firstChild);
+					}
+				}
+
+				if (loadingDiv) {
+					loadingDiv.style.display = show ? "flex" : "none";
+					if (show) {
+						const loadingText = loadingDiv.querySelector("p");
+						if (loadingText) loadingText.textContent = message;
+					}
+				}
+
+				// Hide/show other section content
+				const otherElements = section.querySelectorAll(
+					".section-actions, .data-table, .user-card"
+				);
+				otherElements.forEach((el) => {
+					el.style.display = show ? "none" : "";
+				});
+			}
+
+			function formatDate(dateString) {
+				const date = new Date(dateString);
+				return date.toLocaleDateString("en-US", {
+					year: "numeric",
+					month: "long",
+					day: "numeric",
+				});
+			}
+
+			function formatDateTime(dateString) {
+				const date = new Date(dateString);
+				return date.toLocaleString("en-US", {
+					year: "numeric",
+					month: "short",
+					day: "numeric",
+					hour: "2-digit",
+					minute: "2-digit",
+				});
+			}
+
+			async function loadUserProfile() {
+				showLoading(true, "Loading your profile...");
+
+				try {
+					const response = await fetch(`${API_BASE_URL}/auth/me`, {
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					if (response.ok) {
+						const data = await response.json();
+						const user = data.data.user;
+
+						// Check if user has required role for dashboard access
+						const allowedRoles = ["manager", "admin"];
+						if (!allowedRoles.includes(user.role)) {
+							showMessage(
+								"Access denied. Dashboard access is restricted to managers and administrators only.",
+								"error"
+							);
+							setTimeout(() => {
+								window.location.href = "signin.html";
+							}, 3000);
+							return;
+						}
+
+						// Update dashboard welcome message
+						document.getElementById("welcome-user-name").textContent =
+							user.name;
+
+						// Update profile information
+						document.getElementById("user-name").textContent = user.name;
+						document.getElementById("user-email").textContent = user.email;
+						document.getElementById("user-phone").textContent =
+							user.phoneNumber;
+						document.getElementById("user-role").textContent =
+							user.role.toUpperCase();
+
+						// Update address
+						const addressText = `${user.address.street}, ${user.address.city}, ${user.address.state} ${user.address.zipCode}, ${user.address.country}`;
+						document.getElementById("user-address").textContent = addressText;
+
+						// Update stats
+						document.getElementById("member-since").textContent = formatDate(
+							user.createdAt
+						);
+						document.getElementById("last-login").textContent = user.lastLogin
+							? formatDateTime(user.lastLogin)
+							: "First time";
+						document.getElementById("account-status").textContent =
+							user.isActive ? "Active" : "Inactive";
+
+						// Store current user and check admin access
+						currentUser = user;
+						checkAdminAccess(user);
+
+						// Show dashboard content
+						const dashboardContent =
+							document.getElementById("dashboard-content");
+						if (dashboardContent) {
+							dashboardContent.style.display = "block";
+						}
+
+						showLoading(false);
+					} else {
+						throw new Error("Failed to load profile");
+					}
+				} catch (error) {
+					console.error("Profile loading error:", error);
+					showMessage("Failed to load profile. Please try again.", "error");
+					showLoading(false);
+
+					// If token is invalid, redirect to login
+					setTimeout(() => {
+						logout();
+					}, 2000);
+				}
+			}
+
+			function editProfile() {
+				showMessage("Profile editing feature coming soon!", "success");
+			}
+
+			function changePassword() {
+				showMessage("Password change feature coming soon!", "success");
+			}
+
+			function logout() {
+				localStorage.removeItem("authToken");
+				showMessage("Signed out successfully. Redirecting...", "success");
+				setTimeout(() => {
+					window.location.href = "signin.html";
+				}, 1500);
+			}
+
+			// User Management Functions
+			let currentUser = null;
+			let allUsers = [];
+			let allProducts = [];
+			let allCategories = [];
+
+			// Check if user has management access and show/hide user management section
+			function checkAdminAccess(user) {
+				// Allow both admin and manager roles to access user management
+				if (user.role === "admin" || user.role === "manager") {
+					const userMgmtSection = document.getElementById(
+						"user-management-section"
+					);
+					if (userMgmtSection) {
+						userMgmtSection.style.display = "block";
+					}
+					loadAllUsers();
+				}
+			}
+
+			// Load all users
+			async function loadAllUsers() {
+				showSectionLoading("users", true, "Loading users...");
+
+				try {
+					// Check if we have a valid token
+					if (!currentToken) {
+						console.error("No auth token available");
+						showMessage(
+							"Authentication required. Please sign in again.",
+							"error"
+						);
+						showSectionLoading("users", false);
+						return;
+					}
+
+					const response = await fetch(`${API_BASE_URL}/auth/users`, {
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					if (response.ok) {
+						const data = await response.json();
+						allUsers = data.data && data.data.users ? data.data.users : [];
+						displayUsers(allUsers);
+						updateUsersCount(allUsers.length);
+					} else if (response.status === 401) {
+						showMessage("Session expired. Please sign in again.", "error");
+						setTimeout(() => logout(), 2000);
+					} else {
+						const errorData = await response.json().catch(() => ({}));
+						showMessage(
+							errorData.message || "Failed to load users list",
+							"error"
+						);
+					}
+				} catch (error) {
+					console.error("Error loading users:", error);
+					showMessage(
+						"Network error. Please check your connection and try again.",
+						"error"
+					);
+				} finally {
+					showSectionLoading("users", false);
+				}
+			}
+
+			// Display users in table
+			function displayUsers(users) {
+				const tbody = document.getElementById("users-table-body");
+				if (!tbody) {
+					console.error("Users table body element not found");
+					return;
+				}
+
+				tbody.innerHTML = "";
+
+				if (!users || users.length === 0) {
+					tbody.innerHTML = `
+						<tr>
+							<td colspan="6" style="text-align: center; padding: 40px; color: #666;">
+								No users found.
+							</td>
+						</tr>
+					`;
+					return;
+				}
+
+				users.forEach((user) => {
+					try {
+						const row = document.createElement("tr");
+						const userName = user.name || "N/A";
+						const userEmail = user.email || "N/A";
+						const userRole = user.role || "user";
+						const userStatus = user.isActive ? "Active" : "Inactive";
+						const createdDate = user.createdAt
+							? formatDate(user.createdAt)
+							: "N/A";
+
+						row.innerHTML = `
+							<td>${userName}</td>
+							<td>${userEmail}</td>
+							<td><span class="role-badge ${userRole}">${userRole.toUpperCase()}</span></td>
+							<td><span class="status-badge ${
+								user.isActive ? "active" : "inactive"
+							}">${userStatus}</span></td>
+							<td>${createdDate}</td>
+							<td>
+								<div class="action-buttons">
+									<button class="action-btn edit" onclick="editUser('${user._id}')">Edit</button>
+									<button class="action-btn delete" onclick="deleteUser('${
+										user._id
+									}', '${userName.replace(/'/g, "\\'")}')">Delete</button>
+								</div>
+							</td>
+						`;
+						tbody.appendChild(row);
+					} catch (error) {
+						console.error("Error displaying user:", user, error);
+					}
+				});
+			}
+
+			// Update users count
+			function updateUsersCount(count) {
+				const totalUsersElement = document.getElementById("total-users-count");
+				const usersCountElement = document.getElementById("users-count");
+
+				if (totalUsersElement) {
+					totalUsersElement.textContent = `${count} user${
+						count !== 1 ? "s" : ""
+					}`;
+				}
+
+				// Update sidebar badge
+				if (usersCountElement) {
+					usersCountElement.textContent = count;
+				}
+			}
+
+			// Show add user modal
+			function showAddUserModal() {
+				try {
+					const modalTitle = document.getElementById("modal-title");
+					const userForm = document.getElementById("user-form");
+					const userId = document.getElementById("user-id");
+					const passwordGroup = document.getElementById("password-group");
+					const userPassword = document.getElementById("user-password");
+					const userModal = document.getElementById("user-modal");
+
+					if (
+						!modalTitle ||
+						!userForm ||
+						!userId ||
+						!passwordGroup ||
+						!userPassword ||
+						!userModal
+					) {
+						console.error("Modal elements not found");
+						showMessage(
+							"Modal not available. Please refresh the page.",
+							"error"
+						);
+						return;
+					}
+
+					modalTitle.textContent = "Add New User";
+					userForm.reset();
+					userId.value = "";
+
+					// Show password field for new users
+					passwordGroup.style.display = "block";
+					userPassword.setAttribute("required", "required");
+
+					userModal.style.display = "block";
+				} catch (error) {
+					console.error("Error showing add user modal:", error);
+					showMessage("Error opening modal. Please try again.", "error");
+				}
+			}
+
+			// Edit user
+			function editUser(userId) {
+				try {
+					const user = allUsers.find((u) => u._id === userId);
+					if (!user) {
+						showMessage("User not found", "error");
+						return;
+					}
+
+					// Get modal elements with error checking
+					const elements = {
+						modalTitle: document.getElementById("modal-title"),
+						userId: document.getElementById("user-id"),
+						userName: document.getElementById("user-name"),
+						userEmail: document.getElementById("user-email"),
+						userPhone: document.getElementById("user-phone"),
+						userRole: document.getElementById("user-role"),
+						userStatus: document.getElementById("user-status"),
+						userStreet: document.getElementById("user-street"),
+						userCity: document.getElementById("user-city"),
+						userState: document.getElementById("user-state"),
+						userZipcode: document.getElementById("user-zipcode"),
+						userCountry: document.getElementById("user-country"),
+						passwordGroup: document.getElementById("password-group"),
+						userPassword: document.getElementById("user-password"),
+						userModal: document.getElementById("user-modal"),
+					};
+
+					// Check if all elements exist
+					for (const [key, element] of Object.entries(elements)) {
+						if (!element) {
+							console.error(`Element ${key} not found`);
+							showMessage(
+								"Modal form not available. Please refresh the page.",
+								"error"
+							);
+							return;
+						}
+					}
+
+					// Populate form
+					elements.modalTitle.textContent = "Edit User";
+					elements.userId.value = user._id;
+					elements.userName.value = user.name || "";
+					elements.userEmail.value = user.email || "";
+					elements.userPhone.value = user.phoneNumber || "";
+					elements.userRole.value = user.role || "user";
+					elements.userStatus.value = user.isActive ? "true" : "false";
+
+					// Handle address safely
+					if (user.address) {
+						elements.userStreet.value = user.address.street || "";
+						elements.userCity.value = user.address.city || "";
+						elements.userState.value = user.address.state || "";
+						elements.userZipcode.value = user.address.zipCode || "";
+						elements.userCountry.value = user.address.country || "";
+					}
+
+					// Hide password field when editing
+					elements.passwordGroup.style.display = "none";
+					elements.userPassword.removeAttribute("required");
+
+					elements.userModal.style.display = "block";
+				} catch (error) {
+					console.error("Error editing user:", error);
+					showMessage(
+						"Error opening user edit form. Please try again.",
+						"error"
+					);
+				}
+			}
+
+			// Delete user
+			async function deleteUser(userId, userName) {
+				if (
+					!confirm(
+						`Are you sure you want to delete user "${userName}"? This action cannot be undone.`
+					)
+				) {
+					return;
+				}
+
+				try {
+					const response = await fetch(`${API_BASE_URL}/auth/users/${userId}`, {
+						method: "DELETE",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					const result = await response.json();
+
+					if (response.ok) {
+						showMessage(`User "${userName}" deleted successfully`, "success");
+						loadAllUsers(); // Refresh the list
+					} else {
+						showMessage(result.message || "Failed to delete user", "error");
+					}
+				} catch (error) {
+					showMessage("Error deleting user: " + error.message, "error");
+				}
+			}
+
+			// Save user (create or update)
+			async function saveUser() {
+				try {
+					const form = document.getElementById("user-form");
+					const userIdElement = document.getElementById("user-id");
+
+					if (!form || !userIdElement) {
+						showMessage(
+							"Form not available. Please refresh the page.",
+							"error"
+						);
+						return;
+					}
+
+					const formData = new FormData(form);
+					const userId = userIdElement.value;
+
+					// Validate required fields
+					const requiredFields = [
+						"name",
+						"phone",
+						"email",
+						"role",
+						"status",
+						"street",
+						"city",
+						"state",
+						"zipcode",
+						"country",
+					];
+					for (const field of requiredFields) {
+						if (!formData.get(field)) {
+							showMessage(`Please fill in the ${field} field.`, "error");
+							return;
+						}
+					}
+
+					// Validate password for new users
+					if (!userId && !formData.get("password")) {
+						showMessage("Password is required for new users.", "error");
+						return;
+					}
+
+					const userData = {
+						name: formData.get("name"),
+						phoneNumber: formData.get("phone"),
+						email: formData.get("email"),
+						role: formData.get("role"),
+						isActive: formData.get("status") === "true",
+						address: {
+							street: formData.get("street"),
+							city: formData.get("city"),
+							state: formData.get("state"),
+							zipCode: formData.get("zipcode"),
+							country: formData.get("country"),
+						},
+					};
+
+					// Add password for new users
+					if (!userId) {
+						userData.password = formData.get("password");
+					}
+
+					const url = userId
+						? `${API_BASE_URL}/auth/users/${userId}`
+						: `${API_BASE_URL}/auth/users`;
+					const method = userId ? "PUT" : "POST";
+
+					const response = await fetch(url, {
+						method: method,
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify(userData),
+					});
+
+					if (!response.ok) {
+						const errorData = await response.json().catch(() => ({}));
+						throw new Error(
+							errorData.message ||
+								`HTTP ${response.status}: ${response.statusText}`
+						);
+					}
+
+					const result = await response.json();
+					showMessage(
+						result.message ||
+							`User ${userId ? "updated" : "created"} successfully`,
+						"success"
+					);
+					closeModal();
+					await loadAllUsers(); // Refresh the list
+				} catch (error) {
+					console.error("Error saving user:", error);
+					showMessage("Error saving user: " + error.message, "error");
+				}
+			}
+
+			// Close modal
+			function closeModal() {
+				const modal = document.getElementById("user-modal");
+				if (modal) {
+					modal.style.display = "none";
+				}
+			}
+
+			// Refresh users list
+			function refreshUsersList() {
+				loadAllUsers();
+				showMessage("Users list refreshed", "success");
+			}
+
+			// Sidebar Navigation Functions
+			function toggleSidebar() {
+				const sidebar = document.getElementById("sidebar");
+				const mainContent = document.getElementById("mainContent");
+
+				if (window.innerWidth <= 768) {
+					sidebar.classList.toggle("show");
+				} else {
+					sidebar.classList.toggle("collapsed");
+					mainContent.classList.toggle("expanded");
+				}
+			}
+
+			function showSection(sectionName) {
+				// Hide all sections
+				const sections = document.querySelectorAll(".content-section");
+				sections.forEach((section) => {
+					section.classList.remove("active");
+				});
+
+				// Remove active class from all menu items
+				const menuItems = document.querySelectorAll(".menu-item");
+				menuItems.forEach((item) => {
+					item.classList.remove("active");
+				});
+
+				// Show selected section
+				const targetSection = document.getElementById(sectionName + "-section");
+				if (targetSection) {
+					targetSection.classList.add("active");
+				}
+
+				// Add active class to selected menu item
+				const activeMenuItem = document.getElementById("menu-" + sectionName);
+				if (activeMenuItem) {
+					activeMenuItem.parentElement.classList.add("active");
+				}
+
+				// Load section-specific data
+				loadSectionData(sectionName);
+
+				// Close sidebar on mobile after selection
+				if (window.innerWidth <= 768) {
+					document.getElementById("sidebar").classList.remove("show");
+				}
+			}
+
+			function loadSectionData(sectionName) {
+				switch (sectionName) {
+					case "dashboard":
+						loadDashboardStats();
+						break;
+					case "users":
+						if (currentUser && currentUser.role === "admin") {
+							loadAllUsers();
+						}
+						break;
+					case "categories":
+						// If categories are already loaded, display them; otherwise load them
+						if (allCategories && allCategories.length > 0) {
+							displayCategories(allCategories);
+							updateCategoriesCount(allCategories.length);
+							updateCategorySummary();
+						} else {
+							loadCategories();
+						}
+						break;
+					case "products":
+						// Always refresh products data when section is opened
+						loadProducts();
+						// Load categories for the filter dropdown
+						loadCategoriesForProductFilter();
+						// Attach search event listeners
+						setTimeout(attachProductSearchListeners, 100);
+						break;
+					case "orders":
+						loadOrders();
+						break;
+					case "riders":
+						loadRiders();
+						break;
+					case "profile":
+						loadProfileSection();
+						break;
+				}
+			}
+
+			// Dashboard Statistics
+			async function loadDashboardStats() {
+				showSectionLoading(
+					"dashboard",
+					true,
+					"Loading dashboard statistics..."
+				);
+
+				// Update quick stats
+				document.getElementById("total-users-stat").textContent =
+					allUsers.length || "0";
+
+				// Load categories data and count for dashboard
+				try {
+					const response = await fetch(
+						`${API_BASE_URL}/categories?isActive=all&sortBy=isActive&sortOrder=desc`,
+						{
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+						}
+					);
+					if (response.ok) {
+						const data = await response.json();
+						// Store categories data for use in categories section
+						allCategories = data.data || [];
+
+						const categoriesCount = allCategories.length;
+						document.getElementById("categories-count").textContent =
+							categoriesCount;
+					}
+				} catch (error) {
+					console.error("Error loading categories count:", error);
+				}
+
+				// Load products data and count for dashboard
+				try {
+					const response = await fetch(`${API_BASE_URL}/products?limit=50`, {
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+					if (response.ok) {
+						const data = await response.json();
+						// Store products data for use in products section
+						allProducts = data.data || [];
+
+						const productsCount = data.pagination
+							? data.pagination.totalProducts
+							: allProducts.length;
+						document.getElementById("total-products-stat").textContent =
+							productsCount;
+						document.getElementById("products-count").textContent =
+							productsCount;
+					}
+				} catch (error) {
+					console.error("Error loading products count:", error);
+				}
+
+				// Placeholder for orders and riders (to be implemented)
+				document.getElementById("total-orders-stat").textContent = "0";
+				document.getElementById("total-riders-stat").textContent = "0";
+				document.getElementById("orders-count").textContent = "0";
+				document.getElementById("riders-count").textContent = "0";
+
+				showSectionLoading("dashboard", false);
+			}
+
+			// Categories Management Functions
+			async function loadCategories() {
+				showSectionLoading("categories", true, "Loading categories...");
+
+				try {
+					// Load all categories (both active and inactive) for management
+					const response = await fetch(
+						`${API_BASE_URL}/categories?isActive=all&sortBy=isActive&sortOrder=desc`,
+						{
+							method: "GET",
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+						}
+					);
+
+					if (response.ok) {
+						const data = await response.json();
+						allCategories = data.data || [];
+						displayCategories(allCategories);
+						updateCategoriesCount(allCategories.length);
+						updateCategorySummary();
+					} else if (response.status === 401) {
+						showMessage("Session expired. Please sign in again.", "error");
+						setTimeout(() => logout(), 2000);
+					} else {
+						const errorData = await response.json().catch(() => ({}));
+						showMessage(
+							errorData.message || "Failed to load categories",
+							"error"
+						);
+					}
+				} catch (error) {
+					console.error("Error loading categories:", error);
+					showMessage(
+						"Network error. Please check your connection and try again.",
+						"error"
+					);
+				} finally {
+					showSectionLoading("categories", false);
+				}
+			}
+
+			function displayCategories(categories) {
+				const tbody = document.getElementById("categories-table-body");
+				if (!tbody) {
+					console.error("Categories table body element not found");
+					return;
+				}
+
+				tbody.innerHTML = "";
+
+				if (!categories || categories.length === 0) {
+					tbody.innerHTML = `
+						<tr>
+							<td colspan="7" style="text-align: center; padding: 40px; color: #666;">
+								No categories found. Click "Add Category" to create one.
+							</td>
+						</tr>
+					`;
+					return;
+				}
+
+				categories.forEach((category, index) => {
+					try {
+						const row = document.createElement("tr");
+						const categoryName = category.name || "N/A";
+						const description = category.description || "No description";
+						const productCount = category.productCount || 0;
+						const status = category.isActive ? "Active" : "Inactive";
+						const createdDate = category.createdAt
+							? formatDate(category.createdAt)
+							: "N/A";
+
+						// Add styling for inactive categories
+						if (!category.isActive) {
+							row.style.opacity = "0.6";
+							row.style.backgroundColor = "#f8f9fa";
+						}
+
+						row.innerHTML = `
+							<td style="text-align: center; font-weight: 600; color: #666;">${index + 1}</td>
+							<td>
+								<div style="display: flex; align-items: center;">
+									${
+										category.image
+											? `<img src="${category.image}" alt="${categoryName}" 
+											style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd; margin-right: 10px;"
+											onerror="this.style.display='none';">`
+											: `<div style="width: 30px; height: 30px; background: #f8f9fa; border-radius: 4px; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; color: #6c757d; font-size: 10px; margin-right: 10px;">No Image</div>`
+									}
+									${categoryName}
+								</div>
+							</td>
+							<td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${description}</td>
+							<td>${productCount}</td>
+							<td><span class="status-badge ${
+								category.isActive ? "active" : "inactive"
+							}">${status}</span></td>
+							<td>${createdDate}</td>
+							<td>
+								<div class="action-buttons">
+									<button class="action-btn edit" onclick="editCategory('${
+										category._id
+									}')">Edit</button>
+									<button class="action-btn delete" onclick="deleteCategory('${
+										category._id
+									}', '${categoryName.replace(/'/g, "\\'")}')">Delete</button>
+								</div>
+							</td>
+						`;
+						tbody.appendChild(row);
+					} catch (error) {
+						console.error("Error displaying category:", category, error);
+					}
+				});
+			}
+
+			function updateCategoriesCount(count) {
+				const categoriesCountElement =
+					document.getElementById("categories-count");
+				const categoriesCountDisplayElement = document.getElementById(
+					"categories-count-display"
+				);
+
+				if (categoriesCountElement) {
+					categoriesCountElement.textContent = count;
+				}
+
+				if (categoriesCountDisplayElement) {
+					categoriesCountDisplayElement.textContent = `${count} categor${
+						count !== 1 ? "ies" : "y"
+					}`;
+				}
+			}
+
+			function updateCategorySummary() {
+				const summaryElement = document.getElementById("category-summary");
+				if (!summaryElement || !allCategories) return;
+
+				const activeCount = allCategories.filter(
+					(category) => category.isActive
+				).length;
+				const inactiveCount = allCategories.filter(
+					(category) => !category.isActive
+				).length;
+				const totalCount = allCategories.length;
+
+				summaryElement.innerHTML = `
+					<strong>Total:</strong> ${totalCount} categories | 
+					<span style="color: #28a745;"><strong>Active:</strong> ${activeCount}</span> | 
+					<span style="color: #6c757d;"><strong>Inactive:</strong> ${inactiveCount}</span>
+				`;
+			}
+
+			function showAddCategoryModal() {
+				try {
+					const modalTitle = document.getElementById("category-modal-title");
+					const categoryForm = document.getElementById("category-form");
+					const categoryId = document.getElementById("category-id");
+					const categoryModal = document.getElementById("category-modal");
+
+					if (!modalTitle || !categoryForm || !categoryId || !categoryModal) {
+						console.error("Category modal elements not found");
+						showMessage(
+							"Modal not available. Please refresh the page.",
+							"error"
+						);
+						return;
+					}
+
+					modalTitle.textContent = "Add New Category";
+					categoryForm.reset();
+					categoryId.value = "";
+
+					// Clear image-related fields
+					const currentImageField = document.getElementById(
+						"category-current-image"
+					);
+					const imagePreview = document.getElementById(
+						"category-image-preview"
+					);
+					if (currentImageField) currentImageField.value = "";
+					if (imagePreview) imagePreview.style.display = "none";
+
+					categoryModal.style.display = "block";
+				} catch (error) {
+					console.error("Error showing add category modal:", error);
+					showMessage("Error opening modal. Please try again.", "error");
+				}
+			}
+
+			function editCategory(categoryId) {
+				try {
+					const category = allCategories.find((c) => c._id === categoryId);
+					if (!category) {
+						showMessage("Category not found", "error");
+						return;
+					}
+
+					const elements = {
+						modalTitle: document.getElementById("category-modal-title"),
+						categoryId: document.getElementById("category-id"),
+						categoryName: document.getElementById("category-name"),
+						categoryDescription: document.getElementById(
+							"category-description"
+						),
+						categoryImage: document.getElementById("category-image"),
+						categoryIcon: document.getElementById("category-icon"),
+						categorySortOrder: document.getElementById("category-sort-order"),
+						categoryStatus: document.getElementById("category-status"),
+						categoryModal: document.getElementById("category-modal"),
+					};
+
+					for (const [key, element] of Object.entries(elements)) {
+						if (!element) {
+							console.error(`Element ${key} not found`);
+							showMessage(
+								"Modal form not available. Please refresh the page.",
+								"error"
+							);
+							return;
+						}
+					}
+
+					elements.modalTitle.textContent = "Edit Category";
+					elements.categoryId.value = category._id;
+					elements.categoryName.value = category.name || "";
+					elements.categoryDescription.value = category.description || "";
+
+					// Handle existing image display
+					const imagePreview = document.getElementById(
+						"category-image-preview"
+					);
+					const previewImg = document.getElementById("category-preview-img");
+					const currentImageField = document.getElementById(
+						"category-current-image"
+					);
+
+					if (category.image) {
+						previewImg.src = category.image;
+						imagePreview.style.display = "block";
+						if (currentImageField) currentImageField.value = category.image;
+					} else {
+						imagePreview.style.display = "none";
+						if (currentImageField) currentImageField.value = "";
+					}
+
+					elements.categoryIcon.value = category.icon || "";
+					elements.categorySortOrder.value = category.sortOrder || 0;
+					elements.categoryStatus.value = category.isActive ? "true" : "false";
+
+					elements.categoryModal.style.display = "block";
+				} catch (error) {
+					console.error("Error editing category:", error);
+					showMessage(
+						"Error opening category edit form. Please try again.",
+						"error"
+					);
+				}
+			}
+
+			async function deleteCategory(categoryId, categoryName) {
+				if (
+					!confirm(
+						`Are you sure you want to delete category "${categoryName}"? This action cannot be undone.`
+					)
+				) {
+					return;
+				}
+
+				try {
+					const response = await fetch(
+						`${API_BASE_URL}/categories/${categoryId}`,
+						{
+							method: "DELETE",
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+						}
+					);
+
+					const result = await response.json();
+
+					if (response.ok) {
+						showMessage(
+							`Category "${categoryName}" deleted successfully`,
+							"success"
+						);
+						loadCategories();
+					} else {
+						showMessage(result.message || "Failed to delete category", "error");
+					}
+				} catch (error) {
+					showMessage("Error deleting category: " + error.message, "error");
+				}
+			}
+
+			async function saveCategory() {
+				try {
+					const form = document.getElementById("category-form");
+					const categoryIdElement = document.getElementById("category-id");
+
+					if (!form || !categoryIdElement) {
+						showMessage(
+							"Form not available. Please refresh the page.",
+							"error"
+						);
+						return;
+					}
+
+					const formData = new FormData(form);
+					const categoryId = categoryIdElement.value;
+
+					if (!formData.get("name")) {
+						showMessage("Please provide a category name.", "error");
+						return;
+					}
+
+					let imageUrl = "";
+
+					// Handle image upload if a file is selected
+					const fileInput = document.getElementById("category-image");
+					if (fileInput && fileInput.files && fileInput.files[0]) {
+						const imageFormData = new FormData();
+						imageFormData.append("image", fileInput.files[0]);
+
+						const uploadResponse = await fetch(
+							`${API_BASE_URL}/categories/upload-image`,
+							{
+								method: "POST",
+								headers: {
+									Authorization: `Bearer ${currentToken}`,
+								},
+								body: imageFormData,
+							}
+						);
+
+						if (!uploadResponse.ok) {
+							const uploadError = await uploadResponse.json().catch(() => ({}));
+							throw new Error(uploadError.message || "Error uploading image");
+						}
+
+						const uploadResult = await uploadResponse.json();
+						imageUrl = uploadResult.data.url;
+					} else if (categoryId) {
+						// If editing and no new file, preserve existing image
+						const currentImageField = document.getElementById(
+							"category-current-image"
+						);
+						imageUrl = currentImageField ? currentImageField.value : "";
+					}
+
+					const categoryData = {
+						name: formData.get("name"),
+						description: formData.get("description") || "",
+						image: imageUrl,
+						icon: formData.get("icon") || "",
+						sortOrder: parseInt(formData.get("sortOrder")) || 0,
+						isActive: formData.get("status") === "true",
+					};
+
+					const url = categoryId
+						? `${API_BASE_URL}/categories/${categoryId}`
+						: `${API_BASE_URL}/categories`;
+					const method = categoryId ? "PUT" : "POST";
+
+					const response = await fetch(url, {
+						method: method,
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify(categoryData),
+					});
+
+					if (!response.ok) {
+						const errorData = await response.json().catch(() => ({}));
+						throw new Error(
+							errorData.message ||
+								`HTTP ${response.status}: ${response.statusText}`
+						);
+					}
+
+					const result = await response.json();
+					showMessage(
+						result.message ||
+							`Category ${categoryId ? "updated" : "created"} successfully`,
+						"success"
+					);
+					closeCategoryModal();
+					await loadCategories();
+				} catch (error) {
+					console.error("Error saving category:", error);
+					showMessage("Error saving category: " + error.message, "error");
+				}
+			}
+
+			function closeCategoryModal() {
+				const modal = document.getElementById("category-modal");
+				if (modal) {
+					modal.style.display = "none";
+				}
+			}
+
+			function refreshCategories() {
+				loadCategories();
+				showMessage("Categories refreshed", "success");
+			}
+
+			function filterCategories() {
+				const filterSelect = document.getElementById("category-filter");
+				const searchInput = document.getElementById("category-search");
+				const filterValue = filterSelect.value;
+				const searchValue = searchInput
+					? searchInput.value.toLowerCase().trim()
+					: "";
+				const tableTitle = document.getElementById("categories-table-title");
+
+				let filteredCategories = [];
+				let titleText = "";
+
+				// First apply status filter
+				switch (filterValue) {
+					case "active":
+						filteredCategories = allCategories.filter(
+							(category) => category.isActive
+						);
+						titleText = "Active Categories";
+						break;
+					case "inactive":
+						filteredCategories = allCategories.filter(
+							(category) => !category.isActive
+						);
+						titleText = "Inactive Categories";
+						break;
+					case "all":
+					default:
+						filteredCategories = allCategories;
+						titleText = "All Categories";
+						break;
+				}
+
+				// Then apply search filter if there's a search term
+				if (searchValue) {
+					filteredCategories = filteredCategories.filter((category) => {
+						const name = (category.name || "").toLowerCase();
+						const description = (category.description || "").toLowerCase();
+						return (
+							name.includes(searchValue) || description.includes(searchValue)
+						);
+					});
+
+					// Update title to reflect search
+					if (searchValue) {
+						titleText += ` (Searching: "${searchInput.value}")`;
+					}
+				}
+
+				if (tableTitle) tableTitle.textContent = titleText;
+				displayCategories(filteredCategories);
+				updateCategoriesCount(filteredCategories.length);
+			}
+
+			// Clear all category filters
+			function clearCategoryFilters() {
+				const searchInput = document.getElementById("category-search");
+				const filterSelect = document.getElementById("category-filter");
+
+				if (searchInput) searchInput.value = "";
+				if (filterSelect) filterSelect.value = "all";
+
+				filterCategories();
+			}
+
+			// Products Management Functions
+			async function loadProducts(
+				page = currentProductsPage,
+				pageSize = productsPageSize
+			) {
+				showSectionLoading("products", true, "Loading products...");
+
+				try {
+					const response = await fetch(
+						`${API_BASE_URL}/products?page=${page}&limit=${pageSize}&isActive=all`,
+						{
+							method: "GET",
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+						}
+					);
+
+					if (response.ok) {
+						const data = await response.json();
+						allProducts = data.data || [];
+						displayProducts(allProducts);
+
+						// Update pagination info
+						if (data.pagination) {
+							totalProducts = data.pagination.totalProducts || 0;
+							currentProductsPage = page;
+							productsPageSize = pageSize;
+							totalProductsPages = Math.ceil(totalProducts / pageSize) || 1;
+
+							updateProductsCount(totalProducts);
+							updateProductsPagination();
+						} else {
+							totalProducts = allProducts.length;
+							updateProductsCount(totalProducts);
+							document.getElementById("products-pagination").style.display =
+								"none";
+						}
+					} else if (response.status === 401) {
+						showMessage("Session expired. Please sign in again.", "error");
+						setTimeout(() => logout(), 2000);
+					} else {
+						const errorData = await response.json().catch(() => ({}));
+						showMessage(
+							errorData.message || "Failed to load products",
+							"error"
+						);
+					}
+				} catch (error) {
+					console.error("Error loading products:", error);
+					showMessage(
+						"Network error. Please check your connection and try again.",
+						"error"
+					);
+				} finally {
+					showSectionLoading("products", false);
+				}
+			}
+
+			function displayProducts(products) {
+				const tbody = document.getElementById("products-table-body");
+				if (!tbody) {
+					console.error("Products table body element not found");
+					return;
+				}
+
+				tbody.innerHTML = "";
+
+				if (!products || products.length === 0) {
+					tbody.innerHTML = `
+						<tr>
+							<td colspan="7" style="text-align: center; padding: 40px; color: #666;">
+								No products found. Click "Add Product" to create one.
+							</td>
+						</tr>
+					`;
+					return;
+				}
+
+				products.forEach((product, index) => {
+					try {
+						const row = document.createElement("tr");
+						const productName = product.name || "N/A";
+						const categoryName = product.category
+							? product.category.name || "N/A"
+							: "Uncategorized";
+						const price = product.price
+							? `$${product.price.toFixed(2)}`
+							: "N/A";
+						const stock = product.stock !== undefined ? product.stock : "N/A";
+						const status = product.isActive ? "Active" : "Inactive";
+						const barcode = product.barcode || "N/A";
+						const shelfNumber = product.shelfNumber || "N/A";
+
+						row.innerHTML = `
+							<td style="text-align: center; font-weight: 600; color: #666;">${
+								(currentProductsPage - 1) * productsPageSize + index + 1
+							}</td>
+							<td>
+								<div style="display: flex; align-items: center; gap: 10px;">
+									${
+										product.picture
+											? `<img src="${product.picture}" alt="${productName}" 
+											style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;"
+											onerror="this.style.display='none';">`
+											: `<div style="width: 40px; height: 40px; background: #f8f9fa; border-radius: 4px; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; color: #6c757d; font-size: 12px;">No Image</div>`
+									}
+									<div>
+										<strong>${productName}</strong>
+										<br>
+										<small style="color: #666;">Barcode: ${barcode}</small>
+										<br>
+										<small style="color: #666;">Shelf: ${shelfNumber}</small>
+									</div>
+								</div>
+							</td>
+							<td>${categoryName}</td>
+							<td>${price}</td>
+							<td>
+								<span style="color: ${
+									stock <= 0 ? "#dc3545" : stock <= 10 ? "#fd7e14" : "#28a745"
+								};">
+									${stock}
+								</span>
+							</td>
+							<td><span class="status-badge ${
+								product.isActive ? "active" : "inactive"
+							}">${status}</span></td>
+							<td>
+								<div class="action-buttons">
+									<button class="action-btn edit" onclick="editProduct('${
+										product._id
+									}')">Edit</button>
+									<button class="action-btn" style="background: #17a2b8; color: white;" onclick="updateStock('${
+										product._id
+									}')">Stock</button>
+									<button class="action-btn delete" onclick="deleteProduct('${
+										product._id
+									}', '${productName.replace(/'/g, "\\'")}')">Delete</button>
+								</div>
+							</td>
+						`;
+						tbody.appendChild(row);
+					} catch (error) {
+						console.error("Error displaying product:", product, error);
+					}
+				});
+			}
+
+			function updateProductsCount(count) {
+				const productsCountElement = document.getElementById("products-count");
+				const productsCountDisplayElement = document.getElementById(
+					"products-count-display"
+				);
+
+				if (productsCountElement) {
+					productsCountElement.textContent = count;
+				}
+
+				if (productsCountDisplayElement) {
+					productsCountDisplayElement.textContent = `${count} product${
+						count !== 1 ? "s" : ""
+					}`;
+				}
+			}
+
+			// Pagination functions
+			function updateProductsPagination() {
+				const paginationContainer = document.getElementById(
+					"products-pagination"
+				);
+				const paginationInfo = document.getElementById(
+					"products-pagination-info"
+				);
+				const paginationNumbers = document.getElementById(
+					"products-pagination-numbers"
+				);
+				const firstBtn = document.getElementById("products-first-btn");
+				const prevBtn = document.getElementById("products-prev-btn");
+				const nextBtn = document.getElementById("products-next-btn");
+				const lastBtn = document.getElementById("products-last-btn");
+
+				if (!paginationContainer) return;
+
+				// Show pagination if there are multiple pages
+				if (totalProductsPages > 1) {
+					paginationContainer.style.display = "flex";
+
+					// Update info text
+					const startItem = (currentProductsPage - 1) * productsPageSize + 1;
+					const endItem = Math.min(
+						currentProductsPage * productsPageSize,
+						totalProducts
+					);
+					paginationInfo.textContent = `Showing ${startItem}-${endItem} of ${totalProducts} products`;
+
+					// Update button states
+					firstBtn.disabled = currentProductsPage === 1;
+					prevBtn.disabled = currentProductsPage === 1;
+					nextBtn.disabled = currentProductsPage === totalProductsPages;
+					lastBtn.disabled = currentProductsPage === totalProductsPages;
+
+					// Generate page numbers
+					generateProductsPageNumbers();
+				} else {
+					paginationContainer.style.display = "none";
+				}
+			}
+
+			function generateProductsPageNumbers() {
+				const paginationNumbers = document.getElementById(
+					"products-pagination-numbers"
+				);
+				if (!paginationNumbers) return;
+
+				paginationNumbers.innerHTML = "";
+
+				const maxVisiblePages = 5;
+				let startPage = Math.max(
+					1,
+					currentProductsPage - Math.floor(maxVisiblePages / 2)
+				);
+				let endPage = Math.min(
+					totalProductsPages,
+					startPage + maxVisiblePages - 1
+				);
+
+				// Adjust start page if we're near the end
+				if (endPage - startPage < maxVisiblePages - 1) {
+					startPage = Math.max(1, endPage - maxVisiblePages + 1);
+				}
+
+				// Add ellipsis at start if needed
+				if (startPage > 1) {
+					const firstPageBtn = createPageButton(1, "1");
+					paginationNumbers.appendChild(firstPageBtn);
+
+					if (startPage > 2) {
+						const ellipsis = document.createElement("span");
+						ellipsis.textContent = "...";
+						ellipsis.className = "pagination-ellipsis";
+						ellipsis.style.padding = "8px 4px";
+						ellipsis.style.color = "#666";
+						paginationNumbers.appendChild(ellipsis);
+					}
+				}
+
+				// Add page number buttons
+				for (let i = startPage; i <= endPage; i++) {
+					const pageBtn = createPageButton(i, i.toString());
+					paginationNumbers.appendChild(pageBtn);
+				}
+
+				// Add ellipsis at end if needed
+				if (endPage < totalProductsPages) {
+					if (endPage < totalProductsPages - 1) {
+						const ellipsis = document.createElement("span");
+						ellipsis.textContent = "...";
+						ellipsis.className = "pagination-ellipsis";
+						ellipsis.style.padding = "8px 4px";
+						ellipsis.style.color = "#666";
+						paginationNumbers.appendChild(ellipsis);
+					}
+
+					const lastPageBtn = createPageButton(
+						totalProductsPages,
+						totalProductsPages.toString()
+					);
+					paginationNumbers.appendChild(lastPageBtn);
+				}
+			}
+
+			function createPageButton(pageNum, text) {
+				const button = document.createElement("button");
+				button.className = "btn btn-pagination";
+				button.textContent = text;
+				button.onclick = () => goToProductsPage(pageNum);
+
+				if (pageNum === currentProductsPage) {
+					button.classList.add("active");
+				}
+
+				return button;
+			}
+
+			function goToProductsPage(page) {
+				if (
+					page >= 1 &&
+					page <= totalProductsPages &&
+					page !== currentProductsPage
+				) {
+					loadProducts(page, productsPageSize);
+				}
+			}
+
+			function changeProductsPageSize(newPageSize) {
+				productsPageSize = parseInt(newPageSize);
+				currentProductsPage = 1; // Reset to first page when changing page size
+				loadProducts(1, productsPageSize);
+			}
+
+			async function showAddProductModal() {
+				// Load categories first for the dropdown
+				await loadCategoriesForDropdown();
+
+				try {
+					const modalTitle = document.getElementById("product-modal-title");
+					const productForm = document.getElementById("product-form");
+					const productId = document.getElementById("product-id");
+					const productModal = document.getElementById("product-modal");
+
+					if (!modalTitle || !productForm || !productId || !productModal) {
+						console.error("Product modal elements not found");
+						showMessage(
+							"Modal not available. Please refresh the page.",
+							"error"
+						);
+						return;
+					}
+
+					modalTitle.textContent = "Add New Product";
+					productForm.reset();
+					productId.value = "";
+
+					productModal.style.display = "block";
+				} catch (error) {
+					console.error("Error showing add product modal:", error);
+					showMessage("Error opening modal. Please try again.", "error");
+				}
+			}
+
+			async function loadCategoriesForDropdown() {
+				try {
+					const response = await fetch(`${API_BASE_URL}/categories`, {
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					if (response.ok) {
+						const data = await response.json();
+						const categories = data.data || [];
+						const select = document.getElementById("product-category");
+
+						if (select) {
+							select.innerHTML = '<option value="">Select Category</option>';
+							categories.forEach((category) => {
+								const option = document.createElement("option");
+								option.value = category._id;
+								option.textContent = category.name;
+								select.appendChild(option);
+							});
+						}
+					}
+				} catch (error) {
+					console.error("Error loading categories for dropdown:", error);
+				}
+			}
+
+			async function editProduct(productId) {
+				// Load categories first
+				await loadCategoriesForDropdown();
+
+				try {
+					const product = allProducts.find((p) => p._id === productId);
+					if (!product) {
+						showMessage("Product not found", "error");
+						return;
+					}
+
+					const elements = {
+						modalTitle: document.getElementById("product-modal-title"),
+						productId: document.getElementById("product-id"),
+						productName: document.getElementById("product-name"),
+						productBarcode: document.getElementById("product-barcode"),
+						productShelfNumber: document.getElementById("product-shelf-number"),
+						productCategory: document.getElementById("product-category"),
+						productDescription: document.getElementById("product-description"),
+						productPicture: document.getElementById("product-picture"),
+						productPrice: document.getElementById("product-price"),
+						productStock: document.getElementById("product-stock"),
+						productStatus: document.getElementById("product-status"),
+						productModal: document.getElementById("product-modal"),
+					};
+
+					for (const [key, element] of Object.entries(elements)) {
+						if (!element) {
+							console.error(`Element ${key} not found`);
+							showMessage(
+								"Modal form not available. Please refresh the page.",
+								"error"
+							);
+							return;
+						}
+					}
+
+					elements.modalTitle.textContent = "Edit Product";
+					elements.productId.value = product._id;
+					elements.productName.value = product.name || "";
+					elements.productBarcode.value = product.barcode || "";
+					elements.productShelfNumber.value = product.shelfNumber || "";
+					elements.productCategory.value = product.category
+						? product.category._id
+						: "";
+					elements.productDescription.value = product.description || "";
+
+					// Handle existing image display
+					const imagePreview = document.getElementById("image-preview");
+					const previewImg = document.getElementById("preview-img");
+					if (product.picture) {
+						previewImg.src = product.picture;
+						imagePreview.style.display = "block";
+					} else {
+						imagePreview.style.display = "none";
+					}
+
+					elements.productPrice.value = product.price || "";
+					elements.productStock.value = product.stock || 0;
+					elements.productStatus.value = product.isActive ? "true" : "false";
+
+					elements.productModal.style.display = "block";
+				} catch (error) {
+					console.error("Error editing product:", error);
+					showMessage(
+						"Error opening product edit form. Please try again.",
+						"error"
+					);
+				}
+			}
+
+			async function updateStock(productId) {
+				const product = allProducts.find((p) => p._id === productId);
+				if (!product) {
+					showMessage("Product not found", "error");
+					return;
+				}
+
+				const newStock = prompt(
+					`Update stock for "${product.name}"\nCurrent stock: ${product.stock}\n\nEnter new stock quantity:`,
+					product.stock
+				);
+
+				if (newStock === null) return; // User cancelled
+
+				const stockValue = parseInt(newStock);
+				if (isNaN(stockValue) || stockValue < 0) {
+					showMessage(
+						"Please enter a valid stock quantity (0 or greater)",
+						"error"
+					);
+					return;
+				}
+
+				try {
+					const response = await fetch(
+						`${API_BASE_URL}/products/${productId}/stock`,
+						{
+							method: "PATCH",
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({
+								quantity: stockValue,
+								operation: "set",
+							}),
+						}
+					);
+
+					const result = await response.json();
+
+					if (response.ok) {
+						showMessage(
+							`Stock updated successfully for "${product.name}"`,
+							"success"
+						);
+						loadProducts();
+					} else {
+						showMessage(result.message || "Failed to update stock", "error");
+					}
+				} catch (error) {
+					showMessage("Error updating stock: " + error.message, "error");
+				}
+			}
+
+			async function deleteProduct(productId, productName) {
+				if (
+					!confirm(
+						`Are you sure you want to delete product "${productName}"? This action cannot be undone.`
+					)
+				) {
+					return;
+				}
+
+				try {
+					const response = await fetch(
+						`${API_BASE_URL}/products/${productId}`,
+						{
+							method: "DELETE",
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+						}
+					);
+
+					const result = await response.json();
+
+					if (response.ok) {
+						showMessage(
+							`Product "${productName}" deleted successfully`,
+							"success"
+						);
+						loadProducts();
+					} else {
+						showMessage(result.message || "Failed to delete product", "error");
+					}
+				} catch (error) {
+					showMessage("Error deleting product: " + error.message, "error");
+				}
+			}
+
+			async function saveProduct() {
+				try {
+					const form = document.getElementById("product-form");
+					const productIdElement = document.getElementById("product-id");
+
+					if (!form || !productIdElement) {
+						showMessage(
+							"Form not available. Please refresh the page.",
+							"error"
+						);
+						return;
+					}
+
+					const formData = new FormData(form);
+					const productId = productIdElement.value;
+
+					// Validate required fields
+					const requiredFields = ["name", "barcode", "shelfNumber", "category"];
+					for (const field of requiredFields) {
+						if (!formData.get(field) && field !== "picture") {
+							showMessage(
+								`Please fill in the ${field
+									.replace(/([A-Z])/g, " $1")
+									.toLowerCase()} field.`,
+								"error"
+							);
+							return;
+						}
+					}
+
+					let pictureUrl = "";
+
+					// Handle image upload if a file is selected
+					const fileInput = document.getElementById("product-picture");
+					if (fileInput && fileInput.files && fileInput.files[0]) {
+						const imageFormData = new FormData();
+						imageFormData.append("image", fileInput.files[0]);
+
+						const uploadResponse = await fetch(
+							`${API_BASE_URL}/products/upload-image`,
+							{
+								method: "POST",
+								headers: {
+									Authorization: `Bearer ${currentToken}`,
+								},
+								body: imageFormData,
+							}
+						);
+
+						if (!uploadResponse.ok) {
+							const uploadError = await uploadResponse.json().catch(() => ({}));
+							throw new Error(uploadError.message || "Error uploading image");
+						}
+
+						const uploadResult = await uploadResponse.json();
+						pictureUrl = uploadResult.data.url;
+					}
+
+					const productData = {
+						name: formData.get("name"),
+						barcode: formData.get("barcode"),
+						shelfNumber: formData.get("shelfNumber"),
+						category: formData.get("category"),
+						description: formData.get("description") || "",
+						picture: pictureUrl || "",
+						price: formData.get("price")
+							? parseFloat(formData.get("price"))
+							: undefined,
+						stock: parseInt(formData.get("stock")) || 0,
+						isActive: formData.get("status") === "true",
+					};
+
+					const url = productId
+						? `${API_BASE_URL}/products/${productId}`
+						: `${API_BASE_URL}/products`;
+					const method = productId ? "PUT" : "POST";
+
+					const response = await fetch(url, {
+						method: method,
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify(productData),
+					});
+
+					if (!response.ok) {
+						const errorData = await response.json().catch(() => ({}));
+						throw new Error(
+							errorData.message ||
+								`HTTP ${response.status}: ${response.statusText}`
+						);
+					}
+
+					const result = await response.json();
+					showMessage(
+						result.message ||
+							`Product ${productId ? "updated" : "created"} successfully`,
+						"success"
+					);
+					closeProductModal();
+					await loadProducts();
+				} catch (error) {
+					console.error("Error saving product:", error);
+					showMessage("Error saving product: " + error.message, "error");
+				}
+			}
+
+			function closeProductModal() {
+				const modal = document.getElementById("product-modal");
+				if (modal) {
+					modal.style.display = "none";
+				}
+			}
+
+			function refreshProducts() {
+				loadProducts(currentProductsPage, productsPageSize);
+				showMessage("Products refreshed", "success");
+			}
+
+			function importProducts() {
+				showMessage("Product import feature coming soon!", "success");
+			}
+
+			// Product Search and Filter Functions
+			async function searchProducts() {
+				const searchInput = document.getElementById("product-search");
+				const categoryFilter = document.getElementById(
+					"product-category-filter"
+				);
+				const statusFilter = document.getElementById("product-status-filter");
+
+				const searchTerm = searchInput ? searchInput.value.trim() : "";
+				const categoryId = categoryFilter ? categoryFilter.value : "all";
+				const status = statusFilter ? statusFilter.value : "all";
+
+				showSectionLoading("products", true, "Searching products...");
+
+				try {
+					let url = `${API_BASE_URL}/products?page=1&limit=${productsPageSize}`;
+
+					// Add search parameters
+					if (searchTerm) {
+						url += `&search=${encodeURIComponent(searchTerm)}`;
+					}
+
+					if (categoryId && categoryId !== "all") {
+						url += `&category=${categoryId}`;
+					}
+
+					if (status && status !== "all") {
+						url += `&isActive=${status === "active"}`;
+					} else {
+						url += `&isActive=all`;
+					}
+
+					const response = await fetch(url, {
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					if (response.ok) {
+						const data = await response.json();
+						allProducts = data.data || [];
+						displayProducts(allProducts);
+
+						// Update pagination info
+						if (data.pagination) {
+							totalProducts = data.pagination.totalProducts || 0;
+							currentProductsPage = 1; // Reset to first page after search
+							totalProductsPages =
+								Math.ceil(totalProducts / productsPageSize) || 1;
+
+							updateProductsCount(totalProducts);
+							updateProductsPagination();
+						} else {
+							totalProducts = allProducts.length;
+							updateProductsCount(totalProducts);
+							document.getElementById("products-pagination").style.display =
+								"none";
+						}
+
+						// Update table title to reflect search
+						const tableTitle = document.querySelector(
+							"#products-section .table-header h3"
+						);
+						if (tableTitle) {
+							if (searchTerm) {
+								tableTitle.textContent = `Search Results: "${searchTerm}"`;
+							} else if (categoryId !== "all" || status !== "all") {
+								tableTitle.textContent = "Filtered Products";
+							} else {
+								tableTitle.textContent = "All Products";
+							}
+						}
+
+						if (allProducts.length === 0) {
+							showMessage(
+								"No products found matching your search criteria.",
+								"info"
+							);
+						} else {
+							showMessage(
+								`Found ${totalProducts} product(s) matching your search.`,
+								"success"
+							);
+						}
+					} else {
+						const errorData = await response.json().catch(() => ({}));
+						showMessage(
+							errorData.message || "Failed to search products",
+							"error"
+						);
+					}
+				} catch (error) {
+					console.error("Error searching products:", error);
+					showMessage("Error searching products. Please try again.", "error");
+				} finally {
+					showSectionLoading("products", false);
+				}
+			}
+
+			function clearProductFilters() {
+				const searchInput = document.getElementById("product-search");
+				const categoryFilter = document.getElementById(
+					"product-category-filter"
+				);
+				const statusFilter = document.getElementById("product-status-filter");
+
+				if (searchInput) searchInput.value = "";
+				if (categoryFilter) categoryFilter.value = "all";
+				if (statusFilter) statusFilter.value = "all";
+
+				// Reset table title
+				const tableTitle = document.querySelector(
+					"#products-section .table-header h3"
+				);
+				if (tableTitle) {
+					tableTitle.textContent = "All Products";
+				}
+
+				// Reload all products
+				loadProducts(1, productsPageSize);
+				showMessage("Search filters cleared", "success");
+			}
+
+			// Load categories for the product filter dropdown
+			async function loadCategoriesForProductFilter() {
+				try {
+					const response = await fetch(
+						`${API_BASE_URL}/categories?isActive=all`,
+						{
+							method: "GET",
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+						}
+					);
+
+					if (response.ok) {
+						const data = await response.json();
+						const categories = data.data || [];
+						const categoryFilter = document.getElementById(
+							"product-category-filter"
+						);
+
+						if (categoryFilter) {
+							// Clear existing options except "All Categories"
+							categoryFilter.innerHTML =
+								'<option value="all">All Categories</option>';
+
+							// Add category options
+							categories.forEach((category) => {
+								if (category.isActive) {
+									const option = document.createElement("option");
+									option.value = category._id;
+									option.textContent = category.name;
+									categoryFilter.appendChild(option);
+								}
+							});
+						}
+					}
+				} catch (error) {
+					console.error("Error loading categories for filter:", error);
+				}
+			}
+
+			// Add Enter key support for search input (will be attached when products section loads)
+			function attachProductSearchListeners() {
+				const searchInput = document.getElementById("product-search");
+				if (searchInput) {
+					searchInput.addEventListener("keypress", function (event) {
+						if (event.key === "Enter") {
+							searchProducts();
+						}
+					});
+				}
+			}
+
+			// Orders Management Functions
+			function loadOrders() {
+				// Placeholder for orders loading
+				document.getElementById("orders-count").textContent = "0";
+				document.getElementById("orders-count-display").textContent =
+					"0 orders";
+			}
+
+			function refreshOrders() {
+				loadOrders();
+				showMessage("Orders refreshed", "success");
+			}
+
+			function exportOrders() {
+				showMessage("Order export feature coming soon!", "success");
+			}
+
+			function showOrderFilters() {
+				showMessage("Order filters coming soon!", "success");
+			}
+
+			// Riders Management Functions
+			function loadRiders() {
+				// Placeholder for riders loading
+				document.getElementById("riders-count").textContent = "0";
+				document.getElementById("riders-count-display").textContent =
+					"0 riders";
+			}
+
+			function showAddRiderModal() {
+				showMessage("Rider management coming soon!", "success");
+			}
+
+			function refreshRiders() {
+				loadRiders();
+				showMessage("Riders refreshed", "success");
+			}
+
+			function showRiderMap() {
+				showMessage("Rider map feature coming soon!", "success");
+			}
+
+			// Profile Section Functions
+			function loadProfileSection() {
+				if (currentUser) {
+					document.getElementById("profile-user-name").textContent =
+						currentUser.name;
+					document.getElementById("profile-user-email").textContent =
+						currentUser.email;
+					document.getElementById("profile-user-phone").textContent =
+						currentUser.phoneNumber;
+					document.getElementById("profile-user-role").textContent =
+						currentUser.role.toUpperCase();
+
+					const addressText = `${currentUser.address.street}, ${currentUser.address.city}, ${currentUser.address.state} ${currentUser.address.zipCode}, ${currentUser.address.country}`;
+					document.getElementById("profile-user-address").textContent =
+						addressText;
+				}
+			}
+
+			// Export Users Function
+			function exportUsers() {
+				showMessage("User export feature coming soon!", "success");
+			}
+
+			// Load profile when page loads
+			document.addEventListener("DOMContentLoaded", function () {
+				loadUserProfile();
+				// Set dashboard as default active section
+				showSection("dashboard");
+			});
+
+			// Handle window resize for responsive sidebar
+			window.addEventListener("resize", function () {
+				const sidebar = document.getElementById("sidebar");
+				const mainContent = document.getElementById("mainContent");
+
+				if (window.innerWidth > 768) {
+					sidebar.classList.remove("show");
+					if (!sidebar.classList.contains("collapsed")) {
+						mainContent.classList.remove("expanded");
+					}
+				}
+			});
+
+			// Close modal when clicking outside
+			window.onclick = function (event) {
+				const userModal = document.getElementById("user-modal");
+				const categoryModal = document.getElementById("category-modal");
+				const productModal = document.getElementById("product-modal");
+
+				if (event.target === userModal) {
+					closeModal();
+				} else if (event.target === categoryModal) {
+					closeCategoryModal();
+				} else if (event.target === productModal) {
+					closeProductModal();
+				}
+			};
+		</script>
+
+		<!-- Category Management Modal -->
+		<div id="category-modal" class="modal">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h2 id="category-modal-title">Add New Category</h2>
+					<span class="close" onclick="closeCategoryModal()">&times;</span>
+				</div>
+
+				<form
+					id="category-form"
+					onsubmit="event.preventDefault(); saveCategory();"
+				>
+					<input type="hidden" id="category-id" name="id" />
+					<input
+						type="hidden"
+						id="category-current-image"
+						name="currentImage"
+					/>
+
+					<div class="form-grid">
+						<div class="form-group">
+							<label for="category-name">Category Name *</label>
+							<input
+								type="text"
+								id="category-name"
+								name="name"
+								required
+								placeholder="e.g., Fresh Fruits"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="category-image">Category Image</label>
+							<input
+								type="file"
+								id="category-image"
+								name="image"
+								accept="image/*"
+								style="margin-bottom: 10px"
+							/>
+							<div
+								id="category-image-preview"
+								style="display: none; margin-top: 10px"
+							>
+								<img
+									id="category-preview-img"
+									src=""
+									alt="Preview"
+									style="
+										max-width: 100px;
+										max-height: 100px;
+										border-radius: 4px;
+										border: 1px solid #ddd;
+									"
+								/>
+								<button
+									type="button"
+									id="remove-category-image"
+									style="
+										display: block;
+										margin-top: 5px;
+										padding: 5px 10px;
+										background: #dc3545;
+										color: white;
+										border: none;
+										border-radius: 4px;
+										cursor: pointer;
+										font-size: 12px;
+									"
+								>
+									Remove Image
+								</button>
+							</div>
+							<small
+								style="
+									color: #666;
+									font-size: 12px;
+									margin-top: 5px;
+									display: block;
+								"
+							>
+								Optional: Upload an image (JPG, PNG, GIF, WebP, etc. - Max 5MB)
+							</small>
+						</div>
+
+						<div class="form-group full-width">
+							<label for="category-description">Description</label>
+							<input
+								type="text"
+								id="category-description"
+								name="description"
+								placeholder="Brief description of the category"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="category-icon">Icon (optional)</label>
+							<input
+								type="text"
+								id="category-icon"
+								name="icon"
+								placeholder="e.g., fruit, vegetable"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="category-sort-order">Sort Order</label>
+							<input
+								type="number"
+								id="category-sort-order"
+								name="sortOrder"
+								min="0"
+								value="0"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="category-status">Status *</label>
+							<select id="category-status" name="status" required>
+								<option value="true">Active</option>
+								<option value="false">Inactive</option>
+							</select>
+						</div>
+					</div>
+
+					<div
+						style="
+							display: flex;
+							gap: 10px;
+							justify-content: flex-end;
+							margin-top: 30px;
+						"
+					>
+						<button
+							type="button"
+							class="btn btn-secondary"
+							onclick="closeCategoryModal()"
+						>
+							Cancel
+						</button>
+						<button type="submit" class="btn btn-primary">Save Category</button>
+					</div>
+				</form>
+			</div>
+		</div>
+
+		<!-- User Management Modal -->
+		<div id="user-modal" class="modal">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h2 id="modal-title">Add New User</h2>
+					<span class="close" onclick="closeModal()">&times;</span>
+				</div>
+
+				<form id="user-form" onsubmit="event.preventDefault(); saveUser();">
+					<input type="hidden" id="user-id" name="id" />
+
+					<div class="form-grid">
+						<div class="form-group">
+							<label for="user-name">Full Name *</label>
+							<input type="text" id="user-name" name="name" required />
+						</div>
+
+						<div class="form-group">
+							<label for="user-email">Email Address *</label>
+							<input type="email" id="user-email" name="email" required />
+						</div>
+
+						<div class="form-group">
+							<label for="user-phone">Phone Number *</label>
+							<input type="tel" id="user-phone" name="phone" required />
+						</div>
+
+						<div class="form-group">
+							<label for="user-role">Role *</label>
+							<select id="user-role" name="role" required>
+								<option value="rider">Rider</option>
+								<option value="user">User</option>
+								<option value="manager">Manager</option>
+								<option value="admin">Admin</option>
+							</select>
+						</div>
+
+						<div class="form-group">
+							<label for="user-status">Status *</label>
+							<select id="user-status" name="status" required>
+								<option value="true">Active</option>
+								<option value="false">Inactive</option>
+							</select>
+						</div>
+
+						<div class="form-group" id="password-group">
+							<label for="user-password">Password *</label>
+							<input
+								type="password"
+								id="user-password"
+								name="password"
+								minlength="6"
+							/>
+						</div>
+					</div>
+
+					<h3 style="margin: 20px 0 10px 0; color: #333">
+						Address Information
+					</h3>
+
+					<div class="form-grid">
+						<div class="form-group full-width">
+							<label for="user-street">Street Address *</label>
+							<input type="text" id="user-street" name="street" required />
+						</div>
+
+						<div class="form-group">
+							<label for="user-city">City *</label>
+							<input type="text" id="user-city" name="city" required />
+						</div>
+
+						<div class="form-group">
+							<label for="user-state">State/Province *</label>
+							<input type="text" id="user-state" name="state" required />
+						</div>
+
+						<div class="form-group">
+							<label for="user-zipcode">ZIP/Postal Code *</label>
+							<input type="text" id="user-zipcode" name="zipcode" required />
+						</div>
+
+						<div class="form-group">
+							<label for="user-country">Country *</label>
+							<input type="text" id="user-country" name="country" required />
+						</div>
+					</div>
+
+					<div
+						style="
+							display: flex;
+							gap: 10px;
+							justify-content: flex-end;
+							margin-top: 30px;
+						"
+					>
+						<button
+							type="button"
+							class="btn btn-secondary"
+							onclick="closeModal()"
+						>
+							Cancel
+						</button>
+						<button type="submit" class="btn btn-primary">Save User</button>
+					</div>
+				</form>
+			</div>
+		</div>
+
+		<!-- Product Management Modal -->
+		<div id="product-modal" class="modal">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h2 id="product-modal-title">Add New Product</h2>
+					<span class="close" onclick="closeProductModal()">&times;</span>
+				</div>
+
+				<form
+					id="product-form"
+					onsubmit="event.preventDefault(); saveProduct();"
+				>
+					<input type="hidden" id="product-id" name="id" />
+
+					<div class="form-grid">
+						<div class="form-group">
+							<label for="product-name">Product Name *</label>
+							<input
+								type="text"
+								id="product-name"
+								name="name"
+								required
+								placeholder="e.g., Organic Apples"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="product-category">Category *</label>
+							<select id="product-category" name="category" required>
+								<option value="">Select Category</option>
+							</select>
+						</div>
+
+						<div class="form-group">
+							<label for="product-barcode">Barcode *</label>
+							<input
+								type="text"
+								id="product-barcode"
+								name="barcode"
+								required
+								placeholder="e.g., APP123456"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="product-shelf-number">Shelf Number *</label>
+							<input
+								type="text"
+								id="product-shelf-number"
+								name="shelfNumber"
+								required
+								placeholder="e.g., A-1, B2-3"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="product-price">Price ($)</label>
+							<input
+								type="number"
+								id="product-price"
+								name="price"
+								min="0"
+								step="0.01"
+								placeholder="0.00"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="product-stock">Stock Quantity</label>
+							<input
+								type="number"
+								id="product-stock"
+								name="stock"
+								min="0"
+								value="0"
+							/>
+						</div>
+
+						<div class="form-group full-width">
+							<label for="product-description">Description</label>
+							<input
+								type="text"
+								id="product-description"
+								name="description"
+								placeholder="Brief description of the product"
+							/>
+						</div>
+
+						<div class="form-group full-width">
+							<label for="product-picture">Product Picture</label>
+							<input
+								type="file"
+								id="product-picture"
+								name="picture"
+								accept="image/*"
+								style="margin-bottom: 10px"
+							/>
+							<div id="image-preview" style="display: none; margin-top: 10px">
+								<img
+									id="preview-img"
+									src=""
+									alt="Preview"
+									style="
+										max-width: 200px;
+										max-height: 200px;
+										border-radius: 4px;
+										border: 1px solid #ddd;
+									"
+								/>
+								<button
+									type="button"
+									id="remove-image"
+									style="
+										display: block;
+										margin-top: 5px;
+										padding: 5px 10px;
+										background: #dc3545;
+										color: white;
+										border: none;
+										border-radius: 4px;
+										cursor: pointer;
+									"
+								>
+									Remove Image
+								</button>
+							</div>
+							<small
+								style="
+									color: #666;
+									font-size: 12px;
+									margin-top: 5px;
+									display: block;
+								"
+							>
+								Optional: Upload an image file (JPG, PNG, GIF, WebP, etc. - Max
+								5MB)
+							</small>
+						</div>
+
+						<div class="form-group">
+							<label for="product-status">Status *</label>
+							<select id="product-status" name="status" required>
+								<option value="true">Active</option>
+								<option value="false">Inactive</option>
+							</select>
+						</div>
+					</div>
+
+					<div
+						style="
+							display: flex;
+							gap: 10px;
+							justify-content: flex-end;
+							margin-top: 30px;
+						"
+					>
+						<button
+							type="button"
+							class="btn btn-secondary"
+							onclick="closeProductModal()"
+						>
+							Cancel
+						</button>
+						<button type="submit" class="btn btn-primary">Save Product</button>
+					</div>
+				</form>
+			</div>
+		</div>
+
+		<script>
+			// Image upload handling
+			document.addEventListener("DOMContentLoaded", function () {
+				// Product image handling
+				const fileInput = document.getElementById("product-picture");
+				const imagePreview = document.getElementById("image-preview");
+				const previewImg = document.getElementById("preview-img");
+				const removeButton = document.getElementById("remove-image");
+
+				if (fileInput) {
+					fileInput.addEventListener("change", function (e) {
+						const file = e.target.files[0];
+						if (file) {
+							// Validate file type
+							if (!file.type.startsWith("image/")) {
+								showMessage("Please select an image file", "error");
+								fileInput.value = "";
+								return;
+							}
+
+							// Validate file size (5MB)
+							if (file.size > 5 * 1024 * 1024) {
+								showMessage("Image file size must be less than 5MB", "error");
+								fileInput.value = "";
+								return;
+							}
+
+							// Show preview
+							const reader = new FileReader();
+							reader.onload = function (e) {
+								previewImg.src = e.target.result;
+								imagePreview.style.display = "block";
+							};
+							reader.readAsDataURL(file);
+						} else {
+							imagePreview.style.display = "none";
+						}
+					});
+				}
+
+				if (removeButton) {
+					removeButton.addEventListener("click", function () {
+						fileInput.value = "";
+						imagePreview.style.display = "none";
+						previewImg.src = "";
+					});
+				}
+
+				// Category image handling
+				const categoryFileInput = document.getElementById("category-image");
+				const categoryImagePreview = document.getElementById(
+					"category-image-preview"
+				);
+				const categoryPreviewImg = document.getElementById(
+					"category-preview-img"
+				);
+				const categoryRemoveButton = document.getElementById(
+					"remove-category-image"
+				);
+
+				if (categoryFileInput) {
+					categoryFileInput.addEventListener("change", function (e) {
+						const file = e.target.files[0];
+						if (file) {
+							// Validate file type
+							if (!file.type.startsWith("image/")) {
+								showMessage("Please select an image file", "error");
+								categoryFileInput.value = "";
+								return;
+							}
+
+							// Validate file size (5MB)
+							if (file.size > 5 * 1024 * 1024) {
+								showMessage("Image file size must be less than 5MB", "error");
+								categoryFileInput.value = "";
+								return;
+							}
+
+							// Show preview
+							const reader = new FileReader();
+							reader.onload = function (e) {
+								categoryPreviewImg.src = e.target.result;
+								categoryImagePreview.style.display = "block";
+							};
+							reader.readAsDataURL(file);
+						} else {
+							categoryImagePreview.style.display = "none";
+						}
+					});
+				}
+
+				if (categoryRemoveButton) {
+					categoryRemoveButton.addEventListener("click", function () {
+						const currentImageField = document.getElementById(
+							"category-current-image"
+						);
+						categoryFileInput.value = "";
+						categoryImagePreview.style.display = "none";
+						categoryPreviewImg.src = "";
+						if (currentImageField) currentImageField.value = "";
+					});
+				}
+			});
+		</script>
+	</body>
+</html>

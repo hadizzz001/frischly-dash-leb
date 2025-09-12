@@ -1,0 +1,8 @@
+# Netlify Configuration
+/*    /index.html   200
+
+# Redirect all API calls to your backend server
+/api/*  https://your-backend-url.com/api/:splat  200
+
+# Handle client-side routing
+/*    /index.html   200
