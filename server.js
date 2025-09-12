@@ -22,7 +22,7 @@ app.use(
 		contentSecurityPolicy: {
 			directives: {
 				defaultSrc: ["'self'"],
-				scriptSrc: ["'self'", "'unsafe-inline'"],
+				scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
 				scriptSrcAttr: ["'unsafe-inline'"], // Allow inline event handlers
 				styleSrc: ["'self'", "'unsafe-inline'"],
 				imgSrc: ["'self'", "data:", "https:"],
