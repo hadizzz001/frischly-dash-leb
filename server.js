@@ -42,6 +42,7 @@ app.use(
 				process.env.CLIENT_URL || "http://localhost:3000",
 				"http://localhost:3001", // Allow same origin for the HTML page
 				"https://frischly-server-1.onrender.com/", // Your Netlify frontend URL
+				"https://frischly-server.onrender.com/",
 				"https://amazing-name-123456.netlify.app", // Example Netlify URL format
 			];
 
