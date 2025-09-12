@@ -66,35 +66,35 @@ Your Frischly project consists of:
 
 ### Phase 3: Update Frontend for Production
 
-1. **Update API URLs in Frontend Files**
+1. **✅ Update API URLs in Frontend Files (COMPLETED)**
 
    **File: `public/dashboard.html`**
 
    ```javascript
-   // Find this line:
+   // Updated from:
    const API_BASE_URL = "http://localhost:3001/api";
 
-   // Replace with:
-   const API_BASE_URL = "https://frischly-backend.onrender.com/api";
+   // To:
+   const API_BASE_URL = "https://frischly-server.onrender.com/api";
    ```
 
    **File: `public/signin.html`**
 
    ```javascript
-   // Find and update:
-   const API_BASE_URL = "https://frischly-backend.onrender.com/api";
+   // Updated to:
+   const API_BASE_URL = "https://frischly-server.onrender.com/api";
    ```
 
    **File: `public/signup.html`**
 
    ```javascript
-   // Find and update:
-   const API_BASE_URL = "https://frischly-backend.onrender.com/api";
+   // Updated to:
+   const API_BASE_URL = "https://frischly-server.onrender.com/api";
    ```
 
 2. **Update Netlify Configuration**
 
-   **File: `netlify.toml`**
+   **File: `netlify.toml`** ✅ **UPDATED**
 
    ```toml
    [build]
@@ -102,7 +102,7 @@ Your Frischly project consists of:
 
    [[redirects]]
      from = "/api/*"
-     to = "https://frischly-backend.onrender.com/api/:splat"
+     to = "https://frischly-server.onrender.com/api/:splat"
      status = 200
      force = true
 
