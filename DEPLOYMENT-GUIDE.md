@@ -58,7 +58,10 @@ Your Frischly project consists of:
    JWT_EXPIRE=30d
    NODE_ENV=production
    PORT=10000
+   CLIENT_URL=https://your-netlify-app.netlify.app
    ```
+
+   **Note:** You'll update `CLIENT_URL` after deploying your frontend to Netlify.
 
 4. **Deploy and Get URL**
    - Render will build and deploy your backend
@@ -66,35 +69,35 @@ Your Frischly project consists of:
 
 ### Phase 3: Update Frontend for Production
 
-1. **✅ Update API URLs in Frontend Files (COMPLETED)**
+1. **Update API URLs in Frontend Files**
 
    **File: `public/dashboard.html`**
 
    ```javascript
-   // Updated from:
+   // Find this line:
    const API_BASE_URL = "http://localhost:3001/api";
 
-   // To:
-   const API_BASE_URL = "https://frischly-server.onrender.com/api";
+   // Replace with:
+   const API_BASE_URL = "https://frischly-backend.onrender.com/api";
    ```
 
    **File: `public/signin.html`**
 
    ```javascript
-   // Updated to:
-   const API_BASE_URL = "https://frischly-server.onrender.com/api";
+   // Find and update:
+   const API_BASE_URL = "https://frischly-backend.onrender.com/api";
    ```
 
    **File: `public/signup.html`**
 
    ```javascript
-   // Updated to:
-   const API_BASE_URL = "https://frischly-server.onrender.com/api";
+   // Find and update:
+   const API_BASE_URL = "https://frischly-backend.onrender.com/api";
    ```
 
 2. **Update Netlify Configuration**
 
-   **File: `netlify.toml`** ✅ **UPDATED**
+   **File: `netlify.toml`**
 
    ```toml
    [build]
@@ -102,7 +105,7 @@ Your Frischly project consists of:
 
    [[redirects]]
      from = "/api/*"
-     to = "https://frischly-server.onrender.com/api/:splat"
+     to = "https://frischly-backend.onrender.com/api/:splat"
      status = 200
      force = true
 

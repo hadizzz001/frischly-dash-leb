@@ -34,10 +34,29 @@ app.use(
 // CORS
 app.use(
 	cors({
-		origin: [
-			process.env.CLIENT_URL || "http://localhost:3000",
-			"http://localhost:3001", // Allow same origin for the HTML page
-		],
+		origin: function (origin, callback) {
+			// Allow requests with no origin (like mobile apps or curl requests)
+			if (!origin) return callback(null, true);
+
+			const allowedOrigins = [
+				process.env.CLIENT_URL || "http://localhost:3000",
+				"http://localhost:3001", // Allow same origin for the HTML page
+				"https://frischly-server-1.onrender.com/", // Your Netlify frontend URL
+				"https://amazing-name-123456.netlify.app", // Example Netlify URL format
+			];
+
+			// Allow any Netlify subdomain
+			if (origin.includes(".netlify.app")) {
+				return callback(null, true);
+			}
+
+			// Check if origin is in allowed list
+			if (allowedOrigins.indexOf(origin) !== -1) {
+				callback(null, true);
+			} else {
+				callback(new Error("Not allowed by CORS"));
+			}
+		},
 		credentials: true,
 	})
 );

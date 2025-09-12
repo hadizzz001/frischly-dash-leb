@@ -170,12 +170,12 @@
 		</div>
 
 		<script>
-			const API_BASE_URL = "http://localhost:3001/api";
+			const API_BASE_URL = "https://frischly-server.onrender.com/api";
 
 			// Check API status
 			async function checkApiStatus() {
 				try {
-					const response = await fetch("http://localhost:3001/api/health");
+					const response = await fetch(`${API_BASE_URL}/health`);
 					const data = await response.json();
 
 					if (data.success) {

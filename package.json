@@ -10,6 +10,7 @@
 		"manage-users": "node scripts/manageUsers.js",
 		"add-products": "node scripts/add3000Products.js",
 		"prepare-deploy": "powershell -ExecutionPolicy Bypass -File prepare-deploy.ps1",
+		"update-client-url": "powershell -ExecutionPolicy Bypass -File update-client-url.ps1",
 		"check-deploy": "node scripts/checkDeployment.js",
 		"build": "echo Build complete - static files ready",
 		"test": "echo \"Error: no test specified\" && exit 1"
