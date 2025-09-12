@@ -47,7 +47,7 @@ app.use(
 			];
 
 			// Allow any Netlify subdomain
-			if (origin.includes(".netlify.app")) {
+			if (origin.includes(".com")) {
 				return callback(null, true);
 			}
 
