@@ -13,7 +13,7 @@
 
 			body {
 				font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-				background: #000000;
+				background: #ffffff;
 				min-height: 100vh;
 				display: flex;
 				align-items: center;
@@ -232,17 +232,59 @@
 	<body>
 		<div class="container">
 			<div class="header">
-				<h1>Create Account</h1>
-				<p>Join us today and get started</p>
+				<h1>🚫 Sign Up Disabled</h1>
+				<p>Account registration is currently disabled</p>
 			</div>
 
-			<div id="message"></div>
-			<div class="loading" id="loading">
-				<div class="spinner"></div>
-				<p>Creating your account...</p>
+			<div
+				style="
+					text-align: center;
+					padding: 40px 20px;
+					background: #f8f9fa;
+					border-radius: 10px;
+					border: 2px solid #dc3545;
+				"
+			>
+				<div style="font-size: 48px; margin-bottom: 20px">🔒</div>
+				<h2 style="color: #dc3545; margin-bottom: 15px">
+					Registration Temporarily Unavailable
+				</h2>
+				<p style="color: #6c757d; margin-bottom: 20px; line-height: 1.6">
+					New account registration is currently disabled. If you need access to
+					the system, please contact your system administrator.
+				</p>
+				<div
+					style="
+						background: #fff3cd;
+						border: 1px solid #ffeaa7;
+						border-radius: 8px;
+						padding: 15px;
+						margin: 20px 0;
+						color: #856404;
+					"
+				>
+					<strong>📧 Need an Account?</strong><br />
+					Contact your administrator for account creation assistance.
+				</div>
+				<a
+					href="signin.html"
+					style="
+						display: inline-block;
+						background: #ffc300;
+						color: #000;
+						padding: 12px 30px;
+						text-decoration: none;
+						border-radius: 8px;
+						font-weight: 600;
+						margin-top: 10px;
+					"
+				>
+					← Back to Sign In
+				</a>
 			</div>
 
-			<form id="signup-form">
+			<!-- Keep the original form hidden for potential future re-enabling -->
+			<form id="signup-form" style="display: none">
 				<div class="form-group">
 					<label for="name">Full Name</label>
 					<input

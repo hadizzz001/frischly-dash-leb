@@ -710,7 +710,7 @@
 				color: white;
 			}
 
-			.role-badge.user {
+			.role-badge.staff {
 				background: #6c757d;
 				color: white;
 			}
@@ -2266,7 +2266,7 @@
 						const row = document.createElement("tr");
 						const userName = user.name || "N/A";
 						const userEmail = user.email || "N/A";
-						const userRole = user.role || "user";
+						const userRole = user.role || "staff";
 						const userStatus = user.isActive ? "Active" : "Inactive";
 						const createdDate = user.createdAt
 							? formatDate(user.createdAt)
@@ -2394,7 +2394,7 @@
 					elements.userName.value = user.name || "";
 					elements.userEmail.value = user.email || "";
 					elements.userPhone.value = user.phoneNumber || "";
-					elements.userRole.value = user.role || "user";
+					elements.userRole.value = user.role || "staff";
 					elements.userStatus.value = user.isActive ? "true" : "false";
 
 					// Handle address safely
@@ -4411,8 +4411,9 @@
 						<div class="form-group">
 							<label for="user-role">Role *</label>
 							<select id="user-role" name="role" required>
+								<option value="customer">Customer</option>
 								<option value="rider">Rider</option>
-								<option value="user">User</option>
+								<option value="staff">Staff</option>
 								<option value="manager">Manager</option>
 								<option value="admin">Admin</option>
 							</select>
