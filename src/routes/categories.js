@@ -11,6 +11,7 @@ const {
 	reorderCategories,
 	uploadImage,
 	uploadMiddleware,
+	getCategoryProductCount,
 } = require("../controllers/categoryController");
 
 // Import middleware
@@ -23,6 +24,7 @@ router.get("/", getCategories);
 router.get("/stats", getCategoryStats);
 router.get("/name/:name", getCategoryByName);
 router.get("/:id", getCategory);
+router.get("/:id/product-count", getCategoryProductCount);
 
 // Protected routes (require authentication)
 router.post("/", protect, authorize("admin", "manager"), createCategory);

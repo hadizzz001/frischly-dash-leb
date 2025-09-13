@@ -12,7 +12,6 @@ const productRoutes = require("./src/routes/products");
 const categoryRoutes = require("./src/routes/categories");
 const orderRoutes = require("./src/routes/orders");
 const riderRoutes = require("./src/routes/riders");
-const zoneRoutes = require("./src/routes/zones");
 
 // Connect to database
 connectDB();
@@ -93,7 +92,6 @@ app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/riders", riderRoutes);
-app.use("/api/zones", zoneRoutes);
 
 // Health check route
 app.get("/api/health", (req, res) => {

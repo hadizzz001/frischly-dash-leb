@@ -526,5 +526,54 @@ exports.uploadImage = async (req, res) => {
 	}
 };
 
+// @desc    Get product count for a specific category
+// @route   GET /api/categories/:id/product-count
+// @access  Public
+exports.getCategoryProductCount = async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		// Validate category ID
+		if (!mongoose.Types.ObjectId.isValid(id)) {
+			return res.status(400).json({
+				success: false,
+				message: "Invalid category ID format",
+			});
+		}
+
+		// First check if the category exists
+		const category = await Category.findById(id);
+		if (!category) {
+			return res.status(404).json({
+				success: false,
+				message: "Category not found",
+			});
+		}
+
+		// Count products in this category
+		const productCount = await Product.countDocuments({
+			category: id,
+			isActive: true,
+		});
+
+		res.json({
+			success: true,
+			data: {
+				categoryId: id,
+				categoryName: category.name,
+				productCount: productCount,
+			},
+			message: `Category '${category.name}' has ${productCount} active products`,
+		});
+	} catch (error) {
+		console.error("Error getting category product count:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error retrieving category product count",
+			error: error.message,
+		});
+	}
+};
+
 // Export multer upload middleware
 exports.uploadMiddleware = upload.single("image");

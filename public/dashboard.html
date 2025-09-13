@@ -1523,7 +1523,7 @@
 						<div class="quick-stats">
 							<div class="stat-box">
 								<h3 id="total-users-stat">0</h3>
-								<p>Total Users</p>
+								<p>Total Customers</p>
 							</div>
 							<div class="stat-box">
 								<h3 id="total-products-stat">0</h3>
@@ -1562,12 +1562,12 @@
 						</button>
 					</div>
 
-					<!-- User Management Section (Admin Only) -->
+					<!-- Staff Management Section (Admin Only) -->
 					<div id="user-management-section">
 						<div class="user-card">
 							<div class="users-container">
 								<div class="users-header">
-									<h3>All Users</h3>
+									<h3>Staff Management</h3>
 									<div class="users-stats">
 										<span id="total-users-count">0 users</span>
 									</div>
@@ -2964,7 +2964,32 @@
 					"Loading dashboard statistics..."
 				);
 
-				// Load users count for dashboard
+				// Load customer count for dashboard
+				try {
+					const response = await fetch(
+						`${API_BASE_URL}/auth/users?role=customer`,
+						{
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+						}
+					);
+					if (response.ok) {
+						const data = await response.json();
+						const customerCount =
+							data.data && data.data.users ? data.data.users.length : 0;
+						document.getElementById("total-users-stat").textContent =
+							customerCount;
+						// Store customer data for potential use
+						customerUsers = data.data && data.data.users ? data.data.users : [];
+					}
+				} catch (error) {
+					console.error("Error loading customer count:", error);
+					document.getElementById("total-users-stat").textContent = "0";
+				}
+
+				// Load all users for other sections that may need it
 				try {
 					const response = await fetch(`${API_BASE_URL}/auth/users`, {
 						headers: {
@@ -2974,17 +2999,11 @@
 					});
 					if (response.ok) {
 						const data = await response.json();
-						const usersCount =
-							data.data && data.data.users ? data.data.users.length : 0;
-						document.getElementById("total-users-stat").textContent =
-							usersCount;
 						// Update allUsers for use in other sections
 						allUsers = data.data && data.data.users ? data.data.users : [];
 					}
 				} catch (error) {
-					console.error("Error loading users count:", error);
-					document.getElementById("total-users-stat").textContent =
-						allUsers.length || "0";
+					console.error("Error loading all users:", error);
 				}
 
 				// Load categories data and count for dashboard
@@ -3138,7 +3157,7 @@
 						const row = document.createElement("tr");
 						const categoryName = category.name || "N/A";
 						const description = category.description || "No description";
-						const productCount = category.productCount || 0;
+						const productCount = category.productCount || "?";
 						const status = category.isActive ? "Active" : "Inactive";
 						const createdDate = category.createdAt
 							? formatDate(category.createdAt)
@@ -3165,7 +3184,13 @@
 								</div>
 							</td>
 							<td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${description}</td>
-							<td>${productCount}</td>
+							<td>
+								<span id="product-count-${
+									category._id
+								}" style="padding: 2px 6px; border-radius: 4px;">
+									${productCount === "?" ? "Loading..." : productCount}
+								</span>
+							</td>
 							<td><span class="status-badge ${
 								category.isActive ? "active" : "inactive"
 							}">${status}</span></td>
@@ -3186,6 +3211,9 @@
 						console.error("Error displaying category:", category, error);
 					}
 				});
+
+				// Automatically fetch product counts for all displayed categories
+				setTimeout(() => fetchAllCategoryProductCounts(categories), 100);
 			}
 
 			function updateCategoriesCount(count) {
@@ -3526,7 +3554,77 @@
 
 				if (tableTitle) tableTitle.textContent = titleText;
 				displayCategories(filteredCategories);
-				updateCategoriesCount(filteredCategories.length);
+			}
+
+			// Function to fetch product count for a specific category
+			async function fetchCategoryProductCount(categoryId) {
+				try {
+					// Show loading indicator
+					const countElement = document.getElementById(
+						`product-count-${categoryId}`
+					);
+					if (countElement) {
+						countElement.textContent = "Loading...";
+					}
+
+					// Fetch product count from API
+					const response = await fetch(
+						`${API_BASE_URL}/categories/${categoryId}/product-count`,
+						{
+							method: "GET",
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+						}
+					);
+
+					if (response.ok) {
+						const data = await response.json();
+						if (data.success && countElement) {
+							countElement.textContent = data.data.productCount;
+							// Flash animation to show updated value
+							countElement.style.backgroundColor = "#e6f7ff";
+							setTimeout(() => {
+								countElement.style.backgroundColor = "transparent";
+							}, 1500);
+						}
+					} else {
+						const errorData = await response.json();
+						console.error("Error fetching product count:", errorData);
+						if (countElement) {
+							countElement.textContent = "Error";
+						}
+					}
+				} catch (error) {
+					console.error("Error fetching product count:", error);
+					const countElement = document.getElementById(
+						`product-count-${categoryId}`
+					);
+					if (countElement) {
+						countElement.textContent = "Error";
+					}
+				}
+			}
+
+			// Function to fetch product counts for all displayed categories
+			async function fetchAllCategoryProductCounts(categories) {
+				if (!categories || categories.length === 0) return;
+
+				console.log(
+					`Fetching product counts for ${categories.length} categories...`
+				);
+
+				// Fetch counts in parallel (but limit to batches of 5 to avoid too many requests)
+				const batchSize = 5;
+				for (let i = 0; i < categories.length; i += batchSize) {
+					const batch = categories.slice(i, i + batchSize);
+					await Promise.all(
+						batch.map((category) => fetchCategoryProductCount(category._id))
+					);
+				}
+
+				console.log("All category product counts fetched");
 			}
 
 			// Clear all category filters
