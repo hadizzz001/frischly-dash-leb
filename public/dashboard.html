@@ -838,11 +838,6 @@
 				color: white;
 			}
 
-			.role-badge.rider {
-				background: #007bff;
-				color: white;
-			}
-
 			.status-badge {
 				padding: 4px 8px;
 				border-radius: 4px;
@@ -2321,6 +2316,7 @@
 			// Load all users
 			async function loadAllUsers() {
 				showSectionLoading("users", true, "Loading users...");
+				console.log("Loading all users...");
 
 				try {
 					// Check if we have a valid token
@@ -2344,6 +2340,7 @@
 
 					if (response.ok) {
 						const data = await response.json();
+						console.log("Users data received:", data);
 						allUsers = data.data && data.data.users ? data.data.users : [];
 						displayUsers(allUsers);
 						updateUsersCount(allUsers.length);
@@ -2504,11 +2501,33 @@
 			}
 
 			// Edit user
-			function editUser(userId) {
+			async function editUser(userId) {
 				try {
-					const user = allUsers.find((u) => u._id === userId);
+					// Get user details directly from API instead of relying on allUsers array
+					const response = await fetch(`${API_BASE_URL}/auth/users/${userId}`, {
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					if (!response.ok) {
+						const errorData = await response.json().catch(() => ({}));
+						const statusText = response.statusText || response.status;
+						const errorMessage =
+							errorData.message || `Failed to get user details: ${statusText}`;
+						console.error(`API Error (${response.status}):`, errorMessage);
+						throw new Error(errorMessage);
+					}
+
+					const result = await response.json();
+					console.log("User details received:", result);
+					const user = result.data;
+
 					if (!user) {
-						showMessage("User not found", "error");
+						console.error("User data missing in API response:", result);
+						showMessage("User not found or data missing", "error");
 						return;
 					}
 
@@ -2553,13 +2572,12 @@
 					elements.userStatus.value = user.isActive ? "true" : "false";
 
 					// Handle address safely
-					if (user.address) {
-						elements.userStreet.value = user.address.street || "";
-						elements.userCity.value = user.address.city || "";
-						elements.userState.value = user.address.state || "";
-						elements.userZipcode.value = user.address.zipCode || "";
-						elements.userCountry.value = user.address.country || "";
-					}
+					const address = user.address || {};
+					elements.userStreet.value = address.street || "";
+					elements.userCity.value = address.city || "";
+					elements.userState.value = address.state || "";
+					elements.userZipcode.value = address.zipCode || "";
+					elements.userCountry.value = address.country || "";
 
 					// Hide password field when editing
 					elements.passwordGroup.style.display = "none";
@@ -2568,10 +2586,10 @@
 					elements.userModal.style.display = "block";
 				} catch (error) {
 					console.error("Error editing user:", error);
-					showMessage(
-						"Error opening user edit form. Please try again.",
-						"error"
-					);
+					const errorMsg =
+						error.message || "Error opening user edit form. Please try again.";
+					console.log("Error details:", errorMsg);
+					showMessage(errorMsg, "error");
 				}
 			}
 
@@ -2699,10 +2717,12 @@
 						"success"
 					);
 					closeModal();
-					await loadAllUsers(); // Refresh the list
+					await loadAllUsers(); // Refresh the list with updated data
 				} catch (error) {
 					console.error("Error saving user:", error);
-					showMessage("Error saving user: " + error.message, "error");
+					const errorMsg = error.message || "Unknown error occurred";
+					console.log("Error details:", errorMsg);
+					showMessage("Error saving user: " + errorMsg, "error");
 				}
 			}
 
@@ -2798,9 +2818,6 @@
 					case "orders":
 						loadOrders();
 						break;
-					case "riders":
-						loadRiders();
-						break;
 					case "profile":
 						loadProfileSection();
 						break;
@@ -2878,8 +2895,9 @@
 							: allProducts.length;
 						document.getElementById("total-products-stat").textContent =
 							productsCount;
-						document.getElementById("products-count").textContent =
-							productsCount;
+						document.getElementById(
+							"products-count-display"
+						).textContent = `${productsCount} products`;
 					}
 				} catch (error) {
 					console.error("Error loading products count:", error);
@@ -2914,29 +2932,7 @@
 						"0 orders";
 				}
 
-				// Load riders count for dashboard
-				try {
-					const response = await fetch(
-						`${API_BASE_URL}/riders?page=1&limit=1`,
-						{
-							headers: {
-								Authorization: `Bearer ${currentToken}`,
-								"Content-Type": "application/json",
-							},
-						}
-					);
-					if (response.ok) {
-						const data = await response.json();
-						const ridersCount = data.data.pagination
-							? data.data.pagination.totalRiders
-							: 0;
-						document.getElementById("total-riders-stat").textContent =
-							ridersCount;
-					}
-				} catch (error) {
-					console.error("Error loading riders count:", error);
-					document.getElementById("total-riders-stat").textContent = "0";
-				}
+				// Rider stats section removed
 
 				showSectionLoading("dashboard", false);
 			}
@@ -5716,135 +5712,6 @@
 						</div>
 					</div>
 				</div>
-			</div>
-		</div>
-
-		<!-- Rider Management Modal -->
-		<div id="rider-modal" class="modal">
-			<div class="modal-content">
-				<div class="modal-header">
-					<h2 id="rider-modal-title">Add New Rider</h2>
-					<span class="close" onclick="closeRiderModal()">&times;</span>
-				</div>
-				<form id="rider-form" onsubmit="saveRider(event)">
-					<input type="hidden" id="rider-id" />
-
-					<!-- User Selection -->
-					<div class="form-section">
-						<h3>User Information</h3>
-						<div class="form-group">
-							<label for="rider-user-select">Select User *</label>
-							<select id="rider-user-select" name="userId" required>
-								<option value="">Select a user to become a rider</option>
-							</select>
-						</div>
-					</div>
-
-					<!-- Rider Details -->
-					<div class="form-section">
-						<h3>Rider Details</h3>
-						<div class="form-group">
-							<label for="rider-zone">Zone *</label>
-							<input
-								type="text"
-								id="rider-zone"
-								name="zone"
-								placeholder="e.g., Downtown, North Side, West End"
-								required
-							/>
-						</div>
-						<div class="form-group">
-							<label for="rider-vehicle-type">Vehicle Type *</label>
-							<select id="rider-vehicle-type" name="vehicleType" required>
-								<option value="">Select vehicle type</option>
-								<option value="bicycle">Bicycle</option>
-								<option value="motorcycle">Motorcycle</option>
-								<option value="scooter">Scooter</option>
-								<option value="car">Car</option>
-								<option value="truck">Truck</option>
-								<option value="van">Van</option>
-							</select>
-						</div>
-						<div class="form-group">
-							<label for="rider-license-number">License Number</label>
-							<input
-								type="text"
-								id="rider-license-number"
-								name="licenseNumber"
-								placeholder="Driver's license or vehicle registration number"
-							/>
-						</div>
-					</div>
-
-					<!-- Availability -->
-					<div class="form-section">
-						<h3>Availability Settings</h3>
-						<div class="form-group">
-							<label for="rider-status">Initial Status *</label>
-							<select id="rider-status" name="status" required>
-								<option value="active">Active</option>
-								<option value="inactive">Inactive</option>
-							</select>
-						</div>
-						<div class="form-group">
-							<label for="rider-max-orders">Maximum Concurrent Orders</label>
-							<input
-								type="number"
-								id="rider-max-orders"
-								name="maxConcurrentOrders"
-								min="1"
-								max="10"
-								value="3"
-								placeholder="Maximum orders rider can handle at once"
-							/>
-						</div>
-					</div>
-
-					<!-- Contact & Emergency Info -->
-					<div class="form-section">
-						<h3>Additional Information</h3>
-						<div class="form-group">
-							<label for="rider-emergency-contact"
-								>Emergency Contact Name</label
-							>
-							<input
-								type="text"
-								id="rider-emergency-contact"
-								name="emergencyContactName"
-								placeholder="Emergency contact person"
-							/>
-						</div>
-						<div class="form-group">
-							<label for="rider-emergency-phone">Emergency Contact Phone</label>
-							<input
-								type="tel"
-								id="rider-emergency-phone"
-								name="emergencyContactPhone"
-								placeholder="+1-234-567-8900"
-							/>
-						</div>
-						<div class="form-group">
-							<label for="rider-notes">Notes</label>
-							<textarea
-								id="rider-notes"
-								name="notes"
-								rows="3"
-								placeholder="Additional information about the rider"
-							></textarea>
-						</div>
-					</div>
-
-					<div class="form-actions">
-						<button
-							type="button"
-							class="btn btn-secondary"
-							onclick="closeRiderModal()"
-						>
-							Cancel
-						</button>
-						<button type="submit" class="btn btn-primary">Save Rider</button>
-					</div>
-				</form>
 			</div>
 		</div>
 
