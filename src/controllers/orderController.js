@@ -135,6 +135,7 @@ exports.createOrder = async (req, res) => {
 			tax = 0,
 			discount = 0,
 			paymentMethod = "cash",
+			shelfNumber = 0,
 			notes,
 		} = req.body;
 
@@ -206,6 +207,7 @@ exports.createOrder = async (req, res) => {
 			discount,
 			total,
 			paymentMethod,
+			shelfNumber,
 			notes,
 			createdBy: req.user.id,
 		});
@@ -250,6 +252,7 @@ exports.updateOrder = async (req, res) => {
 			status,
 			paymentStatus,
 			paymentMethod,
+			shelfNumber,
 			notes,
 			tax,
 			discount,
@@ -283,6 +286,7 @@ exports.updateOrder = async (req, res) => {
 		if (status) order.status = status;
 		if (paymentStatus) order.paymentStatus = paymentStatus;
 		if (paymentMethod) order.paymentMethod = paymentMethod;
+		if (shelfNumber !== undefined) order.shelfNumber = shelfNumber;
 		if (notes !== undefined) order.notes = notes;
 		if (tax !== undefined) order.tax = tax;
 		if (discount !== undefined) order.discount = discount;

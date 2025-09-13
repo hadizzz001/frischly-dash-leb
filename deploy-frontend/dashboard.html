@@ -813,9 +813,103 @@
 				color: white;
 			}
 
+			/* Rider Status Badges */
+			.status-badge.status-available {
+				background: #28a745;
+				color: white;
+			}
+
+			.status-badge.status-busy {
+				background: #ffc107;
+				color: #212529;
+			}
+
+			.status-badge.status-offline {
+				background: #6c757d;
+				color: white;
+			}
+
+			.status-badge.status-break {
+				background: #17a2b8;
+				color: white;
+			}
+
+			.status-badge.status-unknown {
+				background: #dc3545;
+				color: white;
+			}
+
+			/* Rider Table Specific Styles */
+			.vehicle-info {
+				text-align: center;
+			}
+
+			.vehicle-number {
+				font-size: 12px;
+				color: #666;
+				margin-top: 2px;
+			}
+
+			.orders-info {
+				text-align: center;
+				font-size: 12px;
+			}
+
+			.rating-info {
+				text-align: center;
+			}
+
+			.rating-count {
+				font-size: 10px;
+				color: #666;
+				margin-top: 2px;
+			}
+
 			.action-buttons {
 				display: flex;
 				gap: 5px;
+				justify-content: center;
+			}
+
+			/* Metric Cards for Rider Details */
+			.metric-card {
+				background: #f8f9fa;
+				padding: 15px;
+				border-radius: 8px;
+				border: 1px solid #dee2e6;
+			}
+
+			.metric-value {
+				font-size: 24px;
+				font-weight: bold;
+				color: #007bff;
+				margin-bottom: 5px;
+			}
+
+			.metric-label {
+				font-size: 12px;
+				color: #666;
+				text-transform: uppercase;
+			}
+
+			/* Form Row for Side-by-Side Fields */
+			.form-row {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 15px;
+			}
+
+			/* Status Option Buttons */
+			.status-options {
+				display: flex;
+				flex-direction: column;
+				gap: 10px;
+			}
+
+			.status-option-btn:hover {
+				opacity: 0.8;
+				transform: translateY(-2px);
+				transition: all 0.2s ease;
 			}
 
 			.action-btn {
@@ -1453,6 +1547,34 @@
 						</button>
 					</div>
 
+					<!-- Rider Statistics -->
+					<div
+						class="stats"
+						id="rider-stats"
+						style="margin-bottom: 20px; display: none"
+					>
+						<div class="stat-card">
+							<div class="stat-value" id="total-riders-stat">0</div>
+							<div class="stat-label">Total Riders</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-value" id="available-riders-stat">0</div>
+							<div class="stat-label">Available</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-value" id="busy-riders-stat">0</div>
+							<div class="stat-label">Busy</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-value" id="offline-riders-stat">0</div>
+							<div class="stat-label">Offline</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-value" id="average-rating-stat">0.0</div>
+							<div class="stat-label">Avg Rating</div>
+						</div>
+					</div>
+
 					<div class="data-table">
 						<div class="table-header">
 							<h3>All Riders</h3>
@@ -1866,7 +1988,28 @@
 					return;
 				}
 
-				users.forEach((user) => {
+				// Sort users to show customers after all other roles
+				const sortedUsers = [...users].sort((a, b) => {
+					const roleOrder = {
+						admin: 1,
+						manager: 2,
+						staff: 3,
+						rider: 4,
+						customer: 5, // Customers come last
+					};
+
+					const roleA = roleOrder[a.role] || 3; // Default to staff level if role not found
+					const roleB = roleOrder[b.role] || 3;
+
+					if (roleA !== roleB) {
+						return roleA - roleB;
+					}
+
+					// If same role, sort by name
+					return (a.name || "").localeCompare(b.name || "");
+				});
+
+				sortedUsers.forEach((user) => {
 					try {
 						const row = document.createElement("tr");
 						const userName = user.name || "N/A";
@@ -3659,24 +3802,222 @@
 			}
 
 			// Riders Management Functions
-			function loadRiders() {
-				// Placeholder for riders loading
-				document.getElementById("riders-count").textContent = "0";
-				document.getElementById("riders-count-display").textContent =
-					"0 riders";
+			let allRiders = [];
+			let riderStats = null;
+
+			async function loadRiders() {
+				try {
+					showLoading(true);
+					const response = await makeAuthenticatedRequest(
+						"/api/riders?limit=100"
+					);
+
+					if (response.success) {
+						allRiders = response.data.riders || [];
+						displayRiders(allRiders);
+						updateRiderCount(allRiders.length);
+
+						// Load rider statistics
+						await loadRiderStats();
+					} else {
+						console.error("Failed to load riders:", response.message);
+						showMessage("Failed to load riders: " + response.message, "error");
+					}
+				} catch (error) {
+					console.error("Error loading riders:", error);
+					showMessage("Error loading riders", "error");
+				} finally {
+					showLoading(false);
+				}
+			}
+
+			async function loadRiderStats() {
+				try {
+					const response = await makeAuthenticatedRequest("/api/riders/stats");
+					if (response.success) {
+						riderStats = response.data;
+						updateRiderStats();
+					}
+				} catch (error) {
+					console.error("Error loading rider stats:", error);
+				}
+			}
+
+			function displayRiders(riders) {
+				const tableBody = document.getElementById("riders-table-body");
+
+				if (!riders || riders.length === 0) {
+					tableBody.innerHTML = `
+						<tr>
+							<td colspan="7" style="text-align: center; padding: 40px; color: #666">
+								No riders found. Click "Add Rider" to register one.
+							</td>
+						</tr>
+					`;
+					return;
+				}
+
+				tableBody.innerHTML = riders
+					.map((rider) => {
+						const user = rider.user || {};
+						const statusClass = getStatusClass(rider.status);
+						const rating = rider.rating
+							? rider.rating.average.toFixed(1)
+							: "N/A";
+						const ratingCount = rider.rating ? rider.rating.totalRatings : 0;
+
+						return `
+						<tr>
+							<td>
+								<div class="user-info">
+									<div class="user-name">${user.name || "Unknown"}</div>
+									<div class="user-email">${user.email || ""}</div>
+								</div>
+							</td>
+							<td>${user.phoneNumber || "N/A"}</td>
+							<td>
+								<div class="vehicle-info">
+									<div><strong>${rider.vehicleType || "N/A"}</strong></div>
+									<div class="vehicle-number">${rider.vehicleNumber || "N/A"}</div>
+								</div>
+							</td>
+							<td>
+								<span class="status-badge ${statusClass}">
+									${rider.status || "unknown"}
+								</span>
+							</td>
+							<td>
+								<div class="orders-info">
+									<div>Delivered: ${rider.ordersDeliveredCount || 0}</div>
+									<div>Picked: ${rider.ordersPickedCount || 0}</div>
+								</div>
+							</td>
+							<td>
+								<div class="rating-info">
+									<div>⭐ ${rating}</div>
+									<div class="rating-count">(${ratingCount} reviews)</div>
+								</div>
+							</td>
+							<td>
+								<div class="action-buttons">
+									<button class="btn btn-sm btn-primary" onclick="editRider('${
+										rider._id
+									}')" title="Edit Rider">
+										✏️
+									</button>
+									<button class="btn btn-sm btn-secondary" onclick="updateRiderStatus('${
+										rider._id
+									}', '${rider.status}')" title="Update Status">
+										🔄
+									</button>
+									<button class="btn btn-sm btn-success" onclick="viewRiderDetails('${
+										rider._id
+									}')" title="View Details">
+										👁️
+									</button>
+								</div>
+							</td>
+						</tr>
+					`;
+					})
+					.join("");
+			}
+
+			function getStatusClass(status) {
+				const statusClasses = {
+					available: "status-available",
+					busy: "status-busy",
+					offline: "status-offline",
+					"on-break": "status-break",
+				};
+				return statusClasses[status] || "status-unknown";
+			}
+
+			function updateRiderCount(count) {
+				const countDisplay = document.getElementById("riders-count-display");
+				if (countDisplay) {
+					countDisplay.textContent = `${count} rider${count !== 1 ? "s" : ""}`;
+				}
+			}
+
+			function updateRiderStats() {
+				if (!riderStats) return;
+
+				// Show stats section
+				const statsSection = document.getElementById("rider-stats");
+				if (statsSection) {
+					statsSection.style.display = "flex";
+				}
+
+				// Update stat values
+				document.getElementById("total-riders-stat").textContent =
+					riderStats.totalRiders || 0;
+				document.getElementById("available-riders-stat").textContent =
+					riderStats.availableRiders || 0;
+				document.getElementById("busy-riders-stat").textContent =
+					riderStats.busyRiders || 0;
+				document.getElementById("offline-riders-stat").textContent =
+					riderStats.offlineRiders || 0;
+				document.getElementById("average-rating-stat").textContent =
+					riderStats.averageRating
+						? riderStats.averageRating.toFixed(1)
+						: "0.0";
 			}
 
 			function showAddRiderModal() {
-				showMessage("Rider management coming soon!", "success");
+				showRiderModal();
 			}
 
-			function refreshRiders() {
-				loadRiders();
-				showMessage("Riders refreshed", "success");
+			async function refreshRiders() {
+				await loadRiders();
+				showMessage("Riders refreshed successfully", "success");
 			}
 
 			function showRiderMap() {
-				showMessage("Rider map feature coming soon!", "success");
+				showMessage("Rider map feature coming soon!", "info");
+			}
+
+			// Rider action functions
+			function editRider(riderId) {
+				const rider = allRiders.find((r) => r._id === riderId);
+				if (rider) {
+					showRiderModal(rider);
+				}
+			}
+
+			function viewRiderDetails(riderId) {
+				const rider = allRiders.find((r) => r._id === riderId);
+				if (rider) {
+					showRiderDetailsModal(rider);
+				}
+			}
+
+			async function updateRiderStatus(riderId, currentStatus) {
+				const newStatus = await showStatusUpdateModal(currentStatus);
+				if (newStatus && newStatus !== currentStatus) {
+					try {
+						const response = await makeAuthenticatedRequest(
+							`/api/riders/${riderId}/status`,
+							{
+								method: "PATCH",
+								body: JSON.stringify({ status: newStatus }),
+							}
+						);
+
+						if (response.success) {
+							showMessage(`Rider status updated to ${newStatus}`, "success");
+							await refreshRiders();
+						} else {
+							showMessage(
+								"Failed to update rider status: " + response.message,
+								"error"
+							);
+						}
+					} catch (error) {
+						console.error("Error updating rider status:", error);
+						showMessage("Error updating rider status", "error");
+					}
+				}
 			}
 
 			// Profile Section Functions
@@ -4264,6 +4605,377 @@
 					});
 				}
 			});
+
+			// Rider Modal Functions
+			let currentEditingRider = null;
+
+			async function showRiderModal(riderToEdit = null) {
+				currentEditingRider = riderToEdit;
+				const modal = document.getElementById("rider-modal");
+				const title = document.getElementById("rider-modal-title");
+				const form = document.getElementById("rider-form");
+
+				// Reset form
+				form.reset();
+
+				if (riderToEdit) {
+					title.textContent = "Edit Rider";
+					document.getElementById("rider-user-select").value =
+						riderToEdit.user._id;
+					document.getElementById("rider-zone").value = riderToEdit.zone;
+					document.getElementById("rider-vehicle-type").value =
+						riderToEdit.vehicleType;
+					document.getElementById("rider-vehicle-number").value =
+						riderToEdit.vehicleNumber;
+					document.getElementById("rider-status").value = riderToEdit.status;
+					document.getElementById("rider-working-hours-start").value =
+						riderToEdit.workingHours?.start || "";
+					document.getElementById("rider-working-hours-end").value =
+						riderToEdit.workingHours?.end || "";
+					document.getElementById("rider-verified").checked =
+						riderToEdit.isVerified;
+				} else {
+					title.textContent = "Add New Rider";
+				}
+
+				// Load users for selection
+				await loadUsersForRiderSelect();
+
+				modal.style.display = "block";
+			}
+
+			function closeRiderModal() {
+				document.getElementById("rider-modal").style.display = "none";
+				currentEditingRider = null;
+			}
+
+			async function loadUsersForRiderSelect() {
+				try {
+					const response = await makeAuthenticatedRequest(
+						"/api/users?role=all"
+					);
+					const userSelect = document.getElementById("rider-user-select");
+
+					if (response.success && response.data.users) {
+						userSelect.innerHTML = '<option value="">Select User</option>';
+
+						// Filter users who don't already have rider profiles (unless editing)
+						const usersWithoutRiders = response.data.users.filter((user) => {
+							const hasRiderProfile = allRiders.some(
+								(rider) => rider.user._id === user._id
+							);
+							return (
+								!hasRiderProfile ||
+								(currentEditingRider &&
+									currentEditingRider.user._id === user._id)
+							);
+						});
+
+						usersWithoutRiders.forEach((user) => {
+							const option = document.createElement("option");
+							option.value = user._id;
+							option.textContent = `${user.name} (${user.email}) - ${user.role}`;
+							userSelect.appendChild(option);
+						});
+					}
+				} catch (error) {
+					console.error("Error loading users:", error);
+				}
+			}
+
+			async function saveRider() {
+				const form = document.getElementById("rider-form");
+				const formData = new FormData(form);
+
+				const riderData = {
+					user: formData.get("user"),
+					zone: formData.get("zone"),
+					vehicleType: formData.get("vehicleType"),
+					vehicleNumber: formData.get("vehicleNumber"),
+					status: formData.get("status"),
+					workingHours: {
+						start: formData.get("workingHoursStart"),
+						end: formData.get("workingHoursEnd"),
+					},
+					isVerified: formData.has("isVerified"),
+				};
+
+				try {
+					let response;
+					if (currentEditingRider) {
+						response = await makeAuthenticatedRequest(
+							`/api/riders/${currentEditingRider._id}`,
+							{
+								method: "PUT",
+								body: JSON.stringify(riderData),
+							}
+						);
+					} else {
+						response = await makeAuthenticatedRequest("/api/riders", {
+							method: "POST",
+							body: JSON.stringify(riderData),
+						});
+					}
+
+					if (response.success) {
+						showMessage(
+							currentEditingRider
+								? "Rider updated successfully"
+								: "Rider created successfully",
+							"success"
+						);
+						closeRiderModal();
+						await refreshRiders();
+					} else {
+						showMessage("Failed to save rider: " + response.message, "error");
+					}
+				} catch (error) {
+					console.error("Error saving rider:", error);
+					showMessage("Error saving rider", "error");
+				}
+			}
+
+			// Status update modal
+			function showStatusUpdateModal(currentStatus) {
+				return new Promise((resolve) => {
+					const statuses = [
+						{ value: "available", label: "✅ Available", color: "#28a745" },
+						{ value: "busy", label: "⚠️ Busy", color: "#ffc107" },
+						{ value: "on-break", label: "☕ On Break", color: "#17a2b8" },
+						{ value: "offline", label: "⭕ Offline", color: "#6c757d" },
+					];
+
+					const modalHtml = `
+						<div class="modal" id="status-update-modal" style="display: block;">
+							<div class="modal-content" style="max-width: 400px;">
+								<div class="modal-header">
+									<h3>Update Rider Status</h3>
+									<span class="close" onclick="closeStatusModal()">&times;</span>
+								</div>
+								<div class="modal-body">
+									<p>Current status: <strong>${currentStatus}</strong></p>
+									<div class="status-options">
+										${statuses
+											.map(
+												(status) => `
+											<button class="status-option-btn" 
+													data-status="${status.value}"
+													style="background: ${status.color}; color: white; margin: 5px; padding: 10px; border: none; border-radius: 5px; cursor: pointer; width: 100%;">
+												${status.label}
+											</button>
+										`
+											)
+											.join("")}
+									</div>
+								</div>
+							</div>
+						</div>
+					`;
+
+					document.body.insertAdjacentHTML("beforeend", modalHtml);
+
+					// Add event listeners
+					document.querySelectorAll(".status-option-btn").forEach((btn) => {
+						btn.addEventListener("click", () => {
+							const selectedStatus = btn.dataset.status;
+							closeStatusModal();
+							resolve(selectedStatus);
+						});
+					});
+
+					window.closeStatusModal = () => {
+						const modal = document.getElementById("status-update-modal");
+						if (modal) modal.remove();
+						resolve(null);
+					};
+				});
+			}
+
+			// Rider details modal
+			function showRiderDetailsModal(rider) {
+				const user = rider.user || {};
+				const rating = rider.rating ? rider.rating.average.toFixed(1) : "N/A";
+				const completionRate =
+					rider.ordersPickedCount > 0
+						? (
+								(rider.ordersDeliveredCount / rider.ordersPickedCount) *
+								100
+						  ).toFixed(1)
+						: "0";
+
+				const modalHtml = `
+					<div class="modal" id="rider-details-modal" style="display: block;">
+						<div class="modal-content" style="max-width: 600px;">
+							<div class="modal-header">
+								<h3>Rider Details: ${user.name || "Unknown"}</h3>
+								<span class="close" onclick="closeRiderDetailsModal()">&times;</span>
+							</div>
+							<div class="modal-body">
+								<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+									<div>
+										<h4>Personal Information</h4>
+										<p><strong>Name:</strong> ${user.name || "N/A"}</p>
+										<p><strong>Email:</strong> ${user.email || "N/A"}</p>
+										<p><strong>Phone:</strong> ${user.phoneNumber || "N/A"}</p>
+										<p><strong>Status:</strong> 
+											<span class="status-badge ${getStatusClass(rider.status)}">${
+					rider.status
+				}</span>
+										</p>
+									</div>
+									<div>
+										<h4>Vehicle Information</h4>
+										<p><strong>Type:</strong> ${rider.vehicleType || "N/A"}</p>
+										<p><strong>Number:</strong> ${rider.vehicleNumber || "N/A"}</p>
+										<p><strong>Zone:</strong> ${rider.zone || "N/A"}</p>
+										<p><strong>Verified:</strong> ${rider.isVerified ? "✅ Yes" : "❌ No"}</p>
+									</div>
+								</div>
+								<div style="margin-top: 20px;">
+									<h4>Performance Metrics</h4>
+									<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; text-align: center;">
+										<div class="metric-card">
+											<div class="metric-value">${rider.ordersPickedCount || 0}</div>
+											<div class="metric-label">Orders Picked</div>
+										</div>
+										<div class="metric-card">
+											<div class="metric-value">${rider.ordersDeliveredCount || 0}</div>
+											<div class="metric-label">Orders Delivered</div>
+										</div>
+										<div class="metric-card">
+											<div class="metric-value">${completionRate}%</div>
+											<div class="metric-label">Completion Rate</div>
+										</div>
+										<div class="metric-card">
+											<div class="metric-value">⭐ ${rating}</div>
+											<div class="metric-label">Rating</div>
+										</div>
+									</div>
+								</div>
+								<div style="margin-top: 20px;">
+									<h4>Working Hours</h4>
+									<p><strong>Start:</strong> ${rider.workingHours?.start || "N/A"}</p>
+									<p><strong>End:</strong> ${rider.workingHours?.end || "N/A"}</p>
+								</div>
+							</div>
+							<div class="modal-footer">
+								<button class="btn btn-primary" onclick="editRider('${
+									rider._id
+								}'); closeRiderDetailsModal();">
+									✏️ Edit Rider
+								</button>
+								<button class="btn btn-secondary" onclick="closeRiderDetailsModal()">Close</button>
+							</div>
+						</div>
+					</div>
+				`;
+
+				document.body.insertAdjacentHTML("beforeend", modalHtml);
+
+				window.closeRiderDetailsModal = () => {
+					const modal = document.getElementById("rider-details-modal");
+					if (modal) modal.remove();
+				};
+			}
 		</script>
+
+		<!-- Rider Modal -->
+		<div id="rider-modal" class="modal">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h3 id="rider-modal-title">Add New Rider</h3>
+					<span class="close" onclick="closeRiderModal()">&times;</span>
+				</div>
+				<form id="rider-form" onsubmit="event.preventDefault(); saveRider();">
+					<div class="modal-body">
+						<div class="form-group">
+							<label for="rider-user-select">Select User *</label>
+							<select id="rider-user-select" name="user" required>
+								<option value="">Loading users...</option>
+							</select>
+						</div>
+
+						<div class="form-group">
+							<label for="rider-zone">Delivery Zone *</label>
+							<input
+								type="text"
+								id="rider-zone"
+								name="zone"
+								required
+								placeholder="e.g., Downtown, North Zone"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="rider-vehicle-type">Vehicle Type *</label>
+							<select id="rider-vehicle-type" name="vehicleType" required>
+								<option value="">Select Vehicle Type</option>
+								<option value="bike">🏍️ Motorbike</option>
+								<option value="bicycle">🚲 Bicycle</option>
+								<option value="car">🚗 Car</option>
+								<option value="motorbike">🛵 Scooter</option>
+							</select>
+						</div>
+
+						<div class="form-group">
+							<label for="rider-vehicle-number">Vehicle Number</label>
+							<input
+								type="text"
+								id="rider-vehicle-number"
+								name="vehicleNumber"
+								placeholder="e.g., MB-001, CAR-123"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="rider-status">Initial Status</label>
+							<select id="rider-status" name="status">
+								<option value="offline">Offline</option>
+								<option value="available">Available</option>
+								<option value="busy">Busy</option>
+								<option value="on-break">On Break</option>
+							</select>
+						</div>
+
+						<div class="form-row">
+							<div class="form-group">
+								<label for="rider-working-hours-start">Work Start Time</label>
+								<input
+									type="time"
+									id="rider-working-hours-start"
+									name="workingHoursStart"
+								/>
+							</div>
+							<div class="form-group">
+								<label for="rider-working-hours-end">Work End Time</label>
+								<input
+									type="time"
+									id="rider-working-hours-end"
+									name="workingHoursEnd"
+								/>
+							</div>
+						</div>
+
+						<div class="form-group">
+							<label class="checkbox-label">
+								<input type="checkbox" id="rider-verified" name="isVerified" />
+								<span class="checkmark"></span>
+								Verified Rider
+							</label>
+						</div>
+					</div>
+					<div class="modal-footer">
+						<button type="submit" class="btn btn-primary">Save Rider</button>
+						<button
+							type="button"
+							class="btn btn-secondary"
+							onclick="closeRiderModal()"
+						>
+							Cancel
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
 	</body>
 </html>

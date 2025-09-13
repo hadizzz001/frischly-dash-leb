@@ -10,6 +10,8 @@
 		"create-admin": "node scripts/createAdminUsers.js",
 		"manage-users": "node scripts/manageUsers.js",
 		"add-products": "node scripts/add3000Products.js",
+		"add-customers": "node scripts/add20Customers.js",
+		"test-shelf": "node scripts/testShelfNumber.js",
 		"delete-all-orders": "node scripts/deleteAllOrders.js",
 		"prepare-deploy": "powershell -ExecutionPolicy Bypass -File prepare-deploy.ps1",
 		"update-client-url": "powershell -ExecutionPolicy Bypass -File update-client-url.ps1",

@@ -102,6 +102,7 @@ const orderSchema = new mongoose.Schema(
 					"pending",
 					"confirmed",
 					"processing",
+					"ready for pickup",
 					"shipped",
 					"delivered",
 					"cancelled",
@@ -126,6 +127,25 @@ const orderSchema = new mongoose.Schema(
 			type: String,
 			enum: ["cash", "card", "online", "wallet"],
 			default: "cash",
+		},
+		shelfNumber: {
+			type: Number,
+			default: 0,
+			min: [0, "Shelf number cannot be negative"],
+		},
+		assignedRider: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Rider",
+			index: true,
+		},
+		riderAssignedAt: {
+			type: Date,
+		},
+		deliveryStartedAt: {
+			type: Date,
+		},
+		deliveryCompletedAt: {
+			type: Date,
 		},
 		notes: {
 			type: String,

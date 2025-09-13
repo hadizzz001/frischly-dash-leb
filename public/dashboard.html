@@ -2342,7 +2342,28 @@
 					return;
 				}
 
-				users.forEach((user) => {
+				// Sort users to show customers after all other roles
+				const sortedUsers = [...users].sort((a, b) => {
+					const roleOrder = {
+						admin: 1,
+						manager: 2,
+						staff: 3,
+						rider: 4,
+						customer: 5, // Customers come last
+					};
+
+					const roleA = roleOrder[a.role] || 3; // Default to staff level if role not found
+					const roleB = roleOrder[b.role] || 3;
+
+					if (roleA !== roleB) {
+						return roleA - roleB;
+					}
+
+					// If same role, sort by name
+					return (a.name || "").localeCompare(b.name || "");
+				});
+
+				sortedUsers.forEach((user) => {
 					try {
 						const row = document.createElement("tr");
 						const userName = user.name || "N/A";

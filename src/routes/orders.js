@@ -16,14 +16,9 @@ const router = express.Router();
 
 // Protected routes (require authentication)
 router.get("/stats", protect, authorize("admin", "manager"), getOrderStats);
-router.get("/", protect, authorize("admin", "manager", "cashier"), getOrders);
-router.get("/:id", protect, authorize("admin", "manager", "cashier"), getOrder);
-router.post(
-	"/",
-	protect,
-	authorize("admin", "manager", "cashier"),
-	createOrder
-);
+router.get("/", protect, authorize("admin", "manager", "staff"), getOrders);
+router.get("/:id", protect, authorize("admin", "manager", "staff"), getOrder);
+router.post("/", protect, authorize("admin", "manager", "staff"), createOrder);
 router.put("/:id", protect, authorize("admin", "manager"), updateOrder);
 router.patch(
 	"/:id/cancel",

@@ -140,6 +140,17 @@ const createSampleOrders = async () => {
 
 		console.log(`👤 Using admin user: ${adminUser.name} (${adminUser.email})`);
 
+		// Get existing customers from database
+		const customers = await User.find({ role: "customer", isActive: true });
+		console.log(`👥 Found ${customers.length} customers in database`);
+
+		if (customers.length === 0) {
+			console.error(
+				"❌ No customers found. Please create customers first using: npm run add-customers"
+			);
+			return;
+		}
+
 		// Get available products
 		const allProducts = await Product.find({ isActive: true });
 		console.log(`📦 Found ${allProducts.length} active products`);
@@ -150,14 +161,25 @@ const createSampleOrders = async () => {
 		}
 
 		let ordersCreated = 0;
+		const numberOfOrdersToCreate = Math.min(5, customers.length);
 
-		for (const orderData of sampleOrders) {
+		// Shuffle customers and take first 5
+		const shuffledCustomers = customers.sort(() => 0.5 - Math.random());
+		const selectedCustomers = shuffledCustomers.slice(
+			0,
+			numberOfOrdersToCreate
+		);
+
+		for (let i = 0; i < numberOfOrdersToCreate; i++) {
 			try {
+				const customer = selectedCustomers[i];
+				const orderTemplate = sampleOrders[i % sampleOrders.length];
+
 				// Process order items - match products by name
 				const processedItems = [];
 				let itemsValid = true;
 
-				for (const item of orderData.items) {
+				for (const item of orderTemplate.items) {
 					// Try to find exact match first, then partial match
 					let product = await findProductByName(item.productName);
 
@@ -206,7 +228,7 @@ const createSampleOrders = async () => {
 
 				if (!itemsValid) {
 					console.log(
-						`⏭️  Skipping order for ${orderData.customer.name} due to product issues`
+						`⏭️  Skipping order for ${customer.name} due to product issues`
 					);
 					continue;
 				}
@@ -217,18 +239,27 @@ const createSampleOrders = async () => {
 					0
 				);
 				const total =
-					subtotal + (orderData.tax || 0) - (orderData.discount || 0);
+					subtotal + (orderTemplate.tax || 0) - (orderTemplate.discount || 0);
+
+				// Create customer object for order (using real customer data)
+				const customerData = {
+					name: customer.name,
+					email: customer.email,
+					phone: customer.phoneNumber,
+					address: customer.address,
+				};
 
 				// Create the order
 				const newOrder = new Order({
-					customer: orderData.customer,
+					customer: customerData,
+					customerId: customer._id, // Link to actual customer
 					items: processedItems,
-					tax: orderData.tax || 0,
-					discount: orderData.discount || 0,
-					status: orderData.status || "pending",
-					paymentStatus: orderData.paymentStatus || "pending",
-					paymentMethod: orderData.paymentMethod || "cash",
-					notes: orderData.notes || "",
+					tax: orderTemplate.tax || 0,
+					discount: orderTemplate.discount || 0,
+					status: orderTemplate.status || "pending",
+					paymentStatus: orderTemplate.paymentStatus || "pending",
+					paymentMethod: orderTemplate.paymentMethod || "cash",
+					notes: orderTemplate.notes || `Order for ${customer.name}`,
 					createdBy: adminUser._id,
 				});
 
@@ -245,15 +276,12 @@ const createSampleOrders = async () => {
 
 				ordersCreated++;
 				console.log(
-					`✅ Created order ${newOrder.orderNumber} for ${
-						orderData.customer.name
-					} - Total: $${total.toFixed(2)}`
+					`✅ Created order ${newOrder.orderNumber} for ${customer.name} (${
+						customer.email
+					}) - Total: $${total.toFixed(2)}`
 				);
 			} catch (error) {
-				console.error(
-					`❌ Error creating order for ${orderData.customer.name}:`,
-					error.message
-				);
+				console.error(`❌ Error creating order for customer:`, error.message);
 			}
 		}
 
@@ -278,13 +306,13 @@ const createSampleOrders = async () => {
 
 // Main execution
 const main = async () => {
-	console.log("🚀 Starting sample orders creation...");
-	console.log("=====================================");
+	console.log("🚀 Starting orders creation for existing customers...");
+	console.log("====================================================");
 
 	await connectDB();
 	await createSampleOrders();
 
-	console.log("\n✅ Sample orders creation completed!");
+	console.log("\n✅ Orders creation completed!");
 	console.log(
 		"🌐 You can now view the orders in your dashboard at: http://localhost:3001/dashboard.html"
 	);
