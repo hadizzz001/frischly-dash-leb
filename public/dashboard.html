@@ -1185,7 +1185,7 @@
 						</select>
 						<select id="product-status-filter" class="filter-select">
 							<option value="all">All Status</option>
-							<option value="active">Active Only</option>
+							<option value="active" selected>Active Only</option>
 							<option value="inactive">Inactive Only</option>
 						</select>
 						<button
@@ -2740,7 +2740,7 @@
 
 				try {
 					const response = await fetch(
-						`${API_BASE_URL}/products?page=${page}&limit=${pageSize}&isActive=all`,
+						`${API_BASE_URL}/products?page=${page}&limit=${pageSize}&isActive=true`,
 						{
 							method: "GET",
 							headers: {
