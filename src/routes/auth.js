@@ -146,6 +146,7 @@ router.put(
 );
 
 // Admin-only routes for user management
+// GET /users can be filtered with query parameter ?role=rider
 router.get("/users", protect, getAllUsers);
 router.get("/users/:id", protect, getUserById);
 router.post("/users", protect, registerValidation, createUser);

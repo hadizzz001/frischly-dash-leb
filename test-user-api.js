@@ -16,7 +16,7 @@ async function login() {
 			},
 			body: JSON.stringify({
 				email: "admin@frischly.com",
-				password: "Admin123",
+				password: "Admin123!",
 			}),
 		});
 

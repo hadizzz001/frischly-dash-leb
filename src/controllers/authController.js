@@ -338,6 +338,7 @@ const loginProfile = async (req, res) => {
 
 // @desc    Get all users (Admin only)
 // @route   GET /api/auth/users
+// @desc     Get all users or filter by role (supports inclusion/exclusion)
 // @access  Private (Admin only)
 const getAllUsers = async (req, res) => {
 	try {
@@ -349,7 +350,27 @@ const getAllUsers = async (req, res) => {
 			});
 		}
 
-		const users = await User.find({})
+		// Build query object
+		const queryObj = {};
+
+		// Advanced role filtering
+		if (req.query.role) {
+			// Simple equality: ?role=admin
+			queryObj.role = req.query.role;
+		}
+
+		// Handle role exclusion: ?excludeRole=customer
+		if (req.query.excludeRole) {
+			queryObj.role = { $ne: req.query.excludeRole };
+		}
+
+		// Handle role inclusion for multiple roles: ?includeRoles=admin,staff,manager
+		if (req.query.includeRoles) {
+			const roles = req.query.includeRoles.split(",");
+			queryObj.role = { $in: roles };
+		}
+
+		const users = await User.find(queryObj)
 			.select("-password")
 			.sort({ createdAt: -1 });
 
