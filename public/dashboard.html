@@ -2357,7 +2357,10 @@
 				} catch (error) {
 					console.error("Error loading users:", error);
 					showMessage(
-						"Network error. Please check your connection and try again.",
+						`Failed to load users: ${
+							error.message ||
+							"Network error. Please check your connection and try again."
+						}`,
 						"error"
 					);
 				} finally {
@@ -2462,12 +2465,14 @@
 			// Show add user modal
 			function showAddUserModal() {
 				try {
-					const modalTitle = document.getElementById("modal-title");
-					const userForm = document.getElementById("user-form");
-					const userId = document.getElementById("user-id");
-					const passwordGroup = document.getElementById("password-group");
-					const userPassword = document.getElementById("user-password");
-					const userModal = document.getElementById("user-modal");
+					const modalTitle = document.getElementById("user-edit-modal-title");
+					const userForm = document.getElementById("user-edit-form");
+					const userId = document.getElementById("user-edit-id");
+					const passwordGroup = document.getElementById(
+						"user-edit-password-group"
+					);
+					const userPassword = document.getElementById("user-edit-password");
+					const userModal = document.getElementById("user-edit-modal");
 
 					if (
 						!modalTitle ||
@@ -2503,7 +2508,10 @@
 			// Edit user
 			async function editUser(userId) {
 				try {
-					// Get user details directly from API instead of relying on allUsers array
+					// Show loading message
+					showMessage("Loading user data...", "info");
+
+					// Get user details directly from API
 					const response = await fetch(`${API_BASE_URL}/auth/users/${userId}`, {
 						method: "GET",
 						headers: {
@@ -2531,65 +2539,144 @@
 						return;
 					}
 
-					// Get modal elements with error checking
-					const elements = {
-						modalTitle: document.getElementById("modal-title"),
-						userId: document.getElementById("user-id"),
-						userName: document.getElementById("user-name"),
-						userEmail: document.getElementById("user-email"),
-						userPhone: document.getElementById("user-phone"),
-						userRole: document.getElementById("user-role"),
-						userStatus: document.getElementById("user-status"),
-						userStreet: document.getElementById("user-street"),
-						userCity: document.getElementById("user-city"),
-						userState: document.getElementById("user-state"),
-						userZipcode: document.getElementById("user-zipcode"),
-						userCountry: document.getElementById("user-country"),
-						passwordGroup: document.getElementById("password-group"),
-						userPassword: document.getElementById("user-password"),
-						userModal: document.getElementById("user-modal"),
-					};
+					// Access form elements
+					const modalTitle = document.getElementById("user-edit-modal-title");
+					const form = document.getElementById("user-edit-form");
 
-					// Check if all elements exist
-					for (const [key, element] of Object.entries(elements)) {
-						if (!element) {
-							console.error(`Element ${key} not found`);
-							showMessage(
-								"Modal form not available. Please refresh the page.",
-								"error"
-							);
-							return;
-						}
+					if (!modalTitle || !form) {
+						showMessage(
+							"Modal form not available. Please refresh the page.",
+							"error"
+						);
+						return;
 					}
 
-					// Populate form
-					elements.modalTitle.textContent = "Edit User";
-					elements.userId.value = user._id;
-					elements.userName.value = user.name || "";
-					elements.userEmail.value = user.email || "";
-					elements.userPhone.value = user.phoneNumber || "";
-					elements.userRole.value = user.role || "staff";
-					elements.userStatus.value = user.isActive ? "true" : "false";
+					// Set title
+					modalTitle.textContent = "Edit User";
 
-					// Handle address safely
+					// DO NOT reset the form as it clears all values
+					// form.reset();  // Removing this line
+
+					// Debug the user object
+					console.log("User data for form:", {
+						id: user._id,
+						name: user.name,
+						email: user.email,
+						phone: user.phoneNumber,
+						role: user.role,
+						isActive: user.isActive,
+					});
+
+					// Set form values directly with null checks
+					const idField = document.getElementById("user-edit-id");
+					const nameField = document.getElementById("user-edit-name");
+					const emailField = document.getElementById("user-edit-email");
+					const phoneField = document.getElementById("user-edit-phone");
+					const roleField = document.getElementById("user-edit-role");
+					const statusField = document.getElementById("user-edit-status");
+
+					// Check if all fields are found
+					if (
+						!idField ||
+						!nameField ||
+						!emailField ||
+						!phoneField ||
+						!roleField ||
+						!statusField
+					) {
+						console.error("Some form fields were not found in the DOM");
+						showMessage("Error: Some form fields could not be found", "error");
+					}
+
+					// Set values with validity checks
+
+					// Use setTimeout to ensure values are set even if there's a timing issue
+					setTimeout(() => {
+						console.log("Verifying values after timeout:");
+						if (emailField)
+							console.log("Email field valuesssssssss:", user._id);
+						if (phoneField) console.log("Phone field value:", phoneField.value);
+					}, 100);
+
+					// Set address values
 					const address = user.address || {};
-					elements.userStreet.value = address.street || "";
-					elements.userCity.value = address.city || "";
-					elements.userState.value = address.state || "";
-					elements.userZipcode.value = address.zipCode || "";
-					elements.userCountry.value = address.country || "";
+					console.log("Address data:", address);
+
+					const streetField = document.getElementById("user-edit-street");
+					const cityField = document.getElementById("user-edit-city");
+					const stateField = document.getElementById("user-edit-state");
+					const zipcodeField = document.getElementById("user-edit-zipcode");
+					const countryField = document.getElementById("user-edit-country");
+
+					if (streetField) streetField.value = address.street || "";
+					if (cityField) cityField.value = address.city || "";
+					if (stateField) stateField.value = address.state || "";
+					if (zipcodeField) zipcodeField.value = address.zipCode || "";
+					if (countryField) countryField.value = address.country || "";
+					if (idField) idField.value = user._id || "";
+					if (nameField) nameField.value = user.name || "";
+					if (emailField) emailField.value = user.email || "";
+					if (phoneField) phoneField.value = user.phoneNumber || "";
+					if (roleField) roleField.value = user.role || "staff";
+					if (statusField) statusField.value = user.isActive ? "true" : "false";
+
+					// Verify address values were set
+					console.log("Address form values after setting:", {
+						street: streetField ? streetField.value : "field not found",
+						city: cityField ? cityField.value : "field not found",
+						state: stateField ? stateField.value : "field not found",
+						zipcode: zipcodeField ? zipcodeField.value : "field not found",
+						country: countryField ? countryField.value : "field not found",
+					});
 
 					// Hide password field when editing
-					elements.passwordGroup.style.display = "none";
-					elements.userPassword.removeAttribute("required");
+					const passwordGroup = document.getElementById(
+						"user-edit-password-group"
+					);
+					const userPassword = document.getElementById("user-edit-password");
+					const userModal = document.getElementById("user-edit-modal");
 
-					elements.userModal.style.display = "block";
+					if (passwordGroup) {
+						passwordGroup.style.display = "none";
+						console.log("Password group hidden");
+					} else {
+						console.log("Password group element not found");
+					}
+
+					if (userPassword) {
+						userPassword.removeAttribute("required");
+						console.log("Password required attribute removed");
+					} else {
+						console.log("User password element not found");
+					}
+
+					// Display the modal
+					if (userModal) {
+						userModal.style.display = "block";
+						console.log("User modal displayed");
+					} else {
+						console.log("User modal element not found");
+						showMessage("Error: Could not find user modal element", "error");
+					} // Log confirmation
+					console.log("User form populated with:", {
+						id: user._id,
+						name: user.name,
+						email: user.email,
+						phone: user.phoneNumber,
+						role: user.role,
+						status: user.isActive,
+					});
 				} catch (error) {
 					console.error("Error editing user:", error);
 					const errorMsg =
 						error.message || "Error opening user edit form. Please try again.";
 					console.log("Error details:", errorMsg);
-					showMessage(errorMsg, "error");
+
+					// Display a clear error message to the user
+					showMessage(
+						`Failed to load user data: ${errorMsg}. Please try again.`,
+						"error"
+					);
 				}
 			}
 
@@ -2621,15 +2708,19 @@
 						showMessage(result.message || "Failed to delete user", "error");
 					}
 				} catch (error) {
-					showMessage("Error deleting user: " + error.message, "error");
+					console.error("Error deleting user:", error);
+					showMessage(
+						`Failed to delete user: ${error.message || "Unknown error"}`,
+						"error"
+					);
 				}
 			}
 
 			// Save user (create or update)
 			async function saveUser() {
 				try {
-					const form = document.getElementById("user-form");
-					const userIdElement = document.getElementById("user-id");
+					const form = document.getElementById("user-edit-form");
+					const userIdElement = document.getElementById("user-edit-id");
 
 					if (!form || !userIdElement) {
 						showMessage(
@@ -2657,9 +2748,16 @@
 					];
 					for (const field of requiredFields) {
 						if (!formData.get(field)) {
+							console.log(`Missing required field: ${field}`);
 							showMessage(`Please fill in the ${field} field.`, "error");
 							return;
 						}
+					}
+
+					// Debug form data
+					console.log("Form data collected:");
+					for (const [key, value] of formData.entries()) {
+						console.log(`- ${key}: ${value}`);
 					}
 
 					// Validate password for new users
@@ -2722,13 +2820,13 @@
 					console.error("Error saving user:", error);
 					const errorMsg = error.message || "Unknown error occurred";
 					console.log("Error details:", errorMsg);
-					showMessage("Error saving user: " + errorMsg, "error");
+					showMessage(`Failed to save user: ${errorMsg}`, "error");
 				}
 			}
 
 			// Close modal
 			function closeModal() {
-				const modal = document.getElementById("user-modal");
+				const modal = document.getElementById("user-edit-modal");
 				if (modal) {
 					modal.style.display = "none";
 				}
@@ -4961,7 +5059,7 @@
 
 			// Close modal when clicking outside
 			window.onclick = function (event) {
-				const userModal = document.getElementById("user-modal");
+				const userModal = document.getElementById("user-edit-modal");
 				const categoryModal = document.getElementById("category-modal");
 				const productModal = document.getElementById("product-modal");
 				const riderModal = document.getElementById("rider-modal");
@@ -5130,35 +5228,38 @@
 		</div>
 
 		<!-- User Management Modal -->
-		<div id="user-modal" class="modal">
+		<div id="user-edit-modal" class="modal">
 			<div class="modal-content">
 				<div class="modal-header">
-					<h2 id="modal-title">Add New User</h2>
+					<h2 id="user-edit-modal-title">Add New User</h2>
 					<span class="close" onclick="closeModal()">&times;</span>
 				</div>
 
-				<form id="user-form" onsubmit="event.preventDefault(); saveUser();">
-					<input type="hidden" id="user-id" name="id" />
+				<form
+					id="user-edit-form"
+					onsubmit="event.preventDefault(); saveUser();"
+				>
+					<input type="hidden" id="user-edit-id" name="id" />
 
 					<div class="form-grid">
 						<div class="form-group">
-							<label for="user-name">Full Name *</label>
-							<input type="text" id="user-name" name="name" required />
+							<label for="user-edit-name">Full Name *</label>
+							<input type="text" id="user-edit-name" name="name" required />
 						</div>
 
 						<div class="form-group">
-							<label for="user-email">Email Address *</label>
-							<input type="email" id="user-email" name="email" required />
+							<label for="user-edit-email">Email Address *</label>
+							<input type="email" id="user-edit-email" name="email" required />
 						</div>
 
 						<div class="form-group">
-							<label for="user-phone">Phone Number *</label>
-							<input type="tel" id="user-phone" name="phone" required />
+							<label for="user-edit-phone">Phone Number *</label>
+							<input type="tel" id="user-edit-phone" name="phone" required />
 						</div>
 
 						<div class="form-group">
-							<label for="user-role">Role *</label>
-							<select id="user-role" name="role" required>
+							<label for="user-edit-role">Role *</label>
+							<select id="user-edit-role" name="role" required>
 								<option value="staff">Staff</option>
 								<option value="customer">Customer</option>
 								<option value="rider">Rider</option>
@@ -5168,18 +5269,18 @@
 						</div>
 
 						<div class="form-group">
-							<label for="user-status">Status *</label>
-							<select id="user-status" name="status" required>
+							<label for="user-edit-status">Status *</label>
+							<select id="user-edit-status" name="status" required>
 								<option value="true">Active</option>
 								<option value="false">Inactive</option>
 							</select>
 						</div>
 
-						<div class="form-group" id="password-group">
-							<label for="user-password">Password *</label>
+						<div class="form-group" id="user-edit-password-group">
+							<label for="user-edit-password">Password *</label>
 							<input
 								type="password"
-								id="user-password"
+								id="user-edit-password"
 								name="password"
 								minlength="6"
 							/>
@@ -5192,28 +5293,38 @@
 
 					<div class="form-grid">
 						<div class="form-group full-width">
-							<label for="user-street">Street Address *</label>
-							<input type="text" id="user-street" name="street" required />
+							<label for="user-edit-street">Street Address *</label>
+							<input type="text" id="user-edit-street" name="street" required />
 						</div>
 
 						<div class="form-group">
-							<label for="user-city">City *</label>
-							<input type="text" id="user-city" name="city" required />
+							<label for="user-edit-city">City *</label>
+							<input type="text" id="user-edit-city" name="city" required />
 						</div>
 
 						<div class="form-group">
-							<label for="user-state">State/Province *</label>
-							<input type="text" id="user-state" name="state" required />
+							<label for="user-edit-state">State/Province *</label>
+							<input type="text" id="user-edit-state" name="state" required />
 						</div>
 
 						<div class="form-group">
-							<label for="user-zipcode">ZIP/Postal Code *</label>
-							<input type="text" id="user-zipcode" name="zipcode" required />
+							<label for="user-edit-zipcode">ZIP/Postal Code *</label>
+							<input
+								type="text"
+								id="user-edit-zipcode"
+								name="zipcode"
+								required
+							/>
 						</div>
 
 						<div class="form-group">
-							<label for="user-country">Country *</label>
-							<input type="text" id="user-country" name="country" required />
+							<label for="user-edit-country">Country *</label>
+							<input
+								type="text"
+								id="user-edit-country"
+								name="country"
+								required
+							/>
 						</div>
 					</div>
 

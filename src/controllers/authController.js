@@ -545,6 +545,41 @@ const deleteUser = async (req, res) => {
 	}
 };
 
+// @desc    Get user by ID
+// @route   GET /api/auth/users/:id
+// @access  Private (Admin only)
+const getUserById = async (req, res) => {
+	try {
+		// Check if user is admin
+		if (req.user.role !== "admin") {
+			return res.status(403).json({
+				success: false,
+				message: "Not authorized to access this resource",
+			});
+		}
+
+		const user = await User.findById(req.params.id);
+
+		if (!user) {
+			return res.status(404).json({
+				success: false,
+				message: "User not found",
+			});
+		}
+
+		res.status(200).json({
+			success: true,
+			data: user.toSafeObject(),
+		});
+	} catch (error) {
+		console.error("Error in getUserById:", error);
+		res.status(500).json({
+			success: false,
+			message: "Server error",
+		});
+	}
+};
+
 module.exports = {
 	register,
 	login,
@@ -553,6 +588,7 @@ module.exports = {
 	updateProfile,
 	changePassword,
 	getAllUsers,
+	getUserById,
 	createUser,
 	updateUser,
 	deleteUser,

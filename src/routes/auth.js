@@ -8,6 +8,7 @@ const {
 	updateProfile,
 	changePassword,
 	getAllUsers,
+	getUserById,
 	createUser,
 	updateUser,
 	deleteUser,
@@ -146,6 +147,7 @@ router.put(
 
 // Admin-only routes for user management
 router.get("/users", protect, getAllUsers);
+router.get("/users/:id", protect, getUserById);
 router.post("/users", protect, registerValidation, createUser);
 router.put("/users/:id", protect, updateUser);
 router.delete("/users/:id", protect, deleteUser);
