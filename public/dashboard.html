@@ -4,6 +4,69 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Dashboard - FRISCHLY Server</title>
+
+		<!-- Favicon and App Icons -->
+		<link
+			rel="icon"
+			type="image/png"
+			sizes="16x16"
+			href="icons/favicon_16x16.png"
+		/>
+		<link
+			rel="icon"
+			type="image/png"
+			sizes="32x32"
+			href="icons/favicon_32x32.png"
+		/>
+		<link
+			rel="icon"
+			type="image/png"
+			sizes="48x48"
+			href="icons/favicon_48x48.png"
+		/>
+
+		<!-- Apple Touch Icons -->
+		<link
+			rel="apple-touch-icon"
+			sizes="72x72"
+			href="icons/app_icon_72x72.png"
+		/>
+		<link
+			rel="apple-touch-icon"
+			sizes="96x96"
+			href="icons/app_icon_96x96.png"
+		/>
+		<link
+			rel="apple-touch-icon"
+			sizes="128x128"
+			href="icons/app_icon_128x128.png"
+		/>
+		<link
+			rel="apple-touch-icon"
+			sizes="192x192"
+			href="icons/app_icon_192x192.png"
+		/>
+		<link
+			rel="apple-touch-icon"
+			sizes="256x256"
+			href="icons/app_icon_256x256.png"
+		/>
+		<link
+			rel="apple-touch-icon"
+			sizes="512x512"
+			href="icons/app_icon_512x512.png"
+		/>
+		<link
+			rel="apple-touch-icon"
+			sizes="1024x1024"
+			href="icons/app_icon_1024x1024.png"
+		/>
+
+		<!-- Manifest for PWA -->
+		<meta name="theme-color" content="#FFC300" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+		<meta name="apple-mobile-web-app-title" content="FRISCHLY Dashboard" />
 		<style>
 			* {
 				margin: 0;
@@ -41,6 +104,19 @@
 				color: #000000;
 				padding: 20px;
 				text-align: center;
+			}
+
+			.sidebar-logo {
+				width: 48px;
+				height: 48px;
+				border-radius: 12px;
+				margin-bottom: 10px;
+				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+				transition: transform 0.3s ease;
+			}
+
+			.sidebar-logo:hover {
+				transform: scale(1.05);
 			}
 
 			.sidebar-header h2 {
@@ -1296,6 +1372,11 @@
 		<!-- Sidebar -->
 		<div class="sidebar" id="sidebar">
 			<div class="sidebar-header">
+				<img
+					src="icons/app_icon_96x96.png"
+					alt="FRISCHLY Logo"
+					class="sidebar-logo"
+				/>
 				<h2>FRISCHLY Admin</h2>
 				<p>Management Dashboard</p>
 			</div>
@@ -2299,11 +2380,17 @@
 			// Update users count
 			function updateUsersCount(count) {
 				const totalUsersElement = document.getElementById("total-users-count");
+				const dashboardUsersElement =
+					document.getElementById("total-users-stat");
 
 				if (totalUsersElement) {
 					totalUsersElement.textContent = `${count} user${
 						count !== 1 ? "s" : ""
 					}`;
+				}
+
+				if (dashboardUsersElement) {
+					dashboardUsersElement.textContent = count;
 				}
 			}
 
@@ -2660,9 +2747,28 @@
 					"Loading dashboard statistics..."
 				);
 
-				// Update quick stats
-				document.getElementById("total-users-stat").textContent =
-					allUsers.length || "0";
+				// Load users count for dashboard
+				try {
+					const response = await fetch(`${API_BASE_URL}/auth/users`, {
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+					if (response.ok) {
+						const data = await response.json();
+						const usersCount =
+							data.data && data.data.users ? data.data.users.length : 0;
+						document.getElementById("total-users-stat").textContent =
+							usersCount;
+						// Update allUsers for use in other sections
+						allUsers = data.data && data.data.users ? data.data.users : [];
+					}
+				} catch (error) {
+					console.error("Error loading users count:", error);
+					document.getElementById("total-users-stat").textContent =
+						allUsers.length || "0";
+				}
 
 				// Load categories data and count for dashboard
 				try {
@@ -2711,8 +2817,36 @@
 					console.error("Error loading products count:", error);
 				}
 
-				// Placeholder for orders and riders (to be implemented)
-				document.getElementById("total-orders-stat").textContent = "0";
+				// Load orders count for dashboard
+				try {
+					const response = await fetch(
+						`${API_BASE_URL}/orders?page=1&limit=1`,
+						{
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+						}
+					);
+					if (response.ok) {
+						const data = await response.json();
+						const ordersCount = data.pagination
+							? data.pagination.totalOrders
+							: 0;
+						document.getElementById("total-orders-stat").textContent =
+							ordersCount;
+						document.getElementById(
+							"orders-count-display"
+						).textContent = `${ordersCount} orders`;
+					}
+				} catch (error) {
+					console.error("Error loading orders count:", error);
+					document.getElementById("total-orders-stat").textContent = "0";
+					document.getElementById("orders-count-display").textContent =
+						"0 orders";
+				}
+
+				// Placeholder for riders (to be implemented)
 				document.getElementById("total-riders-stat").textContent = "0";
 
 				showSectionLoading("dashboard", false);
@@ -4411,6 +4545,7 @@
 						<div class="form-group">
 							<label for="user-role">Role *</label>
 							<select id="user-role" name="role" required>
+								<option value="staff">Staff</option>
 								<option value="customer">Customer</option>
 								<option value="rider">Rider</option>
 								<option value="manager">Manager</option>
@@ -5295,6 +5430,13 @@
 					pagination.currentPage * ordersPageSize,
 					pagination.totalOrders
 				)} of ${pagination.totalOrders} orders`;
+
+				// Update the orders count display and dashboard stat
+				document.getElementById(
+					"orders-count-display"
+				).textContent = `${pagination.totalOrders} orders`;
+				document.getElementById("total-orders-stat").textContent =
+					pagination.totalOrders;
 			}
 
 			// Show add order modal

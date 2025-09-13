@@ -1,4 +1,5 @@
 {
+	"$schema": "https://json.schemastore.org/package.json",
 	"name": "frischly-server",
 	"version": "1.0.0",
 	"description": "Node.js API server with MongoDB and Express for user authentication",
