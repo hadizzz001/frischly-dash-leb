@@ -909,6 +909,384 @@
 					flex-direction: column;
 				}
 			}
+
+			/* Order Form Styles */
+			.order-item {
+				display: flex;
+				gap: 15px;
+				align-items: end;
+				margin-bottom: 15px;
+				padding: 15px;
+				background: #f8f9fa;
+				border-radius: 8px;
+				border: 1px solid #e9ecef;
+			}
+
+			.order-item .form-group {
+				flex: 1;
+				margin-bottom: 0;
+			}
+
+			.order-item .remove-item {
+				padding: 8px 12px;
+				height: fit-content;
+				margin-left: 10px;
+			}
+
+			.form-section {
+				margin-bottom: 30px;
+				padding: 20px;
+				background: #f8f9fa;
+				border-radius: 8px;
+				border: 1px solid #e9ecef;
+			}
+
+			.form-section h3 {
+				margin: 0 0 20px 0;
+				color: #495057;
+				font-size: 18px;
+				font-weight: 600;
+				border-bottom: 2px solid #007bff;
+				padding-bottom: 10px;
+			}
+
+			.status-badge {
+				display: inline-block;
+				padding: 4px 12px;
+				border-radius: 20px;
+				color: white;
+				font-size: 12px;
+				font-weight: 600;
+				text-transform: uppercase;
+				text-align: center;
+				min-width: 70px;
+			}
+
+			/* Status Badge Colors */
+			.status-pending {
+				background-color: #ffc107;
+				color: #000;
+			}
+			.status-confirmed {
+				background-color: #17a2b8;
+			}
+			.status-preparing {
+				background-color: #fd7e14;
+			}
+			.status-ready {
+				background-color: #28a745;
+			}
+			.status-delivered {
+				background-color: #6f42c1;
+			}
+			.status-cancelled {
+				background-color: #dc3545;
+			}
+			.status-completed {
+				background-color: #20c997;
+			}
+			.status-paid {
+				background-color: #28a745;
+			}
+			.status-unpaid {
+				background-color: #dc3545;
+			}
+			.status-partial {
+				background-color: #ffc107;
+				color: #000;
+			}
+			.status-refunded {
+				background-color: #6c757d;
+			}
+
+			/* Order Details Modal Styles */
+			.order-details-modal {
+				display: none;
+				position: fixed;
+				z-index: 10000;
+				left: 0;
+				top: 0;
+				width: 100%;
+				height: 100%;
+				background-color: rgba(0, 0, 0, 0.5);
+				backdrop-filter: blur(5px);
+			}
+
+			.order-details-content {
+				background-color: #ffffff;
+				margin: 2% auto;
+				padding: 0;
+				border-radius: 15px;
+				width: 90%;
+				max-width: 800px;
+				max-height: 90vh;
+				overflow-y: auto;
+				box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+				animation: slideIn 0.3s ease-out;
+			}
+
+			@keyframes slideIn {
+				from {
+					opacity: 0;
+					transform: translateY(-50px);
+				}
+				to {
+					opacity: 1;
+					transform: translateY(0);
+				}
+			}
+
+			.order-details-header {
+				background: linear-gradient(135deg, #007bff, #0056b3);
+				color: white;
+				padding: 25px 30px;
+				border-radius: 15px 15px 0 0;
+				position: relative;
+			}
+
+			.order-details-header h2 {
+				margin: 0;
+				font-size: 24px;
+				font-weight: 600;
+			}
+
+			.order-details-header .order-number {
+				font-size: 14px;
+				opacity: 0.9;
+				margin-top: 5px;
+			}
+
+			.close-details {
+				position: absolute;
+				right: 20px;
+				top: 20px;
+				color: white;
+				font-size: 28px;
+				font-weight: bold;
+				cursor: pointer;
+				width: 35px;
+				height: 35px;
+				border-radius: 50%;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				transition: background-color 0.3s;
+			}
+
+			.close-details:hover {
+				background-color: rgba(255, 255, 255, 0.2);
+			}
+
+			.order-details-body {
+				padding: 30px;
+			}
+
+			.order-info-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+				gap: 25px;
+				margin-bottom: 30px;
+			}
+
+			.info-card {
+				background: #f8f9fa;
+				padding: 20px;
+				border-radius: 10px;
+				border-left: 4px solid #007bff;
+			}
+
+			.info-card h4 {
+				margin: 0 0 15px 0;
+				color: #495057;
+				font-size: 16px;
+				font-weight: 600;
+				display: flex;
+				align-items: center;
+				gap: 8px;
+			}
+
+			.info-card .icon {
+				font-size: 18px;
+			}
+
+			.info-value {
+				color: #212529;
+				font-size: 15px;
+				line-height: 1.5;
+			}
+
+			.order-items-section {
+				margin-top: 30px;
+			}
+
+			.order-items-section h3 {
+				margin: 0 0 20px 0;
+				color: #495057;
+				font-size: 20px;
+				font-weight: 600;
+				display: flex;
+				align-items: center;
+				gap: 10px;
+			}
+
+			.items-table {
+				width: 100%;
+				border-collapse: collapse;
+				background: white;
+				border-radius: 10px;
+				overflow: hidden;
+				box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+			}
+
+			.items-table th {
+				background: #f8f9fa;
+				color: #495057;
+				font-weight: 600;
+				padding: 15px;
+				text-align: left;
+				border-bottom: 2px solid #dee2e6;
+			}
+
+			.items-table td {
+				padding: 15px;
+				border-bottom: 1px solid #dee2e6;
+				vertical-align: middle;
+			}
+
+			.items-table tr:last-child td {
+				border-bottom: none;
+			}
+
+			.items-table tr:hover {
+				background: #f8f9fa;
+			}
+
+			.product-info {
+				display: flex;
+				flex-direction: column;
+				gap: 5px;
+			}
+
+			.product-name {
+				font-weight: 600;
+				color: #212529;
+			}
+
+			.product-barcode {
+				font-size: 12px;
+				color: #6c757d;
+				font-family: monospace;
+			}
+
+			.quantity-badge {
+				background: #e3f2fd;
+				color: #1976d2;
+				padding: 5px 10px;
+				border-radius: 15px;
+				font-weight: 600;
+				text-align: center;
+				min-width: 40px;
+			}
+
+			.price-info {
+				text-align: right;
+			}
+
+			.unit-price {
+				font-size: 13px;
+				color: #6c757d;
+			}
+
+			.total-price {
+				font-weight: 600;
+				color: #212529;
+				font-size: 15px;
+			}
+
+			.order-summary {
+				background: #f8f9fa;
+				padding: 20px;
+				border-radius: 10px;
+				margin-top: 20px;
+				border: 1px solid #dee2e6;
+			}
+
+			.summary-row {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				margin-bottom: 10px;
+				padding: 5px 0;
+			}
+
+			.summary-row:last-child {
+				margin-bottom: 0;
+				padding-top: 15px;
+				border-top: 2px solid #dee2e6;
+				font-weight: 600;
+				font-size: 18px;
+				color: #007bff;
+			}
+
+			.summary-label {
+				color: #495057;
+			}
+
+			.summary-value {
+				font-weight: 600;
+				color: #212529;
+			}
+
+			@media (max-width: 768px) {
+				.order-item {
+					flex-direction: column;
+					gap: 10px;
+				}
+
+				.order-item .form-group {
+					width: 100%;
+				}
+
+				.order-item .remove-item {
+					margin-left: 0;
+					align-self: stretch;
+				}
+
+				.order-details-content {
+					width: 95%;
+					margin: 5% auto;
+				}
+
+				.order-details-header {
+					padding: 20px;
+				}
+
+				.order-details-header h2 {
+					font-size: 20px;
+				}
+
+				.order-details-body {
+					padding: 20px;
+				}
+
+				.order-info-grid {
+					grid-template-columns: 1fr;
+					gap: 15px;
+				}
+
+				.items-table {
+					font-size: 14px;
+				}
+
+				.items-table th,
+				.items-table td {
+					padding: 10px 8px;
+				}
+
+				.items-table .product-barcode {
+					display: none;
+				}
+			}
 		</style>
 	</head>
 	<body>
@@ -932,35 +1310,30 @@
 					<a href="#" onclick="showSection('users')" id="menu-users">
 						<span class="menu-icon">👥</span>
 						<span class="menu-text">Users Management</span>
-						<span class="menu-badge" id="users-count">0</span>
 					</a>
 				</li>
 				<li class="menu-item">
 					<a href="#" onclick="showSection('categories')" id="menu-categories">
 						<span class="menu-icon">📂</span>
 						<span class="menu-text">Categories</span>
-						<span class="menu-badge" id="categories-count">0</span>
 					</a>
 				</li>
 				<li class="menu-item">
 					<a href="#" onclick="showSection('products')" id="menu-products">
 						<span class="menu-icon">📦</span>
 						<span class="menu-text">Products</span>
-						<span class="menu-badge" id="products-count">0</span>
 					</a>
 				</li>
 				<li class="menu-item">
 					<a href="#" onclick="showSection('orders')" id="menu-orders">
 						<span class="menu-icon">🛒</span>
 						<span class="menu-text">Orders</span>
-						<span class="menu-badge" id="orders-count">0</span>
 					</a>
 				</li>
 				<li class="menu-item">
 					<a href="#" onclick="showSection('riders')" id="menu-riders">
 						<span class="menu-icon">🏍️</span>
 						<span class="menu-text">Riders Management</span>
-						<span class="menu-badge" id="riders-count">0</span>
 					</a>
 				</li>
 				<li class="menu-item">
@@ -1329,11 +1702,13 @@
 							<table class="users-table">
 								<thead>
 									<tr>
+										<th>#</th>
 										<th>Order ID</th>
 										<th>Customer</th>
 										<th>Items</th>
 										<th>Total</th>
 										<th>Status</th>
+										<th>Payment</th>
 										<th>Date</th>
 										<th>Actions</th>
 									</tr>
@@ -1349,6 +1724,105 @@
 									</tr>
 								</tbody>
 							</table>
+						</div>
+					</div>
+				</div>
+
+				<!-- Orders Management Section -->
+				<div id="orders-section" class="content-section">
+					<div class="section-header">
+						<h2>Orders Management</h2>
+						<p>Manage customer orders and track their status</p>
+					</div>
+
+					<div class="section-actions">
+						<button class="btn btn-primary" onclick="showAddOrderModal()">
+							➕ Create Order
+						</button>
+						<button class="btn btn-secondary" onclick="loadOrderStats()">
+							📊 View Statistics
+						</button>
+					</div>
+
+					<div class="filters-container">
+						<select id="order-status-filter" class="filter-select">
+							<option value="all">All Status</option>
+							<option value="pending">Pending</option>
+							<option value="confirmed">Confirmed</option>
+							<option value="processing">Processing</option>
+							<option value="shipped">Shipped</option>
+							<option value="delivered">Delivered</option>
+							<option value="cancelled">Cancelled</option>
+						</select>
+						<select id="order-payment-filter" class="filter-select">
+							<option value="all">All Payment Status</option>
+							<option value="pending">Payment Pending</option>
+							<option value="paid">Paid</option>
+							<option value="failed">Payment Failed</option>
+							<option value="refunded">Refunded</option>
+						</select>
+						<input
+							type="text"
+							id="order-search"
+							placeholder="Search orders..."
+							class="search-input"
+						/>
+						<button
+							class="btn btn-primary"
+							onclick="searchOrders()"
+							style="white-space: nowrap"
+						>
+							🔍 Search
+						</button>
+					</div>
+
+					<div class="table-container">
+						<div class="loading-overlay" id="orders-loading">
+							<div class="spinner"></div>
+							<p>Loading orders...</p>
+						</div>
+						<table class="data-table">
+							<thead>
+								<tr>
+									<th>Index</th>
+									<th>Order Number</th>
+									<th>Customer</th>
+									<th>Items</th>
+									<th>Total</th>
+									<th>Status</th>
+									<th>Payment</th>
+									<th>Date</th>
+									<th>Actions</th>
+								</tr>
+							</thead>
+							<tbody id="orders-table-body">
+								<!-- Orders will be loaded here -->
+							</tbody>
+						</table>
+					</div>
+
+					<div class="pagination-container">
+						<div class="pagination-info">
+							<span id="orders-pagination-info">Showing 0 of 0 orders</span>
+						</div>
+						<div class="pagination-controls">
+							<button
+								class="btn btn-secondary"
+								onclick="loadOrders(currentOrdersPage - 1)"
+								id="orders-prev-btn"
+								disabled
+							>
+								← Previous
+							</button>
+							<span id="orders-page-info">Page 1 of 1</span>
+							<button
+								class="btn btn-secondary"
+								onclick="loadOrders(currentOrdersPage + 1)"
+								id="orders-next-btn"
+								disabled
+							>
+								Next →
+							</button>
 						</div>
 					</div>
 				</div>
@@ -1825,17 +2299,11 @@
 			// Update users count
 			function updateUsersCount(count) {
 				const totalUsersElement = document.getElementById("total-users-count");
-				const usersCountElement = document.getElementById("users-count");
 
 				if (totalUsersElement) {
 					totalUsersElement.textContent = `${count} user${
 						count !== 1 ? "s" : ""
 					}`;
-				}
-
-				// Update sidebar badge
-				if (usersCountElement) {
-					usersCountElement.textContent = count;
 				}
 			}
 
@@ -2213,8 +2681,6 @@
 						allCategories = data.data || [];
 
 						const categoriesCount = allCategories.length;
-						document.getElementById("categories-count").textContent =
-							categoriesCount;
 					}
 				} catch (error) {
 					console.error("Error loading categories count:", error);
@@ -2248,8 +2714,6 @@
 				// Placeholder for orders and riders (to be implemented)
 				document.getElementById("total-orders-stat").textContent = "0";
 				document.getElementById("total-riders-stat").textContent = "0";
-				document.getElementById("orders-count").textContent = "0";
-				document.getElementById("riders-count").textContent = "0";
 
 				showSectionLoading("dashboard", false);
 			}
@@ -2374,15 +2838,9 @@
 			}
 
 			function updateCategoriesCount(count) {
-				const categoriesCountElement =
-					document.getElementById("categories-count");
 				const categoriesCountDisplayElement = document.getElementById(
 					"categories-count-display"
 				);
-
-				if (categoriesCountElement) {
-					categoriesCountElement.textContent = count;
-				}
 
 				if (categoriesCountDisplayElement) {
 					categoriesCountDisplayElement.textContent = `${count} categor${
@@ -2818,9 +3276,36 @@
 						const categoryName = product.category
 							? product.category.name || "N/A"
 							: "Uncategorized";
-						const price = product.price
-							? `$${product.price.toFixed(2)}`
+						// Calculate pricing information
+						const basePrice = product.price || 0;
+						const tax = product.tax || 0;
+						const discount = product.discount || 0;
+
+						// Calculate discounted price
+						const discountAmount = (basePrice * discount) / 100;
+						const discountedPrice = basePrice - discountAmount;
+
+						// Calculate final price with tax
+						const taxAmount = (discountedPrice * tax) / 100;
+						const finalPrice = discountedPrice + taxAmount;
+
+						const priceDisplay = basePrice ? `$${basePrice.toFixed(2)}` : "N/A";
+						const finalPriceDisplay = basePrice
+							? `$${finalPrice.toFixed(2)}`
 							: "N/A";
+
+						// Create price info with details
+						const priceInfo = basePrice
+							? `Base: $${basePrice.toFixed(2)}${
+									discount > 0
+										? `\nDiscount: ${discount}% (-$${discountAmount.toFixed(
+												2
+										  )})`
+										: ""
+							  }${
+									tax > 0 ? `\nTax: ${tax}% (+$${taxAmount.toFixed(2)})` : ""
+							  }\nFinal: $${finalPrice.toFixed(2)}`
+							: "No price set";
 						const stock = product.stock !== undefined ? product.stock : "N/A";
 						const status = product.isActive ? "Active" : "Inactive";
 						const barcode = product.barcode || "N/A";
@@ -2849,7 +3334,38 @@
 								</div>
 							</td>
 							<td>${categoryName}</td>
-							<td>${price}</td>
+							<td>
+								<div style="position: relative;">
+									<div style="display: flex; flex-direction: column; gap: 2px;">
+										<div style="font-weight: 600;">${finalPriceDisplay}</div>
+										${
+											basePrice && (tax > 0 || discount > 0)
+												? `
+											<div style="font-size: 11px; color: #6c757d;">
+												${discount > 0 ? `<span style="color: #28a745;">-${discount}%</span>` : ""}
+												${tax > 0 ? `<span style="color: #fd7e14;">+${tax}% tax</span>` : ""}
+											</div>
+										`
+												: ""
+										}
+										${
+											basePrice && finalPrice !== basePrice
+												? `
+											<div style="font-size: 10px; color: #6c757d; text-decoration: line-through;">
+												Base: ${priceDisplay}
+											</div>
+										`
+												: basePrice && finalPrice === basePrice
+												? `
+											<div style="font-size: 10px; color: #6c757d;">
+												Base price
+											</div>
+										`
+												: ""
+										}
+									</div>
+								</div>
+							</td>
 							<td>
 								<span style="color: ${
 									stock <= 0 ? "#dc3545" : stock <= 10 ? "#fd7e14" : "#28a745"
@@ -2882,14 +3398,9 @@
 			}
 
 			function updateProductsCount(count) {
-				const productsCountElement = document.getElementById("products-count");
 				const productsCountDisplayElement = document.getElementById(
 					"products-count-display"
 				);
-
-				if (productsCountElement) {
-					productsCountElement.textContent = count;
-				}
 
 				if (productsCountDisplayElement) {
 					productsCountDisplayElement.textContent = `${count} product${
@@ -3056,6 +3567,16 @@
 					productForm.reset();
 					productId.value = "";
 
+					// Reset price calculation display
+					document.getElementById("calc-base-price").textContent =
+						"Base Price: $0.00";
+					document.getElementById("calc-discount").style.display = "none";
+					document.getElementById("calc-subtotal").textContent =
+						"After Discount: $0.00";
+					document.getElementById("calc-tax").style.display = "none";
+					document.getElementById("calc-final-price").textContent =
+						"Final Price: $0.00";
+
 					productModal.style.display = "block";
 				} catch (error) {
 					console.error("Error showing add product modal:", error);
@@ -3113,6 +3634,8 @@
 						productDescription: document.getElementById("product-description"),
 						productPicture: document.getElementById("product-picture"),
 						productPrice: document.getElementById("product-price"),
+						productTax: document.getElementById("product-tax"),
+						productDiscount: document.getElementById("product-discount"),
 						productStock: document.getElementById("product-stock"),
 						productStatus: document.getElementById("product-status"),
 						productModal: document.getElementById("product-modal"),
@@ -3150,8 +3673,54 @@
 					}
 
 					elements.productPrice.value = product.price || "";
+					elements.productTax.value = product.tax || 0;
+					elements.productDiscount.value = product.discount || 0;
 					elements.productStock.value = product.stock || 0;
 					elements.productStatus.value = product.isActive ? "true" : "false";
+
+					// Update price calculation display for editing
+					setTimeout(() => {
+						const basePrice = parseFloat(product.price) || 0;
+						const tax = parseFloat(product.tax) || 0;
+						const discount = parseFloat(product.discount) || 0;
+
+						const discountAmount = (basePrice * discount) / 100;
+						const discountedPrice = basePrice - discountAmount;
+						const taxAmount = (discountedPrice * tax) / 100;
+						const finalPrice = discountedPrice + taxAmount;
+
+						document.getElementById(
+							"calc-base-price"
+						).textContent = `Base Price: $${basePrice.toFixed(2)}`;
+
+						const discountElement = document.getElementById("calc-discount");
+						if (discount > 0) {
+							discountElement.textContent = `Discount: ${discount}% (-$${discountAmount.toFixed(
+								2
+							)})`;
+							discountElement.style.display = "block";
+						} else {
+							discountElement.style.display = "none";
+						}
+
+						document.getElementById(
+							"calc-subtotal"
+						).textContent = `After Discount: $${discountedPrice.toFixed(2)}`;
+
+						const taxElement = document.getElementById("calc-tax");
+						if (tax > 0) {
+							taxElement.textContent = `Tax: ${tax}% (+$${taxAmount.toFixed(
+								2
+							)})`;
+							taxElement.style.display = "block";
+						} else {
+							taxElement.style.display = "none";
+						}
+
+						document.getElementById(
+							"calc-final-price"
+						).textContent = `Final Price: $${finalPrice.toFixed(2)}`;
+					}, 100);
 
 					elements.productModal.style.display = "block";
 				} catch (error) {
@@ -3323,6 +3892,10 @@
 						price: formData.get("price")
 							? parseFloat(formData.get("price"))
 							: undefined,
+						tax: formData.get("tax") ? parseFloat(formData.get("tax")) : 0,
+						discount: formData.get("discount")
+							? parseFloat(formData.get("discount"))
+							: 0,
 						stock: parseInt(formData.get("stock")) || 0,
 						isActive: formData.get("status") === "true",
 					};
@@ -3561,7 +4134,6 @@
 			// Orders Management Functions
 			function loadOrders() {
 				// Placeholder for orders loading
-				document.getElementById("orders-count").textContent = "0";
 				document.getElementById("orders-count-display").textContent =
 					"0 orders";
 			}
@@ -3582,7 +4154,6 @@
 			// Riders Management Functions
 			function loadRiders() {
 				// Placeholder for riders loading
-				document.getElementById("riders-count").textContent = "0";
 				document.getElementById("riders-count-display").textContent =
 					"0 riders";
 			}
@@ -3648,6 +4219,9 @@
 				const userModal = document.getElementById("user-modal");
 				const categoryModal = document.getElementById("category-modal");
 				const productModal = document.getElementById("product-modal");
+				const orderDetailsModal = document.getElementById(
+					"order-details-modal"
+				);
 
 				if (event.target === userModal) {
 					closeModal();
@@ -3655,6 +4229,8 @@
 					closeCategoryModal();
 				} else if (event.target === productModal) {
 					closeProductModal();
+				} else if (event.target === orderDetailsModal) {
+					closeOrderDetails();
 				}
 			};
 		</script>
@@ -3981,6 +4557,34 @@
 						</div>
 
 						<div class="form-group">
+							<label for="product-tax">Tax (%)</label>
+							<input
+								type="number"
+								id="product-tax"
+								name="tax"
+								min="0"
+								max="100"
+								step="0.01"
+								value="0"
+								placeholder="0.00"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="product-discount">Discount (%)</label>
+							<input
+								type="number"
+								id="product-discount"
+								name="discount"
+								min="0"
+								max="100"
+								step="0.01"
+								value="0"
+								placeholder="0.00"
+							/>
+						</div>
+
+						<div class="form-group">
 							<label for="product-stock">Stock Quantity</label>
 							<input
 								type="number"
@@ -4059,6 +4663,44 @@
 								<option value="false">Inactive</option>
 							</select>
 						</div>
+
+						<!-- Price Calculation Display -->
+						<div
+							class="form-group full-width"
+							style="
+								background: #f8f9fa;
+								padding: 15px;
+								border-radius: 8px;
+								border: 1px solid #e9ecef;
+							"
+						>
+							<h4 style="margin: 0 0 10px 0; color: #495057; font-size: 14px">
+								Price Calculation
+							</h4>
+							<div
+								id="price-calculation"
+								style="font-size: 13px; color: #6c757d"
+							>
+								<div id="calc-base-price">Base Price: $0.00</div>
+								<div id="calc-discount" style="display: none">
+									Discount: 0% (-$0.00)
+								</div>
+								<div id="calc-subtotal">After Discount: $0.00</div>
+								<div id="calc-tax" style="display: none">Tax: 0% (+$0.00)</div>
+								<div
+									id="calc-final-price"
+									style="
+										font-weight: 600;
+										color: #007bff;
+										margin-top: 5px;
+										padding-top: 5px;
+										border-top: 1px solid #dee2e6;
+									"
+								>
+									Final Price: $0.00
+								</div>
+							</div>
+						</div>
 					</div>
 
 					<div
@@ -4079,6 +4721,248 @@
 						<button type="submit" class="btn btn-primary">Save Product</button>
 					</div>
 				</form>
+			</div>
+		</div>
+
+		<!-- Order Modal -->
+		<div id="order-modal" class="modal">
+			<div class="modal-content">
+				<span class="close" onclick="closeOrderModal()">&times;</span>
+				<form id="order-form" onsubmit="saveOrder(event)">
+					<h2 id="order-modal-title">Create New Order</h2>
+
+					<!-- Customer Information -->
+					<div class="form-section">
+						<h3>Customer Information</h3>
+						<div class="form-group">
+							<label for="customer-name">Customer Name *</label>
+							<input
+								type="text"
+								id="customer-name"
+								name="customer-name"
+								required
+							/>
+						</div>
+						<div class="form-group">
+							<label for="customer-email">Email</label>
+							<input
+								type="email"
+								id="customer-email"
+								name="customer-email"
+								placeholder="customer@example.com"
+							/>
+						</div>
+						<div class="form-group">
+							<label for="customer-phone">Phone</label>
+							<input
+								type="tel"
+								id="customer-phone"
+								name="customer-phone"
+								placeholder="+1-234-567-8900"
+							/>
+						</div>
+					</div>
+
+					<!-- Order Items -->
+					<div class="form-section">
+						<h3>Order Items</h3>
+						<div id="order-items-container">
+							<div class="order-item">
+								<div class="form-group">
+									<label>Product *</label>
+									<select class="product-select" required>
+										<option value="">Select a product</option>
+									</select>
+								</div>
+								<div class="form-group">
+									<label>Quantity *</label>
+									<input
+										type="number"
+										class="quantity-input"
+										min="1"
+										value="1"
+										required
+									/>
+								</div>
+								<div class="form-group">
+									<label>Unit Price *</label>
+									<input
+										type="number"
+										class="price-input"
+										step="0.01"
+										min="0"
+										required
+									/>
+								</div>
+								<div class="form-group">
+									<label>Total</label>
+									<input type="number" class="total-input" readonly />
+								</div>
+								<button
+									type="button"
+									class="btn btn-danger remove-item"
+									onclick="removeOrderItem(this)"
+								>
+									Remove
+								</button>
+							</div>
+						</div>
+						<button
+							type="button"
+							class="btn btn-secondary"
+							onclick="addOrderItem()"
+						>
+							+ Add Item
+						</button>
+					</div>
+
+					<!-- Order Totals -->
+					<div class="form-section">
+						<h3>Order Summary</h3>
+						<div class="form-group">
+							<label for="order-subtotal">Subtotal</label>
+							<input type="number" id="order-subtotal" readonly value="0.00" />
+						</div>
+						<div class="form-group">
+							<label for="order-tax">Tax</label>
+							<input
+								type="number"
+								id="order-tax"
+								step="0.01"
+								min="0"
+								value="0.00"
+							/>
+						</div>
+						<div class="form-group">
+							<label for="order-discount">Discount</label>
+							<input
+								type="number"
+								id="order-discount"
+								step="0.01"
+								min="0"
+								value="0.00"
+							/>
+						</div>
+						<div class="form-group">
+							<label for="order-total">Total</label>
+							<input type="number" id="order-total" readonly value="0.00" />
+						</div>
+					</div>
+
+					<!-- Additional Information -->
+					<div class="form-section">
+						<h3>Additional Information</h3>
+						<div class="form-group">
+							<label for="payment-method">Payment Method</label>
+							<select id="payment-method">
+								<option value="cash">Cash</option>
+								<option value="card">Card</option>
+								<option value="online">Online</option>
+								<option value="wallet">Digital Wallet</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="order-notes">Notes</label>
+							<textarea
+								id="order-notes"
+								name="notes"
+								rows="3"
+								placeholder="Additional notes or instructions..."
+							></textarea>
+						</div>
+					</div>
+
+					<div
+						style="
+							display: flex;
+							gap: 10px;
+							justify-content: flex-end;
+							margin-top: 30px;
+						"
+					>
+						<button
+							type="button"
+							class="btn btn-secondary"
+							onclick="closeOrderModal()"
+						>
+							Cancel
+						</button>
+						<button type="submit" class="btn btn-primary">Create Order</button>
+					</div>
+				</form>
+			</div>
+		</div>
+
+		<!-- Order Details Modal -->
+		<div id="order-details-modal" class="order-details-modal">
+			<div class="order-details-content">
+				<div class="order-details-header">
+					<h2>Order Details</h2>
+					<div class="order-number" id="modal-order-number"></div>
+					<span class="close-details" onclick="closeOrderDetails()"
+						>&times;</span
+					>
+				</div>
+				<div class="order-details-body">
+					<div class="order-info-grid">
+						<div class="info-card">
+							<h4><span class="icon">👤</span> Customer Information</h4>
+							<div class="info-value" id="modal-customer-info"></div>
+						</div>
+						<div class="info-card">
+							<h4><span class="icon">📊</span> Order Status</h4>
+							<div class="info-value" id="modal-order-status"></div>
+						</div>
+						<div class="info-card">
+							<h4><span class="icon">💳</span> Payment Status</h4>
+							<div class="info-value" id="modal-payment-status"></div>
+						</div>
+						<div class="info-card">
+							<h4><span class="icon">📅</span> Order Date</h4>
+							<div class="info-value" id="modal-order-date"></div>
+						</div>
+						<div class="info-card">
+							<h4><span class="icon">👨‍💼</span> Created By</h4>
+							<div class="info-value" id="modal-created-by"></div>
+						</div>
+						<div class="info-card">
+							<h4><span class="icon">🏪</span> Service Type</h4>
+							<div class="info-value" id="modal-service-type"></div>
+						</div>
+					</div>
+
+					<div class="order-items-section">
+						<h3><span class="icon">🛒</span> Order Items</h3>
+						<table class="items-table">
+							<thead>
+								<tr>
+									<th>Product</th>
+									<th>Quantity</th>
+									<th>Unit Price</th>
+									<th>Total Price</th>
+								</tr>
+							</thead>
+							<tbody id="modal-order-items">
+								<!-- Order items will be populated here -->
+							</tbody>
+						</table>
+
+						<div class="order-summary">
+							<div class="summary-row">
+								<span class="summary-label">Subtotal:</span>
+								<span class="summary-value" id="modal-subtotal">$0.00</span>
+							</div>
+							<div class="summary-row">
+								<span class="summary-label">Tax:</span>
+								<span class="summary-value" id="modal-tax">$0.00</span>
+							</div>
+							<div class="summary-row">
+								<span class="summary-label">Total:</span>
+								<span class="summary-value" id="modal-total">$0.00</span>
+							</div>
+						</div>
+					</div>
+				</div>
 			</div>
 		</div>
 
@@ -4184,6 +5068,808 @@
 						if (currentImageField) currentImageField.value = "";
 					});
 				}
+
+				// Price calculation handling
+				const priceInput = document.getElementById("product-price");
+				const taxInput = document.getElementById("product-tax");
+				const discountInput = document.getElementById("product-discount");
+
+				function updatePriceCalculation() {
+					const basePrice = parseFloat(priceInput.value) || 0;
+					const tax = parseFloat(taxInput.value) || 0;
+					const discount = parseFloat(discountInput.value) || 0;
+
+					// Calculate discounted price
+					const discountAmount = (basePrice * discount) / 100;
+					const discountedPrice = basePrice - discountAmount;
+
+					// Calculate final price with tax
+					const taxAmount = (discountedPrice * tax) / 100;
+					const finalPrice = discountedPrice + taxAmount;
+
+					// Update display elements
+					document.getElementById(
+						"calc-base-price"
+					).textContent = `Base Price: $${basePrice.toFixed(2)}`;
+
+					const discountElement = document.getElementById("calc-discount");
+					if (discount > 0) {
+						discountElement.textContent = `Discount: ${discount}% (-$${discountAmount.toFixed(
+							2
+						)})`;
+						discountElement.style.display = "block";
+					} else {
+						discountElement.style.display = "none";
+					}
+
+					document.getElementById(
+						"calc-subtotal"
+					).textContent = `After Discount: $${discountedPrice.toFixed(2)}`;
+
+					const taxElement = document.getElementById("calc-tax");
+					if (tax > 0) {
+						taxElement.textContent = `Tax: ${tax}% (+$${taxAmount.toFixed(2)})`;
+						taxElement.style.display = "block";
+					} else {
+						taxElement.style.display = "none";
+					}
+
+					document.getElementById(
+						"calc-final-price"
+					).textContent = `Final Price: $${finalPrice.toFixed(2)}`;
+				}
+
+				// Add event listeners for real-time calculation
+				if (priceInput) {
+					priceInput.addEventListener("input", updatePriceCalculation);
+				}
+				if (taxInput) {
+					taxInput.addEventListener("input", updatePriceCalculation);
+				}
+				if (discountInput) {
+					discountInput.addEventListener("input", updatePriceCalculation);
+				}
+
+				// Initial calculation
+				updatePriceCalculation();
+			});
+
+			// ============================================
+			// Orders Management Functions
+			// ============================================
+
+			let currentOrdersPage = 1;
+			const ordersPageSize = 20;
+			let isEditingOrder = false;
+			let currentOrderId = null;
+
+			// Load orders with pagination
+			async function loadOrders(
+				page = currentOrdersPage,
+				pageSize = ordersPageSize
+			) {
+				showSectionLoading("orders", true, "Loading orders...");
+
+				try {
+					const response = await fetch(
+						`${API_BASE_URL}/orders?page=${page}&limit=${pageSize}&isActive=true`,
+						{
+							method: "GET",
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+						}
+					);
+
+					const result = await response.json();
+
+					if (response.ok) {
+						displayOrders(result.data || []);
+						updateOrdersPagination(result.pagination);
+						currentOrdersPage = page;
+					} else {
+						showMessage(result.message || "Failed to load orders", "error");
+					}
+				} catch (error) {
+					showMessage("Error loading orders: " + error.message, "error");
+				} finally {
+					showSectionLoading("orders", false);
+				}
+			}
+
+			// Display orders in table
+			function displayOrders(orders) {
+				const tbody = document.getElementById("orders-table-body");
+				tbody.innerHTML = "";
+
+				if (orders.length === 0) {
+					tbody.innerHTML = `
+						<tr>
+							<td colspan="9" style="text-align: center; padding: 40px; color: #666;">
+								<div style="font-size: 48px; margin-bottom: 16px;">📦</div>
+								<div style="font-size: 18px; margin-bottom: 8px; font-weight: 500;">No orders found</div>
+								<div style="font-size: 14px;">Create your first order to get started</div>
+							</td>
+						</tr>
+					`;
+					return;
+				}
+
+				orders.forEach((order, index) => {
+					const startIndex = (currentOrdersPage - 1) * ordersPageSize;
+					const orderIndex = startIndex + index + 1;
+
+					const statusColor = getStatusColor(order.status);
+					const paymentColor = getPaymentStatusColor(order.paymentStatus);
+					const orderDate = new Date(order.createdAt).toLocaleDateString();
+					const customerName = order.customer?.name || "N/A";
+					const itemCount = order.items?.length || 0;
+
+					const row = `
+						<tr>
+							<td>${orderIndex}</td>
+							<td><strong>${order.orderNumber}</strong></td>
+							<td>
+								<div>${customerName}</div>
+								${
+									order.customer?.email
+										? `<small style="color: #666;">${order.customer.email}</small>`
+										: ""
+								}
+							</td>
+							<td>${itemCount} item${itemCount !== 1 ? "s" : ""}</td>
+							<td><strong>$${order.total?.toFixed(2) || "0.00"}</strong></td>
+							<td>
+								<span class="status-badge" style="background-color: ${statusColor};">
+									${order.status}
+								</span>
+							</td>
+							<td>
+								<span class="status-badge" style="background-color: ${paymentColor};">
+									${order.paymentStatus}
+								</span>
+							</td>
+							<td>${orderDate}</td>
+							<td class="actions">
+								<button class="action-btn view" onclick="viewOrder('${
+									order._id
+								}')">View</button>
+								<button class="action-btn edit" onclick="editOrder('${
+									order._id
+								}')">Edit</button>
+								<button class="action-btn cancel" onclick="cancelOrder('${order._id}', '${
+						order.orderNumber
+					}')">Cancel</button>
+								<button class="action-btn delete" onclick="deleteOrder('${order._id}', '${
+						order.orderNumber
+					}')">Delete</button>
+							</td>
+						</tr>
+					`;
+					tbody.innerHTML += row;
+				});
+			}
+
+			// Get status colors
+			function getStatusColor(status) {
+				const colors = {
+					pending: "#ffc107",
+					confirmed: "#17a2b8",
+					processing: "#fd7e14",
+					shipped: "#6f42c1",
+					delivered: "#28a745",
+					cancelled: "#dc3545",
+				};
+				return colors[status] || "#6c757d";
+			}
+
+			function getPaymentStatusColor(status) {
+				const colors = {
+					pending: "#ffc107",
+					paid: "#28a745",
+					failed: "#dc3545",
+					refunded: "#fd7e14",
+				};
+				return colors[status] || "#6c757d";
+			}
+
+			// Update pagination
+			function updateOrdersPagination(pagination) {
+				if (!pagination) return;
+
+				const prevBtn = document.getElementById("orders-prev-btn");
+				const nextBtn = document.getElementById("orders-next-btn");
+				const pageInfo = document.getElementById("orders-page-info");
+				const paginationInfo = document.getElementById(
+					"orders-pagination-info"
+				);
+
+				prevBtn.disabled = !pagination.hasPrevPage;
+				nextBtn.disabled = !pagination.hasNextPage;
+
+				pageInfo.textContent = `Page ${pagination.currentPage} of ${pagination.totalPages}`;
+				paginationInfo.textContent = `Showing ${
+					(pagination.currentPage - 1) * ordersPageSize + 1
+				}-${Math.min(
+					pagination.currentPage * ordersPageSize,
+					pagination.totalOrders
+				)} of ${pagination.totalOrders} orders`;
+			}
+
+			// Show add order modal
+			function showAddOrderModal() {
+				isEditingOrder = false;
+				currentOrderId = null;
+				document.getElementById("order-modal-title").textContent =
+					"Create New Order";
+				document.getElementById("order-form").reset();
+
+				// Load products for selection
+				loadProductsForOrder();
+
+				// Show modal
+				document.getElementById("order-modal").style.display = "block";
+			}
+
+			// Close order modal
+			function closeOrderModal() {
+				document.getElementById("order-modal").style.display = "none";
+				document.getElementById("order-form").reset();
+				isEditingOrder = false;
+				currentOrderId = null;
+			}
+
+			// Load products for order selection
+			async function loadProductsForOrder() {
+				try {
+					const response = await fetch(
+						`${API_BASE_URL}/products?limit=1000&isActive=true`,
+						{
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+							},
+						}
+					);
+
+					const result = await response.json();
+					if (response.ok) {
+						const products = result.data || [];
+						const productSelects = document.querySelectorAll(".product-select");
+
+						productSelects.forEach((select) => {
+							select.innerHTML = '<option value="">Select a product</option>';
+							products.forEach((product) => {
+								select.innerHTML += `<option value="${product._id}" data-price="${product.price}" data-stock="${product.stock}">${product.name} - $${product.price} (Stock: ${product.stock})</option>`;
+							});
+						});
+					}
+				} catch (error) {
+					console.error("Error loading products:", error);
+				}
+			}
+
+			// Add order item
+			function addOrderItem() {
+				const container = document.getElementById("order-items-container");
+				const newItem = document.createElement("div");
+				newItem.className = "order-item";
+				newItem.innerHTML = `
+					<div class="form-group">
+						<label>Product *</label>
+						<select class="product-select" required>
+							<option value="">Select a product</option>
+						</select>
+					</div>
+					<div class="form-group">
+						<label>Quantity *</label>
+						<input
+							type="number"
+							class="quantity-input"
+							min="1"
+							value="1"
+							required
+						/>
+					</div>
+					<div class="form-group">
+						<label>Unit Price *</label>
+						<input
+							type="number"
+							class="price-input"
+							step="0.01"
+							min="0"
+							required
+						/>
+					</div>
+					<div class="form-group">
+						<label>Total</label>
+						<input
+							type="number"
+							class="total-input"
+							readonly
+						/>
+					</div>
+					<button type="button" class="btn btn-danger remove-item" onclick="removeOrderItem(this)">
+						Remove
+					</button>
+				`;
+				container.appendChild(newItem);
+
+				// Add event listeners to new item
+				setupOrderItemListeners(newItem);
+
+				// Load products for the new select
+				loadProductsForNewItem(newItem.querySelector(".product-select"));
+			}
+
+			// Remove order item
+			function removeOrderItem(button) {
+				const item = button.closest(".order-item");
+				const container = document.getElementById("order-items-container");
+				if (container.children.length > 1) {
+					item.remove();
+					calculateOrderTotal();
+				} else {
+					showMessage("Order must have at least one item", "error");
+				}
+			}
+
+			// Setup event listeners for order items
+			function setupOrderItemListeners(item) {
+				const productSelect = item.querySelector(".product-select");
+				const quantityInput = item.querySelector(".quantity-input");
+				const priceInput = item.querySelector(".price-input");
+				const totalInput = item.querySelector(".total-input");
+
+				// Product selection change
+				productSelect.addEventListener("change", function () {
+					const selectedOption = this.options[this.selectedIndex];
+					if (selectedOption.value) {
+						const price = parseFloat(selectedOption.dataset.price) || 0;
+						priceInput.value = price.toFixed(2);
+						calculateItemTotal(item);
+					}
+				});
+
+				// Quantity or price change
+				[quantityInput, priceInput].forEach((input) => {
+					input.addEventListener("input", function () {
+						calculateItemTotal(item);
+					});
+				});
+			}
+
+			// Calculate item total
+			function calculateItemTotal(item) {
+				const quantity =
+					parseFloat(item.querySelector(".quantity-input").value) || 0;
+				const price = parseFloat(item.querySelector(".price-input").value) || 0;
+				const total = quantity * price;
+
+				item.querySelector(".total-input").value = total.toFixed(2);
+				calculateOrderTotal();
+			}
+
+			// Calculate order total
+			function calculateOrderTotal() {
+				const items = document.querySelectorAll(".order-item");
+				let subtotal = 0;
+
+				items.forEach((item) => {
+					const itemTotal =
+						parseFloat(item.querySelector(".total-input").value) || 0;
+					subtotal += itemTotal;
+				});
+
+				const tax = parseFloat(document.getElementById("order-tax").value) || 0;
+				const discount =
+					parseFloat(document.getElementById("order-discount").value) || 0;
+				const total = subtotal + tax - discount;
+
+				document.getElementById("order-subtotal").value = subtotal.toFixed(2);
+				document.getElementById("order-total").value = Math.max(
+					0,
+					total
+				).toFixed(2);
+			}
+
+			// Load products for new item
+			async function loadProductsForNewItem(select) {
+				try {
+					const response = await fetch(
+						`${API_BASE_URL}/products?limit=1000&isActive=true`,
+						{
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+							},
+						}
+					);
+
+					const result = await response.json();
+					if (response.ok) {
+						const products = result.data || [];
+						select.innerHTML = '<option value="">Select a product</option>';
+						products.forEach((product) => {
+							select.innerHTML += `<option value="${product._id}" data-price="${product.price}" data-stock="${product.stock}">${product.name} - $${product.price} (Stock: ${product.stock})</option>`;
+						});
+					}
+				} catch (error) {
+					console.error("Error loading products:", error);
+				}
+			}
+
+			// Save order
+			async function saveOrder(event) {
+				event.preventDefault();
+
+				try {
+					// Get form data
+					const formData = new FormData(event.target);
+					const customerName = document.getElementById("customer-name").value;
+					const customerEmail = document.getElementById("customer-email").value;
+					const customerPhone = document.getElementById("customer-phone").value;
+					const paymentMethod = document.getElementById("payment-method").value;
+					const notes = document.getElementById("order-notes").value;
+					const tax =
+						parseFloat(document.getElementById("order-tax").value) || 0;
+					const discount =
+						parseFloat(document.getElementById("order-discount").value) || 0;
+
+					// Get order items
+					const items = [];
+					const orderItems = document.querySelectorAll(".order-item");
+
+					for (const item of orderItems) {
+						const productId = item.querySelector(".product-select").value;
+						const quantity = parseInt(
+							item.querySelector(".quantity-input").value
+						);
+						const unitPrice = parseFloat(
+							item.querySelector(".price-input").value
+						);
+
+						if (!productId || !quantity || !unitPrice) {
+							showMessage("Please fill in all item details", "error");
+							return;
+						}
+
+						items.push({
+							product: productId,
+							quantity: quantity,
+							unitPrice: unitPrice,
+						});
+					}
+
+					if (items.length === 0) {
+						showMessage("Order must have at least one item", "error");
+						return;
+					}
+
+					const orderData = {
+						customer: {
+							name: customerName,
+							email: customerEmail,
+							phone: customerPhone,
+						},
+						items: items,
+						tax: tax,
+						discount: discount,
+						paymentMethod: paymentMethod,
+						notes: notes,
+					};
+
+					const response = await fetch(`${API_BASE_URL}/orders`, {
+						method: "POST",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify(orderData),
+					});
+
+					const result = await response.json();
+
+					if (response.ok) {
+						showMessage("Order created successfully", "success");
+						closeOrderModal();
+						loadOrders();
+					} else {
+						showMessage(result.message || "Failed to create order", "error");
+					}
+				} catch (error) {
+					showMessage("Error creating order: " + error.message, "error");
+				}
+			}
+
+			// Search orders
+			async function searchOrders() {
+				const status = document.getElementById("order-status-filter").value;
+				const paymentStatus = document.getElementById(
+					"order-payment-filter"
+				).value;
+				const search = document.getElementById("order-search").value;
+
+				showSectionLoading("orders", true, "Searching orders...");
+
+				try {
+					let url = `${API_BASE_URL}/orders?page=1&limit=${ordersPageSize}`;
+
+					if (search) {
+						url += `&search=${encodeURIComponent(search)}`;
+					}
+
+					if (status && status !== "all") {
+						url += `&status=${status}`;
+					}
+
+					if (paymentStatus && paymentStatus !== "all") {
+						url += `&paymentStatus=${paymentStatus}`;
+					}
+
+					url += `&isActive=true`;
+
+					const response = await fetch(url, {
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					const result = await response.json();
+
+					if (response.ok) {
+						displayOrders(result.data || []);
+						updateOrdersPagination(result.pagination);
+						currentOrdersPage = 1;
+					} else {
+						showMessage(result.message || "Failed to search orders", "error");
+					}
+				} catch (error) {
+					showMessage("Error searching orders: " + error.message, "error");
+				} finally {
+					showSectionLoading("orders", false);
+				}
+			}
+
+			// View order details
+			async function viewOrder(orderId) {
+				try {
+					const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+						},
+					});
+
+					const result = await response.json();
+					if (response.ok) {
+						showOrderDetails(result.data);
+					} else {
+						showMessage(
+							result.message || "Failed to load order details",
+							"error"
+						);
+					}
+				} catch (error) {
+					showMessage("Error loading order: " + error.message, "error");
+				}
+			}
+
+			// Show order details in modal
+			function showOrderDetails(order) {
+				// Set order number and header
+				document.getElementById("modal-order-number").textContent =
+					order.orderNumber;
+
+				// Set customer information
+				let customerInfo = `<strong>${order.customer.name}</strong>`;
+				if (order.customer.email) {
+					customerInfo += `<br>📧 ${order.customer.email}`;
+				}
+				if (order.customer.phone) {
+					customerInfo += `<br>📞 ${order.customer.phone}`;
+				}
+				document.getElementById("modal-customer-info").innerHTML = customerInfo;
+
+				// Set order status with appropriate styling
+				const statusElement = document.getElementById("modal-order-status");
+				statusElement.innerHTML = `<span class="status-badge status-${order.status.toLowerCase()}">${
+					order.status
+				}</span>`;
+
+				// Set payment status with appropriate styling
+				const paymentElement = document.getElementById("modal-payment-status");
+				paymentElement.innerHTML = `<span class="status-badge status-${order.paymentStatus
+					.toLowerCase()
+					.replace(" ", "-")}">${order.paymentStatus}</span>`;
+
+				// Set order date
+				const orderDate = new Date(order.createdAt).toLocaleString();
+				document.getElementById("modal-order-date").textContent = orderDate;
+
+				// Set created by
+				document.getElementById("modal-created-by").textContent =
+					order.createdBy.name;
+
+				// Set service type
+				document.getElementById("modal-service-type").textContent =
+					order.serviceType || "Dine In";
+
+				// Populate order items
+				const itemsContainer = document.getElementById("modal-order-items");
+				itemsContainer.innerHTML = "";
+
+				order.items.forEach((item) => {
+					const row = document.createElement("tr");
+					row.innerHTML = `
+						<td>
+							<div class="product-info">
+								<div class="product-name">${item.productName}</div>
+								<div class="product-barcode">${item.productBarcode}</div>
+							</div>
+						</td>
+						<td>
+							<div class="quantity-badge">${item.quantity}</div>
+						</td>
+						<td>$${item.unitPrice.toFixed(2)}</td>
+						<td>
+							<div class="price-info">
+								<div class="total-price">$${item.totalPrice.toFixed(2)}</div>
+							</div>
+						</td>
+					`;
+					itemsContainer.appendChild(row);
+				});
+
+				// Set summary values
+				document.getElementById(
+					"modal-subtotal"
+				).textContent = `$${order.subtotal.toFixed(2)}`;
+				const tax = order.total - order.subtotal;
+				document.getElementById("modal-tax").textContent = `$${tax.toFixed(2)}`;
+				document.getElementById(
+					"modal-total"
+				).textContent = `$${order.total.toFixed(2)}`;
+
+				// Show the modal
+				document.getElementById("order-details-modal").style.display = "block";
+			}
+
+			// Close order details modal
+			function closeOrderDetails() {
+				document.getElementById("order-details-modal").style.display = "none";
+			}
+
+			// Edit order
+			function editOrder(orderId) {
+				// For now, show a simple message. Full edit functionality can be added later
+				showMessage(
+					"Order editing will be implemented in the next update",
+					"info"
+				);
+			}
+
+			// Cancel order
+			async function cancelOrder(orderId, orderNumber) {
+				if (
+					!confirm(
+						`Are you sure you want to cancel order "${orderNumber}"? This will restore product stock.`
+					)
+				) {
+					return;
+				}
+
+				try {
+					const reason = prompt(
+						"Please provide a reason for cancellation (optional):"
+					);
+
+					const response = await fetch(
+						`${API_BASE_URL}/orders/${orderId}/cancel`,
+						{
+							method: "PATCH",
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({ reason }),
+						}
+					);
+
+					const result = await response.json();
+
+					if (response.ok) {
+						showMessage(
+							`Order "${orderNumber}" cancelled successfully`,
+							"success"
+						);
+						loadOrders();
+					} else {
+						showMessage(result.message || "Failed to cancel order", "error");
+					}
+				} catch (error) {
+					showMessage("Error cancelling order: " + error.message, "error");
+				}
+			}
+
+			// Delete order
+			async function deleteOrder(orderId, orderNumber) {
+				if (
+					!confirm(
+						`Are you sure you want to delete order "${orderNumber}"? This action cannot be undone.`
+					)
+				) {
+					return;
+				}
+
+				try {
+					const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+						method: "DELETE",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					const result = await response.json();
+
+					if (response.ok) {
+						showMessage(
+							`Order "${orderNumber}" deleted successfully`,
+							"success"
+						);
+						loadOrders();
+					} else {
+						showMessage(result.message || "Failed to delete order", "error");
+					}
+				} catch (error) {
+					showMessage("Error deleting order: " + error.message, "error");
+				}
+			}
+
+			// Load order statistics
+			async function loadOrderStats() {
+				try {
+					const response = await fetch(`${API_BASE_URL}/orders/stats`, {
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+						},
+					});
+
+					const result = await response.json();
+					if (response.ok) {
+						const stats = result.data;
+						const message = `Order Statistics:\n\nTotal Orders: ${
+							stats.totalOrders
+						}\nTotal Revenue: $${stats.totalRevenue.toFixed(
+							2
+						)}\nToday's Orders: ${stats.todayOrders}\nMonthly Orders: ${
+							stats.monthlyOrders
+						}\nMonthly Revenue: $${stats.monthlyRevenue.toFixed(2)}`;
+						alert(message);
+					} else {
+						showMessage(result.message || "Failed to load statistics", "error");
+					}
+				} catch (error) {
+					showMessage("Error loading statistics: " + error.message, "error");
+				}
+			}
+
+			// Initialize order item listeners when page loads
+			document.addEventListener("DOMContentLoaded", function () {
+				// Setup initial order item listeners
+				const initialItem = document.querySelector(".order-item");
+				if (initialItem) {
+					setupOrderItemListeners(initialItem);
+				}
+
+				// Add listeners for tax and discount inputs
+				["order-tax", "order-discount"].forEach((id) => {
+					const input = document.getElementById(id);
+					if (input) {
+						input.addEventListener("input", calculateOrderTotal);
+					}
+				});
 			});
 		</script>
 	</body>

@@ -73,6 +73,32 @@ const productSchema = new mongoose.Schema(
 				message: "Price must have at most 2 decimal places",
 			},
 		},
+		tax: {
+			type: Number,
+			default: 0,
+			min: [0, "Tax cannot be negative"],
+			max: [100, "Tax cannot exceed 100%"],
+			validate: {
+				validator: function (v) {
+					// Allow up to 2 decimal places for tax percentage
+					return v === undefined || /^\d+(\.\d{1,2})?$/.test(v.toString());
+				},
+				message: "Tax must have at most 2 decimal places",
+			},
+		},
+		discount: {
+			type: Number,
+			default: 0,
+			min: [0, "Discount cannot be negative"],
+			max: [100, "Discount cannot exceed 100%"],
+			validate: {
+				validator: function (v) {
+					// Allow up to 2 decimal places for discount percentage
+					return v === undefined || /^\d+(\.\d{1,2})?$/.test(v.toString());
+				},
+				message: "Discount must have at most 2 decimal places",
+			},
+		},
 		stock: {
 			type: Number,
 			default: 0,
@@ -148,11 +174,32 @@ productSchema.index({ name: 1 });
 productSchema.index({ category: 1 });
 productSchema.index({ isActive: 1 });
 productSchema.index({ createdAt: -1 });
+productSchema.index({ tax: 1 });
+productSchema.index({ discount: 1 });
 
 // Virtual for formatted price
 productSchema.virtual("formattedPrice").get(function () {
 	if (this.price === undefined) return "N/A";
 	return `$${this.price.toFixed(2)}`;
+});
+
+// Virtual for price after discount
+productSchema.virtual("discountedPrice").get(function () {
+	if (this.price === undefined) return 0;
+	const discountAmount = (this.price * (this.discount || 0)) / 100;
+	return this.price - discountAmount;
+});
+
+// Virtual for final price after discount and tax
+productSchema.virtual("finalPrice").get(function () {
+	const discountedPrice = this.discountedPrice;
+	const taxAmount = (discountedPrice * (this.tax || 0)) / 100;
+	return discountedPrice + taxAmount;
+});
+
+// Virtual for formatted final price
+productSchema.virtual("formattedFinalPrice").get(function () {
+	return `$${this.finalPrice.toFixed(2)}`;
 });
 
 // Virtual for stock status

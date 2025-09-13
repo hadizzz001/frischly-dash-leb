@@ -10,6 +10,7 @@ const connectDB = require("./src/config/database");
 const authRoutes = require("./src/routes/auth");
 const productRoutes = require("./src/routes/products");
 const categoryRoutes = require("./src/routes/categories");
+const orderRoutes = require("./src/routes/orders");
 
 // Connect to database
 connectDB();
@@ -86,6 +87,7 @@ app.use(express.static("public"));
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
+app.use("/api/orders", orderRoutes);
 
 // Health check route
 app.get("/api/health", (req, res) => {
