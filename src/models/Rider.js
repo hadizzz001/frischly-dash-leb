@@ -10,15 +10,10 @@ const riderSchema = new mongoose.Schema(
 		},
 		// Rider specific details
 		zone: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: "Zone",
-			required: [true, "Zone is required"],
-		},
-		// Legacy zone name field for backward compatibility
-		zoneName: {
 			type: String,
+			required: [true, "Zone is required"],
 			trim: true,
-			maxlength: [100, "Zone name cannot be more than 100 characters"],
+			maxlength: [100, "Zone cannot be more than 100 characters"],
 		},
 		status: {
 			type: String,
@@ -197,24 +192,12 @@ riderSchema.methods.getSummary = function () {
 
 // Static method to find available riders in a zone
 riderSchema.statics.findAvailableInZone = function (zone) {
-	// We'll accept either a zone ID or a zone name
-	let query = {
+	return this.find({
+		zone: zone,
 		status: "available",
 		isActive: true,
 		isVerified: true,
-	};
-
-	if (mongoose.Types.ObjectId.isValid(zone)) {
-		// If it's a valid ObjectId, search by zone ID
-		query.zone = zone;
-	} else {
-		// Otherwise search by zoneName for backward compatibility
-		query.zoneName = zone;
-	}
-
-	return this.find(query)
-		.populate("user", "name email phoneNumber")
-		.populate("zone", "name maxDistance deliveryFee");
+	}).populate("user", "name email phoneNumber");
 };
 
 // Static method to get riders with performance stats

@@ -1,7 +1,6 @@
 const Rider = require("../models/Rider");
 const User = require("../models/User");
 const Order = require("../models/Order");
-const Zone = require("../models/Zone");
 const mongoose = require("mongoose");
 
 // @desc    Get all riders with stats
@@ -237,53 +236,10 @@ exports.createRider = async (req, res) => {
 			});
 		}
 
-		// Verify that zone exists if it's an ID
-		let zoneId = zone;
-		let zoneName = null;
-
-		if (mongoose.Types.ObjectId.isValid(zone)) {
-			// It's an ID, verify it exists
-			const zoneDoc = await Zone.findById(zone);
-			if (!zoneDoc) {
-				return res.status(404).json({
-					success: false,
-					message: "Zone not found",
-				});
-			}
-			zoneName = zoneDoc.name;
-		} else {
-			// It's a name, try to find zone by name for backward compatibility
-			const zoneDoc = await Zone.findOne({ name: zone });
-			if (zoneDoc) {
-				zoneId = zoneDoc._id;
-				zoneName = zoneDoc.name;
-			} else {
-				// For backward compatibility, we'll create a zone with this name
-				const newZone = new Zone({
-					name: zone,
-					maxDistance: 10, // Default
-					description: `Zone created automatically for rider assignment`,
-				});
-
-				try {
-					await newZone.save();
-					zoneId = newZone._id;
-					zoneName = newZone.name;
-				} catch (zoneError) {
-					console.error("Error creating zone from name:", zoneError);
-					return res.status(400).json({
-						success: false,
-						message: "Invalid zone. Please select a valid zone.",
-					});
-				}
-			}
-		}
-
 		// Create rider profile
 		const rider = new Rider({
 			user: userId,
-			zone: zoneId,
-			zoneName: zoneName,
+			zone,
 			vehicleType,
 			vehicleNumber,
 			workingHours,

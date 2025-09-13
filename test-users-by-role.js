@@ -17,7 +17,7 @@ async function login() {
 		console.log("Logging in to get auth token...");
 		const response = await axios.post(`${API_URL}/login`, {
 			email: "admin@frischly.com",
-			password: "Admin123!",
+			password: "Admin123",
 		});
 
 		if (response.data.success) {

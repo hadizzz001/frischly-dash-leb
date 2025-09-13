@@ -2239,7 +2239,7 @@
 						const user = data.data.user;
 
 						// Check if user has required role for dashboard access
-						const allowedRoles = ["manager", "admin"];
+						const allowedRoles = ["manager", "admin", "customer"];
 						if (!allowedRoles.includes(user.role)) {
 							showMessage(
 								"Access denied. Dashboard access is restricted to managers and administrators only.",

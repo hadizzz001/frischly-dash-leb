@@ -29,8 +29,8 @@ async function authenticate() {
 				"Content-Type": "application/json",
 			},
 			body: JSON.stringify({
-				email: "admin@frischly.com",
-				password: "Admin123!",
+				email: "admin@example.com",
+				password: "admin123",
 			}),
 		});
 

@@ -3,7 +3,7 @@ const fetch = require("node-fetch");
 // Configuration
 const API_URL = "http://localhost:3001/api/auth";
 const ADMIN_EMAIL = "admin@frischly.com";
-const ADMIN_PASSWORD = "Admin123!";
+const ADMIN_PASSWORD = "Admin123";
 
 // Helper functions
 async function login() {

@@ -103,7 +103,7 @@ const login = async (req, res) => {
 		}
 
 		// Check if user has required role for dashboard access
-		const allowedRoles = ["manager", "admin"];
+		const allowedRoles = ["manager", "admin", "customer"];
 		if (!allowedRoles.includes(user.role)) {
 			return res.status(403).json({
 				success: false,

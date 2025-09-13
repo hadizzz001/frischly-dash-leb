@@ -61,7 +61,7 @@ const listUsers = async () => {
 // Update user role
 const updateUserRole = async (email, newRole) => {
 	try {
-		const validRoles = ["rider", "user", "manager", "admin"];
+		const validRoles = ["manager", "admin"];
 
 		if (!validRoles.includes(newRole)) {
 			throw new Error(
