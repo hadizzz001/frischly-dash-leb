@@ -38,7 +38,16 @@ app.use(
 			// Allow requests with no origin (like mobile apps or curl requests)
 			if (!origin) return callback(null, true);
 
-			const allowedOrigins = [process.env.CLIENT_URL || "*"];
+			// Parse CLIENT_URL which can be comma-separated
+			const clientUrls = process.env.CLIENT_URL
+				? process.env.CLIENT_URL.split(",").map((url) => url.trim())
+				: [];
+			const allowedOrigins = [
+				...clientUrls,
+				"http://localhost:3000",
+				"http://localhost:3001",
+				"http://127.0.0.1:3001",
+			];
 
 			// Check if origin is in allowed list
 			if (allowedOrigins.includes(origin)) {
