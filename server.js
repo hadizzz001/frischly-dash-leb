@@ -38,12 +38,7 @@ app.use(
 			// Allow requests with no origin (like mobile apps or curl requests)
 			if (!origin) return callback(null, true);
 
-			const allowedOrigins = [
-				process.env.CLIENT_URL || "http://localhost:3000",
-				"http://localhost:3001",
-				"https://frischly-server-1.onrender.com",
-				"https://frischly-server.onrender.com",
-			];
+			const allowedOrigins = [process.env.CLIENT_URL || "*"];
 
 			// Check if origin is in allowed list
 			if (allowedOrigins.includes(origin)) {
