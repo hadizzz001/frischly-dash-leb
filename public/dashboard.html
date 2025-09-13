@@ -426,6 +426,53 @@
 				box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 			}
 
+			/* Action Buttons */
+			.actions-menu {
+				display: flex;
+				gap: 5px;
+				justify-content: center;
+			}
+
+			.action-btn {
+				background: #f8f9fa;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				padding: 6px 8px;
+				font-size: 14px;
+				cursor: pointer;
+				transition: all 0.2s ease;
+				min-width: 32px;
+				height: 32px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
+
+			.action-btn:hover {
+				background: #e9ecef;
+				transform: translateY(-1px);
+			}
+
+			.action-btn.success {
+				background: #d4edda;
+				border-color: #c3e6cb;
+				color: #155724;
+			}
+
+			.action-btn.success:hover {
+				background: #c3e6cb;
+			}
+
+			.action-btn.danger {
+				background: #f8d7da;
+				border-color: #f5c6cb;
+				color: #721c24;
+			}
+
+			.action-btn.danger:hover {
+				background: #f5c6cb;
+			}
+
 			.loading {
 				display: none;
 				text-align: center;
@@ -2867,8 +2914,29 @@
 						"0 orders";
 				}
 
-				// Placeholder for riders (to be implemented)
-				document.getElementById("total-riders-stat").textContent = "0";
+				// Load riders count for dashboard
+				try {
+					const response = await fetch(
+						`${API_BASE_URL}/riders?page=1&limit=1`,
+						{
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+						}
+					);
+					if (response.ok) {
+						const data = await response.json();
+						const ridersCount = data.data.pagination
+							? data.data.pagination.totalRiders
+							: 0;
+						document.getElementById("total-riders-stat").textContent =
+							ridersCount;
+					}
+				} catch (error) {
+					console.error("Error loading riders count:", error);
+					document.getElementById("total-riders-stat").textContent = "0";
+				}
 
 				showSectionLoading("dashboard", false);
 			}
@@ -4307,14 +4375,155 @@
 			}
 
 			// Riders Management Functions
-			function loadRiders() {
-				// Placeholder for riders loading
-				document.getElementById("riders-count-display").textContent =
-					"0 riders";
+			async function loadRiders() {
+				try {
+					const token = localStorage.getItem("token");
+					if (!token) {
+						showMessage("Please log in first", "error");
+						return;
+					}
+
+					const response = await fetch(`${API_BASE_URL}/riders`, {
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${token}`,
+							"Content-Type": "application/json",
+						},
+					});
+					if (response.ok) {
+						const data = await response.json();
+						displayRiders(data.data.riders);
+						document.getElementById(
+							"riders-count-display"
+						).textContent = `${data.data.pagination.totalRiders} riders`;
+					} else if (response.status === 401) {
+						showMessage("Please log in first", "error");
+						setTimeout(() => {
+							window.location.href = "signin.html";
+						}, 2000);
+					} else {
+						const errorData = await response.json();
+						showMessage(errorData.message || "Failed to load riders", "error");
+					}
+				} catch (error) {
+					console.error("Error loading riders:", error);
+					showMessage("Error loading riders", "error");
+				}
+			}
+
+			function displayRiders(riders) {
+				const tableBody = document.getElementById("riders-table-body");
+
+				if (!riders || riders.length === 0) {
+					tableBody.innerHTML = `
+						<tr>
+							<td colspan="7" style="text-align: center; padding: 40px; color: #666">
+								No riders found. Click "Add Rider" to register one.
+							</td>
+						</tr>
+					`;
+					return;
+				}
+
+				tableBody.innerHTML = riders
+					.map((rider) => {
+						const userName = rider.userInfo
+							? rider.userInfo.name
+							: rider.user?.name || "N/A";
+						const userPhone = rider.userInfo
+							? rider.userInfo.phoneNumber
+							: rider.user?.phoneNumber || "N/A";
+						const completionRate = rider.completionRate
+							? rider.completionRate.toFixed(1)
+							: "0.0";
+						const activeOrdersCount = rider.activeOrdersCount || 0;
+						const rating = rider.rating ? rider.rating.toFixed(1) : "N/A";
+
+						const statusBadge = getStatusBadge(rider.status);
+
+						return `
+							<tr>
+								<td>
+									<div style="display: flex; align-items: center;">
+										<div style="width: 40px; height: 40px; border-radius: 50%; background: #ffc300; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-weight: bold;">
+											${userName.charAt(0).toUpperCase()}
+										</div>
+										<div>
+											<div style="font-weight: 500;">${userName}</div>
+											<div style="font-size: 12px; color: #666;">${rider.zone || "No Zone"}</div>
+										</div>
+									</div>
+								</td>
+								<td>${userPhone}</td>
+								<td>
+									<span style="background: #f0f0f0; padding: 4px 8px; border-radius: 12px; font-size: 12px;">
+										${rider.vehicleType || "N/A"}
+									</span>
+								</td>
+								<td>${statusBadge}</td>
+								<td>
+									<span style="background: ${
+										activeOrdersCount > 0 ? "#e3f2fd" : "#f5f5f5"
+									}; color: ${
+							activeOrdersCount > 0 ? "#1976d2" : "#666"
+						}; padding: 4px 8px; border-radius: 12px; font-size: 12px;">
+										${activeOrdersCount} orders
+									</span>
+								</td>
+								<td>
+									<div style="display: flex; align-items: center;">
+										<span style="margin-right: 5px;">⭐</span>
+										<span>${rating}</span>
+										<span style="font-size: 12px; color: #666; margin-left: 5px;">(${completionRate}%)</span>
+									</div>
+								</td>
+								<td>
+									<div class="actions-menu">
+										<button class="action-btn" onclick="viewRiderDetails('${
+											rider._id
+										}')" title="View Details">👁️</button>
+										<button class="action-btn" onclick="editRider('${
+											rider._id
+										}')" title="Edit Rider">✏️</button>
+										<button class="action-btn ${
+											rider.status === "active" ? "danger" : "success"
+										}" onclick="toggleRiderStatus('${rider._id}', '${
+							rider.status
+						}')" title="${
+							rider.status === "active" ? "Deactivate" : "Activate"
+						}">
+											${rider.status === "active" ? "⏸️" : "▶️"}
+										</button>
+										<button class="action-btn danger" onclick="deleteRider('${
+											rider._id
+										}')" title="Delete Rider">🗑️</button>
+									</div>
+								</td>
+							</tr>
+						`;
+					})
+					.join("");
+			}
+
+			function getStatusBadge(status) {
+				const statusConfig = {
+					active: { color: "#4caf50", bg: "#e8f5e8", text: "Active" },
+					inactive: { color: "#f44336", bg: "#ffeaea", text: "Inactive" },
+					busy: { color: "#ff9800", bg: "#fff3e0", text: "Busy" },
+					offline: { color: "#9e9e9e", bg: "#f5f5f5", text: "Offline" },
+				};
+
+				const config = statusConfig[status] || statusConfig.offline;
+				return `<span style="background: ${config.bg}; color: ${config.color}; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">${config.text}</span>`;
 			}
 
 			function showAddRiderModal() {
-				showMessage("Rider management coming soon!", "success");
+				document.getElementById("rider-modal").style.display = "block";
+				document.getElementById("rider-modal-title").textContent =
+					"Add New Rider";
+				document.getElementById("rider-form").reset();
+				document.getElementById("rider-id").value = "";
+				loadUsersForRiderModal();
 			}
 
 			function refreshRiders() {
@@ -4322,8 +4531,393 @@
 				showMessage("Riders refreshed", "success");
 			}
 
+			async function loadUsersForRiderModal() {
+				try {
+					const token = localStorage.getItem("token");
+					const response = await fetch(`${API_BASE_URL}/auth/users`, {
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${token}`,
+							"Content-Type": "application/json",
+						},
+					});
+					if (response.ok) {
+						const data = await response.json();
+						const userSelect = document.getElementById("rider-user-select");
+						userSelect.innerHTML =
+							'<option value="">Select a user to become a rider</option>';
+
+						// Filter out users who are already riders
+						data.data.users.forEach((user) => {
+							if (user.role === "customer" || user.role === "staff") {
+								userSelect.innerHTML += `<option value="${user._id}">${user.name} (${user.email})</option>`;
+							}
+						});
+					}
+				} catch (error) {
+					console.error("Error loading users:", error);
+				}
+			}
+
+			function closeRiderModal() {
+				document.getElementById("rider-modal").style.display = "none";
+			}
+
+			async function saveRider(event) {
+				event.preventDefault();
+
+				const form = event.target;
+				const formData = new FormData(form);
+				const riderId = document.getElementById("rider-id").value;
+
+				const riderData = {
+					userId: formData.get("userId"),
+					zone: formData.get("zone"),
+					vehicleType: formData.get("vehicleType"),
+					licenseNumber: formData.get("licenseNumber"),
+					status: formData.get("status"),
+					maxConcurrentOrders:
+						parseInt(formData.get("maxConcurrentOrders")) || 3,
+					emergencyContactName: formData.get("emergencyContactName"),
+					emergencyContactPhone: formData.get("emergencyContactPhone"),
+					notes: formData.get("notes"),
+				};
+
+				try {
+					const token = localStorage.getItem("token");
+					const url = riderId
+						? `${API_BASE_URL}/riders/${riderId}`
+						: `${API_BASE_URL}/riders`;
+					const method = riderId ? "PUT" : "POST";
+
+					const response = await fetch(url, {
+						method: method,
+						headers: {
+							Authorization: `Bearer ${token}`,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify(riderData),
+					});
+
+					if (response.ok) {
+						const data = await response.json();
+						showMessage(
+							riderId
+								? "Rider updated successfully!"
+								: "Rider created successfully!",
+							"success"
+						);
+						closeRiderModal();
+						loadRiders();
+						loadDashboardStats(); // Refresh dashboard stats
+					} else {
+						const errorData = await response.json();
+						showMessage(errorData.message || "Failed to save rider", "error");
+					}
+				} catch (error) {
+					console.error("Error saving rider:", error);
+					showMessage("Error saving rider", "error");
+				}
+			}
+
 			function showRiderMap() {
 				showMessage("Rider map feature coming soon!", "success");
+			}
+
+			async function viewRiderDetails(riderId) {
+				try {
+					const token = localStorage.getItem("token");
+					const response = await fetch(`${API_BASE_URL}/riders/${riderId}`, {
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${token}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					if (response.ok) {
+						const data = await response.json();
+						const rider = data.data;
+
+						let detailsHtml = `
+							<div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 600px; margin: 20px auto;">
+								<h3 style="color: #333; margin-bottom: 20px; border-bottom: 2px solid #ffc300; padding-bottom: 10px;">
+									🏍️ Rider Details - ${rider.user.name}
+								</h3>
+								
+								<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+									<div>
+										<strong>📧 Email:</strong><br>
+										<span style="color: #666;">${rider.user.email}</span>
+									</div>
+									<div>
+										<strong>📞 Phone:</strong><br>
+										<span style="color: #666;">${rider.user.phoneNumber || "Not provided"}</span>
+									</div>
+									<div>
+										<strong>🏢 Zone:</strong><br>
+										<span style="color: #666;">${rider.zone}</span>
+									</div>
+									<div>
+										<strong>🚗 Vehicle:</strong><br>
+										<span style="color: #666;">${rider.vehicleType}</span>
+									</div>
+									<div>
+										<strong>📄 License:</strong><br>
+										<span style="color: #666;">${rider.licenseNumber || "Not provided"}</span>
+									</div>
+									<div>
+										<strong>📊 Status:</strong><br>
+										${getStatusBadge(rider.status)}
+									</div>
+								</div>
+
+								<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+									<div style="text-align: center; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+										<div style="font-size: 24px; font-weight: bold; color: #ffc300;">${
+											rider.ordersPickedCount || 0
+										}</div>
+										<div style="font-size: 12px; color: #666;">Orders Picked</div>
+									</div>
+									<div style="text-align: center; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+										<div style="font-size: 24px; font-weight: bold; color: #28a745;">${
+											rider.ordersDeliveredCount || 0
+										}</div>
+										<div style="font-size: 12px; color: #666;">Orders Delivered</div>
+									</div>
+									<div style="text-align: center; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+										<div style="font-size: 24px; font-weight: bold; color: #007bff;">⭐ ${
+											rider.rating ? rider.rating.toFixed(1) : "N/A"
+										}</div>
+										<div style="font-size: 12px; color: #666;">Rating</div>
+									</div>
+								</div>
+
+								${
+									rider.emergencyContactName
+										? `
+									<div style="background: #fff3cd; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+										<strong>🚨 Emergency Contact:</strong><br>
+										${rider.emergencyContactName} - ${rider.emergencyContactPhone || "No phone"}
+									</div>
+								`
+										: ""
+								}
+
+								${
+									rider.notes
+										? `
+									<div style="background: #e9ecef; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+										<strong>📝 Notes:</strong><br>
+										${rider.notes}
+									</div>
+								`
+										: ""
+								}
+
+								<div style="text-align: center; margin-top: 20px;">
+									<button onclick="editRider('${riderId}')" class="btn btn-primary" style="margin-right: 10px;">
+										✏️ Edit Rider
+									</button>
+									<button onclick="document.getElementById('rider-details-overlay').style.display='none'" class="btn btn-secondary">
+										Close
+									</button>
+								</div>
+							</div>
+						`;
+
+						// Create overlay if it doesn't exist
+						let overlay = document.getElementById("rider-details-overlay");
+						if (!overlay) {
+							overlay = document.createElement("div");
+							overlay.id = "rider-details-overlay";
+							overlay.style.cssText = `
+								position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+								background: rgba(0,0,0,0.5); z-index: 10000; display: flex; 
+								align-items: center; justify-content: center; overflow-y: auto;
+							`;
+							document.body.appendChild(overlay);
+						}
+
+						overlay.innerHTML = detailsHtml;
+						overlay.style.display = "flex";
+
+						// Close on outside click
+						overlay.onclick = function (e) {
+							if (e.target === overlay) {
+								overlay.style.display = "none";
+							}
+						};
+					} else {
+						showMessage("Failed to load rider details", "error");
+					}
+				} catch (error) {
+					console.error("Error loading rider details:", error);
+					showMessage("Error loading rider details", "error");
+				}
+			}
+
+			async function editRider(riderId) {
+				try {
+					const token = localStorage.getItem("token");
+					const response = await fetch(`${API_BASE_URL}/riders/${riderId}`, {
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${token}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					if (response.ok) {
+						const data = await response.json();
+						const rider = data.data;
+
+						// Close details overlay if open
+						const overlay = document.getElementById("rider-details-overlay");
+						if (overlay) overlay.style.display = "none";
+
+						// Populate the form
+						document.getElementById("rider-id").value = rider._id;
+						document.getElementById("rider-zone").value = rider.zone;
+						document.getElementById("rider-vehicle-type").value =
+							rider.vehicleType;
+						document.getElementById("rider-license-number").value =
+							rider.licenseNumber || "";
+						document.getElementById("rider-status").value = rider.status;
+						document.getElementById("rider-max-orders").value =
+							rider.maxConcurrentOrders || 3;
+						document.getElementById("rider-emergency-contact").value =
+							rider.emergencyContactName || "";
+						document.getElementById("rider-emergency-phone").value =
+							rider.emergencyContactPhone || "";
+						document.getElementById("rider-notes").value = rider.notes || "";
+
+						// Load users but disable the select since we're editing
+						await loadUsersForRiderModal();
+						const userSelect = document.getElementById("rider-user-select");
+						userSelect.value = rider.user._id;
+						userSelect.disabled = true; // Can't change user after creation
+
+						// Update modal title and show
+						document.getElementById(
+							"rider-modal-title"
+						).textContent = `Edit Rider - ${rider.user.name}`;
+						document.getElementById("rider-modal").style.display = "block";
+					} else {
+						showMessage("Failed to load rider data", "error");
+					}
+				} catch (error) {
+					console.error("Error loading rider for edit:", error);
+					showMessage("Error loading rider data", "error");
+				}
+			}
+
+			async function toggleRiderStatus(riderId, currentStatus) {
+				const newStatus = currentStatus === "active" ? "inactive" : "active";
+				const action = newStatus === "active" ? "activate" : "deactivate";
+
+				if (!confirm(`Are you sure you want to ${action} this rider?`)) {
+					return;
+				}
+
+				try {
+					const token = localStorage.getItem("token");
+					const response = await fetch(
+						`${API_BASE_URL}/riders/${riderId}/status`,
+						{
+							method: "PATCH",
+							headers: {
+								Authorization: `Bearer ${token}`,
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({ status: newStatus }),
+						}
+					);
+					if (response.ok) {
+						showMessage(`Rider ${action}d successfully!`, "success");
+						loadRiders();
+						loadDashboardStats(); // Refresh dashboard stats
+					} else {
+						const errorData = await response.json();
+						showMessage(
+							errorData.message || `Failed to ${action} rider`,
+							"error"
+						);
+					}
+				} catch (error) {
+					console.error(`Error ${action}ing rider:`, error);
+					showMessage(`Error ${action}ing rider`, "error");
+				}
+			}
+
+			async function deleteRider(riderId) {
+				if (
+					!confirm(
+						"Are you sure you want to delete this rider? This action cannot be undone."
+					)
+				) {
+					return;
+				}
+
+				try {
+					const token = localStorage.getItem("token");
+					const response = await fetch(`${API_BASE_URL}/riders/${riderId}`, {
+						method: "DELETE",
+						headers: {
+							Authorization: `Bearer ${token}`,
+							"Content-Type": "application/json",
+						},
+					});
+					if (response.ok) {
+						showMessage("Rider deleted successfully!", "success");
+						loadRiders();
+						loadDashboardStats(); // Refresh dashboard stats
+					} else {
+						const errorData = await response.json();
+						showMessage(errorData.message || "Failed to delete rider", "error");
+					}
+				} catch (error) {
+					console.error("Error deleting rider:", error);
+					showMessage("Error deleting rider", "error");
+				}
+			}
+
+			async function loadRiderStats() {
+				try {
+					const token = localStorage.getItem("token");
+					const response = await fetch(`${API_BASE_URL}/riders/stats`, {
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${token}`,
+							"Content-Type": "application/json",
+						},
+					});
+					if (response.ok) {
+						const data = await response.json();
+						const stats = data.data;
+
+						// Update any rider stats displays if they exist
+						const statsElements = {
+							"riders-total": stats.totalRiders,
+							"riders-active": stats.activeRiders,
+							"riders-busy": stats.busyRiders,
+							"riders-offline": stats.offlineRiders,
+							"total-riders-stat": stats.activeRiders, // For dashboard
+						};
+
+						Object.entries(statsElements).forEach(([id, value]) => {
+							const element = document.getElementById(id);
+							if (element) {
+								element.textContent = value || 0;
+							}
+						});
+
+						return stats;
+					}
+				} catch (error) {
+					console.error("Error loading rider stats:", error);
+				}
+				return null;
 			}
 
 			// Profile Section Functions
@@ -4374,6 +4968,7 @@
 				const userModal = document.getElementById("user-modal");
 				const categoryModal = document.getElementById("category-modal");
 				const productModal = document.getElementById("product-modal");
+				const riderModal = document.getElementById("rider-modal");
 				const orderDetailsModal = document.getElementById(
 					"order-details-modal"
 				);
@@ -4384,6 +4979,8 @@
 					closeCategoryModal();
 				} else if (event.target === productModal) {
 					closeProductModal();
+				} else if (event.target === riderModal) {
+					closeRiderModal();
 				} else if (event.target === orderDetailsModal) {
 					closeOrderDetails();
 				}
@@ -5119,6 +5716,135 @@
 						</div>
 					</div>
 				</div>
+			</div>
+		</div>
+
+		<!-- Rider Management Modal -->
+		<div id="rider-modal" class="modal">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h2 id="rider-modal-title">Add New Rider</h2>
+					<span class="close" onclick="closeRiderModal()">&times;</span>
+				</div>
+				<form id="rider-form" onsubmit="saveRider(event)">
+					<input type="hidden" id="rider-id" />
+
+					<!-- User Selection -->
+					<div class="form-section">
+						<h3>User Information</h3>
+						<div class="form-group">
+							<label for="rider-user-select">Select User *</label>
+							<select id="rider-user-select" name="userId" required>
+								<option value="">Select a user to become a rider</option>
+							</select>
+						</div>
+					</div>
+
+					<!-- Rider Details -->
+					<div class="form-section">
+						<h3>Rider Details</h3>
+						<div class="form-group">
+							<label for="rider-zone">Zone *</label>
+							<input
+								type="text"
+								id="rider-zone"
+								name="zone"
+								placeholder="e.g., Downtown, North Side, West End"
+								required
+							/>
+						</div>
+						<div class="form-group">
+							<label for="rider-vehicle-type">Vehicle Type *</label>
+							<select id="rider-vehicle-type" name="vehicleType" required>
+								<option value="">Select vehicle type</option>
+								<option value="bicycle">Bicycle</option>
+								<option value="motorcycle">Motorcycle</option>
+								<option value="scooter">Scooter</option>
+								<option value="car">Car</option>
+								<option value="truck">Truck</option>
+								<option value="van">Van</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="rider-license-number">License Number</label>
+							<input
+								type="text"
+								id="rider-license-number"
+								name="licenseNumber"
+								placeholder="Driver's license or vehicle registration number"
+							/>
+						</div>
+					</div>
+
+					<!-- Availability -->
+					<div class="form-section">
+						<h3>Availability Settings</h3>
+						<div class="form-group">
+							<label for="rider-status">Initial Status *</label>
+							<select id="rider-status" name="status" required>
+								<option value="active">Active</option>
+								<option value="inactive">Inactive</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="rider-max-orders">Maximum Concurrent Orders</label>
+							<input
+								type="number"
+								id="rider-max-orders"
+								name="maxConcurrentOrders"
+								min="1"
+								max="10"
+								value="3"
+								placeholder="Maximum orders rider can handle at once"
+							/>
+						</div>
+					</div>
+
+					<!-- Contact & Emergency Info -->
+					<div class="form-section">
+						<h3>Additional Information</h3>
+						<div class="form-group">
+							<label for="rider-emergency-contact"
+								>Emergency Contact Name</label
+							>
+							<input
+								type="text"
+								id="rider-emergency-contact"
+								name="emergencyContactName"
+								placeholder="Emergency contact person"
+							/>
+						</div>
+						<div class="form-group">
+							<label for="rider-emergency-phone">Emergency Contact Phone</label>
+							<input
+								type="tel"
+								id="rider-emergency-phone"
+								name="emergencyContactPhone"
+								placeholder="+1-234-567-8900"
+							/>
+						</div>
+						<div class="form-group">
+							<label for="rider-notes">Notes</label>
+							<textarea
+								id="rider-notes"
+								name="notes"
+								rows="3"
+								placeholder="Additional information about the rider"
+							></textarea>
+						</div>
+					</div>
+
+					<div class="form-actions">
+						<button
+							type="button"
+							class="btn btn-secondary"
+							onclick="closeRiderModal()"
+						>
+							Cancel
+						</button>
+						<button type="submit" class="btn btn-primary">Save Rider</button>
+					</div>
+				</form>
 			</div>
 		</div>
 
