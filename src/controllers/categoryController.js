@@ -575,5 +575,67 @@ exports.getCategoryProductCount = async (req, res) => {
 	}
 };
 
+// @desc    Get product count for all categories
+// @route   GET /api/categories/all/product-count
+// @access  Public
+exports.getAllCategoriesProductCount = async (req, res) => {
+	try {
+		// Use MongoDB aggregation for better performance
+		const categoryProductCounts = await Category.aggregate([
+			{
+				$match: { isActive: true },
+			},
+			{
+				$lookup: {
+					from: "products",
+					let: { categoryId: "$_id" },
+					pipeline: [
+						{
+							$match: {
+								$expr: {
+									$and: [
+										{ $eq: ["$category", "$$categoryId"] },
+										{ $eq: ["$isActive", true] },
+									],
+								},
+							},
+						},
+						{
+							$count: "count",
+						},
+					],
+					as: "productCountResult",
+				},
+			},
+			{
+				$project: {
+					categoryId: "$_id",
+					categoryName: "$name",
+					productCount: {
+						$ifNull: [{ $arrayElemAt: ["$productCountResult.count", 0] }, 0],
+					},
+				},
+			},
+			{
+				$sort: { categoryName: 1 },
+			},
+		]);
+
+		res.json({
+			success: true,
+			data: categoryProductCounts,
+			total: categoryProductCounts.length,
+			message: `Retrieved product counts for ${categoryProductCounts.length} categories`,
+		});
+	} catch (error) {
+		console.error("Error getting all categories product count:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error retrieving categories product count",
+			error: error.message,
+		});
+	}
+};
+
 // Export multer upload middleware
 exports.uploadMiddleware = upload.single("image");

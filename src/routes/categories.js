@@ -12,6 +12,7 @@ const {
 	uploadImage,
 	uploadMiddleware,
 	getCategoryProductCount,
+	getAllCategoriesProductCount,
 } = require("../controllers/categoryController");
 
 // Import middleware
@@ -22,6 +23,7 @@ const router = express.Router();
 // Public routes
 router.get("/", getCategories);
 router.get("/stats", getCategoryStats);
+router.get("/all/product-count", getAllCategoriesProductCount);
 router.get("/name/:name", getCategoryByName);
 router.get("/:id", getCategory);
 router.get("/:id/product-count", getCategoryProductCount);

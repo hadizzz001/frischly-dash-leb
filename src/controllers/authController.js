@@ -103,7 +103,7 @@ const login = async (req, res) => {
 		}
 
 		// Check if user has required role for  access
-		const allowedRoles = ["manager", "admin", "customer", "rider"];
+		const allowedRoles = ["manager", "admin", "customer", "rider", "staff"];
 		if (!allowedRoles.includes(user.role)) {
 			return res.status(403).json({
 				success: false,
