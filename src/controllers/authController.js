@@ -102,13 +102,13 @@ const login = async (req, res) => {
 			});
 		}
 
-		// Check if user has required role for dashboard access
-		const allowedRoles = ["manager", "admin", "customer"];
+		// Check if user has required role for  access
+		const allowedRoles = ["manager", "admin", "customer", "rider"];
 		if (!allowedRoles.includes(user.role)) {
 			return res.status(403).json({
 				success: false,
 				message:
-					"Access denied. Dashboard access is restricted to managers and administrators only.",
+					"Access denied.  Access is restricted to managers, administrators, customers, and riders only.",
 			});
 		}
 
