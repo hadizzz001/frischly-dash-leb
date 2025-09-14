@@ -12,8 +12,9 @@ const {
 	createUser,
 	updateUser,
 	deleteUser,
+	getCustomerCount,
 } = require("../controllers/authController");
-const { protect } = require("../middleware/auth");
+const { protect, authorize } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -152,5 +153,13 @@ router.get("/users/:id", protect, getUserById);
 router.post("/users", protect, registerValidation, createUser);
 router.put("/users/:id", protect, updateUser);
 router.delete("/users/:id", protect, deleteUser);
+
+// Customer count endpoint (Admin/Manager only)
+router.get(
+	"/customers/count",
+	protect,
+	authorize("admin", "manager"),
+	getCustomerCount
+);
 
 module.exports = router;

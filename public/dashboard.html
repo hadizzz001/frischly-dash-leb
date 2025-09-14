@@ -2964,34 +2964,9 @@
 					"Loading dashboard statistics..."
 				);
 
-				// Load customer count for dashboard
+				// Load customer count for dashboard using the new optimized API
 				try {
-					const response = await fetch(
-						`${API_BASE_URL}/auth/users?role=customer`,
-						{
-							headers: {
-								Authorization: `Bearer ${currentToken}`,
-								"Content-Type": "application/json",
-							},
-						}
-					);
-					if (response.ok) {
-						const data = await response.json();
-						const customerCount =
-							data.data && data.data.users ? data.data.users.length : 0;
-						document.getElementById("total-users-stat").textContent =
-							customerCount;
-						// Store customer data for potential use
-						customerUsers = data.data && data.data.users ? data.data.users : [];
-					}
-				} catch (error) {
-					console.error("Error loading customer count:", error);
-					document.getElementById("total-users-stat").textContent = "0";
-				}
-
-				// Load all users for other sections that may need it
-				try {
-					const response = await fetch(`${API_BASE_URL}/auth/users`, {
+					const response = await fetch(`${API_BASE_URL}/auth/customers/count`, {
 						headers: {
 							Authorization: `Bearer ${currentToken}`,
 							"Content-Type": "application/json",
@@ -2999,12 +2974,37 @@
 					});
 					if (response.ok) {
 						const data = await response.json();
-						// Update allUsers for use in other sections
-						allUsers = data.data && data.data.users ? data.data.users : [];
+						const customerCount =
+							data.success && data.data ? data.data.customerCount : 0;
+						document.getElementById("total-users-stat").textContent =
+							customerCount;
+						console.log(`Dashboard: Loaded customer count: ${customerCount}`);
+					} else {
+						const errorData = await response.json().catch(() => ({}));
+						console.error("Error loading customer count:", errorData);
+						document.getElementById("total-users-stat").textContent = "0";
 					}
 				} catch (error) {
-					console.error("Error loading all users:", error);
+					console.error("Error loading customer count:", error);
+					document.getElementById("total-users-stat").textContent = "0";
 				}
+
+				// Load all users for other sections that may need it
+				// try {
+				// 	const response = await fetch(`${API_BASE_URL}/auth/users`, {
+				// 		headers: {
+				// 			Authorization: `Bearer ${currentToken}`,
+				// 			"Content-Type": "application/json",
+				// 		},
+				// 	});
+				// 	if (response.ok) {
+				// 		const data = await response.json();
+				// 		// Update allUsers for use in other sections
+				// 		allUsers = data.data && data.data.users ? data.data.users : [];
+				// 	}
+				// } catch (error) {
+				// 	console.error("Error loading all users:", error);
+				// }
 
 				// Load categories data and count for dashboard
 				try {

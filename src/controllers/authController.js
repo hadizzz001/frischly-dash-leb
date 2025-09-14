@@ -601,6 +601,33 @@ const getUserById = async (req, res) => {
 	}
 };
 
+// @desc    Get customer count
+// @route   GET /api/auth/customers/count
+// @access  Private (Admin/Manager only)
+const getCustomerCount = async (req, res) => {
+	try {
+		// Count only customers (users with role "customer")
+		const customerCount = await User.countDocuments({
+			role: "customer",
+			isActive: true,
+		});
+
+		res.json({
+			success: true,
+			data: {
+				customerCount: customerCount,
+				message: `Total active customers: ${customerCount}`,
+			},
+		});
+	} catch (error) {
+		console.error("Get customer count error:", error);
+		res.status(500).json({
+			success: false,
+			message: "Server error while fetching customer count",
+		});
+	}
+};
+
 module.exports = {
 	register,
 	login,
@@ -613,4 +640,5 @@ module.exports = {
 	createUser,
 	updateUser,
 	deleteUser,
+	getCustomerCount,
 };
