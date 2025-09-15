@@ -4,6 +4,7 @@ const {
 	register,
 	login,
 	loginProfile,
+	refreshToken,
 	getMe,
 	updateProfile,
 	changePassword,
@@ -131,10 +132,15 @@ const changePasswordValidation = [
 		),
 ];
 
+const refreshTokenValidation = [
+	body("refreshToken").notEmpty().withMessage("Refresh token is required"),
+];
+
 // Public routes
 router.post("/register", registerValidation, register);
 router.post("/login", loginValidation, login);
 router.post("/login-profile", loginValidation, loginProfile);
+router.post("/refresh", refreshTokenValidation, refreshToken);
 
 // Protected routes
 router.get("/me", protect, getMe);

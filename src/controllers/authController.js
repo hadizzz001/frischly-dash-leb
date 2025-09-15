@@ -1,6 +1,10 @@
 const { validationResult } = require("express-validator");
 const User = require("../models/User");
-const { generateToken, generateRefreshToken } = require("../utils/jwt");
+const {
+	generateToken,
+	generateRefreshToken,
+	verifyRefreshToken,
+} = require("../utils/jwt");
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -336,17 +340,84 @@ const loginProfile = async (req, res) => {
 	}
 };
 
+// @desc    Refresh access token using refresh token
+// @route   POST /api/auth/refresh
+// @access  Public
+const refreshToken = async (req, res) => {
+	try {
+		const { refreshToken } = req.body;
+
+		// Check if refresh token is provided
+		if (!refreshToken) {
+			return res.status(400).json({
+				success: false,
+				message: "Refresh token is required",
+			});
+		}
+
+		try {
+			// Verify refresh token
+			const decoded = verifyRefreshToken(refreshToken);
+
+			// Get user from token
+			const user = await User.findById(decoded.id);
+			if (!user) {
+				return res.status(401).json({
+					success: false,
+					message: "Invalid refresh token",
+				});
+			}
+
+			// Check if user is active
+			if (!user.isActive) {
+				return res.status(401).json({
+					success: false,
+					message: "User account is deactivated",
+				});
+			}
+
+			// Generate new access token
+			const newAccessToken = generateToken({ id: user._id });
+
+			// Optionally generate new refresh token for better security (token rotation)
+			const newRefreshToken = generateRefreshToken({ id: user._id });
+
+			res.json({
+				success: true,
+				message: "Token refreshed successfully",
+				data: {
+					token: newAccessToken,
+					refreshToken: newRefreshToken,
+					user: user.toSafeObject(),
+				},
+			});
+		} catch (error) {
+			return res.status(401).json({
+				success: false,
+				message: "Invalid refresh token",
+			});
+		}
+	} catch (error) {
+		console.error("Refresh token error:", error);
+		res.status(500).json({
+			success: false,
+			message: "Server error during token refresh",
+		});
+	}
+};
+
 // @desc    Get all users (Admin only)
 // @route   GET /api/auth/users
 // @desc     Get all users or filter by role (supports inclusion/exclusion)
-// @access  Private (Admin only)
+// @access  Private (Admin, Manager, Staff)
 const getAllUsers = async (req, res) => {
 	try {
-		// Check if user is admin
-		if (req.user.role !== "admin") {
+		// Check if user has appropriate permissions
+		const allowedRoles = ["admin", "manager", "staff"];
+		if (!allowedRoles.includes(req.user.role)) {
 			return res.status(403).json({
 				success: false,
-				message: "Access denied. Admin privileges required.",
+				message: "Access denied. Admin, manager, or staff privileges required.",
 			});
 		}
 
@@ -632,6 +703,7 @@ module.exports = {
 	register,
 	login,
 	loginProfile,
+	refreshToken,
 	getMe,
 	updateProfile,
 	changePassword,

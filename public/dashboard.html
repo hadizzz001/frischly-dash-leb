@@ -420,6 +420,84 @@
 				letter-spacing: 0.5px;
 			}
 
+			/* Staff & Customer Tab Styles */
+			.staff-tabs {
+				display: flex;
+				gap: 5px;
+				margin-bottom: 20px;
+				border-bottom: 2px solid #e1e5e9;
+			}
+
+			.staff-tab-btn {
+				background: transparent;
+				border: none;
+				padding: 12px 20px;
+				font-size: 14px;
+				font-weight: 500;
+				cursor: pointer;
+				color: #666;
+				border-bottom: 3px solid transparent;
+				transition: all 0.3s ease;
+				border-radius: 8px 8px 0 0;
+			}
+
+			.staff-tab-btn:hover {
+				background: #f8f9fa;
+				color: #333;
+			}
+
+			.staff-tab-btn.active {
+				color: #667eea;
+				border-bottom-color: #667eea;
+				background: #f8f9fa;
+				font-weight: 600;
+			}
+
+			.staff-tab-content {
+				display: none;
+			}
+
+			.staff-tab-content.active {
+				display: block;
+			}
+
+			.customer-summary {
+				background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+				color: white;
+				padding: 15px 20px;
+				margin-bottom: 20px;
+				border-radius: 8px;
+				display: none;
+			}
+
+			.customer-summary.show {
+				display: block;
+			}
+
+			.customer-summary .summary-stats {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+				gap: 15px;
+				text-align: center;
+			}
+
+			.customer-summary .stat-item {
+				padding: 10px;
+			}
+
+			.customer-summary .stat-number {
+				font-size: 24px;
+				font-weight: bold;
+				display: block;
+			}
+
+			.customer-summary .stat-label {
+				font-size: 12px;
+				opacity: 0.9;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+			}
+
 			/* Status badges */
 			.status-badge {
 				padding: 4px 12px;
@@ -1789,52 +1867,141 @@
 				<!-- Users Management Section -->
 				<div id="users-section" class="content-section">
 					<div class="section-header">
-						<h2>Staff Management</h2>
-						<p>
-							Manage all system staff, including admins, managers, and riders
-						</p>
+						<h2>Staff & Customer Management</h2>
+						<p>Manage all system users, including staff and customers</p>
 					</div>
 
-					<div class="section-actions">
-						<button class="btn btn-primary" onclick="showAddUserModal()">
-							➕ Add New User
+					<!-- Tab Navigation -->
+					<div class="staff-tabs">
+						<button
+							class="staff-tab-btn active"
+							onclick="showStaffTab('staff')"
+						>
+							👥 Staff
 						</button>
-						<button class="btn btn-secondary" onclick="refreshUsersList()">
-							🔄 Refresh List
-						</button>
-						<button class="btn btn-secondary" onclick="exportUsers()">
-							📊 Export Users
+						<button class="staff-tab-btn" onclick="showStaffTab('customers')">
+							🛒 Customers
 						</button>
 					</div>
 
-					<!-- Staff Management Section (Admin Only) -->
-					<div id="user-management-section">
-						<div class="user-card">
-							<div class="users-container">
-								<div class="users-header">
-									<h3>Staff Management</h3>
-									<div class="users-stats">
-										<span id="total-users-count">0 users</span>
+					<!-- Staff Tab Content -->
+					<div id="staff-tab-content" class="staff-tab-content active">
+						<div class="section-actions">
+							<button class="btn btn-primary" onclick="showAddUserModal()">
+								➕ Add New User
+							</button>
+							<button class="btn btn-secondary" onclick="refreshUsersList()">
+								🔄 Refresh List
+							</button>
+							<button class="btn btn-secondary" onclick="exportUsers()">
+								📊 Export Users
+							</button>
+						</div>
+
+						<!-- Staff Management Section (Admin Only) -->
+						<div id="user-management-section">
+							<div class="user-card">
+								<div class="users-container">
+									<div class="users-header">
+										<h3>Staff Management</h3>
+										<div class="users-stats">
+											<span id="total-users-count">0 users</span>
+										</div>
+									</div>
+
+									<div class="users-table-container">
+										<table class="users-table" id="users-table">
+											<thead>
+												<tr>
+													<th>Name</th>
+													<th>Email</th>
+													<th>Role</th>
+													<th>Status</th>
+													<th>Created</th>
+													<th>Actions</th>
+												</tr>
+											</thead>
+											<tbody id="users-table-body">
+												<!-- Users will be loaded here -->
+											</tbody>
+										</table>
 									</div>
 								</div>
+							</div>
+						</div>
+					</div>
 
-								<div class="users-table-container">
-									<table class="users-table" id="users-table">
-										<thead>
-											<tr>
-												<th>Name</th>
-												<th>Email</th>
-												<th>Role</th>
-												<th>Status</th>
-												<th>Created</th>
-												<th>Actions</th>
-											</tr>
-										</thead>
-										<tbody id="users-table-body">
-											<!-- Users will be loaded here -->
-										</tbody>
-									</table>
-								</div>
+					<!-- Customers Tab Content -->
+					<div id="customers-tab-content" class="staff-tab-content">
+						<div class="section-actions">
+							<button class="btn btn-secondary" onclick="refreshCustomers()">
+								🔄 Refresh
+							</button>
+							<button class="btn btn-secondary" onclick="exportCustomers()">
+								📊 Export Customers
+							</button>
+							<button class="btn btn-secondary" onclick="showCustomerStats()">
+								📈 Statistics
+							</button>
+						</div>
+
+						<div class="filters-section">
+							<div class="filter-group">
+								<label for="customer-filter">Filter by Status:</label>
+								<select id="customer-filter" onchange="filterCustomers()">
+									<option value="all">All Customers</option>
+									<option value="active">Active</option>
+									<option value="inactive">Inactive</option>
+								</select>
+							</div>
+							<div class="filter-group">
+								<label for="customer-search">Search:</label>
+								<input
+									type="text"
+									id="customer-search"
+									placeholder="Search by name, email, phone..."
+									onkeyup="filterCustomers()"
+								/>
+							</div>
+							<button
+								class="btn btn-secondary btn-sm"
+								onclick="clearCustomerFilters()"
+							>
+								Clear Filters
+							</button>
+						</div>
+
+						<div class="data-table">
+							<div class="table-header">
+								<h3 id="customers-table-title">All Customers</h3>
+								<span id="customers-count-display">0 customers</span>
+							</div>
+							<div class="customer-summary" id="customer-summary"></div>
+							<div class="users-table-container">
+								<table class="users-table">
+									<thead>
+										<tr>
+											<th>#</th>
+											<th>Customer</th>
+											<th>Contact</th>
+											<th>Address</th>
+											<th>Status</th>
+											<th>Joined</th>
+											<th>Last Login</th>
+											<th>Actions</th>
+										</tr>
+									</thead>
+									<tbody id="customers-table-body">
+										<tr>
+											<td
+												colspan="8"
+												style="text-align: center; padding: 40px; color: #666"
+											>
+												No customers found.
+											</td>
+										</tr>
+									</tbody>
+								</table>
 							</div>
 						</div>
 					</div>
@@ -2434,6 +2601,92 @@
 
 		<script>
 			let currentToken = localStorage.getItem("authToken");
+			let currentRefreshToken = localStorage.getItem("refreshToken");
+
+			// Token management functions
+			function updateTokens(token, refreshToken) {
+				currentToken = token;
+				currentRefreshToken = refreshToken;
+				localStorage.setItem("authToken", token);
+				localStorage.setItem("refreshToken", refreshToken);
+			}
+
+			function clearTokens() {
+				currentToken = null;
+				currentRefreshToken = null;
+				localStorage.removeItem("authToken");
+				localStorage.removeItem("refreshToken");
+			}
+
+			// Auto refresh token function
+			async function refreshAuthToken() {
+				if (!currentRefreshToken) {
+					console.log("No refresh token available");
+					clearTokens();
+					window.location.href = "signin.html";
+					return null;
+				}
+
+				try {
+					const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({ refreshToken: currentRefreshToken }),
+					});
+
+					if (response.ok) {
+						const data = await response.json();
+						updateTokens(data.data.token, data.data.refreshToken);
+						console.log("Token refreshed successfully");
+						return data.data.token;
+					} else {
+						console.log("Refresh token expired or invalid");
+						clearTokens();
+						window.location.href = "signin.html";
+						return null;
+					}
+				} catch (error) {
+					console.error("Error refreshing token:", error);
+					clearTokens();
+					window.location.href = "signin.html";
+					return null;
+				}
+			}
+
+			// Enhanced fetch function with automatic token refresh
+			async function authenticatedFetch(url, options = {}) {
+				// Ensure we have authorization header
+				if (!options.headers) {
+					options.headers = {};
+				}
+
+				if (currentToken) {
+					options.headers.Authorization = `Bearer ${currentToken}`;
+				}
+
+				try {
+					let response = await fetch(url, options);
+
+					// If we get 401, try to refresh token
+					if (response.status === 401 && currentRefreshToken) {
+						console.log("Token expired, attempting refresh...");
+						const newToken = await refreshAuthToken();
+
+						if (newToken) {
+							// Retry the original request with new token
+							options.headers.Authorization = `Bearer ${newToken}`;
+							response = await fetch(url, options);
+						}
+					}
+
+					return response;
+				} catch (error) {
+					console.error("Authenticated fetch error:", error);
+					throw error;
+				}
+			}
 
 			// Pagination variables
 			let currentProductsPage = 1;
@@ -2443,7 +2696,16 @@
 
 			// Check if user is logged in
 			if (!currentToken) {
-				window.location.href = "signin.html";
+				// If no access token but we have refresh token, try to refresh
+				if (currentRefreshToken) {
+					refreshAuthToken().then((newToken) => {
+						if (!newToken) {
+							window.location.href = "signin.html";
+						}
+					});
+				} else {
+					window.location.href = "signin.html";
+				}
 			}
 
 			function showMessage(message, type) {
@@ -2651,7 +2913,7 @@
 			}
 
 			function logout() {
-				localStorage.removeItem("authToken");
+				clearTokens();
 				showMessage("Signed out successfully. Redirecting...", "success");
 				setTimeout(() => {
 					window.location.href = "signin.html";
@@ -2696,12 +2958,11 @@
 					}
 
 					// Use the excludeRole parameter to exclude customers
-					const response = await fetch(
+					const response = await authenticatedFetch(
 						`${API_BASE_URL}/auth/users?excludeRole=customer`,
 						{
 							method: "GET",
 							headers: {
-								Authorization: `Bearer ${currentToken}`,
 								"Content-Type": "application/json",
 							},
 						}
@@ -3261,7 +3522,8 @@
 						break;
 					case "users":
 						if (currentUser && currentUser.role === "admin") {
-							loadAllUsers();
+							// Default to staff tab, load staff data
+							showStaffTab("staff");
 						}
 						break;
 					case "categories":
@@ -5560,6 +5822,249 @@
 
 			function closeZoneStatsModal() {
 				document.getElementById("zone-stats-modal").style.display = "none";
+			}
+
+			// Staff & Customer Tab switching functions
+			function showStaffTab(tabName) {
+				// Remove active class from all tabs and content
+				document
+					.querySelectorAll(".staff-tab-btn")
+					.forEach((btn) => btn.classList.remove("active"));
+				document
+					.querySelectorAll(".staff-tab-content")
+					.forEach((content) => content.classList.remove("active"));
+
+				// Add active class to clicked tab and corresponding content
+				event.target.classList.add("active");
+				document
+					.getElementById(`${tabName}-tab-content`)
+					.classList.add("active");
+
+				// Load data based on active tab
+				if (tabName === "staff") {
+					loadAllUsers();
+				} else if (tabName === "customers") {
+					loadCustomers();
+				}
+			}
+
+			// Customer Management Functions
+			let customersData = [];
+			let filteredCustomersData = [];
+
+			async function loadCustomers() {
+				try {
+					const response = await authenticatedFetch(
+						`${API_BASE_URL}/auth/users?role=customer`
+					);
+
+					if (!response.ok) {
+						throw new Error("Failed to fetch customers");
+					}
+
+					const result = await response.json();
+					customersData = result.data.users || [];
+					filteredCustomersData = [...customersData];
+					displayCustomers(filteredCustomersData);
+					updateCustomerSummary();
+				} catch (error) {
+					console.error("Error loading customers:", error);
+					showMessage("Failed to load customers", "error");
+				}
+			}
+
+			function displayCustomers(customers) {
+				const tbody = document.getElementById("customers-table-body");
+				const countDisplay = document.getElementById("customers-count-display");
+
+				countDisplay.textContent = `${customers.length} customer${
+					customers.length !== 1 ? "s" : ""
+				}`;
+
+				if (customers.length === 0) {
+					tbody.innerHTML = `
+						<tr>
+							<td colspan="8" style="text-align: center; padding: 40px; color: #666">
+								No customers found. ${
+									filteredCustomersData.length !== customersData.length
+										? "Try adjusting your filters."
+										: "No customers have registered yet."
+								}
+							</td>
+						</tr>
+					`;
+					return;
+				}
+
+				tbody.innerHTML = customers
+					.map(
+						(customer, index) => `
+					<tr>
+						<td>${index + 1}</td>
+						<td>
+							<div style="display: flex; align-items: center;">
+								<div style="width: 40px; height: 40px; border-radius: 50%; background: #28a745; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-weight: bold; color: white;">
+									${customer.name.charAt(0).toUpperCase()}
+								</div>
+								<div>
+									<div style="font-weight: 500;">${customer.name}</div>
+									<div style="font-size: 12px; color: #666;">ID: ${customer._id.slice(-6)}</div>
+								</div>
+							</div>
+						</td>
+						<td>
+							<div>
+								<div style="color: #333;">${customer.email}</div>
+								<div style="font-size: 12px; color: #666;">${
+									customer.phoneNumber || "N/A"
+								}</div>
+							</div>
+						</td>
+						<td>
+							<div style="font-size: 12px; color: #666; max-width: 150px;">
+								${
+									customer.address
+										? `${customer.address.street || ""} ${
+												customer.address.city || ""
+										  } ${customer.address.zipCode || ""}`.trim() ||
+										  "No address"
+										: "No address"
+								}
+							</div>
+						</td>
+						<td>${
+							customer.lastLogin
+								? new Date(customer.lastLogin).toLocaleDateString()
+								: "Never"
+						}</td>
+						<td>
+							<span class="status-badge ${customer.isActive ? "active" : "inactive"}">
+								${customer.isActive ? "Active" : "Inactive"}
+							</span>
+						</td>
+						<td>${new Date(customer.createdAt).toLocaleDateString()}</td>
+						<td>
+							<div class="table-actions">
+								<button class="btn-icon" onclick="viewCustomer('${
+									customer._id
+								}')" title="View Details">
+									👁️
+								</button>
+							</div>
+						</td>
+					</tr>
+				`
+					)
+					.join("");
+			}
+
+			function updateCustomerSummary() {
+				const summary = document.getElementById("customer-summary");
+				const activeCustomers = customersData.filter((c) => c.isActive).length;
+				const inactiveCustomers = customersData.filter(
+					(c) => !c.isActive
+				).length;
+				const recentCustomers = customersData.filter((c) => {
+					const lastWeek = new Date();
+					lastWeek.setDate(lastWeek.getDate() - 7);
+					return new Date(c.createdAt) > lastWeek;
+				}).length;
+
+				if (customersData.length > 0) {
+					summary.innerHTML = `
+						<div class="summary-stats">
+							<div class="stat-item">
+								<span class="stat-number">${customersData.length}</span>
+								<span class="stat-label">Total Customers</span>
+							</div>
+							<div class="stat-item">
+								<span class="stat-number">${activeCustomers}</span>
+								<span class="stat-label">Active</span>
+							</div>
+							<div class="stat-item">
+								<span class="stat-number">${inactiveCustomers}</span>
+								<span class="stat-label">Inactive</span>
+							</div>
+							<div class="stat-item">
+								<span class="stat-number">${recentCustomers}</span>
+								<span class="stat-label">New This Week</span>
+							</div>
+						</div>
+					`;
+					summary.classList.add("show");
+				} else {
+					summary.classList.remove("show");
+				}
+			}
+
+			function filterCustomers() {
+				const statusFilter = document.getElementById("customer-filter").value;
+				const searchQuery = document
+					.getElementById("customer-search")
+					.value.toLowerCase();
+
+				filteredCustomersData = customersData.filter((customer) => {
+					const matchesStatus =
+						statusFilter === "all" ||
+						(statusFilter === "active" && customer.isActive) ||
+						(statusFilter === "inactive" && !customer.isActive);
+
+					const matchesSearch =
+						searchQuery === "" ||
+						customer.name.toLowerCase().includes(searchQuery) ||
+						customer.email.toLowerCase().includes(searchQuery) ||
+						(customer.phoneNumber &&
+							customer.phoneNumber.toLowerCase().includes(searchQuery));
+
+					return matchesStatus && matchesSearch;
+				});
+
+				displayCustomers(filteredCustomersData);
+
+				// Update table title
+				const title = document.getElementById("customers-table-title");
+				if (statusFilter !== "all" || searchQuery !== "") {
+					title.textContent = "Filtered Customers";
+				} else {
+					title.textContent = "All Customers";
+				}
+			}
+
+			function clearCustomerFilters() {
+				document.getElementById("customer-filter").value = "all";
+				document.getElementById("customer-search").value = "";
+				filterCustomers();
+			}
+
+			function refreshCustomers() {
+				loadCustomers();
+				showMessage("Customers refreshed", "success");
+			}
+
+			function exportCustomers() {
+				showMessage(
+					"Export customers functionality would be implemented here",
+					"info"
+				);
+				// TODO: Implement customer export
+			}
+
+			function showCustomerStats() {
+				showMessage(
+					"Customer statistics modal would be displayed here",
+					"info"
+				);
+				// TODO: Implement customer statistics modal
+			}
+
+			function viewCustomer(customerId) {
+				showMessage("Customer details modal would be displayed here", "info");
+				// TODO: Implement customer details modal
+			}
+
+			function viewCustomerOrders(customerId) {
+				showMessage("Customer orders modal would be displayed here", "info");
+				// TODO: Implement customer orders modal
 			}
 
 			// Load zones for rider modal dropdown
