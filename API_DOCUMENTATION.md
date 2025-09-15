@@ -1506,9 +1506,346 @@ The system supports the following user roles with different permission levels:
     }
     ```
 
-## Error Handling
+### 6. Zone Management
 
-The API uses standard HTTP status codes to indicate the success or failure of requests.
+#### a. Get All Zones
+
+- **Method**: GET
+- **URL**: `/api/zones`
+- **Description**: Retrieve all zones with filtering and pagination.
+- **Authentication**: Not required
+- **Query Parameters**:
+  - `page` (optional): Page number (default: 1)
+  - `limit` (optional): Items per page (default: 20)
+  - `isActive` (optional): Filter by active status (true, false, all)
+  - `sortBy` (optional): Sort field (priority, zoneName, distance, createdAt)
+  - `sortOrder` (optional): Sort order (asc, desc - default: desc)
+  - `search` (optional): Search by zone name, zip code, or description
+  - `zipCode` (optional): Filter by specific zip code
+- **Response**:
+  - **Status Code**: 200 OK
+  - **Body**:
+    ```json
+    {
+    	"success": true,
+    	"data": [
+    		{
+    			"id": "60d0fe4f5311236168a109cf",
+    			"zoneName": "Downtown",
+    			"zipCode": "10001",
+    			"distance": 5.5,
+    			"distanceUnit": "km",
+    			"description": "Downtown delivery zone",
+    			"deliveryFee": 3.99,
+    			"estimatedDeliveryTime": 30,
+    			"priority": 1,
+    			"isActive": true,
+    			"createdAt": "2021-06-21T07:26:55.000Z",
+    			"createdBy": {
+    				"id": "60d0fe4f5311236168a109ca",
+    				"name": "Admin User"
+    			}
+    		}
+    	],
+    	"pagination": {
+    		"current": 1,
+    		"pages": 3,
+    		"total": 15,
+    		"hasNext": true,
+    		"hasPrev": false
+    	}
+    }
+    ```
+
+#### b. Get Zone by ID
+
+- **Method**: GET
+- **URL**: `/api/zones/:id`
+- **Description**: Get specific zone details by ID.
+- **Authentication**: Not required
+- **Response**:
+  - **Status Code**: 200 OK
+  - **Body**:
+    ```json
+    {
+    	"success": true,
+    	"data": {
+    		"id": "60d0fe4f5311236168a109cf",
+    		"zoneName": "Downtown",
+    		"zipCode": "10001",
+    		"distance": 5.5,
+    		"distanceUnit": "km",
+    		"description": "Downtown delivery zone",
+    		"deliveryFee": 3.99,
+    		"estimatedDeliveryTime": 30,
+    		"priority": 1,
+    		"coordinates": {
+    			"latitude": 40.7128,
+    			"longitude": -74.006
+    		},
+    		"boundaries": [],
+    		"isActive": true,
+    		"createdAt": "2021-06-21T07:26:55.000Z",
+    		"formattedDistance": "5.5 km",
+    		"deliveryInfo": {
+    			"fee": 3.99,
+    			"estimatedTime": 30,
+    			"formattedTime": "30 minutes"
+    		}
+    	}
+    }
+    ```
+
+#### c. Get Zone by Zip Code
+
+- **Method**: GET
+- **URL**: `/api/zones/zipcode/:zipCode`
+- **Description**: Get zone details by zip code.
+- **Authentication**: Not required
+- **Response**:
+  - **Status Code**: 200 OK
+  - **Body**:
+    ```json
+    {
+    	"success": true,
+    	"data": {
+    		"id": "60d0fe4f5311236168a109cf",
+    		"zoneName": "Downtown",
+    		"zipCode": "10001",
+    		"distance": 5.5,
+    		"deliveryFee": 3.99,
+    		"estimatedDeliveryTime": 30
+    	}
+    }
+    ```
+
+#### d. Get Active Zones
+
+- **Method**: GET
+- **URL**: `/api/zones/active`
+- **Description**: Get all active zones sorted by priority.
+- **Authentication**: Not required
+- **Response**:
+  - **Status Code**: 200 OK
+  - **Body**:
+    ```json
+    {
+    	"success": true,
+    	"data": [
+    		{
+    			"id": "60d0fe4f5311236168a109cf",
+    			"zoneName": "Downtown",
+    			"zipCode": "10001",
+    			"distance": 5.5,
+    			"priority": 1,
+    			"deliveryFee": 3.99
+    		}
+    	],
+    	"count": 5
+    }
+    ```
+
+#### e. Create Zone
+
+- **Method**: POST
+- **URL**: `/api/zones`
+- **Description**: Create a new delivery zone.
+- **Authentication**: Required (Bearer token) - Admin/Manager role
+- **Request Body**:
+  ```json
+  {
+  	"zoneName": "Uptown",
+  	"zipCode": "10002",
+  	"distance": 8.2,
+  	"distanceUnit": "km",
+  	"description": "Uptown delivery zone",
+  	"deliveryFee": 4.99,
+  	"estimatedDeliveryTime": 45,
+  	"priority": 2,
+  	"coordinates": {
+  		"latitude": 40.7831,
+  		"longitude": -73.9712
+  	}
+  }
+  ```
+- **Response**:
+  - **Status Code**: 201 Created
+  - **Body**:
+    ```json
+    {
+    	"success": true,
+    	"data": {
+    		"id": "60d0fe4f5311236168a109d0",
+    		"zoneName": "Uptown",
+    		"zipCode": "10002",
+    		"distance": 8.2,
+    		"deliveryFee": 4.99,
+    		"isActive": true
+    	},
+    	"message": "Zone created successfully"
+    }
+    ```
+
+#### f. Update Zone
+
+- **Method**: PUT
+- **URL**: `/api/zones/:id`
+- **Description**: Update zone information.
+- **Authentication**: Required (Bearer token) - Admin/Manager role
+- **Request Body**:
+  ```json
+  {
+  	"zoneName": "Uptown Extended",
+  	"distance": 10.0,
+  	"deliveryFee": 5.99,
+  	"estimatedDeliveryTime": 50,
+  	"priority": 1
+  }
+  ```
+- **Response**:
+  - **Status Code**: 200 OK
+  - **Body**:
+    ```json
+    {
+    	"success": true,
+    	"data": {
+    		"id": "60d0fe4f5311236168a109d0",
+    		"zoneName": "Uptown Extended",
+    		"distance": 10.0,
+    		"deliveryFee": 5.99
+    	},
+    	"message": "Zone updated successfully"
+    }
+    ```
+
+#### g. Update Zone Status
+
+- **Method**: PATCH
+- **URL**: `/api/zones/:id/status`
+- **Description**: Update zone activation status.
+- **Authentication**: Required (Bearer token) - Admin/Manager role
+- **Request Body**:
+  ```json
+  {
+  	"isActive": false
+  }
+  ```
+- **Response**:
+  - **Status Code**: 200 OK
+  - **Body**:
+    ```json
+    {
+    	"success": true,
+    	"data": {
+    		"id": "60d0fe4f5311236168a109d0",
+    		"isActive": false
+    	},
+    	"message": "Zone deactivated successfully"
+    }
+    ```
+
+#### h. Delete Zone (Soft Delete)
+
+- **Method**: DELETE
+- **URL**: `/api/zones/:id`
+- **Description**: Deactivate a zone (soft delete).
+- **Authentication**: Required (Bearer token) - Admin role
+- **Response**:
+  - **Status Code**: 200 OK
+  - **Body**:
+    ```json
+    {
+    	"success": true,
+    	"message": "Zone deactivated successfully"
+    }
+    ```
+
+#### i. Permanently Delete Zone
+
+- **Method**: DELETE
+- **URL**: `/api/zones/:id/permanent`
+- **Description**: Permanently delete a zone from database.
+- **Authentication**: Required (Bearer token) - Admin role
+- **Response**:
+  - **Status Code**: 200 OK
+  - **Body**:
+    ```json
+    {
+    	"success": true,
+    	"message": "Zone permanently deleted successfully"
+    }
+    ```
+
+#### j. Get Zone Statistics
+
+- **Method**: GET
+- **URL**: `/api/zones/admin/stats`
+- **Description**: Get zone statistics and analytics.
+- **Authentication**: Required (Bearer token) - Admin/Manager role
+- **Response**:
+  - **Status Code**: 200 OK
+  - **Body**:
+    ```json
+    {
+    	"success": true,
+    	"data": {
+    		"totalZones": 15,
+    		"activeZones": 12,
+    		"inactiveZones": 3,
+    		"totalDistance": 125.5,
+    		"averageDistance": 8.37,
+    		"averageDeliveryFee": 4.25,
+    		"averageDeliveryTime": 35,
+    		"distanceUnitBreakdown": [
+    			{
+    				"_id": "km",
+    				"count": 12,
+    				"totalDistance": 100.5
+    			},
+    			{
+    				"_id": "miles",
+    				"count": 3,
+    				"totalDistance": 25.0
+    			}
+    		]
+    	}
+    }
+    ```
+
+#### k. Calculate Delivery Fee
+
+- **Method**: POST
+- **URL**: `/api/zones/calculate-delivery`
+- **Description**: Calculate delivery fee for a specific zip code.
+- **Authentication**: Not required
+- **Request Body**:
+  ```json
+  {
+  	"zipCode": "10001",
+  	"baseRate": 2.5
+  }
+  ```
+- **Response**:
+  - **Status Code**: 200 OK
+  - **Body**:
+    ```json
+    {
+    	"success": true,
+    	"data": {
+    		"zone": {
+    			"id": "60d0fe4f5311236168a109cf",
+    			"name": "Downtown",
+    			"zipCode": "10001",
+    			"distance": "5.5 km"
+    		},
+    		"deliveryFee": 3.99,
+    		"estimatedDeliveryTime": 30,
+    		"formattedDeliveryTime": "30 minutes"
+    	}
+    }
+    ```
+
+## Error HandlingThe API uses standard HTTP status codes to indicate the success or failure of requests.
 
 ### HTTP Status Codes
 
