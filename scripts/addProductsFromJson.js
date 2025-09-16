@@ -36,8 +36,21 @@ function* shelfNumberGenerator() {
 async function getOrCreateCategory(name) {
 	let cat = await Category.findOne({ name });
 	if (!cat) {
-		cat = await Category.create({ name });
-		console.log(`Created category: ${name}`);
+		try {
+			cat = await Category.create({ name });
+			console.log(`Created category: ${name}`);
+		} catch (err) {
+			if (err.code === 11000) {
+				// Duplicate key error, try to find existing one
+				cat = await Category.findOne({ name });
+				if (!cat) {
+					throw err;
+				}
+				console.log(`Using existing category: ${name}`);
+			} else {
+				throw err;
+			}
+		}
 	}
 	return cat;
 }
@@ -146,8 +159,8 @@ async function main() {
 			subcategory: subcat._id,
 			price:
 				typeof p["priceFR."] === "number"
-					? p["priceFR."]
-					: parseFloat(p["priceFR."]) || 0,
+					? Math.round(p["priceFR."] * 100) / 100
+					: Math.round((parseFloat(p["priceFR."]) || 0) * 100) / 100,
 			stock: DEFAULT_STOCK,
 			isActive: DEFAULT_IS_ACTIVE,
 			description,

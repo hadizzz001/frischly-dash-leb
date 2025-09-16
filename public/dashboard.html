@@ -6461,35 +6461,92 @@
 				document.getElementById("zone-form").reset();
 				document.getElementById("zone-id").value = "";
 				document.getElementById("zone-is-active").checked = true;
+				clearZoneFormValidation();
 				document.getElementById("zone-modal").style.display = "block";
 			}
 
 			function closeZoneModal() {
 				document.getElementById("zone-modal").style.display = "none";
 				document.getElementById("zone-form").reset();
+				clearZoneFormValidation();
+			}
+
+			function clearZoneFormValidation() {
+				// Clear custom validation messages
+				const inputs = [
+					"zone-name",
+					"zone-zip-code",
+					"zone-distance",
+					"zone-delivery-fee",
+				];
+				inputs.forEach((inputId) => {
+					const input = document.getElementById(inputId);
+					if (input) {
+						input.setCustomValidity("");
+					}
+				});
 			}
 
 			async function saveZone() {
 				try {
 					const formData = new FormData(document.getElementById("zone-form"));
+
+					// Validate required fields
+					const zoneName = formData.get("zoneName")?.trim();
+					const zipCode = formData.get("zipCode")?.trim();
+					const distance = formData.get("distance");
+
+					if (!zoneName) {
+						throw new Error("Zone name is required");
+					}
+					if (!zipCode) {
+						throw new Error("Zip code is required");
+					}
+					if (
+						!distance ||
+						isNaN(parseFloat(distance)) ||
+						parseFloat(distance) < 0
+					) {
+						throw new Error("Valid distance is required");
+					}
+
+					// Validate delivery fee if provided
+					const deliveryFee = formData.get("deliveryFee");
+					if (
+						deliveryFee &&
+						(isNaN(parseFloat(deliveryFee)) || parseFloat(deliveryFee) < 0)
+					) {
+						throw new Error("Delivery fee must be a valid positive number");
+					}
+
 					const zoneData = {
-						zoneName: formData.get("zoneName"),
-						zipCode: formData.get("zipCode"),
-						distance: parseFloat(formData.get("distance")),
-						deliveryFee: formData.get("deliveryFee")
-							? parseFloat(formData.get("deliveryFee"))
-							: 0,
+						zoneName: zoneName,
+						zipCode: zipCode.toUpperCase(),
+						distance: parseFloat(distance),
+						deliveryFee: deliveryFee ? parseFloat(deliveryFee) : 0,
 						estimatedDeliveryTime: formData.get("estimatedDeliveryTime")
 							? parseInt(
 									formData.get("estimatedDeliveryTime").replace(/\D/g, "")
 							  ) || 30
 							: 30,
-						description: formData.get("description") || undefined,
+						description: formData.get("description")?.trim() || undefined,
 						isActive: formData.get("isActive") === "on",
 					};
 
 					const zoneId = formData.get("id");
 					const isEdit = zoneId && zoneId.trim() !== "";
+
+					// Check for duplicate zone names in frontend data (quick check)
+					if (zonesData && zonesData.length > 0) {
+						const duplicateZone = zonesData.find(
+							(zone) =>
+								zone.zoneName.toLowerCase() === zoneName.toLowerCase() &&
+								(!isEdit || zone._id !== zoneId)
+						);
+						if (duplicateZone) {
+							throw new Error("A zone with this name already exists");
+						}
+					}
 
 					const url = isEdit
 						? `${API_BASE_URL}/zones/${zoneId}`
@@ -6544,6 +6601,7 @@
 				document.getElementById("zone-boundaries").value =
 					zone.description || "";
 				document.getElementById("zone-is-active").checked = zone.isActive;
+				clearZoneFormValidation();
 				document.getElementById("zone-modal").style.display = "block";
 			}
 
@@ -6923,16 +6981,6 @@
 				}
 			}
 
-			async function editZone(zoneId) {
-				try {
-					showMessage("Edit Zone modal would open here", "info");
-					// TODO: Implement edit zone modal
-				} catch (error) {
-					console.error("Error editing zone:", error);
-					showMessage("Failed to edit zone", "error");
-				}
-			}
-
 			async function toggleZoneStatus(zoneId, isActive) {
 				try {
 					const response = await fetch(
@@ -6965,29 +7013,32 @@
 			async function deleteZone(zoneId, zoneName) {
 				if (
 					!confirm(
-						`Are you sure you want to delete zone "${zoneName}"? This action cannot be undone.`
+						`Are you sure you want to permanently delete zone "${zoneName}"? This action cannot be undone and will completely remove the zone from the database.`
 					)
 				) {
 					return;
 				}
 
 				try {
-					const response = await fetch(`${API_BASE_URL}/zones/${zoneId}`, {
-						method: "DELETE",
-						headers: {
-							Authorization: `Bearer ${currentToken}`,
-						},
-					});
+					const response = await fetch(
+						`${API_BASE_URL}/zones/${zoneId}/permanent`,
+						{
+							method: "DELETE",
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+							},
+						}
+					);
 
 					if (!response.ok) {
-						throw new Error("Failed to delete zone");
+						throw new Error("Failed to permanently delete zone");
 					}
 
 					loadZones();
-					showMessage("Zone deleted successfully", "success");
+					showMessage("Zone permanently deleted successfully", "success");
 				} catch (error) {
-					console.error("Error deleting zone:", error);
-					showMessage("Failed to delete zone", "error");
+					console.error("Error permanently deleting zone:", error);
+					showMessage("Failed to permanently delete zone", "error");
 				}
 			}
 
@@ -10086,6 +10137,88 @@
 				</form>
 			</div>
 		</div>
+
+		<script>
+			// Add real-time validation for zone form
+			document.addEventListener("DOMContentLoaded", function () {
+				const zoneForm = document.getElementById("zone-form");
+				if (zoneForm) {
+					// Zone name validation
+					const zoneNameInput = document.getElementById("zone-name");
+					if (zoneNameInput) {
+						zoneNameInput.addEventListener("blur", function () {
+							const value = this.value.trim();
+							if (!value) {
+								this.setCustomValidity("Zone name is required");
+							} else if (value.length < 2) {
+								this.setCustomValidity(
+									"Zone name must be at least 2 characters"
+								);
+							} else if (value.length > 100) {
+								this.setCustomValidity(
+									"Zone name cannot exceed 100 characters"
+								);
+							} else {
+								this.setCustomValidity("");
+							}
+						});
+					}
+
+					// Zip code validation
+					const zipCodeInput = document.getElementById("zone-zip-code");
+					if (zipCodeInput) {
+						zipCodeInput.addEventListener("input", function () {
+							// Convert to uppercase
+							this.value = this.value.toUpperCase();
+						});
+
+						zipCodeInput.addEventListener("blur", function () {
+							const value = this.value.trim();
+							if (!value) {
+								this.setCustomValidity("Zip code is required");
+							} else if (!/^[0-9A-Z\s\-]{3,20}$/.test(value)) {
+								this.setCustomValidity("Please enter a valid zip code");
+							} else {
+								this.setCustomValidity("");
+							}
+						});
+					}
+
+					// Distance validation
+					const distanceInput = document.getElementById("zone-distance");
+					if (distanceInput) {
+						distanceInput.addEventListener("blur", function () {
+							const value = parseFloat(this.value);
+							if (isNaN(value) || value < 0) {
+								this.setCustomValidity("Distance must be a positive number");
+							} else if (value > 1000) {
+								this.setCustomValidity("Distance cannot exceed 1000 km");
+							} else {
+								this.setCustomValidity("");
+							}
+						});
+					}
+
+					// Delivery fee validation
+					const deliveryFeeInput = document.getElementById("zone-delivery-fee");
+					if (deliveryFeeInput) {
+						deliveryFeeInput.addEventListener("blur", function () {
+							const value = this.value.trim();
+							if (
+								value &&
+								(isNaN(parseFloat(value)) || parseFloat(value) < 0)
+							) {
+								this.setCustomValidity(
+									"Delivery fee must be a positive number"
+								);
+							} else {
+								this.setCustomValidity("");
+							}
+						});
+					}
+				}
+			});
+		</script>
 
 		<!-- Zone Statistics Modal -->
 		<div id="zone-stats-modal" class="modal">
