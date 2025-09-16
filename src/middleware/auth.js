@@ -18,7 +18,7 @@ const protect = async (req, res, next) => {
 		if (!token) {
 			return res.status(401).json({
 				success: false,
-				message: "Not authorized to access this route",
+				message: "401 ,Not authorized to access this route,token missing",
 			});
 		}
 
@@ -32,7 +32,7 @@ const protect = async (req, res, next) => {
 			if (!user) {
 				return res.status(401).json({
 					success: false,
-					message: "Not authorized to access this route",
+					message: "401 ,Not authorized to access this route,user not found",
 				});
 			}
 

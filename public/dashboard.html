@@ -1424,6 +1424,117 @@
 				box-shadow: 0 0 5px rgba(255, 195, 0, 0.3);
 			}
 
+			/* Zone checkboxes styling */
+			.zone-checkboxes {
+				display: flex;
+				flex-wrap: nowrap;
+				gap: 8px;
+				padding: 8px;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				background-color: #f9f9f9;
+				min-height: 40px;
+				overflow-x: auto;
+				overflow-y: hidden;
+				white-space: nowrap;
+			}
+
+			.zone-checkboxes::-webkit-scrollbar {
+				height: 6px;
+			}
+
+			.zone-checkboxes::-webkit-scrollbar-track {
+				background: #f1f1f1;
+				border-radius: 3px;
+			}
+
+			.zone-checkboxes::-webkit-scrollbar-thumb {
+				background: #ccc;
+				border-radius: 3px;
+			}
+
+			.zone-checkboxes::-webkit-scrollbar-thumb:hover {
+				background: #999;
+			}
+
+			.zone-checkbox-item {
+				display: flex;
+				align-items: center;
+				background: white;
+				padding: 4px 8px;
+				border-radius: 12px;
+				border: 1px solid #ddd;
+				cursor: pointer;
+				transition: all 0.2s ease;
+				flex-shrink: 0;
+				font-size: 12px;
+				min-width: fit-content;
+			}
+
+			.zone-checkbox-item:hover {
+				border-color: #000000;
+				background-color: #f5f5f5;
+			}
+
+			.zone-checkbox-item input[type="checkbox"] {
+				margin-right: 4px;
+				cursor: pointer;
+				transform: scale(0.8);
+			}
+
+			.zone-checkbox-item.selected {
+				background-color: #000000;
+				color: white;
+				border-color: #000000;
+			}
+
+			.zone-checkbox-item.selected input[type="checkbox"] {
+				accent-color: white;
+			}
+
+			.form-help {
+				font-size: 12px;
+				color: #666;
+				margin-top: 5px;
+				font-style: italic;
+			}
+
+			/* Multi-zone display tooltip */
+			.zone-display {
+				position: relative;
+				cursor: pointer;
+			}
+
+			.zone-display:hover .zone-tooltip {
+				display: block;
+			}
+
+			.zone-tooltip {
+				display: none;
+				position: absolute;
+				bottom: 100%;
+				left: 50%;
+				transform: translateX(-50%);
+				background: #333;
+				color: white;
+				padding: 8px 12px;
+				border-radius: 4px;
+				font-size: 12px;
+				white-space: nowrap;
+				z-index: 1000;
+				margin-bottom: 5px;
+			}
+
+			.zone-tooltip::after {
+				content: "";
+				position: absolute;
+				top: 100%;
+				left: 50%;
+				transform: translateX(-50%);
+				border: 5px solid transparent;
+				border-top-color: #333;
+			}
+
 			@media (max-width: 768px) {
 				.menu-toggle {
 					display: block;
@@ -6169,11 +6280,24 @@
 							}
 						}
 
-						// Handle zone - can be string or object
-						const zoneName =
-							typeof rider.zone === "string"
-								? rider.zone
-								: rider.zone?.zoneName || "No Zone";
+						// Handle zones - can be array, string, or object
+						let zoneDisplay = "No Zones";
+						let zoneTooltip = "";
+						if (Array.isArray(rider.zones) && rider.zones.length > 0) {
+							// New multi-zone format
+							if (rider.zones.length === 1) {
+								zoneDisplay = rider.zones[0];
+							} else {
+								zoneDisplay = `${rider.zones[0]} +${rider.zones.length - 1}`;
+								zoneTooltip = `All zones: ${rider.zones.join(", ")}`;
+							}
+						} else if (rider.zone) {
+							// Legacy single zone format
+							zoneDisplay =
+								typeof rider.zone === "string"
+									? rider.zone
+									: rider.zone?.zoneName || "No Zone";
+						}
 
 						const statusBadge = getStatusBadge(rider.status);
 
@@ -6197,8 +6321,9 @@
 									</div>
 								</td>
 								<td>
-									<span style="background: #f0f0f0; padding: 4px 8px; border-radius: 12px; font-size: 12px;">
-										${zoneName}
+									<span class="zone-display" style="background: #f0f0f0; padding: 4px 8px; border-radius: 12px; font-size: 12px;">
+										${zoneDisplay}
+										${zoneTooltip ? `<div class="zone-tooltip">${zoneTooltip}</div>` : ""}
 									</span>
 								</td>
 								<td>
@@ -7002,18 +7127,50 @@
 					const result = await response.json();
 					const zones = result.data || [];
 
-					const zoneSelect = document.getElementById("rider-zone");
+					const zoneContainer = document.getElementById("rider-zones");
 
-					// Clear existing options except the first one
-					zoneSelect.innerHTML = '<option value="">-- Select Zone --</option>';
+					// Clear existing checkboxes
+					zoneContainer.innerHTML = "";
 
-					// Add zones to dropdown
+					// Add zone checkboxes
 					zones.forEach((zone) => {
-						const option = document.createElement("option");
-						option.value = zone.zoneName;
-						option.textContent = `${zone.zoneName} (${zone.zipCode})`;
-						zoneSelect.appendChild(option);
+						const checkboxItem = document.createElement("div");
+						checkboxItem.className = "zone-checkbox-item";
+
+						const checkbox = document.createElement("input");
+						checkbox.type = "checkbox";
+						checkbox.id = `zone-${zone._id}`;
+						checkbox.name = "zones";
+						checkbox.value = zone.zoneName;
+						checkbox.addEventListener("change", function () {
+							if (this.checked) {
+								checkboxItem.classList.add("selected");
+							} else {
+								checkboxItem.classList.remove("selected");
+							}
+						});
+
+						const label = document.createElement("label");
+						label.htmlFor = `zone-${zone._id}`;
+						label.textContent = `${zone.zoneName} (${zone.zipCode})`;
+						label.style.cursor = "pointer";
+
+						checkboxItem.appendChild(checkbox);
+						checkboxItem.appendChild(label);
+						zoneContainer.appendChild(checkboxItem);
+
+						// Make the entire item clickable
+						checkboxItem.addEventListener("click", function (e) {
+							if (e.target !== checkbox) {
+								checkbox.click();
+							}
+						});
 					});
+
+					if (zones.length === 0) {
+						zoneContainer.innerHTML =
+							'<p style="color: #666; font-style: italic;">No active zones available</p>';
+					}
 				} catch (error) {
 					console.error("Error loading zones for rider modal:", error);
 					showMessage("Failed to load zones for dropdown", "error");
@@ -7120,9 +7277,23 @@
 				const formData = new FormData(form);
 				const riderId = document.getElementById("rider-id").value;
 
+				// Collect selected zones
+				const selectedZones = [];
+				const zoneCheckboxes = document.querySelectorAll(
+					'input[name="zones"]:checked'
+				);
+				zoneCheckboxes.forEach((checkbox) => {
+					selectedZones.push(checkbox.value);
+				});
+
+				if (selectedZones.length === 0) {
+					showMessage("Please select at least one zone", "error");
+					return;
+				}
+
 				const riderData = {
 					userId: formData.get("userId"),
-					zone: formData.get("zone"),
+					zones: selectedZones,
 					vehicleType: formData.get("vehicleType"),
 					licenseNumber: formData.get("licenseNumber"),
 					status: formData.get("status"),
@@ -7328,7 +7499,6 @@
 
 						// Populate the form
 						document.getElementById("rider-id").value = rider._id;
-						document.getElementById("rider-zone").value = rider.zone;
 						document.getElementById("rider-vehicle-type").value =
 							rider.vehicleType;
 						document.getElementById("rider-license-number").value =
@@ -7348,9 +7518,24 @@
 						userSelect.value = rider.user._id;
 						userSelect.disabled = true; // Can't change user after creation
 
-						// Load zones and set the selected zone
+						// Load zones and set the selected zones
 						await loadZonesForRiderModal();
-						document.getElementById("rider-zone").value = rider.zone;
+
+						// Select the rider's zones
+						const riderZones = Array.isArray(rider.zones)
+							? rider.zones
+							: rider.zone
+							? [rider.zone]
+							: [];
+						riderZones.forEach((zoneName) => {
+							const checkbox = document.querySelector(
+								`input[name="zones"][value="${zoneName}"]`
+							);
+							if (checkbox) {
+								checkbox.checked = true;
+								checkbox.dispatchEvent(new Event("change"));
+							}
+						});
 
 						// Update modal title and show
 						document.getElementById(
@@ -8491,10 +8676,13 @@
 							</select>
 						</div>
 						<div class="form-group">
-							<label for="rider-zone">Zone *</label>
-							<select id="rider-zone" name="zone" required>
-								<option value="">-- Select Zone --</option>
-							</select>
+							<label for="rider-zones">Zones *</label>
+							<div id="rider-zones" class="zone-checkboxes">
+								<!-- Zone checkboxes will be loaded dynamically -->
+							</div>
+							<small class="form-help"
+								>Select one or more zones where this rider can operate</small
+							>
 						</div>
 						<div class="form-group">
 							<label for="rider-vehicle">Vehicle Type *</label>
@@ -9444,11 +9632,24 @@
 							}
 						}
 
-						// Handle zone - can be string or object
-						const zoneName =
-							typeof rider.zone === "string"
-								? rider.zone
-								: rider.zone?.zoneName || "No Zone";
+						// Handle zones - can be array, string, or object
+						let zoneDisplay = "No Zones";
+						let zoneTooltip = "";
+						if (Array.isArray(rider.zones) && rider.zones.length > 0) {
+							// New multi-zone format
+							if (rider.zones.length === 1) {
+								zoneDisplay = rider.zones[0];
+							} else {
+								zoneDisplay = `${rider.zones[0]} +${rider.zones.length - 1}`;
+								zoneTooltip = `All zones: ${rider.zones.join(", ")}`;
+							}
+						} else if (rider.zone) {
+							// Legacy single zone format
+							zoneDisplay =
+								typeof rider.zone === "string"
+									? rider.zone
+									: rider.zone?.zoneName || "No Zone";
+						}
 
 						return `
 					<tr>
@@ -9470,8 +9671,15 @@
 							</div>
 						</td>
 						<td>
-							<span style="background: #f0f0f0; padding: 4px 8px; border-radius: 12px; font-size: 12px;">
-								${escapeHtml(zoneName)}
+							<span class="zone-display" style="background: #f0f0f0; padding: 4px 8px; border-radius: 12px; font-size: 12px;">
+								${escapeHtml(zoneDisplay)}
+								${
+									zoneTooltip
+										? `<div class="zone-tooltip">${escapeHtml(
+												zoneTooltip
+										  )}</div>`
+										: ""
+								}
 							</span>
 						</td>
 						<td>
@@ -9748,10 +9956,23 @@
 					const formData = new FormData(form);
 					const riderId = riderIdElement.value;
 
+					// Collect selected zones
+					const selectedZones = [];
+					const zoneCheckboxes = document.querySelectorAll(
+						'input[name="zones"]:checked'
+					);
+					zoneCheckboxes.forEach((checkbox) => {
+						selectedZones.push(checkbox.value);
+					});
+
+					if (selectedZones.length === 0) {
+						throw new Error("Please select at least one zone");
+					}
+
 					// Build rider data from form
 					const riderData = {
 						userId: formData.get("userId") || null, // Use userId instead of user
-						zone: formData.get("zone"),
+						zones: selectedZones,
 						vehicleType: formData.get("vehicleType"),
 						vehicleNumber: formData.get("vehicleNumber"),
 						status: formData.get("status"),
@@ -9766,10 +9987,6 @@
 					// Validate required fields
 					if (!riderData.userId) {
 						throw new Error("Please select an associated user");
-					}
-
-					if (!riderData.zone) {
-						throw new Error("Please enter a zone");
 					}
 
 					if (!riderData.vehicleType) {
@@ -9920,11 +10137,24 @@
 						userField.disabled = true; // Can't change user after creation
 					}
 
-					// Load zones dropdown and select the zone if available
+					// Load zones checkboxes and select the rider's zones
 					await loadZonesForRiderModal();
-					if (rider.zone) {
-						zoneField.value = rider.zone;
-					}
+
+					// Select the rider's zones
+					const riderZones = Array.isArray(rider.zones)
+						? rider.zones
+						: rider.zone
+						? [rider.zone]
+						: [];
+					riderZones.forEach((zoneName) => {
+						const checkbox = document.querySelector(
+							`input[name="zones"][value="${zoneName}"]`
+						);
+						if (checkbox) {
+							checkbox.checked = true;
+							checkbox.dispatchEvent(new Event("change"));
+						}
+					});
 
 					// Show the modal
 					document.getElementById("rider-modal").style.display = "block";
