@@ -5562,52 +5562,7 @@
 					return;
 				}
 
-				const newStock = prompt(
-					`Update stock for "${product.name}"\nCurrent stock: ${product.stock}\n\nEnter new stock quantity:`,
-					product.stock
-				);
-
-				if (newStock === null) return; // User cancelled
-
-				const stockValue = parseInt(newStock);
-				if (isNaN(stockValue) || stockValue < 0) {
-					showMessage(
-						"Please enter a valid stock quantity (0 or greater)",
-						"error"
-					);
-					return;
-				}
-
-				try {
-					const response = await fetch(
-						`${API_BASE_URL}/products/${productId}/stock`,
-						{
-							method: "PATCH",
-							headers: {
-								Authorization: `Bearer ${currentToken}`,
-								"Content-Type": "application/json",
-							},
-							body: JSON.stringify({
-								quantity: stockValue,
-								operation: "set",
-							}),
-						}
-					);
-
-					const result = await response.json();
-
-					if (response.ok) {
-						showMessage(
-							`Stock updated successfully for "${product.name}"`,
-							"success"
-						);
-						loadProducts();
-					} else {
-						showMessage(result.message || "Failed to update stock", "error");
-					}
-				} catch (error) {
-					showMessage("Error updating stock: " + error.message, "error");
-				}
+				showStockModal(product);
 			}
 
 			async function deleteProduct(productId, productName) {
@@ -5768,6 +5723,135 @@
 				const modal = document.getElementById("product-modal");
 				if (modal) {
 					modal.style.display = "none";
+				}
+			}
+
+			// Stock Management Modal Functions
+			function showStockModal(product) {
+				const modal = document.getElementById("stock-modal");
+				const productIdInput = document.getElementById("stock-product-id");
+				const productNameInput = document.getElementById("stock-product-name");
+				const currentStockInput = document.getElementById("current-stock");
+				const quantityInput = document.getElementById("stock-quantity");
+				const operationSelect = document.getElementById("stock-operation");
+
+				// Populate modal with product data
+				productIdInput.value = product._id;
+				productNameInput.value = product.name;
+				currentStockInput.value = product.stock || 0;
+
+				// Reset form
+				quantityInput.value = "";
+				operationSelect.value = "set";
+
+				// Update preview
+				updateStockPreview();
+
+				modal.style.display = "block";
+			}
+
+			function closeStockModal() {
+				const modal = document.getElementById("stock-modal");
+				if (modal) {
+					modal.style.display = "none";
+				}
+
+				// Reset form
+				document.getElementById("stock-form").reset();
+			}
+
+			function updateStockPreview() {
+				const currentStock =
+					parseInt(document.getElementById("current-stock").value) || 0;
+				const quantity =
+					parseInt(document.getElementById("stock-quantity").value) || 0;
+				const operation = document.getElementById("stock-operation").value;
+
+				const previewCurrent = document.getElementById("preview-current");
+				const previewOperation = document.getElementById("preview-operation");
+				const previewNew = document.getElementById("preview-new");
+
+				previewCurrent.textContent = `Current Stock: ${currentStock}`;
+
+				let newStock = currentStock;
+				let operationText = "";
+
+				switch (operation) {
+					case "set":
+						newStock = quantity;
+						operationText = `Set stock to: ${quantity}`;
+						break;
+					case "add":
+						newStock = currentStock + quantity;
+						operationText = `Add ${quantity} units`;
+						break;
+					case "subtract":
+						newStock = Math.max(0, currentStock - quantity);
+						operationText = `Remove ${quantity} units`;
+						break;
+				}
+
+				previewOperation.textContent = `Operation: ${operationText}`;
+				previewNew.textContent = `New Stock: ${newStock}`;
+
+				// Color coding for stock levels
+				if (newStock === 0) {
+					previewNew.style.color = "#dc3545"; // Red for out of stock
+				} else if (newStock <= 10) {
+					previewNew.style.color = "#fd7e14"; // Orange for low stock
+				} else {
+					previewNew.style.color = "#28a745"; // Green for good stock
+				}
+			}
+
+			async function saveStockUpdate() {
+				const productId = document.getElementById("stock-product-id").value;
+				const quantityValue = document.getElementById("stock-quantity").value;
+				const quantity = parseInt(quantityValue);
+				const operation = document.getElementById("stock-operation").value;
+				const productName = document.getElementById("stock-product-name").value;
+
+				if (quantityValue === "" || isNaN(quantity) || quantity < 0) {
+					showMessage("Please enter a valid quantity (0 or greater)", "error");
+					return;
+				}
+
+				try {
+					const response = await fetch(
+						`${API_BASE_URL}/products/${productId}/stock`,
+						{
+							method: "PATCH",
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({
+								quantity: quantity,
+								operation: operation,
+							}),
+						}
+					);
+
+					const result = await response.json();
+
+					if (response.ok) {
+						const operationText =
+							operation === "set"
+								? "set to"
+								: operation === "add"
+								? "increased by"
+								: "decreased by";
+						showMessage(
+							`Stock ${operationText} ${quantity} for "${productName}"`,
+							"success"
+						);
+						closeStockModal();
+						loadProducts();
+					} else {
+						showMessage(result.message || "Failed to update stock", "error");
+					}
+				} catch (error) {
+					showMessage("Error updating stock: " + error.message, "error");
 				}
 			}
 
@@ -7937,6 +8021,119 @@
 							Cancel
 						</button>
 						<button type="submit" class="btn btn-primary">Save Product</button>
+					</div>
+				</form>
+			</div>
+		</div>
+
+		<!-- Stock Management Modal -->
+		<div id="stock-modal" class="modal">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h2 id="stock-modal-title">Manage Stock</h2>
+					<span class="close" onclick="closeStockModal()">&times;</span>
+				</div>
+
+				<form
+					id="stock-form"
+					onsubmit="event.preventDefault(); saveStockUpdate();"
+				>
+					<input type="hidden" id="stock-product-id" />
+
+					<div class="form-group">
+						<label for="stock-product-name">Product</label>
+						<input
+							type="text"
+							id="stock-product-name"
+							readonly
+							style="background: #f8f9fa; cursor: not-allowed"
+						/>
+					</div>
+
+					<div class="form-group">
+						<label for="current-stock">Current Stock</label>
+						<input
+							type="number"
+							id="current-stock"
+							readonly
+							style="background: #f8f9fa; cursor: not-allowed"
+						/>
+					</div>
+
+					<div class="form-group">
+						<label for="stock-operation">Operation *</label>
+						<select
+							id="stock-operation"
+							name="operation"
+							required
+							onchange="updateStockPreview()"
+						>
+							<option value="set">Set Stock (Replace current stock)</option>
+							<option value="add">Add Stock (Increase current stock)</option>
+							<option value="subtract">
+								Remove Stock (Decrease current stock)
+							</option>
+						</select>
+					</div>
+
+					<div class="form-group">
+						<label for="stock-quantity">Quantity *</label>
+						<input
+							type="number"
+							id="stock-quantity"
+							name="quantity"
+							required
+							min="0"
+							oninput="updateStockPreview()"
+						/>
+					</div>
+
+					<div
+						class="form-group"
+						style="
+							background: #f8f9fa;
+							padding: 15px;
+							border-radius: 8px;
+							border: 1px solid #e9ecef;
+						"
+					>
+						<h4 style="margin: 0 0 10px 0; color: #495057; font-size: 14px">
+							Stock Preview
+						</h4>
+						<div id="stock-preview" style="font-size: 13px; color: #6c757d">
+							<div id="preview-current">Current Stock: 0</div>
+							<div id="preview-operation">Operation: -</div>
+							<div
+								id="preview-new"
+								style="
+									font-weight: 600;
+									color: #007bff;
+									margin-top: 5px;
+									padding-top: 5px;
+									border-top: 1px solid #dee2e6;
+								"
+							>
+								New Stock: 0
+							</div>
+						</div>
+					</div>
+
+					<div
+						style="
+							display: flex;
+							gap: 10px;
+							justify-content: flex-end;
+							margin-top: 30px;
+						"
+					>
+						<button
+							type="button"
+							class="btn btn-secondary"
+							onclick="closeStockModal()"
+						>
+							Cancel
+						</button>
+						<button type="submit" class="btn btn-primary">Update Stock</button>
 					</div>
 				</form>
 			</div>

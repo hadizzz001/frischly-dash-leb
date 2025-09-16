@@ -378,7 +378,7 @@ exports.createProduct = async (req, res) => {
 
 // @desc    Update product
 // @route   PUT /api/products/:id
-// @access  Private (Admin/Manager)
+// @access  Private (Admin/Manager/staff)
 exports.updateProduct = async (req, res) => {
 	try {
 		const { id } = req.params;
@@ -479,7 +479,14 @@ exports.updateProductStock = async (req, res) => {
 		}
 
 		await product.populate([
-			{ path: "category", select: "name color icon" },
+			{
+				path: "subcategory",
+				select: "name parentCategory",
+				populate: {
+					path: "parentCategory",
+					select: "name color icon",
+				},
+			},
 			{ path: "createdBy", select: "name email" },
 		]);
 
