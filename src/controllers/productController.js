@@ -479,14 +479,7 @@ exports.updateProductStock = async (req, res) => {
 		}
 
 		await product.populate([
-			{
-				path: "subcategory",
-				select: "name parentCategory",
-				populate: {
-					path: "parentCategory",
-					select: "name color icon",
-				},
-			},
+			{ path: "category", select: "name color icon" },
 			{ path: "createdBy", select: "name email" },
 		]);
 
