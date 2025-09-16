@@ -2559,6 +2559,7 @@
 									<thead>
 										<tr>
 											<th>#</th>
+											<th>Image</th>
 											<th>Category Name</th>
 											<th>Description</th>
 											<th>Products Count</th>
@@ -4467,7 +4468,7 @@
 				if (!categories || categories.length === 0) {
 					tbody.innerHTML = `
 						<tr>
-							<td colspan="7" style="text-align: center; padding: 40px; color: #666;">
+							<td colspan="8" style="text-align: center; padding: 40px; color: #666;">
 								No categories found. Click "Add Category" to create one.
 							</td>
 						</tr>
@@ -4494,18 +4495,21 @@
 
 						row.innerHTML = `
 							<td style="text-align: center; font-weight: 600; color: #666;">${index + 1}</td>
-							<td>
-								<div style="display: flex; align-items: center;">
-									${
-										category.image
-											? `<img src="${category.image}" alt="${categoryName}" 
-											style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd; margin-right: 10px;"
-											onerror="this.style.display='none';">`
-											: `<div style="width: 30px; height: 30px; background: #f8f9fa; border-radius: 4px; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; color: #6c757d; font-size: 10px; margin-right: 10px;">No Image</div>`
-									}
-									${categoryName}
+							<td style="text-align: center;">
+								${
+									category.image
+										? `<img src="${category.image}" alt="${categoryName}" 
+										style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 2px solid #e9ecef; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
+										onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+										: ""
+								}
+								<div style="width: 60px; height: 60px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 8px; border: 2px solid #dee2e6; display: ${
+									category.image ? "none" : "flex"
+								}; align-items: center; justify-content: center; color: #6c757d; font-size: 20px; font-weight: bold; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+									📁
 								</div>
 							</td>
+							<td style="font-weight: 600; color: #333;">${categoryName}</td>
 							<td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${description}</td>
 							<td>
 								<span id="product-count-${
@@ -5099,9 +5103,17 @@
 									</div>
 								</td>
 								<td>
-									<span class="category-badge">${
-										subcategory.parentCategory?.name || "Unknown"
-									}</span>
+									<div style="display: flex; align-items: center;">
+										${
+											subcategory.parentCategory?.image
+												? `<img src="${subcategory.parentCategory.image}" alt="${subcategory.parentCategory.name}" 
+												style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd; margin-right: 8px;">`
+												: `<div style="width: 30px; height: 30px; background: #f8f9fa; border-radius: 4px; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; color: #6c757d; font-size: 12px; margin-right: 8px;">📁</div>`
+										}
+										<span class="category-badge">${
+											subcategory.parentCategory?.name || "Unknown"
+										}</span>
+									</div>
 								</td>
 								<td>
 									<code class="slug-code">${subcategory.slug}</code>
