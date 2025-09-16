@@ -1855,6 +1855,19 @@
 					display: none;
 				}
 			}
+
+			/* Rider status colors */
+			.status-active {
+				background-color: #f8f9fa;
+				color: #000000;
+				border: 1px solid #dee2e6;
+			}
+
+			.status-inactive {
+				background-color: #f8f9fa;
+				color: #000000;
+				border: 1px solid #dee2e6;
+			}
 		</style>
 	</head>
 	<body>
@@ -6085,6 +6098,7 @@
 					});
 					if (response.ok) {
 						const data = await response.json();
+						console.log("Riders API Response:", data); // Debug log
 						displayRiders(data.data.riders);
 						document.getElementById(
 							"riders-count-display"
@@ -6105,6 +6119,7 @@
 			}
 
 			function displayRiders(riders) {
+				console.log("displayRiders called with:", riders); // Debug log
 				const tableBody = document.getElementById("riders-table-body");
 				const countDisplay = document.getElementById("riders-count-display");
 
@@ -6125,16 +6140,40 @@
 
 				tableBody.innerHTML = riders
 					.map((rider) => {
+						// Handle user information - API returns userInfo from aggregation
 						const userName = rider.userInfo
 							? rider.userInfo.name
 							: rider.user?.name || "N/A";
 						const userEmail = rider.userInfo
 							? rider.userInfo.email
 							: rider.user?.email || "N/A";
+						const userPhone = rider.userInfo
+							? rider.userInfo.phoneNumber
+							: rider.user?.phoneNumber || "N/A";
+
+						// Handle completion rate
 						const completionRate = rider.completionRate
 							? rider.completionRate.toFixed(1)
 							: "0.0";
-						const rating = rider.rating ? rider.rating.toFixed(1) : "N/A";
+
+						// Handle rating - it can be a number (from aggregation) or object (from direct query)
+						let rating = "N/A";
+						if (rider.rating) {
+							if (typeof rider.rating === "number") {
+								rating = rider.rating.toFixed(1);
+							} else if (rider.rating.average !== undefined) {
+								rating =
+									rider.rating.average > 0
+										? rider.rating.average.toFixed(1)
+										: "0.0";
+							}
+						}
+
+						// Handle zone - can be string or object
+						const zoneName =
+							typeof rider.zone === "string"
+								? rider.zone
+								: rider.zone?.zoneName || "No Zone";
 
 						const statusBadge = getStatusBadge(rider.status);
 
@@ -6154,12 +6193,12 @@
 								<td>
 									<div style="color: #333;">${userEmail}</div>
 									<div style="font-size: 12px; color: #666;">
-										${rider.userInfo?.phoneNumber || rider.user?.phoneNumber || "N/A"}
+										${userPhone}
 									</div>
 								</td>
 								<td>
 									<span style="background: #f0f0f0; padding: 4px 8px; border-radius: 12px; font-size: 12px;">
-										${rider.zone || "No Zone"}
+										${zoneName}
 									</span>
 								</td>
 								<td>
@@ -6191,13 +6230,13 @@
 											✏️
 										</button>
 										<button class="btn-icon ${
-											rider.status === "active" ? "btn-danger" : ""
+											rider.status === "available" ? "btn-danger" : ""
 										}" onclick="toggleRiderStatus('${rider._id}', '${
 							rider.status
 						}')" title="${
-							rider.status === "active" ? "Deactivate" : "Activate"
+							rider.status === "available" ? "Deactivate" : "Activate"
 						}">
-											${rider.status === "active" ? "⏸️" : "▶️"}
+											${rider.status === "available" ? "⏸️" : "▶️"}
 										</button>
 										<button class="btn-icon btn-danger" onclick="deleteRider('${
 											rider._id
@@ -6214,10 +6253,10 @@
 
 			function getStatusBadge(status) {
 				const statusConfig = {
-					active: { color: "#4caf50", bg: "#e8f5e8", text: "Active" },
-					inactive: { color: "#f44336", bg: "#ffeaea", text: "Inactive" },
+					available: { color: "#FFFFFF", bg: "#e8f5e8", text: "Available" },
 					busy: { color: "#ff9800", bg: "#fff3e0", text: "Busy" },
 					offline: { color: "#9e9e9e", bg: "#f5f5f5", text: "Offline" },
+					"on-break": { color: "#2196f3", bg: "#e3f2fd", text: "On Break" },
 				};
 
 				const config = statusConfig[status] || statusConfig.offline;
@@ -6235,7 +6274,7 @@
 			}
 
 			function refreshRiders() {
-				loadRiders();
+				loadAllRiders();
 				showMessage("Riders refreshed", "success");
 			}
 
@@ -6257,7 +6296,7 @@
 
 				// Load data based on active tab
 				if (tabName === "riders") {
-					loadRiders();
+					loadAllRiders();
 				} else if (tabName === "zones") {
 					loadZones();
 				}
@@ -7119,7 +7158,7 @@
 							"success"
 						);
 						closeRiderModal();
-						loadRiders();
+						loadAllRiders();
 						loadDashboardStats(); // Refresh dashboard stats
 					} else {
 						const errorData = await response.json();
@@ -7305,7 +7344,7 @@
 
 						// Load users but disable the select since we're editing
 						await loadUsersForRiderModal();
-						const userSelect = document.getElementById("rider-user-select");
+						const userSelect = document.getElementById("rider-user");
 						userSelect.value = rider.user._id;
 						userSelect.disabled = true; // Can't change user after creation
 
@@ -7328,8 +7367,9 @@
 			}
 
 			async function toggleRiderStatus(riderId, currentStatus) {
-				const newStatus = currentStatus === "active" ? "inactive" : "active";
-				const action = newStatus === "active" ? "activate" : "deactivate";
+				const newStatus =
+					currentStatus === "available" ? "offline" : "available";
+				const action = newStatus === "available" ? "activate" : "deactivate";
 
 				if (!confirm(`Are you sure you want to ${action} this rider?`)) {
 					return;
@@ -7350,7 +7390,7 @@
 					);
 					if (response.ok) {
 						showMessage(`Rider ${action}d successfully!`, "success");
-						loadRiders();
+						loadAllRiders();
 						loadDashboardStats(); // Refresh dashboard stats
 					} else {
 						const errorData = await response.json();
@@ -7385,7 +7425,7 @@
 					});
 					if (response.ok) {
 						showMessage("Rider permanently deleted!", "success");
-						loadRiders();
+						loadAllRiders();
 						loadDashboardStats(); // Refresh dashboard stats
 					} else {
 						const errorData = await response.json();
@@ -9376,7 +9416,7 @@
 				if (!riders || !Array.isArray(riders) || riders.length === 0) {
 					tableBody.innerHTML = `
 						<tr>
-							<td colspan="7" style="text-align: center; padding: 40px; color: #666">
+							<td colspan="8" style="text-align: center; padding: 40px; color: #666">
 								No riders found. Click "Add Rider" to register one.
 							</td>
 						</tr>
@@ -9385,55 +9425,108 @@
 				}
 
 				tableBody.innerHTML = riders
-					.map(
-						(rider) => `
+					.map((rider) => {
+						// Handle user information - API returns userInfo from aggregation
+						const userName = rider.userInfo
+							? rider.userInfo.name
+							: rider.user?.name || "N/A";
+						const userEmail = rider.userInfo
+							? rider.userInfo.email
+							: rider.user?.email || "N/A";
+
+						// Handle rating - it can be a number (from aggregation) or object (from direct query)
+						let rating = 0;
+						if (rider.rating) {
+							if (typeof rider.rating === "number") {
+								rating = rider.rating;
+							} else if (rider.rating.average !== undefined) {
+								rating = rider.rating.average;
+							}
+						}
+
+						// Handle zone - can be string or object
+						const zoneName =
+							typeof rider.zone === "string"
+								? rider.zone
+								: rider.zone?.zoneName || "No Zone";
+
+						return `
 					<tr>
-						<td>${escapeHtml(rider.zone || "-")}</td>
-						<td>${escapeHtml(formatVehicleType(rider.vehicleType) || "-")}</td>
-						<td>${escapeHtml(rider.vehicleNumber || "-")}</td>
+						<td>
+							<div style="display: flex; align-items: center;">
+								<div style="width: 40px; height: 40px; border-radius: 50%; background: #ffc300; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-weight: bold;">
+									${userName.charAt(0).toUpperCase()}
+								</div>
+								<div>
+									<div style="font-weight: 500;">${escapeHtml(userName)}</div>
+									<div style="font-size: 12px; color: #666;">ID: ${rider._id.slice(-6)}</div>
+								</div>
+							</div>
+						</td>
+						<td>
+							<div style="color: #333;">${escapeHtml(userEmail)}</div>
+							<div style="font-size: 12px; color: #666;">
+								${escapeHtml(rider.userInfo?.phoneNumber || rider.user?.phoneNumber || "N/A")}
+							</div>
+						</td>
+						<td>
+							<span style="background: #f0f0f0; padding: 4px 8px; border-radius: 12px; font-size: 12px;">
+								${escapeHtml(zoneName)}
+							</span>
+						</td>
+						<td>
+							<span style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 12px; font-size: 12px;">
+								${escapeHtml(formatVehicleType(rider.vehicleType) || "N/A")}
+							</span>
+						</td>
+						<td>
+							<code style="background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-size: 12px;">
+								${escapeHtml(rider.vehicleNumber || "N/A")}
+							</code>
+						</td>
 						<td>
 							<span class="status-badge ${getStatusClass(rider.status)}">
 								${formatStatus(rider.status)}
 							</span>
 						</td>
-						<td>${
-							rider.workingHours
-								? `${rider.workingHours.start} - ${rider.workingHours.end}`
-								: "-"
-						}</td>
 						<td>
-							<div class="rating">
-								${formatRating(rider.rating && rider.rating.average ? rider.rating.average : 0)}
+							<div style="display: flex; align-items: center;">
+								<span style="margin-right: 5px;">⭐</span>
+								<span>${rating.toFixed(1)}</span>
+								<span style="font-size: 12px; color: #666; margin-left: 5px;">(${
+									rider.completionRate ? rider.completionRate.toFixed(1) : "0.0"
+								}%)</span>
 							</div>
 						</td>
 						<td>
-							<div class="actions">
-								<button 
-									class="action-btn edit-btn" 
-									onclick="editRider('${rider._id}')" 
-									title="Edit rider"
-								>
-									✏️
-								</button>
-								<button 
-									class="action-btn view-btn" 
-									onclick="viewRiderDetails('${rider._id}')" 
-									title="View details"
-								>
+							<div class="table-actions">
+								<button class="btn-icon" onclick="viewRiderDetails('${
+									rider._id
+								}')" title="View Details">
 									👁️
 								</button>
-								<button 
-									class="action-btn delete-btn" 
-									onclick="deleteRider('${rider._id}')" 
-									title="Delete rider"
-								>
+								<button class="btn-icon" onclick="editRider('${rider._id}')" title="Edit Rider">
+									✏️
+								</button>
+								<button class="btn-icon ${
+									rider.status === "available" ? "btn-danger" : ""
+								}" onclick="toggleRiderStatus('${rider._id}', '${
+							rider.status
+						}')" title="${
+							rider.status === "available" ? "Deactivate" : "Activate"
+						}">
+									${rider.status === "available" ? "⏸️" : "▶️"}
+								</button>
+								<button class="btn-icon btn-danger" onclick="deleteRider('${
+									rider._id
+								}')" title="Delete Rider">
 									🗑️
 								</button>
 							</div>
 						</td>
 					</tr>
-				`
-					)
+				`;
+					})
 					.join("");
 			}
 
@@ -9806,7 +9899,6 @@
 
 					// Set rider fields
 					riderIdField.value = rider._id || "";
-					userField.value = rider.user || rider.userId || ""; // Handle both user and userId fields
 					vehicleField.value = rider.vehicleType || "";
 					vehicleNumberField.value = rider.vehicleNumber || "";
 					statusField.value = rider.status || "offline";
@@ -9823,8 +9915,9 @@
 
 					// Load users dropdown and select the user if available
 					await loadUsersForRiderModal();
-					if (rider.user) {
-						userField.value = rider.user;
+					if (rider.user && rider.user._id) {
+						userField.value = rider.user._id;
+						userField.disabled = true; // Can't change user after creation
 					}
 
 					// Load zones dropdown and select the zone if available
