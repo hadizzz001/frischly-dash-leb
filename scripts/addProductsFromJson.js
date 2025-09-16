@@ -18,7 +18,7 @@ const DEFAULT_IS_ACTIVE = true;
 
 // Generate unique barcodes
 function generateUniqueBarcode(index) {
-	return `BAR${String(index).padStart(6, '0')}`;
+	return `BAR${String(index).padStart(6, "0")}`;
 }
 
 // Generate shelf numbers like A-1, B-1, ...
@@ -49,7 +49,10 @@ async function getOrCreateSubcategory(name, parentCategoryId) {
 	});
 	if (!sub) {
 		try {
-			sub = await Subcategory.create({ name, parentCategory: parentCategoryId });
+			sub = await Subcategory.create({
+				name,
+				parentCategory: parentCategoryId,
+			});
 			console.log(`Created subcategory: ${name}`);
 		} catch (err) {
 			if (err.code === 11000) {
@@ -81,13 +84,15 @@ async function main() {
 	// Use existing Others category and subcategory
 	const defaultCat = await Category.findOne({ name: "Others" });
 	const defaultSub = await Subcategory.findOne({ name: "others" });
-	
+
 	if (!defaultCat || !defaultSub) {
-		console.error('Others category or subcategory not found in database');
+		console.error("Others category or subcategory not found in database");
 		process.exit(1);
 	}
-	
-	console.log(`Using default category: ${defaultCat.name} and subcategory: ${defaultSub.name}`);
+
+	console.log(
+		`Using default category: ${defaultCat.name} and subcategory: ${defaultSub.name}`
+	);
 
 	let added = 0,
 		failed = 0;
@@ -101,15 +106,15 @@ async function main() {
 			p["SPC.category"] && p["SPC.category"].trim()
 				? p["SPC.category"].trim()
 				: "others";
-		
+
 		let cat, subcat;
-		
+
 		if (catName === "Others") {
 			cat = defaultCat;
 		} else {
 			cat = await getOrCreateCategory(catName);
 		}
-		
+
 		if (subcatName === "others") {
 			subcat = defaultSub;
 		} else {
