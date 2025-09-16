@@ -57,10 +57,10 @@ const productSchema = new mongoose.Schema(
 				message: "Please provide a valid image URL or file path",
 			},
 		},
-		category: {
+		subcategory: {
 			type: mongoose.Schema.Types.ObjectId,
-			ref: "Category",
-			required: [true, "Please provide a category"],
+			ref: "Subcategory",
+			required: [true, "Please provide a subcategory"],
 		},
 		price: {
 			type: Number,
@@ -171,7 +171,7 @@ const productSchema = new mongoose.Schema(
 productSchema.index({ barcode: 1 }, { unique: true });
 productSchema.index({ shelfNumber: 1 });
 productSchema.index({ name: 1 });
-productSchema.index({ category: 1 });
+productSchema.index({ subcategory: 1 });
 productSchema.index({ isActive: 1 });
 productSchema.index({ createdAt: -1 });
 productSchema.index({ tax: 1 });
@@ -207,6 +207,14 @@ productSchema.virtual("stockStatus").get(function () {
 	if (this.stock === 0) return "Out of Stock";
 	if (this.stock <= 10) return "Low Stock";
 	return "In Stock";
+});
+
+// Virtual for parent category through subcategory
+// Note: This requires the subcategory to be populated first to access parentCategory
+productSchema.virtual("parentCategory").get(function () {
+	return this.subcategory && this.subcategory.parentCategory
+		? this.subcategory.parentCategory
+		: null;
 });
 
 // Static method to find by barcode

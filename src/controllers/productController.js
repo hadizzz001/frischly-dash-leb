@@ -48,7 +48,8 @@ exports.getProducts = async (req, res) => {
 			page = 1,
 			limit = 10,
 			search,
-			category,
+			category, // Keep for backward compatibility - will filter by parent category
+			subcategory,
 			shelfNumber,
 			isActive = true,
 			sortBy = "createdAt",
@@ -60,10 +61,18 @@ exports.getProducts = async (req, res) => {
 		if (isActive !== "all") {
 			filter.isActive = isActive === "true" || isActive === true;
 		}
-		if (category) {
-			// If category is an ObjectId, filter by it; otherwise try to find by name
+		if (subcategory) {
+			// Direct subcategory filtering
+			if (mongoose.Types.ObjectId.isValid(subcategory)) {
+				filter.subcategory = subcategory;
+			} else {
+				// Will need to lookup subcategory by name in aggregation pipeline
+				filter.subcategoryName = new RegExp(subcategory, "i");
+			}
+		} else if (category) {
+			// Filter by parent category - requires aggregation pipeline
 			if (mongoose.Types.ObjectId.isValid(category)) {
-				filter.category = category;
+				filter.parentCategory = category;
 			} else {
 				// Will need to lookup category by name in aggregation pipeline
 				filter.categoryName = new RegExp(category, "i");
@@ -147,7 +156,14 @@ exports.getProducts = async (req, res) => {
 			// Regular query without category name filtering
 			delete filter.categoryName;
 			productsQuery = Product.find(filter)
-				.populate("category", "name color icon")
+				.populate({
+					path: "subcategory",
+					select: "name slug parentCategory",
+					populate: {
+						path: "parentCategory",
+						select: "name color icon",
+					},
+				})
 				.populate("createdBy", "name email")
 				.sort(sort)
 				.skip(skip)
@@ -206,7 +222,14 @@ exports.getProduct = async (req, res) => {
 		}
 
 		const product = await Product.findById(id)
-			.populate("category", "name color icon")
+			.populate({
+				path: "subcategory",
+				select: "name slug parentCategory",
+				populate: {
+					path: "parentCategory",
+					select: "name color icon",
+				},
+			})
 			.populate("createdBy", "name email");
 
 		if (!product) {
@@ -238,7 +261,14 @@ exports.getProductByBarcode = async (req, res) => {
 		const { barcode } = req.params;
 
 		const product = await Product.findByBarcode(barcode)
-			.populate("category", "name color icon")
+			.populate({
+				path: "subcategory",
+				select: "name slug parentCategory",
+				populate: {
+					path: "parentCategory",
+					select: "name color icon",
+				},
+			})
 			.populate("createdBy", "name email");
 
 		if (!product) {
@@ -270,7 +300,14 @@ exports.getProductsByShelfNumber = async (req, res) => {
 		const { shelfNumber } = req.params;
 
 		const products = await Product.findByShelfNumber(shelfNumber)
-			.populate("category", "name color icon")
+			.populate({
+				path: "subcategory",
+				select: "name slug parentCategory",
+				populate: {
+					path: "parentCategory",
+					select: "name color icon",
+				},
+			})
 			.populate("createdBy", "name email");
 
 		res.json({
@@ -304,7 +341,14 @@ exports.createProduct = async (req, res) => {
 
 		// Populate the created product
 		await product.populate([
-			{ path: "category", select: "name color icon" },
+			{
+				path: "subcategory",
+				select: "name slug parentCategory",
+				populate: {
+					path: "parentCategory",
+					select: "name color icon",
+				},
+			},
 			{ path: "createdBy", select: "name email" },
 		]);
 
@@ -354,7 +398,14 @@ exports.updateProduct = async (req, res) => {
 				runValidators: true,
 			}
 		)
-			.populate("category", "name color icon")
+			.populate({
+				path: "subcategory",
+				select: "name slug parentCategory",
+				populate: {
+					path: "parentCategory",
+					select: "name color icon",
+				},
+			})
 			.populate("createdBy", "name email");
 
 		if (!product) {

@@ -461,6 +461,46 @@
 				display: block;
 			}
 
+			.category-tabs {
+				display: flex;
+				gap: 5px;
+				margin-bottom: 20px;
+				border-bottom: 2px solid #e1e5e9;
+			}
+
+			.category-tab-btn {
+				background: transparent;
+				border: none;
+				padding: 12px 20px;
+				font-size: 14px;
+				font-weight: 500;
+				cursor: pointer;
+				color: #666;
+				border-bottom: 3px solid transparent;
+				transition: all 0.3s ease;
+				border-radius: 8px 8px 0 0;
+			}
+
+			.category-tab-btn:hover {
+				background: #f8f9fa;
+				color: #333;
+			}
+
+			.category-tab-btn.active {
+				color: #667eea;
+				border-bottom-color: #667eea;
+				background: #f8f9fa;
+				font-weight: 600;
+			}
+
+			.category-tab-content {
+				display: none;
+			}
+
+			.category-tab-content.active {
+				display: block;
+			}
+
 			.customer-summary {
 				background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
 				color: white;
@@ -518,6 +558,26 @@
 				background: #f8d7da;
 				color: #721c24;
 				border: 1px solid #f5c6cb;
+			}
+
+			.category-badge {
+				background: #e3f2fd;
+				color: #1565c0;
+				border: 1px solid #bbdefb;
+				padding: 4px 8px;
+				border-radius: 12px;
+				font-size: 12px;
+				font-weight: 500;
+			}
+
+			.slug-code {
+				background: #f5f5f5;
+				color: #666;
+				padding: 2px 6px;
+				border-radius: 4px;
+				font-family: "Courier New", monospace;
+				font-size: 12px;
+				border: 1px solid #ddd;
 			}
 
 			/* Table action buttons */
@@ -646,6 +706,48 @@
 			.header p {
 				font-size: 16px;
 				opacity: 0.9;
+			}
+
+			/* Input with button styling */
+			.input-with-button {
+				display: flex;
+				gap: 5px;
+			}
+
+			.input-with-button input {
+				flex: 1;
+			}
+
+			/* Info card styling */
+			.info-card {
+				background-color: #f8f9fa;
+				border: 1px solid #e9ecef;
+				border-radius: 8px;
+				padding: 15px;
+				margin-bottom: 15px;
+			}
+
+			.info-card h4 {
+				margin-top: 0;
+				margin-bottom: 12px;
+				color: #495057;
+				border-bottom: 1px solid #e9ecef;
+				padding-bottom: 8px;
+			}
+
+			.info-row {
+				display: flex;
+				justify-content: space-between;
+				margin-bottom: 8px;
+			}
+
+			.info-label {
+				font-weight: 600;
+				color: #6c757d;
+			}
+
+			.info-value {
+				color: #212529;
 			}
 
 			.content {
@@ -1808,6 +1910,12 @@
 					</a>
 				</li>
 				<li class="menu-item">
+					<a href="#" onclick="showSection('waste')" id="menu-waste">
+						<span class="menu-icon">♻️</span>
+						<span class="menu-text">Waste Management</span>
+					</a>
+				</li>
+				<li class="menu-item">
 					<a href="#" onclick="showSection('profile')" id="menu-profile">
 						<span class="menu-icon">👤</span>
 						<span class="menu-text">Profile</span>
@@ -2017,68 +2125,171 @@
 							style="margin-top: 10px; font-size: 14px; color: #666"
 						></div>
 					</div>
-					<div class="section-actions">
-						<button class="btn btn-primary" onclick="showAddCategoryModal()">
-							➕ Add Category
+
+					<!-- Tab Navigation -->
+					<div class="category-tabs">
+						<button
+							class="category-tab-btn active"
+							onclick="showCategoryTab('categories')"
+						>
+							📂 Categories
 						</button>
-						<div class="filter-controls">
-							<input
-								type="text"
-								id="category-search"
-								placeholder="Search categories..."
-								oninput="filterCategories()"
-								class="search-input"
-							/>
-							<select
-								id="category-filter"
-								onchange="filterCategories()"
-								class="filter-select"
-							>
-								<option value="all">All Categories</option>
-								<option value="active">Active Only</option>
-								<option value="inactive">Inactive Only</option>
-							</select>
-							<button
-								class="btn btn-secondary"
-								onclick="clearCategoryFilters()"
-							>
-								🗑️ Clear
-							</button>
-						</div>
-						<button class="btn btn-secondary" onclick="refreshCategories()">
-							🔄 Refresh
+						<button
+							class="category-tab-btn"
+							onclick="showCategoryTab('subcategories')"
+						>
+							📁 Subcategories
 						</button>
 					</div>
 
-					<div class="data-table">
-						<div class="table-header">
-							<h3 id="categories-table-title">All Categories</h3>
-							<span id="categories-count-display">0 categories</span>
+					<!-- Categories Tab Content -->
+					<div id="categories-tab-content" class="category-tab-content active">
+						<div class="section-actions">
+							<button class="btn btn-primary" onclick="showAddCategoryModal()">
+								➕ Add Category
+							</button>
+							<div class="filter-controls">
+								<input
+									type="text"
+									id="category-search"
+									placeholder="Search categories..."
+									oninput="filterCategories()"
+									class="search-input"
+								/>
+								<select
+									id="category-filter"
+									onchange="filterCategories()"
+									class="filter-select"
+								>
+									<option value="all">All Categories</option>
+									<option value="active">Active Only</option>
+									<option value="inactive">Inactive Only</option>
+								</select>
+								<button
+									class="btn btn-secondary"
+									onclick="clearCategoryFilters()"
+								>
+									🗑️ Clear
+								</button>
+							</div>
+							<button class="btn btn-secondary" onclick="refreshCategories()">
+								🔄 Refresh
+							</button>
 						</div>
-						<div class="users-table-container">
-							<table class="users-table">
-								<thead>
-									<tr>
-										<th>#</th>
-										<th>Category Name</th>
-										<th>Description</th>
-										<th>Products Count</th>
-										<th>Status</th>
-										<th>Created</th>
-										<th>Actions</th>
-									</tr>
-								</thead>
-								<tbody id="categories-table-body">
-									<tr>
-										<td
-											colspan="7"
-											style="text-align: center; padding: 40px; color: #666"
-										>
-											No categories found. Click "Add Category" to create one.
-										</td>
-									</tr>
-								</tbody>
-							</table>
+
+						<div class="data-table">
+							<div class="table-header">
+								<h3 id="categories-table-title">All Categories</h3>
+								<span id="categories-count-display">0 categories</span>
+							</div>
+							<div class="users-table-container">
+								<table class="users-table">
+									<thead>
+										<tr>
+											<th>#</th>
+											<th>Category Name</th>
+											<th>Description</th>
+											<th>Products Count</th>
+											<th>Status</th>
+											<th>Created</th>
+											<th>Actions</th>
+										</tr>
+									</thead>
+									<tbody id="categories-table-body">
+										<tr>
+											<td
+												colspan="7"
+												style="text-align: center; padding: 40px; color: #666"
+											>
+												No categories found. Click "Add Category" to create one.
+											</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+
+					<!-- Subcategories Tab Content -->
+					<div id="subcategories-tab-content" class="category-tab-content">
+						<div class="section-actions">
+							<button
+								class="btn btn-primary"
+								onclick="showAddSubcategoryModal()"
+							>
+								➕ Add Subcategory
+							</button>
+							<div class="filter-controls">
+								<input
+									type="text"
+									id="subcategory-search"
+									placeholder="Search subcategories..."
+									oninput="filterSubcategories()"
+									class="search-input"
+								/>
+								<select
+									id="subcategory-parent-filter"
+									onchange="filterSubcategories()"
+									class="filter-select"
+								>
+									<option value="all">All Parent Categories</option>
+									<!-- Categories will be loaded dynamically -->
+								</select>
+								<select
+									id="subcategory-filter"
+									onchange="filterSubcategories()"
+									class="filter-select"
+								>
+									<option value="all">All Subcategories</option>
+									<option value="active">Active Only</option>
+									<option value="inactive">Inactive Only</option>
+								</select>
+								<button
+									class="btn btn-secondary"
+									onclick="clearSubcategoryFilters()"
+								>
+									🗑️ Clear
+								</button>
+							</div>
+							<button
+								class="btn btn-secondary"
+								onclick="refreshSubcategories()"
+							>
+								🔄 Refresh
+							</button>
+						</div>
+
+						<div class="data-table">
+							<div class="table-header">
+								<h3 id="subcategories-table-title">All Subcategories</h3>
+								<span id="subcategories-count-display">0 subcategories</span>
+							</div>
+							<div class="users-table-container">
+								<table class="users-table">
+									<thead>
+										<tr>
+											<th>#</th>
+											<th>Subcategory Name</th>
+											<th>Parent Category</th>
+											<th>Slug</th>
+											<th>Status</th>
+											<th>Created</th>
+											<th>Actions</th>
+										</tr>
+									</thead>
+									<tbody id="subcategories-table-body">
+										<tr>
+											<td
+												colspan="7"
+												style="text-align: center; padding: 40px; color: #666"
+											>
+												No subcategories found. Click "Add Subcategory" to
+												create one.
+											</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -2115,8 +2326,8 @@
 							class="filter-select"
 							style="min-width: 150px"
 						>
-							<option value="all">All Categories</option>
-							<!-- Categories will be loaded dynamically -->
+							<option value="all">All Subcategories</option>
+							<!-- Subcategories will be loaded dynamically -->
 						</select>
 						<select id="product-status-filter" class="filter-select">
 							<option value="all">All Status</option>
@@ -2161,7 +2372,7 @@
 									<tr>
 										<th>#</th>
 										<th>Product Name</th>
-										<th>Category</th>
+										<th>Subcategory</th>
 										<th>Price</th>
 										<th>Stock</th>
 										<th>Status</th>
@@ -2529,6 +2740,145 @@
 										</tr>
 									</tbody>
 								</table>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Waste Management Section -->
+				<div id="waste-section" class="content-section">
+					<div class="section-header">
+						<h2>Waste Management</h2>
+						<p>Record and track product waste</p>
+					</div>
+
+					<div class="stats">
+						<div class="stat">
+							<span class="stat-number" id="total-waste-count">0</span>
+							<span class="stat-label">Total Waste Records</span>
+						</div>
+						<div class="stat">
+							<span class="stat-number" id="waste-this-week">0</span>
+							<span class="stat-label">Waste This Week</span>
+						</div>
+						<div class="stat">
+							<span class="stat-number" id="expired-items">0</span>
+							<span class="stat-label">Expired Items</span>
+						</div>
+						<div class="stat">
+							<span class="stat-number" id="damaged-items">0</span>
+							<span class="stat-label">Damaged Items</span>
+						</div>
+					</div>
+
+					<div class="tab-container">
+						<div class="tab-header">
+							<div class="tab active" onclick="showWasteTab('records')">
+								Waste Records
+							</div>
+							<div class="tab" onclick="showWasteTab('history')">
+								Waste History
+							</div>
+						</div>
+
+						<div class="tab-content">
+							<!-- Waste Records Tab -->
+							<div id="waste-records-tab" class="tab-pane active">
+								<div class="action-bar">
+									<button class="btn btn-primary" onclick="showAddWasteModal()">
+										<i class="fas">+</i> Record Waste
+									</button>
+
+									<div class="filter-group">
+										<select
+											id="waste-reason-filter"
+											onchange="filterWasteRecords()"
+										>
+											<option value="">All Reasons</option>
+											<option value="Expired">Expired</option>
+											<option value="Damaged">Damaged</option>
+											<option value="Quality Issues">Quality Issues</option>
+											<option value="Overproduction">Overproduction</option>
+											<option value="Spoiled">Spoiled</option>
+											<option value="Recall">Recall</option>
+											<option value="Other">Other</option>
+										</select>
+
+										<div class="date-range">
+											<input
+												type="date"
+												id="waste-date-from"
+												onchange="filterWasteRecords()"
+											/>
+											<span>to</span>
+											<input
+												type="date"
+												id="waste-date-to"
+												onchange="filterWasteRecords()"
+											/>
+										</div>
+
+										<button
+											class="btn btn-outline"
+											onclick="resetWasteFilters()"
+										>
+											Reset Filters
+										</button>
+									</div>
+								</div>
+
+								<div class="table-container">
+									<table class="data-table" id="waste-records-table">
+										<thead>
+											<tr>
+												<th>Date</th>
+												<th>Barcode</th>
+												<th>Product</th>
+												<th>Quantity</th>
+												<th>Reason</th>
+												<th>Recorded By</th>
+												<th>Actions</th>
+											</tr>
+										</thead>
+										<tbody id="waste-records-list">
+											<tr class="empty-row">
+												<td
+													colspan="6"
+													style="text-align: center; padding: 40px; color: #666"
+												>
+													No waste records found. Click "Record Waste" to add
+													one.
+												</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+
+								<div class="pagination" id="waste-pagination">
+									<!-- Pagination will be added dynamically -->
+								</div>
+							</div>
+
+							<!-- Waste History Tab -->
+							<div id="waste-history-tab" class="tab-pane">
+								<div class="charts-container">
+									<div class="chart-wrapper">
+										<h3>Waste by Reason</h3>
+										<canvas id="wasteByReasonChart"></canvas>
+									</div>
+
+									<div class="chart-wrapper">
+										<h3>Waste Trends</h3>
+										<canvas id="wasteTrendsChart"></canvas>
+									</div>
+								</div>
+
+								<div class="stats-summary">
+									<h3>Waste Summary</h3>
+									<div class="stats-grid" id="waste-summary-stats">
+										<!-- Will be populated dynamically -->
+									</div>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -3540,7 +3890,7 @@
 						// Always refresh products data when section is opened
 						loadProducts();
 						// Load categories for the filter dropdown
-						loadCategoriesForProductFilter();
+						loadSubcategoriesForProductFilter();
 						// Attach search event listeners
 						setTimeout(attachProductSearchListeners, 100);
 						break;
@@ -4099,6 +4449,13 @@
 				}
 			}
 
+			function closeSubcategoryModal() {
+				const modal = document.getElementById("subcategory-modal");
+				if (modal) {
+					modal.style.display = "none";
+				}
+			}
+
 			function refreshCategories() {
 				loadCategories();
 				showMessage("Categories refreshed", "success");
@@ -4309,6 +4666,341 @@
 				filterCategories();
 			}
 
+			// Subcategories Management Functions
+			let subcategoriesData = [];
+			let filteredSubcategoriesData = [];
+
+			async function refreshSubcategories() {
+				try {
+					const response = await authenticatedFetch(
+						`${API_BASE_URL}/subcategories`
+					);
+					if (!response.ok) {
+						throw new Error("Failed to fetch subcategories");
+					}
+
+					const result = await response.json();
+					subcategoriesData = result.data || [];
+					filteredSubcategoriesData = [...subcategoriesData];
+
+					updateSubcategoriesTable();
+					updateSubcategoriesCount();
+				} catch (error) {
+					console.error("Error fetching subcategories:", error);
+					showMessage("Failed to load subcategories", "error");
+				}
+			}
+
+			function updateSubcategoriesTable() {
+				const tbody = document.getElementById("subcategories-table-body");
+				if (!tbody) {
+					console.error("Subcategories table body element not found");
+					return;
+				}
+
+				if (filteredSubcategoriesData.length === 0) {
+					tbody.innerHTML = `
+						<tr>
+							<td colspan="7" style="text-align: center; padding: 40px; color: #666;">
+								No subcategories found. Click "Add Subcategory" to create one.
+							</td>
+						</tr>
+					`;
+					return;
+				}
+
+				tbody.innerHTML = filteredSubcategoriesData
+					.map((subcategory, index) => {
+						const createdDate = new Date(
+							subcategory.createdAt
+						).toLocaleDateString();
+						const statusBadge = subcategory.isActive
+							? '<span class="status-badge active">Active</span>'
+							: '<span class="status-badge inactive">Inactive</span>';
+
+						return `
+							<tr>
+								<td>${index + 1}</td>
+								<td>
+									<div class="item-info">
+										<strong>${subcategory.name}</strong>
+									</div>
+								</td>
+								<td>
+									<span class="category-badge">${
+										subcategory.parentCategory?.name || "Unknown"
+									}</span>
+								</td>
+								<td>
+									<code class="slug-code">${subcategory.slug}</code>
+								</td>
+								<td>${statusBadge}</td>
+								<td>${createdDate}</td>
+								<td>
+									<div class="actions">
+										<button 
+											class="btn-action edit" 
+											onclick="editSubcategory('${subcategory._id}')"
+											title="Edit Subcategory"
+										>
+											✏️
+										</button>
+										<button 
+											class="btn-action ${subcategory.isActive ? "deactivate" : "activate"}" 
+											onclick="toggleSubcategoryStatus('${
+												subcategory._id
+											}', ${!subcategory.isActive})"
+											title="${subcategory.isActive ? "Deactivate" : "Activate"} Subcategory"
+										>
+											${subcategory.isActive ? "🔒" : "🔓"}
+										</button>
+									</div>
+								</td>
+							</tr>
+						`;
+					})
+					.join("");
+			}
+
+			function updateSubcategoriesCount() {
+				const countDisplay = document.getElementById(
+					"subcategories-count-display"
+				);
+				if (countDisplay) {
+					const activeCount = filteredSubcategoriesData.filter(
+						(s) => s.isActive
+					).length;
+					const totalCount = filteredSubcategoriesData.length;
+					countDisplay.textContent = `${totalCount} subcategories (${activeCount} active)`;
+				}
+			}
+
+			function filterSubcategories() {
+				const searchTerm =
+					document.getElementById("subcategory-search")?.value.toLowerCase() ||
+					"";
+				const parentFilter =
+					document.getElementById("subcategory-parent-filter")?.value || "all";
+				const statusFilter =
+					document.getElementById("subcategory-filter")?.value || "all";
+
+				filteredSubcategoriesData = subcategoriesData.filter((subcategory) => {
+					const matchesSearch =
+						subcategory.name.toLowerCase().includes(searchTerm) ||
+						subcategory.slug.toLowerCase().includes(searchTerm);
+					const matchesParent =
+						parentFilter === "all" ||
+						subcategory.parentCategory?._id === parentFilter;
+					const matchesStatus =
+						statusFilter === "all" ||
+						(statusFilter === "active" && subcategory.isActive) ||
+						(statusFilter === "inactive" && !subcategory.isActive);
+
+					return matchesSearch && matchesParent && matchesStatus;
+				});
+
+				updateSubcategoriesTable();
+				updateSubcategoriesCount();
+
+				const tableTitle = document.getElementById("subcategories-table-title");
+				if (tableTitle) {
+					const filterText =
+						statusFilter === "all"
+							? "All"
+							: statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1);
+					tableTitle.textContent = `${filterText} Subcategories`;
+				}
+			}
+
+			function clearSubcategoryFilters() {
+				const searchInput = document.getElementById("subcategory-search");
+				const parentFilterSelect = document.getElementById(
+					"subcategory-parent-filter"
+				);
+				const filterSelect = document.getElementById("subcategory-filter");
+
+				if (searchInput) searchInput.value = "";
+				if (parentFilterSelect) parentFilterSelect.value = "all";
+				if (filterSelect) filterSelect.value = "all";
+
+				filterSubcategories();
+			}
+
+			function loadCategoriesForSubcategoryFilter() {
+				const parentFilter = document.getElementById(
+					"subcategory-parent-filter"
+				);
+				if (!parentFilter || !allCategories) return;
+
+				// Clear existing options except "All Parent Categories"
+				parentFilter.innerHTML =
+					'<option value="all">All Parent Categories</option>';
+
+				// Add categories as options
+				allCategories
+					.filter((category) => category.isActive)
+					.forEach((category) => {
+						const option = document.createElement("option");
+						option.value = category._id;
+						option.textContent = category.name;
+						parentFilter.appendChild(option);
+					});
+			}
+
+			function showAddSubcategoryModal() {
+				// Reset form
+				document.getElementById("subcategory-modal-title").textContent =
+					"Add New Subcategory";
+				document.getElementById("subcategory-save-btn-text").textContent =
+					"Create Subcategory";
+				document.getElementById("subcategory-id").value = "";
+				document.getElementById("subcategory-name").value = "";
+				document.getElementById("subcategory-parent").value = "";
+				document.getElementById("subcategory-is-active").value = "true";
+
+				// Load categories for parent dropdown
+				loadCategoriesForSubcategoryParentSelect();
+
+				document.getElementById("subcategory-modal").style.display = "block";
+			}
+
+			function loadCategoriesForSubcategoryParentSelect() {
+				const parentSelect = document.getElementById("subcategory-parent");
+				if (!parentSelect || !allCategories) return;
+
+				// Clear existing options
+				parentSelect.innerHTML =
+					'<option value="">Select Parent Category</option>';
+
+				// Add categories as options
+				allCategories
+					.filter((category) => category.isActive)
+					.forEach((category) => {
+						const option = document.createElement("option");
+						option.value = category._id;
+						option.textContent = category.name;
+						parentSelect.appendChild(option);
+					});
+			}
+
+			async function saveSubcategory() {
+				const id = document.getElementById("subcategory-id").value;
+				const name = document.getElementById("subcategory-name").value;
+				const parentCategory =
+					document.getElementById("subcategory-parent").value;
+				const isActive =
+					document.getElementById("subcategory-is-active").value === "true";
+
+				if (!name.trim()) {
+					showMessage("Please enter a subcategory name", "error");
+					return;
+				}
+
+				if (!parentCategory) {
+					showMessage("Please select a parent category", "error");
+					return;
+				}
+
+				try {
+					const isEdit = !!id;
+					const url = isEdit
+						? `${API_BASE_URL}/subcategories/${id}`
+						: `${API_BASE_URL}/subcategories`;
+					const method = isEdit ? "PUT" : "POST";
+
+					const response = await authenticatedFetch(url, {
+						method,
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							name: name.trim(),
+							parentCategory,
+							isActive,
+						}),
+					});
+
+					if (!response.ok) {
+						const error = await response.json();
+						throw new Error(error.error || "Failed to save subcategory");
+					}
+
+					document.getElementById("subcategory-modal").style.display = "none";
+					await refreshSubcategories();
+					showMessage(
+						`Subcategory ${isEdit ? "updated" : "created"} successfully`,
+						"success"
+					);
+				} catch (error) {
+					console.error("Error saving subcategory:", error);
+					showMessage(error.message || "Failed to save subcategory", "error");
+				}
+			}
+
+			function editSubcategory(subcategoryId) {
+				const subcategory = subcategoriesData.find(
+					(s) => s._id === subcategoryId
+				);
+				if (!subcategory) {
+					showMessage("Subcategory not found", "error");
+					return;
+				}
+
+				document.getElementById("subcategory-modal-title").textContent =
+					"Edit Subcategory";
+				document.getElementById("subcategory-save-btn-text").textContent =
+					"Update Subcategory";
+				document.getElementById("subcategory-id").value = subcategory._id;
+				document.getElementById("subcategory-name").value = subcategory.name;
+				document.getElementById("subcategory-parent").value =
+					subcategory.parentCategory?._id || "";
+				document.getElementById("subcategory-is-active").value =
+					subcategory.isActive.toString();
+
+				// Load categories for parent dropdown
+				loadCategoriesForSubcategoryParentSelect();
+
+				document.getElementById("subcategory-modal").style.display = "block";
+			}
+
+			async function toggleSubcategoryStatus(subcategoryId, newStatus) {
+				try {
+					const response = await authenticatedFetch(
+						`${API_BASE_URL}/subcategories/${subcategoryId}`,
+						{
+							method: "PUT",
+							headers: {
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({
+								isActive: newStatus,
+							}),
+						}
+					);
+
+					if (!response.ok) {
+						const error = await response.json();
+						throw new Error(
+							error.error || "Failed to update subcategory status"
+						);
+					}
+
+					await refreshSubcategories();
+					showMessage(
+						`Subcategory ${
+							newStatus ? "activated" : "deactivated"
+						} successfully`,
+						"success"
+					);
+				} catch (error) {
+					console.error("Error updating subcategory status:", error);
+					showMessage(
+						error.message || "Failed to update subcategory status",
+						"error"
+					);
+				}
+			}
+
 			// Products Management Functions
 			async function loadProducts(
 				page = currentProductsPage,
@@ -4393,9 +5085,16 @@
 					try {
 						const row = document.createElement("tr");
 						const productName = product.name || "N/A";
-						const categoryName = product.category
-							? product.category.name || "N/A"
+						const subcategoryName = product.subcategory
+							? product.subcategory.name || "N/A"
 							: "Uncategorized";
+						const parentCategoryName = product.subcategory?.parentCategory
+							? product.subcategory.parentCategory.name || "N/A"
+							: "N/A";
+						const categoryDisplay =
+							subcategoryName !== "Uncategorized"
+								? `${subcategoryName} (${parentCategoryName})`
+								: "Uncategorized";
 						// Calculate pricing information
 						const basePrice = product.price || 0;
 						const tax = product.tax || 0;
@@ -4453,7 +5152,7 @@
 									</div>
 								</div>
 							</td>
-							<td>${categoryName}</td>
+							<td>${categoryDisplay}</td>
 							<td>
 								<div style="position: relative;">
 									<div style="display: flex; flex-direction: column; gap: 2px;">
@@ -4665,8 +5364,8 @@
 			}
 
 			async function showAddProductModal() {
-				// Load categories first for the dropdown
-				await loadCategoriesForDropdown();
+				// Load subcategories first for the dropdown
+				await loadSubcategoriesForDropdown();
 
 				try {
 					const modalTitle = document.getElementById("product-modal-title");
@@ -4704,9 +5403,9 @@
 				}
 			}
 
-			async function loadCategoriesForDropdown() {
+			async function loadSubcategoriesForDropdown() {
 				try {
-					const response = await fetch(`${API_BASE_URL}/categories`, {
+					const response = await fetch(`${API_BASE_URL}/subcategories`, {
 						headers: {
 							Authorization: `Bearer ${currentToken}`,
 							"Content-Type": "application/json",
@@ -4715,27 +5414,31 @@
 
 					if (response.ok) {
 						const data = await response.json();
-						const categories = data.data || [];
-						const select = document.getElementById("product-category");
+						const subcategories = data.data || [];
+						const select = document.getElementById("product-subcategory");
 
 						if (select) {
-							select.innerHTML = '<option value="">Select Category</option>';
-							categories.forEach((category) => {
+							select.innerHTML = '<option value="">Select Subcategory</option>';
+							subcategories.forEach((subcategory) => {
 								const option = document.createElement("option");
-								option.value = category._id;
-								option.textContent = category.name;
+								option.value = subcategory._id;
+								// Show both subcategory name and parent category for clarity
+								const displayText = subcategory.parentCategory
+									? `${subcategory.name} (${subcategory.parentCategory.name})`
+									: subcategory.name;
+								option.textContent = displayText;
 								select.appendChild(option);
 							});
 						}
 					}
 				} catch (error) {
-					console.error("Error loading categories for dropdown:", error);
+					console.error("Error loading subcategories for dropdown:", error);
 				}
 			}
 
 			async function editProduct(productId) {
-				// Load categories first
-				await loadCategoriesForDropdown();
+				// Load subcategories first
+				await loadSubcategoriesForDropdown();
 
 				try {
 					const product = allProducts.find((p) => p._id === productId);
@@ -4750,7 +5453,7 @@
 						productName: document.getElementById("product-name"),
 						productBarcode: document.getElementById("product-barcode"),
 						productShelfNumber: document.getElementById("product-shelf-number"),
-						productCategory: document.getElementById("product-category"),
+						productSubcategory: document.getElementById("product-subcategory"),
 						productDescription: document.getElementById("product-description"),
 						productPicture: document.getElementById("product-picture"),
 						productPrice: document.getElementById("product-price"),
@@ -4777,8 +5480,8 @@
 					elements.productName.value = product.name || "";
 					elements.productBarcode.value = product.barcode || "";
 					elements.productShelfNumber.value = product.shelfNumber || "";
-					elements.productCategory.value = product.category
-						? product.category._id
+					elements.productSubcategory.value = product.subcategory
+						? product.subcategory._id
 						: "";
 					elements.productDescription.value = product.description || "";
 
@@ -4961,7 +5664,12 @@
 					const productId = productIdElement.value;
 
 					// Validate required fields
-					const requiredFields = ["name", "barcode", "shelfNumber", "category"];
+					const requiredFields = [
+						"name",
+						"barcode",
+						"shelfNumber",
+						"subcategory",
+					];
 					for (const field of requiredFields) {
 						if (!formData.get(field) && field !== "picture") {
 							showMessage(
@@ -5006,7 +5714,7 @@
 						name: formData.get("name"),
 						barcode: formData.get("barcode"),
 						shelfNumber: formData.get("shelfNumber"),
-						category: formData.get("category"),
+						subcategory: formData.get("subcategory"),
 						description: formData.get("description") || "",
 						picture: pictureUrl || "",
 						price: formData.get("price")
@@ -5095,7 +5803,7 @@
 					}
 
 					if (categoryId && categoryId !== "all") {
-						url += `&category=${categoryId}`;
+						url += `&subcategory=${categoryId}`;
 					}
 
 					if (status && status !== "all") {
@@ -5198,10 +5906,10 @@
 			}
 
 			// Load categories for the product filter dropdown
-			async function loadCategoriesForProductFilter() {
+			async function loadSubcategoriesForProductFilter() {
 				try {
 					const response = await fetch(
-						`${API_BASE_URL}/categories?isActive=all`,
+						`${API_BASE_URL}/subcategories?isActive=all`,
 						{
 							method: "GET",
 							headers: {
@@ -5213,29 +5921,33 @@
 
 					if (response.ok) {
 						const data = await response.json();
-						const categories = data.data || [];
+						const subcategories = data.data || [];
 						const categoryFilter = document.getElementById(
 							"product-category-filter"
 						);
 
 						if (categoryFilter) {
-							// Clear existing options except "All Categories"
+							// Clear existing options except "All Subcategories"
 							categoryFilter.innerHTML =
-								'<option value="all">All Categories</option>';
+								'<option value="all">All Subcategories</option>';
 
-							// Add category options
-							categories.forEach((category) => {
-								if (category.isActive) {
+							// Add subcategory options
+							subcategories.forEach((subcategory) => {
+								if (subcategory.isActive) {
 									const option = document.createElement("option");
-									option.value = category._id;
-									option.textContent = category.name;
+									option.value = subcategory._id;
+									// Show both subcategory name and parent category for clarity
+									const displayText = subcategory.parentCategory
+										? `${subcategory.name} (${subcategory.parentCategory.name})`
+										: subcategory.name;
+									option.textContent = displayText;
 									categoryFilter.appendChild(option);
 								}
 							});
 						}
 					}
 				} catch (error) {
-					console.error("Error loading categories for filter:", error);
+					console.error("Error loading subcategories for filter:", error);
 				}
 			}
 
@@ -5845,6 +6557,32 @@
 					loadAllUsers();
 				} else if (tabName === "customers") {
 					loadCustomers();
+				}
+			}
+
+			// Category Tabs Management
+			function showCategoryTab(tabName) {
+				// Remove active class from all tabs and content
+				document
+					.querySelectorAll(".category-tab-btn")
+					.forEach((btn) => btn.classList.remove("active"));
+				document
+					.querySelectorAll(".category-tab-content")
+					.forEach((content) => content.classList.remove("active"));
+
+				// Add active class to clicked tab and corresponding content
+				event.target.classList.add("active");
+				document
+					.getElementById(`${tabName}-tab-content`)
+					.classList.add("active");
+
+				// Load data based on active tab
+				if (tabName === "categories") {
+					refreshCategories();
+					loadCategoriesForSubcategoryFilter();
+				} else if (tabName === "subcategories") {
+					refreshSubcategories();
+					loadCategoriesForSubcategoryFilter();
 				}
 			}
 
@@ -6781,6 +7519,72 @@
 			</div>
 		</div>
 
+		<!-- Subcategory Management Modal -->
+		<div id="subcategory-modal" class="modal">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h2 id="subcategory-modal-title">Add New Subcategory</h2>
+					<span class="close" onclick="closeSubcategoryModal()">&times;</span>
+				</div>
+
+				<form
+					id="subcategory-form"
+					onsubmit="event.preventDefault(); saveSubcategory();"
+				>
+					<input type="hidden" id="subcategory-id" name="id" />
+
+					<div class="form-grid">
+						<div class="form-group">
+							<label for="subcategory-name">Subcategory Name *</label>
+							<input
+								type="text"
+								id="subcategory-name"
+								name="name"
+								required
+								placeholder="e.g., Organic Fruits"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="subcategory-parent">Parent Category *</label>
+							<select id="subcategory-parent" name="parentCategory" required>
+								<option value="">Select Parent Category</option>
+								<!-- Categories will be loaded dynamically -->
+							</select>
+						</div>
+
+						<div class="form-group">
+							<label for="subcategory-is-active">Status *</label>
+							<select id="subcategory-is-active" name="isActive" required>
+								<option value="true">Active</option>
+								<option value="false">Inactive</option>
+							</select>
+						</div>
+					</div>
+
+					<div
+						style="
+							display: flex;
+							gap: 10px;
+							justify-content: flex-end;
+							margin-top: 30px;
+						"
+					>
+						<button
+							type="button"
+							class="btn btn-secondary"
+							onclick="closeSubcategoryModal()"
+						>
+							Cancel
+						</button>
+						<button type="submit" class="btn btn-primary">
+							<span id="subcategory-save-btn-text">Create Subcategory</span>
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+
 		<!-- User Management Modal -->
 		<div id="user-edit-modal" class="modal">
 			<div class="modal-content">
@@ -6930,9 +7734,9 @@
 						</div>
 
 						<div class="form-group">
-							<label for="product-category">Category *</label>
-							<select id="product-category" name="category" required>
-								<option value="">Select Category</option>
+							<label for="product-subcategory">Subcategory *</label>
+							<select id="product-subcategory" name="subcategory" required>
+								<option value="">Select Subcategory</option>
 							</select>
 						</div>
 
@@ -9155,5 +9959,858 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- Waste Record Modal -->
+		<div id="waste-modal" class="modal">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h3 id="waste-modal-title">Record Waste</h3>
+					<span class="close" onclick="closeWasteModal()">&times;</span>
+				</div>
+				<form id="waste-form" onsubmit="saveWasteRecord(event)">
+					<input type="hidden" id="waste-id" />
+					<input type="hidden" id="waste-product-id" />
+					<div class="form-grid">
+						<div class="form-group">
+							<label for="waste-barcode">Product Barcode*</label>
+							<div class="input-with-button">
+								<input
+									type="text"
+									id="waste-barcode"
+									placeholder="Enter product barcode"
+									required
+								/>
+								<button
+									type="button"
+									class="btn btn-secondary"
+									onclick="lookupProductByBarcode()"
+								>
+									Lookup
+								</button>
+							</div>
+						</div>
+
+						<div class="form-group">
+							<label for="waste-product-name">Product Name</label>
+							<input
+								type="text"
+								id="waste-product-name"
+								placeholder="Product name (auto-filled)"
+								readonly
+							/>
+						</div>
+
+						<div
+							class="form-group form-group-full"
+							id="product-details-container"
+							style="display: none"
+						>
+							<div class="info-card">
+								<h4>Product Details</h4>
+								<div class="info-row">
+									<span class="info-label">Name:</span>
+									<span class="info-value" id="product-detail-name">-</span>
+								</div>
+								<div class="info-row">
+									<span class="info-label">Price:</span>
+									<span class="info-value" id="product-detail-price">-</span>
+								</div>
+								<div class="info-row">
+									<span class="info-label">Category:</span>
+									<span class="info-value" id="product-detail-category">-</span>
+								</div>
+								<div class="info-row">
+									<span class="info-label">Current Stock:</span>
+									<span class="info-value" id="product-detail-stock">-</span>
+								</div>
+							</div>
+						</div>
+
+						<div class="form-group">
+							<label for="waste-quantity">Quantity*</label>
+							<input
+								type="number"
+								id="waste-quantity"
+								placeholder="Enter quantity"
+								min="0.01"
+								step="0.01"
+								required
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="waste-reason">Reason*</label>
+							<select id="waste-reason" required>
+								<option value="">Select reason</option>
+								<option value="Expired">Expired</option>
+								<option value="Damaged">Damaged</option>
+								<option value="Quality Issues">Quality Issues</option>
+								<option value="Overproduction">Overproduction</option>
+								<option value="Spoiled">Spoiled</option>
+								<option value="Recall">Recall</option>
+								<option value="Other">Other</option>
+							</select>
+						</div>
+
+						<div class="form-group form-group-full">
+							<label for="waste-notes">Notes</label>
+							<textarea
+								id="waste-notes"
+								placeholder="Enter additional notes"
+								rows="3"
+							></textarea>
+						</div>
+					</div>
+
+					<div class="form-actions">
+						<button
+							type="button"
+							class="btn btn-secondary"
+							onclick="closeWasteModal()"
+						>
+							Cancel
+						</button>
+						<button type="submit" class="btn btn-primary">Save Record</button>
+					</div>
+				</form>
+			</div>
+		</div>
+
+		<!-- Waste Management JavaScript -->
+		<script>
+			// Waste Management Variables
+			let currentWasteId = null;
+			let currentWastePage = 1;
+			let wasteRecords = [];
+			let wasteByReasonChart = null;
+			let wasteTrendChart = null;
+
+			// Show the appropriate waste tab
+			function showWasteTab(tabName) {
+				// Update tab headers
+				document.querySelectorAll(".tab-container .tab").forEach((tab) => {
+					tab.classList.remove("active");
+				});
+				document
+					.querySelector(
+						`.tab-container .tab[onclick="showWasteTab('${tabName}')"]`
+					)
+					.classList.add("active");
+
+				// Update tab content
+				document
+					.querySelectorAll(".tab-container .tab-pane")
+					.forEach((pane) => {
+						pane.classList.remove("active");
+					});
+				document.getElementById(`waste-${tabName}-tab`).classList.add("active");
+
+				// If showing history tab, load charts
+				if (tabName === "history") {
+					loadWasteStats();
+				}
+			}
+
+			// Load all waste records
+			async function loadWasteRecords(page = 1, limit = 10) {
+				try {
+					const reasonFilter = document.getElementById(
+						"waste-reason-filter"
+					).value;
+					const dateFrom = document.getElementById("waste-date-from").value;
+					const dateTo = document.getElementById("waste-date-to").value;
+
+					let url = `/api/waste?page=${page}&limit=${limit}`;
+
+					// Add filters if they exist
+					if (reasonFilter) {
+						url += `&reason=${encodeURIComponent(reasonFilter)}`;
+					}
+
+					if (dateFrom) {
+						url += `&startDate=${encodeURIComponent(dateFrom)}`;
+					}
+
+					if (dateTo) {
+						const endDate = new Date(dateTo);
+						endDate.setDate(endDate.getDate() + 1); // Include the end date
+						url += `&endDate=${encodeURIComponent(endDate.toISOString())}`;
+					}
+
+					// Fetch data
+					const response = await authenticatedFetch(url);
+
+					if (!response.ok) {
+						throw new Error("Failed to fetch waste records");
+					}
+
+					const data = await response.json();
+					wasteRecords = data.data;
+
+					// Update table
+					updateWasteTable(data);
+
+					// Update stats
+					updateWasteStats();
+				} catch (error) {
+					console.error("Error loading waste records:", error);
+					showMessage(
+						"Failed to load waste records: " + error.message,
+						"error"
+					);
+				}
+			}
+
+			// Update the waste table with data
+			function updateWasteTable(data) {
+				const tableBody = document.getElementById("waste-records-list");
+				const paginationContainer = document.getElementById("waste-pagination");
+
+				if (!data.data || data.data.length === 0) {
+					tableBody.innerHTML = `
+						<tr class="empty-row">
+							<td colspan="7" style="text-align: center; padding: 40px; color: #666">
+								No waste records found. Click "Record Waste" to add one.
+							</td>
+						</tr>
+					`;
+					paginationContainer.innerHTML = "";
+					return;
+				}
+
+				// Populate table
+				let html = "";
+
+				data.data.forEach((waste) => {
+					const date = new Date(waste.createdAt).toLocaleDateString();
+					const recordedBy = waste.recordedBy
+						? waste.recordedBy.name
+						: "Unknown";
+
+					html += `
+						<tr>
+							<td>${date}</td>
+							<td>${waste.barcode || "-"}</td>
+							<td>${waste.productName || "-"}</td>
+							<td>${waste.quantity}</td>
+							<td>${waste.reason}</td>
+							<td>${recordedBy}</td>
+							<td class="actions">
+								<button 
+									class="btn btn-icon" 
+									onclick="editWasteRecord('${waste._id}')"
+									title="Edit"
+								>
+									✏️
+								</button>
+								<button 
+									class="btn btn-icon" 
+									onclick="deleteWasteRecord('${waste._id}')"
+									title="Delete"
+								>
+									🗑️
+								</button>
+							</td>
+						</tr>
+					`;
+				});
+
+				tableBody.innerHTML = html;
+
+				// Update pagination
+				updateWastePagination(data.pagination);
+			}
+
+			// Update pagination controls
+			function updateWastePagination(pagination) {
+				const container = document.getElementById("waste-pagination");
+
+				if (!pagination || pagination.totalPages <= 1) {
+					container.innerHTML = "";
+					return;
+				}
+
+				let html = "";
+
+				// Previous button
+				html += `
+					<button 
+						class="btn-page ${pagination.page === 1 ? "disabled" : ""}" 
+						${
+							pagination.page === 1
+								? "disabled"
+								: `onclick="loadWasteRecords(${pagination.page - 1})"`
+						}
+					>
+						&laquo;
+					</button>
+				`;
+
+				// Page numbers
+				const startPage = Math.max(1, pagination.page - 2);
+				const endPage = Math.min(pagination.totalPages, pagination.page + 2);
+
+				for (let i = startPage; i <= endPage; i++) {
+					html += `
+						<button 
+							class="btn-page ${i === pagination.page ? "active" : ""}" 
+							onclick="loadWasteRecords(${i})"
+						>
+							${i}
+						</button>
+					`;
+				}
+
+				// Next button
+				html += `
+					<button 
+						class="btn-page ${pagination.page === pagination.totalPages ? "disabled" : ""}" 
+						${
+							pagination.page === pagination.totalPages
+								? "disabled"
+								: `onclick="loadWasteRecords(${pagination.page + 1})"`
+						}
+					>
+						&raquo;
+					</button>
+				`;
+
+				container.innerHTML = html;
+			}
+
+			// Filter waste records
+			function filterWasteRecords() {
+				loadWasteRecords(1);
+			}
+
+			// Reset waste filters
+			function resetWasteFilters() {
+				document.getElementById("waste-reason-filter").value = "";
+				document.getElementById("waste-date-from").value = "";
+				document.getElementById("waste-date-to").value = "";
+				loadWasteRecords(1);
+			}
+
+			// Look up product by barcode
+			async function lookupProductByBarcode() {
+				const barcode = document.getElementById("waste-barcode").value.trim();
+
+				if (!barcode) {
+					showMessage("Please enter a barcode", "error");
+					return;
+				}
+
+				try {
+					// Fetch product details
+					const response = await authenticatedFetch(
+						`/api/waste/product/${barcode}`
+					);
+
+					if (!response.ok) {
+						const errorData = await response.json();
+						throw new Error(errorData.error || "Product not found");
+					}
+
+					const data = await response.json();
+					const product = data.data;
+
+					// Update form fields
+					document.getElementById("waste-product-id").value = product._id;
+					document.getElementById("waste-product-name").value = product.name;
+
+					// Update product details display
+					document.getElementById("product-detail-name").textContent =
+						product.name;
+					document.getElementById("product-detail-price").textContent =
+						product.price ? `$${product.price.toFixed(2)}` : "N/A";
+					document.getElementById("product-detail-category").textContent =
+						product.category ? product.category : "N/A";
+					document.getElementById("product-detail-stock").textContent =
+						product.stock !== undefined ? product.stock : "N/A";
+
+					// Show product details
+					document.getElementById("product-details-container").style.display =
+						"block";
+				} catch (error) {
+					console.error("Error looking up product:", error);
+					showMessage(error.message || "Failed to find product", "error");
+
+					// Clear product fields
+					document.getElementById("waste-product-id").value = "";
+					document.getElementById("waste-product-name").value = "";
+					document.getElementById("product-details-container").style.display =
+						"none";
+				}
+			}
+
+			// Show the add waste modal
+			function showAddWasteModal() {
+				currentWasteId = null;
+				document.getElementById("waste-modal-title").textContent =
+					"Record Waste";
+				document.getElementById("waste-form").reset();
+				document.getElementById("product-details-container").style.display =
+					"none";
+				document.getElementById("waste-modal").style.display = "block";
+			}
+
+			// Show the edit waste modal
+			function editWasteRecord(id) {
+				const waste = wasteRecords.find((w) => w._id === id);
+
+				if (!waste) {
+					showMessage("Waste record not found", "error");
+					return;
+				}
+
+				currentWasteId = id;
+				document.getElementById("waste-modal-title").textContent =
+					"Edit Waste Record";
+				document.getElementById("waste-id").value = id;
+				document.getElementById("waste-barcode").value = waste.barcode || "";
+				document.getElementById("waste-product-id").value =
+					waste.productId || "";
+				document.getElementById("waste-product-name").value =
+					waste.productName || "";
+				document.getElementById("waste-quantity").value = waste.quantity;
+				document.getElementById("waste-reason").value = waste.reason;
+				document.getElementById("waste-reason").value = waste.reason;
+				document.getElementById("waste-notes").value = waste.notes || "";
+
+				document.getElementById("waste-modal").style.display = "block";
+			}
+
+			// Close waste modal
+			function closeWasteModal() {
+				document.getElementById("waste-modal").style.display = "none";
+			}
+
+			// Save waste record
+			async function saveWasteRecord(event) {
+				event.preventDefault();
+
+				try {
+					const barcode = document.getElementById("waste-barcode").value.trim();
+					const productName =
+						document.getElementById("waste-product-name").value;
+					const productId = document.getElementById("waste-product-id").value;
+					const quantity = document.getElementById("waste-quantity").value;
+					const reason = document.getElementById("waste-reason").value;
+					const notes = document.getElementById("waste-notes").value;
+
+					if (!barcode) {
+						showMessage("Please enter a product barcode", "error");
+						return;
+					}
+
+					const wasteData = {
+						barcode,
+						productName,
+						productId,
+						quantity: parseFloat(quantity),
+						reason,
+						notes,
+					};
+
+					let response;
+
+					if (currentWasteId) {
+						// Update existing record
+						response = await authenticatedFetch(
+							`/api/waste/${currentWasteId}`,
+							{
+								method: "PUT",
+								headers: {
+									"Content-Type": "application/json",
+								},
+								body: JSON.stringify(wasteData),
+							}
+						);
+					} else {
+						// Create new record
+						response = await authenticatedFetch("/api/waste", {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify(wasteData),
+						});
+					}
+
+					if (!response.ok) {
+						const errorData = await response.json();
+						throw new Error(errorData.error || "Failed to save waste record");
+					}
+
+					showMessage("Waste record saved successfully", "success");
+					closeWasteModal();
+					loadWasteRecords(currentWastePage);
+				} catch (error) {
+					console.error("Error saving waste record:", error);
+					showMessage("Failed to save waste record: " + error.message, "error");
+				}
+			}
+
+			// Delete waste record
+			async function deleteWasteRecord(id) {
+				if (!confirm("Are you sure you want to delete this waste record?")) {
+					return;
+				}
+
+				try {
+					const response = await authenticatedFetch(`/api/waste/${id}`, {
+						method: "DELETE",
+					});
+
+					if (!response.ok) {
+						throw new Error("Failed to delete waste record");
+					}
+
+					showMessage("Waste record deleted successfully", "success");
+					loadWasteRecords(currentWastePage);
+				} catch (error) {
+					console.error("Error deleting waste record:", error);
+					showMessage(
+						"Failed to delete waste record: " + error.message,
+						"error"
+					);
+				}
+			}
+
+			// Load waste statistics for charts
+			async function loadWasteStats() {
+				try {
+					// Get date range filters
+					const dateFrom = document.getElementById("waste-date-from").value;
+					const dateTo = document.getElementById("waste-date-to").value;
+
+					let url = "/api/waste/stats";
+
+					// Add date filters if they exist
+					if (dateFrom || dateTo) {
+						url += "?";
+
+						if (dateFrom) {
+							url += `startDate=${encodeURIComponent(dateFrom)}`;
+						}
+
+						if (dateTo) {
+							if (dateFrom) url += "&";
+							const endDate = new Date(dateTo);
+							endDate.setDate(endDate.getDate() + 1); // Include the end date
+							url += `endDate=${encodeURIComponent(endDate.toISOString())}`;
+						}
+					}
+
+					// Fetch statistics
+					const response = await authenticatedFetch(url);
+
+					if (!response.ok) {
+						throw new Error("Failed to fetch waste statistics");
+					}
+
+					const data = await response.json();
+
+					// Update charts
+					updateWasteCharts(data.data);
+
+					// Update summary stats
+					updateWasteSummaryStats(data.data);
+				} catch (error) {
+					console.error("Error loading waste statistics:", error);
+					showMessage(
+						"Failed to load waste statistics: " + error.message,
+						"error"
+					);
+				}
+			}
+
+			// Update waste charts
+			function updateWasteCharts(data) {
+				// Load Chart.js if not already loaded
+				if (!window.Chart) {
+					const script = document.createElement("script");
+					script.src = "https://cdn.jsdelivr.net/npm/chart.js";
+					script.onload = () => {
+						createWasteCharts(data);
+					};
+					document.head.appendChild(script);
+					return;
+				}
+
+				createWasteCharts(data);
+			}
+
+			// Create waste charts
+			function createWasteCharts(data) {
+				// Prepare data for reason chart
+				const reasonLabels = data.byReason.map((item) => item._id);
+				const reasonData = data.byReason.map((item) => item.totalQuantity);
+				const reasonColors = generateRandomColors(reasonLabels.length);
+
+				// Create or update reason chart
+				const reasonCtx = document
+					.getElementById("wasteByReasonChart")
+					.getContext("2d");
+
+				if (wasteByReasonChart) {
+					wasteByReasonChart.data.labels = reasonLabels;
+					wasteByReasonChart.data.datasets[0].data = reasonData;
+					wasteByReasonChart.data.datasets[0].backgroundColor = reasonColors;
+					wasteByReasonChart.update();
+				} else {
+					wasteByReasonChart = new Chart(reasonCtx, {
+						type: "pie",
+						data: {
+							labels: reasonLabels,
+							datasets: [
+								{
+									data: reasonData,
+									backgroundColor: reasonColors,
+								},
+							],
+						},
+						options: {
+							responsive: true,
+							plugins: {
+								legend: {
+									position: "right",
+								},
+								tooltip: {
+									callbacks: {
+										label: function (context) {
+											const label = context.label || "";
+											const value = context.raw || 0;
+											return `${label}: ${value} units`;
+										},
+									},
+								},
+							},
+						},
+					});
+				}
+
+				// Prepare data for trend chart
+				const dateLabels = data.byDate.map((item) => item._id);
+				const dateData = data.byDate.map((item) => item.totalQuantity);
+
+				// Create or update trend chart
+				const trendCtx = document
+					.getElementById("wasteTrendsChart")
+					.getContext("2d");
+
+				if (wasteTrendChart) {
+					wasteTrendChart.data.labels = dateLabels;
+					wasteTrendChart.data.datasets[0].data = dateData;
+					wasteTrendChart.update();
+				} else {
+					wasteTrendChart = new Chart(trendCtx, {
+						type: "line",
+						data: {
+							labels: dateLabels,
+							datasets: [
+								{
+									label: "Waste Quantity",
+									data: dateData,
+									borderColor: "#4c6ef5",
+									backgroundColor: "rgba(76, 110, 245, 0.1)",
+									fill: true,
+									tension: 0.4,
+								},
+							],
+						},
+						options: {
+							responsive: true,
+							scales: {
+								x: {
+									title: {
+										display: true,
+										text: "Date",
+									},
+								},
+								y: {
+									beginAtZero: true,
+									title: {
+										display: true,
+										text: "Quantity",
+									},
+								},
+							},
+						},
+					});
+				}
+			}
+
+			// Update waste summary statistics
+			function updateWasteSummaryStats(data) {
+				const summaryContainer = document.getElementById("waste-summary-stats");
+
+				// Create summary cards
+				let html = "";
+
+				// Total waste
+				html += `
+					<div class="stat-card">
+						<div class="stat-icon">📊</div>
+						<div class="stat-info">
+							<div class="stat-value">${data.total.totalQuantity.toFixed(2)}</div>
+							<div class="stat-label">Total Waste Units</div>
+						</div>
+					</div>
+				`;
+
+				// Total records
+				html += `
+					<div class="stat-card">
+						<div class="stat-icon">🧾</div>
+						<div class="stat-info">
+							<div class="stat-value">${data.total.count}</div>
+							<div class="stat-label">Total Records</div>
+						</div>
+					</div>
+				`;
+
+				// Top waste reason
+				if (data.byReason.length > 0) {
+					html += `
+						<div class="stat-card">
+							<div class="stat-icon">🔍</div>
+							<div class="stat-info">
+								<div class="stat-value">${data.byReason[0]._id}</div>
+								<div class="stat-label">Top Waste Reason</div>
+							</div>
+						</div>
+					`;
+				}
+
+				// Average waste per day
+				if (data.byDate.length > 0) {
+					const avgWaste = data.total.totalQuantity / data.byDate.length;
+					html += `
+						<div class="stat-card">
+							<div class="stat-icon">📈</div>
+							<div class="stat-info">
+								<div class="stat-value">${avgWaste.toFixed(2)}</div>
+								<div class="stat-label">Avg. Waste Per Day</div>
+							</div>
+						</div>
+					`;
+				}
+
+				summaryContainer.innerHTML = html;
+			}
+
+			// Update waste dashboard statistics
+			async function updateWasteStats() {
+				try {
+					// Get summary statistics
+					const response = await authenticatedFetch("/api/waste/stats");
+
+					if (!response.ok) {
+						throw new Error("Failed to fetch waste statistics");
+					}
+
+					const data = await response.json();
+
+					// Update dashboard stats
+					document.getElementById("total-waste-count").textContent =
+						data.data.total.count || 0;
+
+					// Calculate this week's waste
+					const thisWeekWaste = calculateThisWeekWaste(data.data.byDate);
+					document.getElementById("waste-this-week").textContent =
+						thisWeekWaste.toFixed(2);
+
+					// Count by reasons
+					const expiredCount = getWasteCountByReason(
+						data.data.byReason,
+						"Expired"
+					);
+					const damagedCount = getWasteCountByReason(
+						data.data.byReason,
+						"Damaged"
+					);
+
+					document.getElementById("expired-items").textContent =
+						expiredCount.toFixed(2);
+					document.getElementById("damaged-items").textContent =
+						damagedCount.toFixed(2);
+				} catch (error) {
+					console.error("Error updating waste stats:", error);
+				}
+			}
+
+			// Helper to calculate this week's waste
+			function calculateThisWeekWaste(dateData) {
+				const now = new Date();
+				const startOfWeek = new Date(now);
+				startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
+				startOfWeek.setHours(0, 0, 0, 0);
+
+				const weekWaste = dateData
+					.filter((item) => {
+						const itemDate = new Date(item._id);
+						return itemDate >= startOfWeek;
+					})
+					.reduce((sum, item) => sum + item.totalQuantity, 0);
+
+				return weekWaste;
+			}
+
+			// Helper to get waste count by reason
+			function getWasteCountByReason(reasonData, reason) {
+				const found = reasonData.find((item) => item._id === reason);
+				return found ? found.totalQuantity : 0;
+			}
+
+			// Generate random colors for charts
+			function generateRandomColors(count) {
+				const predefinedColors = [
+					"#4c6ef5",
+					"#f03e3e",
+					"#f76707",
+					"#fab005",
+					"#37b24d",
+					"#12b886",
+					"#15aabf",
+					"#228be6",
+					"#7048e8",
+					"#f783ac",
+				];
+
+				if (count <= predefinedColors.length) {
+					return predefinedColors.slice(0, count);
+				}
+
+				const colors = [...predefinedColors];
+
+				for (let i = predefinedColors.length; i < count; i++) {
+					const r = Math.floor(Math.random() * 255);
+					const g = Math.floor(Math.random() * 255);
+					const b = Math.floor(Math.random() * 255);
+					colors.push(`rgb(${r}, ${g}, ${b})`);
+				}
+
+				return colors;
+			}
+
+			// Initialize waste management when showing section
+			document.addEventListener("DOMContentLoaded", function () {
+				// Set default date filters to past month
+				const today = new Date();
+				const monthAgo = new Date();
+				monthAgo.setMonth(today.getMonth() - 1);
+
+				document.getElementById("waste-date-from").valueAsDate = monthAgo;
+				document.getElementById("waste-date-to").valueAsDate = today;
+
+				// Event listener for showing waste section
+				document
+					.getElementById("menu-waste")
+					.addEventListener("click", function () {
+						loadWasteRecords(1);
+					});
+			});
+		</script>
 	</body>
 </html>

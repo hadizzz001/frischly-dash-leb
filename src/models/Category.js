@@ -70,6 +70,14 @@ categorySchema.virtual("productCount", {
 	count: true,
 });
 
+// Virtual for subcategories
+categorySchema.virtual("subcategories", {
+	ref: "Subcategory",
+	localField: "_id",
+	foreignField: "parentCategory",
+	justOne: false,
+});
+
 // Static method to find active categories
 categorySchema.statics.findActive = function () {
 	return this.find({ isActive: true }).sort({ sortOrder: 1, name: 1 });
