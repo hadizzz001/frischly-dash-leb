@@ -73,7 +73,11 @@ exports.createWaste = async (req, res) => {
 			if (product) {
 				// Subtract the wasted quantity from stock
 				product.updateStock(quantity, "subtract");
-				await product.save();
+				console.log(
+					`Updated stock for product ${product.name} (${product.barcode}): -${quantity}`
+				);
+
+				//await product.save();
 			}
 		}
 

@@ -27,10 +27,23 @@ app.use(
 		contentSecurityPolicy: {
 			directives: {
 				defaultSrc: ["'self'"],
-				scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+				scriptSrc: [
+					"'self'",
+					"'unsafe-inline'",
+					"'unsafe-eval'",
+					"https://cdn.jsdelivr.net",
+					"https://cdnjs.cloudflare.com",
+					"https://unpkg.com",
+				],
 				scriptSrcAttr: ["'unsafe-inline'"], // Allow inline event handlers
 				styleSrc: ["'self'", "'unsafe-inline'"],
 				imgSrc: ["'self'", "data:", "https:"],
+				connectSrc: ["'self'", "http://localhost:*", "https://localhost:*"], // Allow API calls
+				fontSrc: [
+					"'self'",
+					"https://fonts.gstatic.com",
+					"https://fonts.googleapis.com",
+				],
 			},
 		},
 	})

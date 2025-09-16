@@ -8934,8 +8934,13 @@
 							</select>
 						</div>
 						<div class="form-group">
-							<label for="rider-zones">Zones *</label>
-							<div id="rider-zones" class="zone-checkboxes">
+							<label>Zones *</label>
+							<div
+								id="rider-zones"
+								class="zone-checkboxes"
+								role="group"
+								aria-label="Select zones for rider operation"
+							>
 								<!-- Zone checkboxes will be loaded dynamically -->
 							</div>
 							<small class="form-help"
@@ -11048,6 +11053,7 @@
 			let wasteRecords = [];
 			let wasteByReasonChart = null;
 			let wasteTrendChart = null;
+			let isWasteSubmitting = false; // Prevent multiple submissions
 
 			// Show the appropriate waste tab
 			function showWasteTab(tabName) {
@@ -11347,11 +11353,24 @@
 			// Close waste modal
 			function closeWasteModal() {
 				document.getElementById("waste-modal").style.display = "none";
+				// Reset the current waste ID when closing modal
+				currentWasteId = null;
 			}
 
 			// Save waste record
 			async function saveWasteRecord(event) {
 				event.preventDefault();
+
+				// Prevent multiple submissions
+				if (isWasteSubmitting) {
+					console.log("Waste submission already in progress, ignoring...");
+					return;
+				}
+
+				isWasteSubmitting = true;
+
+				console.log("Starting waste record save...");
+				console.log("Current waste ID:", currentWasteId);
 
 				try {
 					const barcode = document.getElementById("waste-barcode").value.trim();
@@ -11367,6 +11386,16 @@
 						return;
 					}
 
+					if (!quantity || isNaN(quantity) || parseFloat(quantity) <= 0) {
+						showMessage("Please enter a valid quantity", "error");
+						return;
+					}
+
+					if (!reason) {
+						showMessage("Please select a reason for waste", "error");
+						return;
+					}
+
 					const wasteData = {
 						barcode,
 						productName,
@@ -11375,6 +11404,8 @@
 						reason,
 						notes,
 					};
+
+					console.log("Waste data to save:", wasteData);
 
 					let response;
 
@@ -11402,9 +11433,20 @@
 					}
 
 					if (!response.ok) {
-						const errorData = await response.json();
+						const errorText = await response.text();
+						let errorData;
+						try {
+							errorData = JSON.parse(errorText);
+						} catch (e) {
+							console.error("Failed to parse error response as JSON:", e);
+							errorData = { error: errorText };
+						}
 						throw new Error(errorData.error || "Failed to save waste record");
 					}
+
+					console.log("Waste record saved successfully");
+					const successData = await response.json();
+					console.log("Success response data:", successData);
 
 					showMessage("Waste record saved successfully", "success");
 					closeWasteModal();
@@ -11412,6 +11454,9 @@
 				} catch (error) {
 					console.error("Error saving waste record:", error);
 					showMessage("Failed to save waste record: " + error.message, "error");
+				} finally {
+					// Reset submission flag
+					isWasteSubmitting = false;
 				}
 			}
 
