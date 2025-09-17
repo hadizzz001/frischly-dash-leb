@@ -104,7 +104,16 @@ categorySchema.pre("save", function (next) {
 // Pre-remove middleware to check if category has products
 categorySchema.pre("remove", async function (next) {
 	const Product = mongoose.model("Product");
-	const productCount = await Product.countDocuments({ category: this._id });
+	const Subcategory = mongoose.model("Subcategory");
+
+	// Find all subcategories for this category
+	const subcategories = await Subcategory.find({ parentCategory: this._id });
+	const subcategoryIds = subcategories.map((sub) => sub._id);
+
+	// Count products that belong to these subcategories
+	const productCount = await Product.countDocuments({
+		subcategory: { $in: subcategoryIds },
+	});
 
 	if (productCount > 0) {
 		const error = new Error(

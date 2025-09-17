@@ -311,9 +311,16 @@ exports.deleteCategory = async (req, res) => {
 			});
 		}
 
-		// Check if category has products
+		// Check if category has products through subcategories
+		const Subcategory = require("../models/Subcategory");
+		const subcategories = await Subcategory.find({
+			parentCategory: id,
+			isActive: true,
+		}).select("_id");
+
+		const subcategoryIds = subcategories.map((sub) => sub._id);
 		const productCount = await Product.countDocuments({
-			category: id,
+			subcategory: { $in: subcategoryIds },
 			isActive: true,
 		});
 
@@ -366,8 +373,15 @@ exports.permanentDeleteCategory = async (req, res) => {
 			});
 		}
 
-		// Check if category has products
-		const productCount = await Product.countDocuments({ category: id });
+		// Check if category has products through subcategories
+		const Subcategory = require("../models/Subcategory");
+		const subcategories = await Subcategory.find({ parentCategory: id }).select(
+			"_id"
+		);
+		const subcategoryIds = subcategories.map((sub) => sub._id);
+		const productCount = await Product.countDocuments({
+			subcategory: { $in: subcategoryIds },
+		});
 
 		if (productCount > 0) {
 			return res.status(400).json({
@@ -550,9 +564,20 @@ exports.getCategoryProductCount = async (req, res) => {
 			});
 		}
 
-		// Count products in this category
+		// Count products in this category through subcategories
+		const Subcategory = require("../models/Subcategory");
+
+		// Find all active subcategories for this category
+		const subcategories = await Subcategory.find({
+			parentCategory: id,
+			isActive: true,
+		}).select("_id");
+
+		const subcategoryIds = subcategories.map((sub) => sub._id);
+
+		// Count products that belong to these subcategories
 		const productCount = await Product.countDocuments({
-			category: id,
+			subcategory: { $in: subcategoryIds },
 			isActive: true,
 		});
 
@@ -587,14 +612,33 @@ exports.getAllCategoriesProductCount = async (req, res) => {
 			},
 			{
 				$lookup: {
-					from: "products",
+					from: "subcategories",
 					let: { categoryId: "$_id" },
 					pipeline: [
 						{
 							$match: {
 								$expr: {
 									$and: [
-										{ $eq: ["$category", "$$categoryId"] },
+										{ $eq: ["$parentCategory", "$$categoryId"] },
+										{ $eq: ["$isActive", true] },
+									],
+								},
+							},
+						},
+					],
+					as: "subcategories",
+				},
+			},
+			{
+				$lookup: {
+					from: "products",
+					let: { subcategoryIds: "$subcategories._id" },
+					pipeline: [
+						{
+							$match: {
+								$expr: {
+									$and: [
+										{ $in: ["$subcategory", "$$subcategoryIds"] },
 										{ $eq: ["$isActive", true] },
 									],
 								},

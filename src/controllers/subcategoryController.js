@@ -7,12 +7,10 @@ exports.createSubcategory = async (req, res) => {
 		const { name, parentCategory } = req.body;
 
 		if (!name || !parentCategory) {
-			return res
-				.status(400)
-				.json({
-					success: false,
-					error: "Name and parentCategory are required",
-				});
+			return res.status(400).json({
+				success: false,
+				error: "Name and parentCategory are required",
+			});
 		}
 
 		// Ensure parent category exists
@@ -45,13 +43,11 @@ exports.getAllSubcategories = async (req, res) => {
 			"parentCategory",
 			"name"
 		);
-		res
-			.status(200)
-			.json({
-				success: true,
-				count: subcategories.length,
-				data: subcategories,
-			});
+		res.status(200).json({
+			success: true,
+			count: subcategories.length,
+			data: subcategories,
+		});
 	} catch (error) {
 		res.status(400).json({ success: false, error: error.message });
 	}
