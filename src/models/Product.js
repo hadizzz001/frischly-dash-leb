@@ -57,6 +57,10 @@ const productSchema = new mongoose.Schema(
 				message: "Please provide a valid image URL or file path",
 			},
 		},
+		imagePublicId: {
+			type: String,
+			trim: true,
+		},
 		subcategory: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "Subcategory",

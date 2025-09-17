@@ -29,7 +29,13 @@ router.get("/:id", getCategory);
 router.get("/:id/product-count", getCategoryProductCount);
 
 // Protected routes (require authentication)
-router.post("/", protect, authorize("admin", "manager"), createCategory);
+router.post(
+	"/",
+	protect,
+	authorize("admin", "manager"),
+	uploadMiddleware,
+	createCategory
+);
 router.post(
 	"/upload-image",
 	protect,
@@ -37,7 +43,13 @@ router.post(
 	uploadMiddleware,
 	uploadImage
 );
-router.put("/:id", protect, authorize("admin", "manager"), updateCategory);
+router.put(
+	"/:id",
+	protect,
+	authorize("admin", "manager"),
+	uploadMiddleware,
+	updateCategory
+);
 router.patch(
 	"/reorder",
 	protect,

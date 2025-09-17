@@ -4,24 +4,18 @@ const mongoose = require("mongoose");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const cloudinary = require("cloudinary").v2;
 
-// Configure multer for image uploads
-const storage = multer.diskStorage({
-	destination: function (req, file, cb) {
-		const uploadDir = path.join(__dirname, "../../public/images");
-		// Ensure directory exists
-		if (!fs.existsSync(uploadDir)) {
-			fs.mkdirSync(uploadDir, { recursive: true });
-		}
-		cb(null, uploadDir);
-	},
-	filename: function (req, file, cb) {
-		// Generate unique filename with timestamp
-		const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9);
-		const extension = path.extname(file.originalname);
-		cb(null, uniqueName + extension);
-	},
+// Configure Cloudinary
+cloudinary.config({
+	cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "dbgnsnrto",
+	api_key: process.env.CLOUDINARY_API_KEY || "431121896297761",
+	api_secret:
+		process.env.CLOUDINARY_API_SECRET || "omVgd2HdystgoGQ5yXngAZ40yTg",
 });
+
+// Configure multer for memory storage (for Cloudinary)
+const storage = multer.memoryStorage();
 
 // File filter for images only
 const fileFilter = (req, file, cb) => {
@@ -39,6 +33,47 @@ const upload = multer({
 	},
 	fileFilter: fileFilter,
 });
+
+// Helper function to upload image to Cloudinary
+const uploadToCloudinary = (buffer, folder = "categories") => {
+	return new Promise((resolve, reject) => {
+		const uploadOptions = {
+			folder: folder,
+			resource_type: "image",
+			quality: "auto",
+			format: "webp",
+		};
+
+		const stream = cloudinary.uploader.upload_stream(
+			uploadOptions,
+			(error, result) => {
+				if (error) {
+					reject(error);
+				} else {
+					resolve({
+						url: result.secure_url,
+						public_id: result.public_id,
+					});
+				}
+			}
+		);
+
+		stream.end(buffer);
+	});
+};
+
+// Helper function to delete image from Cloudinary
+const deleteFromCloudinary = (publicId) => {
+	return new Promise((resolve, reject) => {
+		cloudinary.uploader.destroy(publicId, (error, result) => {
+			if (error) {
+				reject(error);
+			} else {
+				resolve(result);
+			}
+		});
+	});
+};
 
 // @desc    Get all categories
 // @route   GET /api/categories
@@ -209,6 +244,22 @@ exports.createCategory = async (req, res) => {
 	try {
 		const categoryData = { ...req.body };
 
+		// Handle image upload if provided
+		if (req.file) {
+			try {
+				const uploadResult = await uploadToCloudinary(req.file.buffer);
+				categoryData.image = uploadResult.url;
+				categoryData.imagePublicId = uploadResult.public_id;
+			} catch (uploadError) {
+				console.error("Error uploading image to Cloudinary:", uploadError);
+				return res.status(500).json({
+					success: false,
+					message: "Error uploading image",
+					error: uploadError.message,
+				});
+			}
+		}
+
 		// Add creator if user is authenticated
 		if (req.user) {
 			categoryData.createdBy = req.user.id;
@@ -257,15 +308,7 @@ exports.updateCategory = async (req, res) => {
 			});
 		}
 
-		const category = await Category.findByIdAndUpdate(
-			id,
-			{ ...req.body, updatedAt: new Date() },
-			{
-				new: true,
-				runValidators: true,
-			}
-		).populate("createdBy", "name email");
-
+		const category = await Category.findById(id);
 		if (!category) {
 			return res.status(404).json({
 				success: false,
@@ -273,10 +316,39 @@ exports.updateCategory = async (req, res) => {
 			});
 		}
 
+		const updateData = { ...req.body, updatedAt: new Date() };
+
+		// Handle image upload if provided
+		if (req.file) {
+			try {
+				// Delete old image from Cloudinary if it exists
+				if (category.imagePublicId) {
+					await deleteFromCloudinary(category.imagePublicId);
+				}
+
+				// Upload new image to Cloudinary
+				const uploadResult = await uploadToCloudinary(req.file.buffer);
+				updateData.image = uploadResult.url;
+				updateData.imagePublicId = uploadResult.public_id;
+			} catch (uploadError) {
+				console.error("Error uploading image to Cloudinary:", uploadError);
+				return res.status(500).json({
+					success: false,
+					message: "Error uploading image",
+					error: uploadError.message,
+				});
+			}
+		}
+
+		const updatedCategory = await Category.findByIdAndUpdate(id, updateData, {
+			new: true,
+			runValidators: true,
+		}).populate("createdBy", "name email");
+
 		res.json({
 			success: true,
 			message: "Category updated successfully",
-			data: category,
+			data: updatedCategory,
 		});
 	} catch (error) {
 		console.error("Error updating category:", error);
@@ -390,7 +462,7 @@ exports.permanentDeleteCategory = async (req, res) => {
 			});
 		}
 
-		const category = await Category.findByIdAndDelete(id);
+		const category = await Category.findById(id);
 
 		if (!category) {
 			return res.status(404).json({
@@ -398,6 +470,19 @@ exports.permanentDeleteCategory = async (req, res) => {
 				message: "Category not found",
 			});
 		}
+
+		// Delete image from Cloudinary if it exists
+		if (category.imagePublicId) {
+			try {
+				await deleteFromCloudinary(category.imagePublicId);
+			} catch (deleteError) {
+				console.error("Error deleting image from Cloudinary:", deleteError);
+				// Continue with category deletion even if image deletion fails
+			}
+		}
+
+		// Permanently delete the category
+		await Category.findByIdAndDelete(id);
 
 		res.json({
 			success: true,
@@ -518,15 +603,15 @@ exports.uploadImage = async (req, res) => {
 			});
 		}
 
-		// Generate the URL for the uploaded image
-		const imageUrl = `/images/${req.file.filename}`;
+		// Upload image to Cloudinary
+		const uploadResult = await uploadToCloudinary(req.file.buffer);
 
 		res.json({
 			success: true,
 			message: "Image uploaded successfully",
 			data: {
-				filename: req.file.filename,
-				url: imageUrl,
+				url: uploadResult.url,
+				public_id: uploadResult.public_id,
 				size: req.file.size,
 			},
 		});

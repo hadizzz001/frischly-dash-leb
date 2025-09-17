@@ -27,7 +27,13 @@ router.get("/shelf/:shelfNumber", getProductsByShelfNumber);
 router.get("/:id", getProduct);
 
 // Protected routes (require authentication)
-router.post("/", protect, authorize("admin", "manager"), createProduct);
+router.post(
+	"/",
+	protect,
+	authorize("admin", "manager"),
+	uploadMiddleware,
+	createProduct
+);
 router.post(
 	"/upload-image",
 	protect,
@@ -35,7 +41,13 @@ router.post(
 	uploadMiddleware,
 	uploadImage
 );
-router.put("/:id", protect, authorize("admin", "manager"), updateProduct);
+router.put(
+	"/:id",
+	protect,
+	authorize("admin", "manager"),
+	uploadMiddleware,
+	updateProduct
+);
 router.patch(
 	"/:id/stock",
 	protect,

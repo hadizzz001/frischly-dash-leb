@@ -3,24 +3,18 @@ const mongoose = require("mongoose");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const cloudinary = require("cloudinary").v2;
 
-// Configure multer for image uploads
-const storage = multer.diskStorage({
-	destination: function (req, file, cb) {
-		const uploadDir = path.join(__dirname, "../../public/images");
-		// Ensure directory exists
-		if (!fs.existsSync(uploadDir)) {
-			fs.mkdirSync(uploadDir, { recursive: true });
-		}
-		cb(null, uploadDir);
-	},
-	filename: function (req, file, cb) {
-		// Generate unique filename with timestamp
-		const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9);
-		const extension = path.extname(file.originalname);
-		cb(null, uniqueName + extension);
-	},
+// Configure Cloudinary
+cloudinary.config({
+	cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "dbgnsnrto",
+	api_key: process.env.CLOUDINARY_API_KEY || "431121896297761",
+	api_secret:
+		process.env.CLOUDINARY_API_SECRET || "omVgd2HdystgoGQ5yXngAZ40yTg",
 });
+
+// Configure multer for memory storage (for Cloudinary)
+const storage = multer.memoryStorage();
 
 // File filter for images only
 const fileFilter = (req, file, cb) => {
@@ -38,6 +32,47 @@ const upload = multer({
 	},
 	fileFilter: fileFilter,
 });
+
+// Helper function to upload image to Cloudinary
+const uploadToCloudinary = (buffer, folder = "products") => {
+	return new Promise((resolve, reject) => {
+		const uploadOptions = {
+			folder: folder,
+			resource_type: "image",
+			quality: "auto",
+			format: "webp",
+		};
+
+		const stream = cloudinary.uploader.upload_stream(
+			uploadOptions,
+			(error, result) => {
+				if (error) {
+					reject(error);
+				} else {
+					resolve({
+						url: result.secure_url,
+						public_id: result.public_id,
+					});
+				}
+			}
+		);
+
+		stream.end(buffer);
+	});
+};
+
+// Helper function to delete image from Cloudinary
+const deleteFromCloudinary = (publicId) => {
+	return new Promise((resolve, reject) => {
+		cloudinary.uploader.destroy(publicId, (error, result) => {
+			if (error) {
+				reject(error);
+			} else {
+				resolve(result);
+			}
+		});
+	});
+};
 
 // @desc    Get all products
 // @route   GET /api/products
@@ -332,6 +367,22 @@ exports.createProduct = async (req, res) => {
 	try {
 		const productData = { ...req.body };
 
+		// Handle image upload if provided
+		if (req.file) {
+			try {
+				const uploadResult = await uploadToCloudinary(req.file.buffer);
+				productData.picture = uploadResult.url;
+				productData.imagePublicId = uploadResult.public_id;
+			} catch (uploadError) {
+				console.error("Error uploading image to Cloudinary:", uploadError);
+				return res.status(500).json({
+					success: false,
+					message: "Error uploading image",
+					error: uploadError.message,
+				});
+			}
+		}
+
 		// Add creator if user is authenticated
 		if (req.user) {
 			productData.createdBy = req.user.id;
@@ -390,14 +441,42 @@ exports.updateProduct = async (req, res) => {
 			});
 		}
 
-		const product = await Product.findByIdAndUpdate(
-			id,
-			{ ...req.body, updatedAt: new Date() },
-			{
-				new: true,
-				runValidators: true,
+		const product = await Product.findById(id);
+		if (!product) {
+			return res.status(404).json({
+				success: false,
+				message: "Product not found",
+			});
+		}
+
+		const updateData = { ...req.body, updatedAt: new Date() };
+
+		// Handle image upload if provided
+		if (req.file) {
+			try {
+				// Delete old image from Cloudinary if it exists
+				if (product.imagePublicId) {
+					await deleteFromCloudinary(product.imagePublicId);
+				}
+
+				// Upload new image to Cloudinary
+				const uploadResult = await uploadToCloudinary(req.file.buffer);
+				updateData.picture = uploadResult.url;
+				updateData.imagePublicId = uploadResult.public_id;
+			} catch (uploadError) {
+				console.error("Error uploading image to Cloudinary:", uploadError);
+				return res.status(500).json({
+					success: false,
+					message: "Error uploading image",
+					error: uploadError.message,
+				});
 			}
-		)
+		}
+
+		const updatedProduct = await Product.findByIdAndUpdate(id, updateData, {
+			new: true,
+			runValidators: true,
+		})
 			.populate({
 				path: "subcategory",
 				select: "name slug parentCategory",
@@ -408,17 +487,10 @@ exports.updateProduct = async (req, res) => {
 			})
 			.populate("createdBy", "name email");
 
-		if (!product) {
-			return res.status(404).json({
-				success: false,
-				message: "Product not found",
-			});
-		}
-
 		res.json({
 			success: true,
 			message: "Product updated successfully",
-			data: product,
+			data: updatedProduct,
 		});
 	} catch (error) {
 		console.error("Error updating product:", error);
@@ -554,7 +626,7 @@ exports.permanentDeleteProduct = async (req, res) => {
 			});
 		}
 
-		const product = await Product.findByIdAndDelete(id);
+		const product = await Product.findById(id);
 
 		if (!product) {
 			return res.status(404).json({
@@ -562,6 +634,19 @@ exports.permanentDeleteProduct = async (req, res) => {
 				message: "Product not found",
 			});
 		}
+
+		// Delete image from Cloudinary if it exists
+		if (product.imagePublicId) {
+			try {
+				await deleteFromCloudinary(product.imagePublicId);
+			} catch (deleteError) {
+				console.error("Error deleting image from Cloudinary:", deleteError);
+				// Continue with product deletion even if image deletion fails
+			}
+		}
+
+		// Permanently delete the product
+		await Product.findByIdAndDelete(id);
 
 		res.json({
 			success: true,
@@ -612,15 +697,15 @@ exports.uploadImage = async (req, res) => {
 			});
 		}
 
-		// Generate the URL for the uploaded image
-		const imageUrl = `/images/${req.file.filename}`;
+		// Upload image to Cloudinary
+		const uploadResult = await uploadToCloudinary(req.file.buffer);
 
 		res.json({
 			success: true,
 			message: "Image uploaded successfully",
 			data: {
-				filename: req.file.filename,
-				url: imageUrl,
+				url: uploadResult.url,
+				public_id: uploadResult.public_id,
 				size: req.file.size,
 			},
 		});

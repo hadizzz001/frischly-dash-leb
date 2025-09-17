@@ -36,6 +36,10 @@ const categorySchema = new mongoose.Schema(
 				message: "Please provide a valid image URL or file path",
 			},
 		},
+		imagePublicId: {
+			type: String,
+			trim: true,
+		},
 		icon: {
 			type: String,
 			trim: true,
