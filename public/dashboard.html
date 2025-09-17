@@ -6190,26 +6190,26 @@
 						const bottlerefundAmount = bottlerefund;
 						const finalPrice = discountedPrice + taxAmount + bottlerefundAmount;
 
-						const priceDisplay = basePrice ? `$${basePrice.toFixed(2)}` : "N/A";
+						const priceDisplay = basePrice ? `€${basePrice.toFixed(2)}` : "N/A";
 						const finalPriceDisplay = basePrice
-							? `$${finalPrice.toFixed(2)}`
+							? `€${finalPrice.toFixed(2)}`
 							: "N/A";
 
 						// Create price info with details
 						const priceInfo = basePrice
-							? `Base: $${basePrice.toFixed(2)}${
+							? `Base: €${basePrice.toFixed(2)}${
 									discount > 0
-										? `\nDiscount: ${discount}% (-$${discountAmount.toFixed(
+										? `\nDiscount: ${discount}% (-€${discountAmount.toFixed(
 												2
 										  )})`
 										: ""
 							  }${
-									tax > 0 ? `\nTax: ${tax}% (+$${taxAmount.toFixed(2)})` : ""
+									tax > 0 ? `\nTax: ${tax}% (+€${taxAmount.toFixed(2)})` : ""
 							  }${
 									bottlerefund > 0
-										? `\nBottle Refund: +$${bottlerefundAmount.toFixed(2)}`
+										? `\nBottle Refund: +€${bottlerefundAmount.toFixed(2)}`
 										: ""
-							  }\nFinal: $${finalPrice.toFixed(2)}`
+							  }\nFinal: €${finalPrice.toFixed(2)}`
 							: "No price set";
 						const stock = product.stock !== undefined ? product.stock : "N/A";
 						const status = product.isActive ? "Active" : "Inactive";
@@ -6251,7 +6251,7 @@
 												${tax > 0 ? `<span style="color: #fd7e14;">+${tax}% tax</span>` : ""}
 												${
 													bottlerefund > 0
-														? `<span style="color: #17a2b8;">+$${bottlerefundAmount.toFixed(
+														? `<span style="color: #17a2b8;">+€${bottlerefundAmount.toFixed(
 																2
 														  )} refund</span>`
 														: ""
@@ -6282,7 +6282,7 @@
 								<span style="color: ${bottlerefund > 0 ? "#17a2b8" : "#6c757d"}; font-weight: ${
 							bottlerefund > 0 ? "600" : "normal"
 						};">
-									$${bottlerefundAmount.toFixed(2)}
+									€${bottlerefundAmount.toFixed(2)}
 								</span>
 							</td>
 							<td>
@@ -9128,7 +9128,7 @@
 						</div>
 
 						<div class="form-group">
-							<label for="product-bottlerefund">Bottle Refund ($)</label>
+							<label for="product-bottlerefund">Bottle Refund ()</label>
 							<input
 								type="number"
 								id="product-bottlerefund"
@@ -11282,9 +11282,10 @@
 			}
 
 			function viewRiderDetails(riderId) {
-				// This function would display detailed rider information
-				// For simplicity, we'll just edit the rider for now
-				editRider(riderId);
+				// Redirect to a dedicated rider details page, passing the riderId as a query parameter
+				window.location.href = `rider-details.html?riderId=${encodeURIComponent(
+					riderId
+				)}`;
 			}
 
 			function showRiderMap() {
