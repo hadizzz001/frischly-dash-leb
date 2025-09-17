@@ -5296,6 +5296,8 @@
 
 			function editCategory(categoryId) {
 				try {
+					showMessage("Updating category...", "info");
+
 					const category = allCategories.find((c) => c._id === categoryId);
 					if (!category) {
 						showMessage("Category not found", "error");
@@ -5403,6 +5405,7 @@
 
 			async function saveCategory() {
 				try {
+					showMessage("Saving category...", "info");
 					const form = document.getElementById("category-form");
 					const categoryIdElement = document.getElementById("category-id");
 
@@ -5793,7 +5796,13 @@
 										${
 											subcategory.parentCategory?.image
 												? `<img src="${subcategory.parentCategory.image}" alt="${subcategory.parentCategory.name}" 
-												style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd; margin-right: 8px;">`
+												style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd; margin-right: 8px;"
+												onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+												: ""
+										}
+										${
+											subcategory.parentCategory?.image
+												? ""
 												: `<div style="width: 30px; height: 30px; background: #f8f9fa; border-radius: 4px; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; color: #6c757d; font-size: 12px; margin-right: 8px;">📁</div>`
 										}
 										<span class="category-badge">${

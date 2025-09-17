@@ -41,7 +41,7 @@ exports.getAllSubcategories = async (req, res) => {
 
 		const subcategories = await Subcategory.find(query).populate(
 			"parentCategory",
-			"name"
+			"name image"
 		);
 		res.status(200).json({
 			success: true,
@@ -58,7 +58,7 @@ exports.getSubcategoryById = async (req, res) => {
 	try {
 		const sub = await Subcategory.findById(req.params.id).populate(
 			"parentCategory",
-			"name"
+			"name image"
 		);
 		if (!sub)
 			return res
