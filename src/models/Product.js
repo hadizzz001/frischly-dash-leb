@@ -8,6 +8,12 @@ const productSchema = new mongoose.Schema(
 			trim: true,
 			maxlength: [200, "Product name cannot be more than 200 characters"],
 		},
+		name: {
+			type: String,
+			required: [true, "Please provide a product name"],
+			trim: true,
+			maxlength: [200, "Product name cannot be more than 200 characters"],
+		},
 		barcode: {
 			type: String,
 			required: [true, "Please provide a barcode"],
@@ -88,6 +94,18 @@ const productSchema = new mongoose.Schema(
 					return v === undefined || /^\d+(\.\d{1,2})?$/.test(v.toString());
 				},
 				message: "Tax must have at most 2 decimal places",
+			},
+		},
+		bottlerefund: {
+			type: Number,
+			default: 0,
+			min: [0, "Bottle refund cannot be negative"],
+			validate: {
+				validator: function (v) {
+					// Allow up to 2 decimal places for bottle refund amount
+					return v === undefined || /^\d+(\.\d{1,2})?$/.test(v.toString());
+				},
+				message: "Bottle refund must have at most 2 decimal places",
 			},
 		},
 		discount: {
@@ -180,6 +198,7 @@ productSchema.index({ isActive: 1 });
 productSchema.index({ createdAt: -1 });
 productSchema.index({ tax: 1 });
 productSchema.index({ discount: 1 });
+productSchema.index({ bottlerefund: 1 });
 
 // Virtual for formatted price
 productSchema.virtual("formattedPrice").get(function () {
@@ -194,11 +213,12 @@ productSchema.virtual("discountedPrice").get(function () {
 	return this.price - discountAmount;
 });
 
-// Virtual for final price after discount and tax
+// Virtual for final price after discount, tax, and bottle refund
 productSchema.virtual("finalPrice").get(function () {
 	const discountedPrice = this.discountedPrice;
 	const taxAmount = (discountedPrice * (this.tax || 0)) / 100;
-	return discountedPrice + taxAmount;
+	const bottleRefundAmount = this.bottlerefund || 0;
+	return discountedPrice + taxAmount + bottleRefundAmount;
 });
 
 // Virtual for formatted final price
@@ -253,5 +273,9 @@ productSchema.pre("save", function (next) {
 	}
 	next();
 });
+
+// Schema options to include virtuals in JSON output
+productSchema.set("toJSON", { virtuals: true });
+productSchema.set("toObject", { virtuals: true });
 
 module.exports = mongoose.model("Product", productSchema);
