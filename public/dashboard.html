@@ -10704,8 +10704,8 @@
 			}
 
 			function refreshRiders() {
-				// loadAllRiders(); // Function not implemented yet
-				showMessage("Riders list refresh not available yet", "info");
+				loadAllRiders();
+				showMessage("Riders list refreshed", "success");
 			}
 
 			async function loadUsersForRiderModal() {
@@ -10947,7 +10947,7 @@
 						"success"
 					);
 					closeRiderModal();
-					// await loadAllRiders(); // Function not implemented yet
+					await loadAllRiders(); // Refresh riders list after successful save
 				} catch (error) {
 					console.error("Error saving rider:", error);
 					showMessage(`Failed to save rider: ${error.message}`, "error");
@@ -11118,7 +11118,7 @@
 					showMessage(result.message || "Rider permanently deleted", "success");
 
 					// Refresh riders list
-					// await loadAllRiders(); // Function not implemented yet
+					await loadAllRiders(); // Refresh riders list after successful deletion
 				} catch (error) {
 					console.error("Error deleting rider:", error);
 					showMessage(`Failed to delete rider: ${error.message}`, "error");
