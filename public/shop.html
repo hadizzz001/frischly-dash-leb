@@ -1419,15 +1419,150 @@
 				});
 			}
 
-			function checkout() {
+			async function checkout() {
 				if (cart.length === 0) return;
 
-				// For now, just show an alert. In a real app, this would redirect to checkout
-				alert(
-					`Checkout functionality would be implemented here. Cart total: €${cart
-						.reduce((sum, item) => sum + item.price * item.quantity, 0)
-						.toFixed(2)}`
-				);
+				// Show loading state
+				const checkoutBtn = document.querySelector(".checkout-btn");
+				const originalText = checkoutBtn.textContent;
+				checkoutBtn.textContent = "Processing...";
+				checkoutBtn.disabled = true;
+
+				try {
+					// Get current user information
+					const authToken = localStorage.getItem("authToken");
+					if (!authToken) {
+						alert("Please log in to place an order.");
+						window.location.href = "signin.html";
+						return;
+					}
+
+					const userResponse = await fetch(`${API_BASE_URL}/auth/me`, {
+						headers: {
+							Authorization: `Bearer ${authToken}`,
+						},
+					});
+
+					if (!userResponse.ok) {
+						throw new Error("Failed to get user information");
+					}
+
+					const userData = await userResponse.json();
+					console.log("User data received:", userData);
+
+					// Check if user data has the expected structure
+					if (!userData.data || !userData.data.user) {
+						throw new Error("Invalid user data structure received from API");
+					}
+
+					if (!userData.data.user.name) {
+						throw new Error("User name is missing from profile");
+					}
+
+					// Prepare order items from cart
+					const orderItems = cart.map((item) => ({
+						product: item.id,
+						quantity: item.quantity,
+						unitPrice: item.price,
+					}));
+
+					// Calculate totals
+					const subtotal = cart.reduce(
+						(sum, item) => sum + item.price * item.quantity,
+						0
+					);
+					const tax = subtotal * 0.1; // 10% tax
+					const total = subtotal + tax;
+
+					// Prepare order data
+					const orderData = {
+						customer: {
+							id: userData.data.user._id,
+							name: userData.data.user.name,
+							email: userData.data.user.email,
+							phoneNumber: userData.data.user.phoneNumber,
+							address: userData.data.user.address,
+						},
+						items: orderItems,
+						subtotal: subtotal,
+						tax: tax,
+						discount: 0,
+						total: total,
+						paymentMethod: "card",
+						notes: "Order placed from shop",
+					};
+
+					console.log("Order data to be sent:", orderData);
+
+					// Create the order
+					const orderResponse = await fetch(`${API_BASE_URL}/orders`, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							Authorization: `Bearer ${authToken}`,
+						},
+						body: JSON.stringify(orderData),
+					});
+
+					if (!orderResponse.ok) {
+						const errorData = await orderResponse.json();
+						throw new Error(errorData.message || "Failed to create order");
+					}
+
+					const orderResult = await orderResponse.json();
+
+					// Success! Clear cart and show confirmation
+					cart = [];
+					saveCart();
+					updateCartDisplay();
+
+					// Show success message
+					showOrderSuccess(orderResult.data);
+				} catch (error) {
+					console.error("Checkout error:", error);
+					alert(`Order failed: ${error.message}`);
+				} finally {
+					// Reset button state
+					checkoutBtn.textContent = originalText;
+					checkoutBtn.disabled = cart.length === 0;
+				}
+			}
+
+			// Show order success message
+			function showOrderSuccess(order) {
+				const mainContent = document.querySelector(".main-content");
+				const orderTotal = order.total.toFixed(2);
+
+				mainContent.innerHTML = `
+					<div style="text-align: center; padding: 50px 20px; max-width: 600px; margin: 0 auto;">
+						<div style="font-size: 64px; margin-bottom: 20px;">🎉</div>
+						<h2 style="color: #28a745; margin-bottom: 20px;">Order Placed Successfully!</h2>
+						<div style="background: #f8f9fa; padding: 30px; border-radius: 12px; margin-bottom: 30px;">
+							<h3 style="margin-bottom: 15px; color: #333;">Order Details</h3>
+							<p style="margin-bottom: 10px;"><strong>Order ID:</strong> ${
+								order.orderNumber || order._id
+							}</p>
+							<p style="margin-bottom: 10px;"><strong>Total Amount:</strong> €${orderTotal}</p>
+							<p style="margin-bottom: 10px;"><strong>Items:</strong> ${
+								order.items.length
+							}</p>
+							<p style="margin-bottom: 10px;"><strong>Status:</strong> ${
+								order.status || "Processing"
+							}</p>
+							<p style="margin-bottom: 0;"><strong>Payment:</strong> ${
+								order.paymentMethod
+							}</p>
+						</div>
+						<div style="background: #d4edda; color: #155724; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+							<strong>✅ Your order has been placed successfully!</strong><br>
+							You will receive a confirmation email shortly.
+						</div>
+						<div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+							<a href="shop.html" class="btn btn-primary" style="padding: 12px 24px;">Continue Shopping</a>
+							<a href="index.html" class="btn btn-secondary" style="padding: 12px 24px;">Home</a>
+						</div>
+					</div>
+				`;
 			}
 
 			// Close cart when clicking overlay

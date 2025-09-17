@@ -38,6 +38,12 @@ exports.getOrders = async (req, res) => {
 			filter.paymentStatus = paymentStatus;
 		}
 
+		// Filter orders based on user role
+		// Customers can only see their own orders
+		if (req.user.role === "customer") {
+			filter["customer.email"] = req.user.email;
+		}
+
 		// Search functionality
 		if (search) {
 			filter.$or = [
@@ -110,6 +116,18 @@ exports.getOrder = async (req, res) => {
 			});
 		}
 
+		// Check if user is authorized to view this order
+		// Customers can only view their own orders
+		if (
+			req.user.role === "customer" &&
+			order.customer.email !== req.user.email
+		) {
+			return res.status(403).json({
+				success: false,
+				message: "You are not authorized to view this order",
+			});
+		}
+
 		res.json({
 			success: true,
 			data: order,
@@ -140,10 +158,10 @@ exports.createOrder = async (req, res) => {
 		} = req.body;
 
 		// Validate required fields
-		if (!customer || !customer.name) {
+		if (!customer || !customer.name || !customer.id) {
 			return res.status(400).json({
 				success: false,
-				message: "Customer name is required",
+				message: "Customer name and ID are required",
 			});
 		}
 
