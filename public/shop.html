@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>FRISCHLY Shop - Fresh Products</title>
+
+		<!-- Favicon and App Icons -->
+		<link
+			rel="icon"
+			type="image/png"
+			sizes="16x16"
+			href="icons/favicon_16x16.png"
+		/>
+		<link
+			rel="icon"
+			type="image/png"
+			sizes="32x32"
+			href="icons/favicon_32x32.png"
+		/>
+		<link
+			rel="icon"
+			type="image/png"
+			sizes="48x48"
+			href="icons/favicon_48x48.png"
+		/>
+
+		<!-- Apple Touch Icons -->
+		<link
+			rel="apple-touch-icon"
+			sizes="72x72"
+			href="icons/app_icon_72x72.png"
+		/>
+		<link
+			rel="apple-touch-icon"
+			sizes="96x96"
+			href="icons/app_icon_96x96.png"
+		/>
+		<link
+			rel="apple-touch-icon"
+			sizes="128x128"
+			href="icons/app_icon_128x128.png"
+		/>
+		<link
+			rel="apple-touch-icon"
+			sizes="192x192"
+			href="icons/app_icon_192x192.png"
+		/>
+		<link
+			rel="apple-touch-icon"
+			sizes="256x256"
+			href="icons/app_icon_256x256.png"
+		/>
+		<link
+			rel="apple-touch-icon"
+			sizes="512x512"
+			href="icons/app_icon_512x512.png"
+		/>
+		<link
+			rel="apple-touch-icon"
+			sizes="1024x1024"
+			href="icons/app_icon_1024x1024.png"
+		/>
+
+		<!-- Manifest for PWA -->
+		<meta name="theme-color" content="#FFC300" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+		<meta name="apple-mobile-web-app-title" content="FRISCHLY Shop" />
+
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			body {
+				font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+				background: #f8f9fa;
+				min-height: 100vh;
+				color: #333;
+			}
+
+			/* Header Styles */
+			.header {
+				background: linear-gradient(135deg, #ffc300 0%, #ff8c00 100%);
+				color: #000;
+				padding: 20px 0;
+				box-shadow: 0 2px 10px rgba(255, 195, 0, 0.3);
+				position: sticky;
+				top: 0;
+				z-index: 100;
+			}
+
+			.header-content {
+				max-width: 1200px;
+				margin: 0 auto;
+				padding: 0 20px;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+
+			.logo {
+				font-size: 28px;
+				font-weight: bold;
+				display: flex;
+				align-items: center;
+				gap: 10px;
+			}
+
+			.logo-icon {
+				font-size: 32px;
+			}
+
+			.user-actions {
+				display: flex;
+				align-items: center;
+				gap: 15px;
+			}
+
+			.cart-button {
+				position: relative;
+				background: #fff;
+				color: #333;
+				border: 1px solid #ddd;
+				padding: 8px 12px;
+				border-radius: 6px;
+				cursor: pointer;
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				transition: all 0.3s ease;
+			}
+
+			.cart-button:hover {
+				background: #f8f9fa;
+				transform: translateY(-1px);
+			}
+
+			.cart-icon {
+				font-size: 18px;
+			}
+
+			.cart-count {
+				background: #dc3545;
+				color: white;
+				border-radius: 50%;
+				padding: 2px 6px;
+				font-size: 12px;
+				font-weight: bold;
+				min-width: 18px;
+				text-align: center;
+				display: none;
+			}
+
+			.cart-count.show {
+				display: inline-block;
+			}
+
+			.btn {
+				padding: 8px 16px;
+				border: none;
+				border-radius: 6px;
+				font-size: 14px;
+				font-weight: 600;
+				cursor: pointer;
+				text-decoration: none;
+				display: inline-block;
+				transition: all 0.3s ease;
+			}
+
+			.btn-primary {
+				background: #000;
+				color: #ffc300;
+			}
+
+			.btn-primary:hover {
+				background: #333;
+				transform: translateY(-1px);
+			}
+
+			.btn-secondary {
+				background: #f8f9fa;
+				color: #333;
+				border: 1px solid #ddd;
+			}
+
+			.btn-secondary:hover {
+				background: #e9ecef;
+			}
+
+			/* Main Content */
+			.main-content {
+				max-width: 1200px;
+				margin: 0 auto;
+				padding: 30px 20px;
+			}
+
+			.page-title {
+				font-size: 32px;
+				font-weight: 700;
+				color: #222;
+				margin-bottom: 10px;
+				text-align: center;
+			}
+
+			.page-subtitle {
+				font-size: 16px;
+				color: #666;
+				text-align: center;
+				margin-bottom: 30px;
+			}
+
+			/* Filters Section */
+			.filters-section {
+				background: #fff;
+				border-radius: 12px;
+				padding: 20px;
+				margin-bottom: 30px;
+				box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+				display: flex;
+				gap: 20px;
+				align-items: center;
+				flex-wrap: wrap;
+				justify-content: center;
+			}
+
+			.filter-group {
+				display: flex;
+				flex-direction: column;
+				gap: 5px;
+			}
+
+			.filter-group label {
+				font-size: 12px;
+				font-weight: 600;
+				color: #333;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+			}
+
+			.filter-group select,
+			.filter-group input {
+				padding: 10px 12px;
+				border: 1px solid #ddd;
+				border-radius: 6px;
+				font-size: 14px;
+				min-width: 150px;
+			}
+
+			/* Products Grid */
+			.products-section {
+				margin-bottom: 40px;
+			}
+
+			.products-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+				gap: 18px;
+			}
+
+			.product-card {
+				background: #fff;
+				border-radius: 12px;
+				overflow: hidden;
+				box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+				transition: transform 0.3s ease, box-shadow 0.3s ease;
+				position: relative;
+			}
+
+			.product-card:hover {
+				transform: translateY(-5px);
+				box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+			}
+
+			.product-image {
+				width: 100%;
+				height: 160px;
+				background: #f8f9fa;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				position: relative;
+				overflow: hidden;
+			}
+
+			.product-image img {
+				width: 100%;
+				height: 100%;
+				object-fit: cover;
+			}
+
+			.product-image .no-image {
+				color: #999;
+				font-size: 36px;
+			}
+
+			.product-info {
+				padding: 16px;
+			}
+
+			.product-name {
+				font-size: 16px;
+				font-weight: 600;
+				color: #222;
+				margin-bottom: 6px;
+				display: -webkit-box;
+				-webkit-line-clamp: 2;
+				line-clamp: 2;
+				-webkit-box-orient: vertical;
+				overflow: hidden;
+			}
+
+			.product-price {
+				font-size: 18px;
+				font-weight: 700;
+				color: #28a745;
+				margin-bottom: 8px;
+			}
+
+			.product-description {
+				color: #666;
+				font-size: 13px;
+				line-height: 1.4;
+				margin-bottom: 12px;
+				display: -webkit-box;
+				-webkit-line-clamp: 2;
+				line-clamp: 2;
+				-webkit-box-orient: vertical;
+				overflow: hidden;
+			}
+
+			.product-meta {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				font-size: 11px;
+				color: #888;
+				margin-bottom: 12px;
+			}
+
+			.product-category {
+				background: #e3f2fd;
+				color: #1565c0;
+				padding: 4px 8px;
+				border-radius: 12px;
+				font-weight: 500;
+			}
+
+			.product-stock {
+				color: #28a745;
+				font-weight: 600;
+			}
+
+			.product-stock.low {
+				color: #fd7e14;
+			}
+
+			.product-stock.out {
+				color: #dc3545;
+			}
+
+			/* Loading and Empty States */
+			.loading {
+				text-align: center;
+				padding: 60px 20px;
+				color: #666;
+			}
+
+			.empty-state {
+				text-align: center;
+				padding: 60px 20px;
+				color: #666;
+			}
+
+			.empty-state h3 {
+				font-size: 24px;
+				margin-bottom: 10px;
+				color: #333;
+			}
+
+			/* Cart Sidebar */
+			.cart-sidebar {
+				position: fixed;
+				top: 0;
+				right: -400px;
+				width: 400px;
+				height: 100vh;
+				background: #fff;
+				box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+				z-index: 1000;
+				transition: right 0.3s ease;
+				display: flex;
+				flex-direction: column;
+			}
+
+			.cart-sidebar.open {
+				right: 0;
+			}
+
+			.cart-header {
+				padding: 20px;
+				border-bottom: 1px solid #eee;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+
+			.cart-title {
+				font-size: 20px;
+				font-weight: 600;
+				margin: 0;
+			}
+
+			.cart-close {
+				background: none;
+				border: none;
+				font-size: 24px;
+				cursor: pointer;
+				color: #666;
+			}
+
+			.cart-items {
+				flex: 1;
+				overflow-y: auto;
+				padding: 0;
+			}
+
+			.cart-item {
+				display: flex;
+				padding: 15px 20px;
+				border-bottom: 1px solid #f0f0f0;
+				align-items: center;
+				gap: 12px;
+			}
+
+			.cart-item-image {
+				width: 50px;
+				height: 50px;
+				background: #f8f9fa;
+				border-radius: 6px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 20px;
+				flex-shrink: 0;
+			}
+
+			.cart-item-info {
+				flex: 1;
+				min-width: 0;
+			}
+
+			.cart-item-name {
+				font-weight: 600;
+				font-size: 14px;
+				margin-bottom: 4px;
+				display: -webkit-box;
+				-webkit-line-clamp: 2;
+				line-clamp: 2;
+				-webkit-box-orient: vertical;
+				overflow: hidden;
+			}
+
+			.cart-item-price {
+				color: #28a745;
+				font-weight: 600;
+				font-size: 14px;
+			}
+
+			.cart-item-controls {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+			}
+
+			.quantity-btn {
+				width: 24px;
+				height: 24px;
+				border: 1px solid #ddd;
+				background: #fff;
+				border-radius: 4px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				cursor: pointer;
+				font-size: 14px;
+				font-weight: bold;
+			}
+
+			.quantity-btn:hover {
+				background: #f8f9fa;
+			}
+
+			.cart-item-quantity {
+				min-width: 30px;
+				text-align: center;
+				font-weight: 600;
+			}
+
+			.remove-item {
+				color: #dc3545;
+				cursor: pointer;
+				font-size: 16px;
+				padding: 4px;
+			}
+
+			.cart-footer {
+				border-top: 1px solid #eee;
+				padding: 20px;
+			}
+
+			.cart-total {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				font-size: 18px;
+				font-weight: 600;
+				margin-bottom: 15px;
+			}
+
+			.checkout-btn {
+				width: 100%;
+				padding: 12px;
+				background: #28a745;
+				color: white;
+				border: none;
+				border-radius: 6px;
+				font-size: 16px;
+				font-weight: 600;
+				cursor: pointer;
+				transition: background 0.3s ease;
+			}
+
+			.checkout-btn:hover {
+				background: #218838;
+			}
+
+			.checkout-btn:disabled {
+				background: #6c757d;
+				cursor: not-allowed;
+			}
+
+			.empty-cart {
+				text-align: center;
+				padding: 60px 20px;
+				color: #666;
+			}
+
+			.empty-cart-icon {
+				font-size: 48px;
+				margin-bottom: 15px;
+			}
+
+			/* Add to Cart Button */
+			.add-to-cart-btn {
+				width: 100%;
+				padding: 10px;
+				background: #ffc300;
+				color: #000;
+				border: none;
+				border-radius: 6px;
+				font-size: 14px;
+				font-weight: 600;
+				cursor: pointer;
+				transition: all 0.3s ease;
+				margin-top: 12px;
+			}
+
+			.add-to-cart-btn:hover {
+				background: #ff8c00;
+				transform: translateY(-1px);
+			}
+
+			.add-to-cart-btn:disabled {
+				background: #ccc;
+				cursor: not-allowed;
+				transform: none;
+			}
+
+			.add-to-cart-btn.added {
+				background: #28a745;
+				color: white;
+			}
+
+			/* Overlay */
+			.cart-overlay {
+				position: fixed;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 100%;
+				background: rgba(0, 0, 0, 0.5);
+				z-index: 999;
+				opacity: 0;
+				visibility: hidden;
+				transition: all 0.3s ease;
+			}
+
+			.cart-overlay.active {
+				opacity: 1;
+				visibility: visible;
+			}
+
+			@media (max-width: 480px) {
+				.products-grid {
+					grid-template-columns: 1fr;
+				}
+
+				.main-content {
+					padding: 20px 15px;
+				}
+
+				.cart-sidebar {
+					width: 100%;
+					right: -100%;
+				}
+
+				.cart-sidebar.open {
+					right: 0;
+				}
+			}
+
+			/* Pagination Styles */
+			.pagination-section {
+				margin-top: 40px;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 20px;
+			}
+
+			.pagination-info {
+				font-size: 14px;
+				color: #666;
+				font-weight: 500;
+			}
+
+			.pagination-controls {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+			}
+
+			.pagination-btn {
+				padding: 10px 16px;
+				border: 1px solid #ddd;
+				background: #fff;
+				color: #333;
+				border-radius: 6px;
+				cursor: pointer;
+				font-size: 14px;
+				font-weight: 500;
+				transition: all 0.3s ease;
+				display: flex;
+				align-items: center;
+				gap: 5px;
+			}
+
+			.pagination-btn:hover:not(:disabled) {
+				background: #f8f9fa;
+				border-color: #ccc;
+			}
+
+			.pagination-btn:disabled {
+				background: #f5f5f5;
+				color: #ccc;
+				cursor: not-allowed;
+			}
+
+			.pagination-numbers {
+				display: flex;
+				gap: 5px;
+			}
+
+			.page-number {
+				padding: 10px 12px;
+				border: 1px solid #ddd;
+				background: #fff;
+				color: #333;
+				border-radius: 6px;
+				cursor: pointer;
+				font-size: 14px;
+				font-weight: 500;
+				min-width: 40px;
+				text-align: center;
+				transition: all 0.3s ease;
+			}
+
+			.page-number:hover {
+				background: #f8f9fa;
+				border-color: #ccc;
+			}
+
+			.page-number.active {
+				background: #ffc300;
+				color: #000;
+				border-color: #ffc300;
+				font-weight: 600;
+			}
+
+			.page-dots {
+				padding: 10px 8px;
+				color: #666;
+				font-size: 14px;
+				align-self: center;
+			}
+		</style>
+	</head>
+	<body>
+		<!-- Header -->
+		<header class="header">
+			<div class="header-content">
+				<div class="logo">
+					<span class="logo-icon">🛒</span>
+					<span>FRISCHLY Shop</span>
+				</div>
+				<div class="user-actions">
+					<button onclick="toggleCart()" class="cart-button">
+						<span class="cart-icon">🛒</span>
+						<span>Cart</span>
+						<span id="cart-count" class="cart-count">0</span>
+					</button>
+					<a href="profile.html" class="btn btn-secondary">My Profile</a>
+					<button onclick="logout()" class="btn btn-primary">Sign Out</button>
+				</div>
+			</div>
+		</header>
+
+		<!-- Main Content -->
+		<main class="main-content">
+			<h1 class="page-title">Fresh Products</h1>
+			<p class="page-subtitle">
+				Discover our selection of fresh, quality products
+			</p>
+
+			<!-- Filters Section -->
+			<section class="filters-section">
+				<div class="filter-group">
+					<label for="category-filter">Category</label>
+					<select id="category-filter" onchange="filterProducts()">
+						<option value="all">All Categories</option>
+					</select>
+				</div>
+				<div class="filter-group">
+					<label for="search-input">Search Products</label>
+					<input
+						type="text"
+						id="search-input"
+						placeholder="Search by name..."
+						onkeyup="filterProducts()"
+					/>
+				</div>
+				<div class="filter-group">
+					<label for="sort-select">Sort By</label>
+					<select id="sort-select" onchange="filterProducts()">
+						<option value="name">Name (A-Z)</option>
+						<option value="price-low">Price (Low to High)</option>
+						<option value="price-high">Price (High to Low)</option>
+						<option value="newest">Newest First</option>
+					</select>
+				</div>
+			</section>
+
+			<!-- Products Section -->
+			<section class="products-section">
+				<div id="products-loading" class="loading">
+					<div>Loading products...</div>
+				</div>
+				<div
+					id="products-grid"
+					class="products-grid"
+					style="display: none"
+				></div>
+				<div id="empty-state" class="empty-state" style="display: none">
+					<h3>No products found</h3>
+					<p>Try adjusting your search or filter criteria.</p>
+				</div>
+			</section>
+
+			<!-- Pagination Section -->
+			<section
+				class="pagination-section"
+				id="pagination-section"
+				style="display: none"
+			>
+				<div class="pagination-info">
+					<span id="pagination-info">Showing 1-12 of 50 products</span>
+				</div>
+				<div class="pagination-controls">
+					<button
+						id="prev-page"
+						class="pagination-btn"
+						onclick="changePage(currentPage - 1)"
+					>
+						<span>‹</span> Previous
+					</button>
+					<div class="pagination-numbers" id="pagination-numbers"></div>
+					<button
+						id="next-page"
+						class="pagination-btn"
+						onclick="changePage(currentPage + 1)"
+					>
+						Next <span>›</span>
+					</button>
+				</div>
+			</section>
+		</main>
+
+		<!-- Cart Sidebar -->
+		<div id="cart-overlay" class="cart-overlay"></div>
+		<div id="cart-sidebar" class="cart-sidebar">
+			<div class="cart-header">
+				<h2 class="cart-title">Shopping Cart</h2>
+				<button onclick="toggleCart()" class="cart-close">&times;</button>
+			</div>
+			<div id="cart-items" class="cart-items">
+				<div class="empty-cart">
+					<div class="empty-cart-icon">🛒</div>
+					<h3>Your cart is empty</h3>
+					<p>Add some products to get started!</p>
+				</div>
+			</div>
+			<div class="cart-footer">
+				<div class="cart-total">
+					<span>Total:</span>
+					<span id="cart-total">€0.00</span>
+				</div>
+				<button onclick="checkout()" class="checkout-btn" disabled>
+					Checkout
+				</button>
+			</div>
+		</div>
+
+		<!-- Global Config -->
+		<script src="js/config.js"></script>
+
+		<script>
+			let allProducts = [];
+			let filteredProducts = [];
+			let allCategories = [];
+			let cart = [];
+
+			// Pagination variables
+			let currentPage = 1;
+			let totalPages = 1;
+			let totalProducts = 0;
+			let productsPerPage = 20; // Show 20 products per page
+			let currentFilters = {
+				search: "",
+				category: "all",
+				sortBy: "name",
+			};
+
+			// Initialize the page
+			document.addEventListener("DOMContentLoaded", function () {
+				loadCategories();
+				loadProducts();
+				loadCart();
+			});
+
+			// Load categories for filter dropdown
+			async function loadCategories() {
+				try {
+					// Load categories with their subcategories
+					const [categoriesResponse, subcategoriesResponse] = await Promise.all(
+						[
+							fetch(`${API_BASE_URL}/categories`),
+							fetch(`${API_BASE_URL}/subcategories`),
+						]
+					);
+
+					let categories = [];
+					let subcategories = [];
+
+					if (categoriesResponse.ok) {
+						const categoriesData = await categoriesResponse.json();
+						categories = categoriesData.data || [];
+					}
+
+					if (subcategoriesResponse.ok) {
+						const subcategoriesData = await subcategoriesResponse.json();
+						subcategories = subcategoriesData.data || [];
+					}
+
+					allCategories = categories;
+					populateCategoryFilter(subcategories);
+				} catch (error) {
+					console.error("Error loading categories and subcategories:", error);
+				}
+			}
+
+			// Populate category filter dropdown
+			function populateCategoryFilter(subcategories) {
+				const categoryFilter = document.getElementById("category-filter");
+				categoryFilter.innerHTML =
+					'<option value="all">All Categories</option>';
+
+				// Create a map of categories for easy lookup
+				const categoryMap = {};
+				allCategories.forEach((category) => {
+					categoryMap[category._id] = category;
+				});
+
+				// Group subcategories by parent category
+				const subcategoriesByCategory = {};
+				subcategories.forEach((subcategory) => {
+					const parentId =
+						subcategory.parentCategory?._id || subcategory.parentCategory;
+					if (!subcategoriesByCategory[parentId]) {
+						subcategoriesByCategory[parentId] = [];
+					}
+					subcategoriesByCategory[parentId].push(subcategory);
+				});
+
+				// Add categories and their subcategories
+				allCategories.forEach((category) => {
+					if (category.isActive) {
+						const option = document.createElement("option");
+						option.value = `category-${category._id}`;
+						option.textContent = category.name;
+						option.setAttribute("data-type", "category");
+						categoryFilter.appendChild(option);
+
+						// Add subcategories for this category
+						const categorySubcategories =
+							subcategoriesByCategory[category._id] || [];
+						categorySubcategories.forEach((subcategory) => {
+							if (subcategory.isActive) {
+								const subOption = document.createElement("option");
+								subOption.value = `subcategory-${subcategory._id}`;
+								subOption.textContent = `  └ ${subcategory.name}`;
+								subOption.setAttribute("data-type", "subcategory");
+								categoryFilter.appendChild(subOption);
+							}
+						});
+					}
+				});
+			}
+
+			// Load products from API with pagination and filters
+			async function loadProducts(page = 1, filters = {}) {
+				const loadingDiv = document.getElementById("products-loading");
+				const gridDiv = document.getElementById("products-grid");
+
+				loadingDiv.style.display = "block";
+				gridDiv.style.display = "none";
+
+				try {
+					// Debug API_BASE_URL
+					console.log("API_BASE_URL:", API_BASE_URL);
+					console.log("typeof API_BASE_URL:", typeof API_BASE_URL);
+
+					// Build query parameters
+					const params = new URLSearchParams({
+						page: page,
+						limit: productsPerPage,
+						isActive: true,
+						...filters,
+					});
+
+					console.log(`Loading products: page ${page}, filters:`, filters);
+					console.log(`API URL: ${API_BASE_URL}/products?${params}`);
+					console.log(
+						`Full URL: ${API_BASE_URL}/products?${params.toString()}`
+					);
+
+					const response = await fetch(`${API_BASE_URL}/products?${params}`);
+					console.log("Response status:", response.status);
+					console.log("Response ok:", response.ok);
+
+					if (!response.ok) {
+						const errorText = await response.text();
+						console.error("Response error:", errorText);
+						throw new Error(
+							`Failed to load products: ${response.status} ${response.statusText}`
+						);
+					}
+
+					const data = await response.json();
+					console.log(`API Response:`, data);
+
+					allProducts = data.data || [];
+					filteredProducts = [...allProducts];
+
+					// Update pagination info
+					currentPage = data.pagination?.currentPage || 1;
+					totalPages = data.pagination?.totalPages || 1;
+					totalProducts = data.pagination?.totalProducts || 0;
+
+					console.log(
+						`Pagination: Page ${currentPage}/${totalPages}, Total: ${totalProducts}`
+					);
+
+					displayProducts(filteredProducts);
+					updatePaginationControls();
+
+					loadingDiv.style.display = "none";
+					gridDiv.style.display = "grid";
+				} catch (error) {
+					console.error("Error loading products:", error);
+					console.error("Error details:", error.message);
+					loadingDiv.innerHTML =
+						'<div style="color: #dc3545;">Error loading products. Please try again.</div>';
+				}
+			}
+
+			// Display products in grid
+			function displayProducts(products) {
+				const gridDiv = document.getElementById("products-grid");
+				const emptyState = document.getElementById("empty-state");
+
+				if (products.length === 0) {
+					gridDiv.style.display = "none";
+					emptyState.style.display = "block";
+					return;
+				}
+
+				emptyState.style.display = "none";
+				gridDiv.style.display = "grid";
+
+				gridDiv.innerHTML = products
+					.map((product) => {
+						const imageUrl = product.picture || "";
+						const price = product.price || 0;
+						const finalPrice = calculateFinalPrice(product);
+						const categoryName =
+							product.subcategory?.parentCategory?.name || "Uncategorized";
+						const subcategoryName = product.subcategory?.name || "";
+						const displayCategory = subcategoryName
+							? `${categoryName} > ${subcategoryName}`
+							: categoryName;
+						const stockStatus = getStockStatus(product.stock);
+
+						return `
+							<div class="product-card">
+								<div class="product-image">
+									${
+										imageUrl
+											? `<img src="${imageUrl}" alt="${product.name}" onerror="this.parentElement.innerHTML='<div class=\\'no-image\\'>📦</div>'">`
+											: '<div class="no-image">📦</div>'
+									}
+								</div>
+								<div class="product-info">
+									<div class="product-name">${product.name}</div>
+									<div class="product-price">€${finalPrice.toFixed(2)}</div>
+									<div class="product-description">${
+										product.description || "No description available."
+									}</div>
+									<div class="product-meta">
+										<span class="product-category">${displayCategory}</span>
+										<span class="product-stock ${stockStatus.class}">${stockStatus.text}</span>
+									</div>
+									<button onclick="addToCart('${product._id}', '${product.name.replace(
+							/'/g,
+							"\\'"
+						)}', ${finalPrice}, '${imageUrl}')" class="add-to-cart-btn" ${
+							stockStatus.class === "out" ? "disabled" : ""
+						}>
+										${stockStatus.class === "out" ? "Out of Stock" : "Add to Cart"}
+									</button>
+								</div>
+							</div>
+						`;
+					})
+					.join("");
+			}
+
+			// Calculate final price including tax and bottle refund
+			function calculateFinalPrice(product) {
+				const basePrice = product.price || 0;
+				const discount = product.discount || 0;
+				const tax = product.tax || 0;
+				const bottlerefund = product.bottlerefund || 0;
+
+				// Calculate discounted price
+				const discountAmount = (basePrice * discount) / 100;
+				const discountedPrice = basePrice - discountAmount;
+
+				// Calculate final price with tax and bottle refund
+				const taxAmount = (discountedPrice * tax) / 100;
+				const bottlerefundAmount = bottlerefund;
+
+				return discountedPrice + taxAmount + bottlerefundAmount;
+			}
+
+			// Get stock status
+			function getStockStatus(stock) {
+				if (!stock || stock <= 0) {
+					return { text: "Out of Stock", class: "out" };
+				} else if (stock <= 10) {
+					return { text: `Low Stock (${stock})`, class: "low" };
+				} else {
+					return { text: `In Stock (${stock})`, class: "" };
+				}
+			}
+
+			// Filter products based on search and category
+			function filterProducts() {
+				const searchTerm = document
+					.getElementById("search-input")
+					.value.toLowerCase();
+				const categoryValue = document.getElementById("category-filter").value;
+				const sortBy = document.getElementById("sort-select").value;
+
+				// Update current filters
+				currentFilters = {
+					search: searchTerm,
+					category: categoryValue,
+					sortBy: sortBy,
+				};
+
+				// Build API filter parameters
+				const apiFilters = {};
+
+				if (searchTerm) {
+					apiFilters.search = searchTerm;
+				}
+
+				if (categoryValue !== "all") {
+					if (categoryValue.startsWith("category-")) {
+						// Filter by parent category
+						const categoryId = categoryValue.replace("category-", "");
+						apiFilters.category = categoryId;
+					} else if (categoryValue.startsWith("subcategory-")) {
+						// Filter by subcategory
+						const subcategoryId = categoryValue.replace("subcategory-", "");
+						apiFilters.subcategory = subcategoryId;
+					}
+				}
+
+				if (sortBy) {
+					apiFilters.sortBy = sortBy;
+					apiFilters.sortOrder = "desc"; // Default to descending
+				}
+
+				// Reset to first page when filtering
+				loadProducts(1, apiFilters);
+			}
+
+			// Update pagination controls
+			function updatePaginationControls() {
+				const paginationSection = document.getElementById("pagination-section");
+				const paginationInfo = document.getElementById("pagination-info");
+				const paginationNumbers = document.getElementById("pagination-numbers");
+				const prevBtn = document.getElementById("prev-page");
+				const nextBtn = document.getElementById("next-page");
+
+				if (totalPages <= 1) {
+					paginationSection.style.display = "none";
+					return;
+				}
+
+				paginationSection.style.display = "flex";
+
+				// Update pagination info
+				const startItem = (currentPage - 1) * productsPerPage + 1;
+				const endItem = Math.min(currentPage * productsPerPage, totalProducts);
+				paginationInfo.textContent = `Showing ${startItem}-${endItem} of ${totalProducts} products`;
+
+				// Update prev/next buttons
+				prevBtn.disabled = currentPage <= 1;
+				nextBtn.disabled = currentPage >= totalPages;
+
+				// Generate page numbers
+				paginationNumbers.innerHTML = generatePageNumbers();
+			}
+
+			// Generate page number buttons
+			function generatePageNumbers() {
+				let pages = [];
+				const maxVisiblePages = 5;
+
+				if (totalPages <= maxVisiblePages) {
+					// Show all pages
+					for (let i = 1; i <= totalPages; i++) {
+						pages.push(createPageButton(i));
+					}
+				} else {
+					// Show pages with ellipsis
+					if (currentPage <= 3) {
+						// Show first 3 pages + ellipsis + last page
+						for (let i = 1; i <= 3; i++) {
+							pages.push(createPageButton(i));
+						}
+						pages.push('<span class="page-dots">...</span>');
+						pages.push(createPageButton(totalPages));
+					} else if (currentPage >= totalPages - 2) {
+						// Show first page + ellipsis + last 3 pages
+						pages.push(createPageButton(1));
+						pages.push('<span class="page-dots">...</span>');
+						for (let i = totalPages - 2; i <= totalPages; i++) {
+							pages.push(createPageButton(i));
+						}
+					} else {
+						// Show first page + ellipsis + current-1, current, current+1 + ellipsis + last page
+						pages.push(createPageButton(1));
+						pages.push('<span class="page-dots">...</span>');
+						for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+							pages.push(createPageButton(i));
+						}
+						pages.push('<span class="page-dots">...</span>');
+						pages.push(createPageButton(totalPages));
+					}
+				}
+
+				return pages.join("");
+			}
+
+			// Create a page number button
+			function createPageButton(pageNum) {
+				const isActive = pageNum === currentPage;
+				return `<button class="page-number ${
+					isActive ? "active" : ""
+				}" onclick="changePage(${pageNum})">${pageNum}</button>`;
+			}
+
+			// Change page
+			function changePage(page) {
+				console.log(`changePage called with page: ${page}`);
+				console.log(`currentFilters:`, currentFilters);
+				console.log(`currentPage: ${currentPage}, totalPages: ${totalPages}`);
+
+				if (page < 1 || page > totalPages || page === currentPage) {
+					console.log(
+						`Invalid page change: page=${page}, currentPage=${currentPage}, totalPages=${totalPages}`
+					);
+					return;
+				}
+
+				// Build API filter parameters from current filters
+				const apiFilters = {};
+
+				if (currentFilters.search) {
+					apiFilters.search = currentFilters.search;
+				}
+
+				if (currentFilters.category !== "all") {
+					if (currentFilters.category.startsWith("category-")) {
+						// Filter by parent category
+						const categoryId = currentFilters.category.replace("category-", "");
+						apiFilters.category = categoryId;
+						console.log(`Filtering by category: ${categoryId}`);
+					} else if (currentFilters.category.startsWith("subcategory-")) {
+						// Filter by subcategory
+						const subcategoryId = currentFilters.category.replace(
+							"subcategory-",
+							""
+						);
+						apiFilters.subcategory = subcategoryId;
+						console.log(`Filtering by subcategory: ${subcategoryId}`);
+					}
+				}
+
+				if (currentFilters.sortBy) {
+					apiFilters.sortBy = currentFilters.sortBy;
+					apiFilters.sortOrder = "desc"; // Default to descending
+				}
+
+				console.log(
+					`Calling loadProducts with page=${page}, apiFilters=`,
+					apiFilters
+				);
+
+				// Load products with current page and properly formatted filters
+				loadProducts(page, apiFilters);
+			}
+
+			// Cart Functions
+			function loadCart() {
+				const savedCart = localStorage.getItem("cart");
+				if (savedCart) {
+					cart = JSON.parse(savedCart);
+					updateCartDisplay();
+				}
+			}
+
+			function saveCart() {
+				localStorage.setItem("cart", JSON.stringify(cart));
+			}
+
+			function addToCart(productId, productName, price, imageUrl) {
+				const existingItem = cart.find((item) => item.id === productId);
+
+				if (existingItem) {
+					existingItem.quantity += 1;
+				} else {
+					cart.push({
+						id: productId,
+						name: productName,
+						price: price,
+						imageUrl: imageUrl,
+						quantity: 1,
+					});
+				}
+
+				saveCart();
+				updateCartDisplay();
+				showAddToCartFeedback(productId);
+			}
+
+			function removeFromCart(productId) {
+				cart = cart.filter((item) => item.id !== productId);
+				saveCart();
+				updateCartDisplay();
+			}
+
+			function updateQuantity(productId, newQuantity) {
+				if (newQuantity <= 0) {
+					removeFromCart(productId);
+					return;
+				}
+
+				const item = cart.find((item) => item.id === productId);
+				if (item) {
+					item.quantity = newQuantity;
+					saveCart();
+					updateCartDisplay();
+				}
+			}
+
+			function updateCartDisplay() {
+				const cartCount = document.getElementById("cart-count");
+				const cartItems = document.getElementById("cart-items");
+				const cartTotal = document.getElementById("cart-total");
+				const checkoutBtn = document.querySelector(".checkout-btn");
+
+				const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+				const totalPrice = cart.reduce(
+					(sum, item) => sum + item.price * item.quantity,
+					0
+				);
+
+				// Update cart count
+				cartCount.textContent = totalItems;
+				cartCount.classList.toggle("show", totalItems > 0);
+
+				// Update cart items
+				if (cart.length === 0) {
+					cartItems.innerHTML = `
+						<div class="empty-cart">
+							<div class="empty-cart-icon">🛒</div>
+							<h3>Your cart is empty</h3>
+							<p>Add some products to get started!</p>
+						</div>
+					`;
+				} else {
+					cartItems.innerHTML = cart
+						.map(
+							(item) => `
+						<div class="cart-item">
+							<div class="cart-item-image">
+								${
+									item.imageUrl
+										? `<img src="${item.imageUrl}" alt="${item.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;" onerror="this.parentElement.innerHTML='📦'">`
+										: "📦"
+								}
+							</div>
+							<div class="cart-item-info">
+								<div class="cart-item-name">${item.name}</div>
+								<div class="cart-item-price">€${item.price.toFixed(2)}</div>
+							</div>
+							<div class="cart-item-controls">
+								<button onclick="updateQuantity('${item.id}', ${
+								item.quantity - 1
+							})" class="quantity-btn">-</button>
+								<span class="cart-item-quantity">${item.quantity}</span>
+								<button onclick="updateQuantity('${item.id}', ${
+								item.quantity + 1
+							})" class="quantity-btn">+</button>
+								<span onclick="removeFromCart('${
+									item.id
+								}')" class="remove-item" title="Remove item">🗑️</span>
+							</div>
+						</div>
+					`
+						)
+						.join("");
+				}
+
+				// Update total
+				cartTotal.textContent = `€${totalPrice.toFixed(2)}`;
+
+				// Update checkout button
+				checkoutBtn.disabled = cart.length === 0;
+			}
+
+			function toggleCart() {
+				const sidebar = document.getElementById("cart-sidebar");
+				const overlay = document.getElementById("cart-overlay");
+
+				sidebar.classList.toggle("open");
+				overlay.classList.toggle("active");
+
+				if (sidebar.classList.contains("open")) {
+					document.body.style.overflow = "hidden";
+				} else {
+					document.body.style.overflow = "";
+				}
+			}
+
+			function showAddToCartFeedback(productId) {
+				// Find the add to cart button for this product and show feedback
+				const buttons = document.querySelectorAll(
+					`[onclick*="addToCart('${productId}'"]`
+				);
+				buttons.forEach((button) => {
+					const originalText = button.textContent;
+					button.textContent = "Added!";
+					button.classList.add("added");
+
+					setTimeout(() => {
+						button.textContent = originalText;
+						button.classList.remove("added");
+					}, 1500);
+				});
+			}
+
+			function checkout() {
+				if (cart.length === 0) return;
+
+				// For now, just show an alert. In a real app, this would redirect to checkout
+				alert(
+					`Checkout functionality would be implemented here. Cart total: €${cart
+						.reduce((sum, item) => sum + item.price * item.quantity, 0)
+						.toFixed(2)}`
+				);
+			}
+
+			// Close cart when clicking overlay
+			document
+				.getElementById("cart-overlay")
+				.addEventListener("click", toggleCart);
+
+			// Close cart on escape key
+			document.addEventListener("keydown", function (e) {
+				if (e.key === "Escape") {
+					const sidebar = document.getElementById("cart-sidebar");
+					const overlay = document.getElementById("cart-overlay");
+					if (sidebar.classList.contains("open")) {
+						toggleCart();
+					}
+				}
+			});
+
+			// Logout function
+			function logout() {
+				// Clear cart from localStorage
+				localStorage.removeItem("cart");
+
+				// Clear auth token
+				localStorage.removeItem("authToken");
+
+				// Show feedback message and redirect
+				const mainContent = document.querySelector(".main-content");
+				mainContent.innerHTML = `
+					<div style="text-align: center; padding: 50px 20px;">
+						<div style="background: #d4edda; color: #155724; padding: 20px; border-radius: 8px; margin-bottom: 30px; max-width: 400px; margin-left: auto; margin-right: auto;">
+							✅ Signed out successfully!
+						</div>
+						<a href="signin.html" class="btn btn-primary" style="margin-right: 10px;">Sign In</a>
+						<a href="index.html" class="btn btn-secondary">Home</a>
+					</div>
+				`;
+			}
+		</script>
+	</body>
+</html>

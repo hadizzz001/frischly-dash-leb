@@ -358,7 +358,10 @@
 							localStorage.setItem("refreshToken", result.data.refreshToken);
 
 							// Role-based redirect
-							const redirectUrl = result.data.redirectUrl || "profile.html";
+							let redirectUrl = result.data.redirectUrl || "profile.html";
+							if (result.data.user && result.data.user.role === "customer") {
+								redirectUrl = "/shop";
+							}
 							setTimeout(() => {
 								window.location.href = redirectUrl;
 							}, 1500);

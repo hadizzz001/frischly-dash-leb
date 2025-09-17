@@ -8,12 +8,6 @@ const productSchema = new mongoose.Schema(
 			trim: true,
 			maxlength: [200, "Product name cannot be more than 200 characters"],
 		},
-		name: {
-			type: String,
-			required: [true, "Please provide a product name"],
-			trim: true,
-			maxlength: [200, "Product name cannot be more than 200 characters"],
-		},
 		barcode: {
 			type: String,
 			required: [true, "Please provide a barcode"],

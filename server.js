@@ -112,6 +112,11 @@ app.use("/api/zones", zoneRoutes);
 app.use("/api/waste", wasteRoutes);
 app.use("/api/subcategories", subcategoryRoutes);
 
+// Route for customer shop page
+app.get("/shop", (req, res) => {
+	res.sendFile(__dirname + "/public/shop.html");
+});
+
 // Health check route
 app.get("/api/health", (req, res) => {
 	res.json({

@@ -134,7 +134,7 @@ exports.createOrder = async (req, res) => {
 			items,
 			tax = 0,
 			discount = 0,
-			paymentMethod = "cash",
+			paymentMethod = "card",
 			shelfNumber = 0,
 			notes,
 		} = req.body;
