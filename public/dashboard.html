@@ -5668,6 +5668,7 @@
 			}
 
 			function updateSubcategoriesTable() {
+				showMessage("Loading subcategories...", "warning", 1000);
 				const tbody = document.getElementById("subcategories-table-body");
 				if (!tbody) {
 					console.error("Subcategories table body element not found");
