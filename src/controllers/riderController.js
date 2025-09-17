@@ -21,7 +21,7 @@ exports.getRiders = async (req, res) => {
 
 		// Build filter object
 		const filter = { isActive: true };
-		if (zone) filter.zone = zone;
+		if (zone) filter.zones = zone; // Check if zone is in zones array
 		if (status) filter.status = status;
 		if (vehicleType) filter.vehicleType = vehicleType;
 
@@ -54,7 +54,7 @@ exports.getRiders = async (req, res) => {
 						$or: [
 							{ "userInfo.name": { $regex: search, $options: "i" } },
 							{ "userInfo.email": { $regex: search, $options: "i" } },
-							{ zone: { $regex: search, $options: "i" } },
+							{ zones: { $regex: search, $options: "i" } },
 						],
 					},
 				},
@@ -196,7 +196,7 @@ exports.createRider = async (req, res) => {
 	try {
 		const {
 			userId,
-			zone,
+			zones,
 			vehicleType,
 			vehicleNumber,
 			workingHours,
@@ -204,10 +204,16 @@ exports.createRider = async (req, res) => {
 		} = req.body;
 
 		// Validate required fields
-		if (!userId || !zone || !vehicleType) {
+		if (
+			!userId ||
+			!zones ||
+			!Array.isArray(zones) ||
+			zones.length === 0 ||
+			!vehicleType
+		) {
 			return res.status(400).json({
 				success: false,
-				message: "User ID, zone, and vehicle type are required",
+				message: "User ID, zones (array), and vehicle type are required",
 			});
 		}
 
@@ -239,7 +245,7 @@ exports.createRider = async (req, res) => {
 		// Create rider profile
 		const rider = new Rider({
 			user: userId,
-			zone,
+			zones,
 			vehicleType,
 			vehicleNumber,
 			workingHours,
@@ -311,7 +317,7 @@ exports.updateRider = async (req, res) => {
 
 		// Update allowed fields
 		const allowedUpdates = [
-			"zone",
+			"zones",
 			"status",
 			"vehicleType",
 			"vehicleNumber",
@@ -323,7 +329,7 @@ exports.updateRider = async (req, res) => {
 
 		// If not admin/manager, limit what can be updated
 		if (req.user.role !== "admin" && req.user.role !== "manager") {
-			const restrictedFields = ["isVerified", "zone"];
+			const restrictedFields = ["isVerified", "zones"];
 			restrictedFields.forEach((field) => {
 				if (updates[field] !== undefined) {
 					delete updates[field];

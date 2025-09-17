@@ -1630,6 +1630,18 @@
 				color: #000;
 			}
 
+			.modal-body {
+				margin-bottom: 20px;
+			}
+
+			.modal-footer {
+				display: flex;
+				justify-content: flex-end;
+				gap: 10px;
+				padding-top: 20px;
+				border-top: 1px solid #f0f0f0;
+			}
+
 			.form-grid {
 				display: grid;
 				grid-template-columns: 1fr 1fr;
@@ -1668,6 +1680,17 @@
 				outline: none;
 				border-color: #000000;
 				box-shadow: 0 0 5px rgba(255, 195, 0, 0.3);
+			}
+
+			.form-row {
+				display: flex;
+				gap: 15px;
+				margin-bottom: 20px;
+			}
+
+			.form-group.half {
+				flex: 1;
+				margin-bottom: 0;
 			}
 
 			/* Zone checkboxes styling */
@@ -3260,49 +3283,64 @@
 				<!-- Profile Section -->
 				<div id="profile-section" class="content-section">
 					<div class="section-header">
-						<h2>Profile Settings</h2>
-						<p>Manage your personal information and preferences</p>
+						<h2 data-translation="profile-settings">Profile Settings</h2>
+						<p data-translation="manage-personal-info">
+							Manage your personal information and preferences
+						</p>
 					</div>
 
 					<div class="stats">
 						<div class="stat-card">
 							<div class="stat-value" id="member-since">-</div>
-							<div class="stat-label">Member Since</div>
+							<div class="stat-label" data-translation="member-since">
+								Member Since
+							</div>
 						</div>
 						<div class="stat-card">
 							<div class="stat-value" id="last-login">-</div>
-							<div class="stat-label">Last Login</div>
+							<div class="stat-label" data-translation="last-login">
+								Last Login
+							</div>
 						</div>
 						<div class="stat-card">
 							<div class="stat-value" id="account-status">-</div>
-							<div class="stat-label">Account Status</div>
+							<div class="stat-label" data-translation="account-status">
+								Account Status
+							</div>
 						</div>
 					</div>
 
 					<div class="user-card">
-						<h2 style="color: #333; margin-bottom: 20px">Your Profile</h2>
+						<h2
+							style="color: #333; margin-bottom: 20px"
+							data-translation="your-profile"
+						>
+							Your Profile
+						</h2>
 
 						<div class="user-info">
 							<div class="info-item">
-								<label>Full Name</label>
+								<label data-translation="full-name">Full Name</label>
 								<span id="user-name">-</span>
 							</div>
 							<div class="info-item">
-								<label>Email Address</label>
+								<label data-translation="email-address">Email Address</label>
 								<span id="user-email">-</span>
 							</div>
 							<div class="info-item">
-								<label>Phone Number</label>
+								<label data-translation="phone-number">Phone Number</label>
 								<span id="user-phone">-</span>
 							</div>
 							<div class="info-item">
-								<label>Account Role</label>
+								<label data-translation="account-role">Account Role</label>
 								<span id="user-role">-</span>
 							</div>
 						</div>
 
 						<div class="address-card">
-							<h3>Address Information</h3>
+							<h3 data-translation="address-information">
+								Address Information
+							</h3>
 							<div id="user-address">-</div>
 						</div>
 
@@ -3310,11 +3348,183 @@
 							<button class="btn btn-primary" onclick="editProfile()">
 								Edit Profile
 							</button>
-							<button class="btn btn-secondary" onclick="changePassword()">
+							<button
+								class="btn btn-secondary"
+								onclick="changePassword()"
+								data-translation="change-password"
+							>
 								Change Password
 							</button>
 						</div>
 					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Change Password Modal -->
+		<div
+			id="change-password-modal"
+			class="modal"
+			onclick="closeChangePasswordModal()"
+		>
+			<div class="modal-content" onclick="event.stopPropagation()">
+				<div class="modal-header">
+					<h3 data-translation="change-password">Change Password</h3>
+					<span class="close" onclick="closeChangePasswordModal()"
+						>&times;</span
+					>
+				</div>
+				<div class="modal-body">
+					<form id="change-password-form">
+						<div class="form-group">
+							<label for="current-password" data-translation="current-password"
+								>Current Password</label
+							>
+							<input
+								type="password"
+								id="current-password"
+								name="currentPassword"
+								required
+							/>
+						</div>
+						<div class="form-group">
+							<label for="new-password" data-translation="new-password"
+								>New Password</label
+							>
+							<input
+								type="password"
+								id="new-password"
+								name="newPassword"
+								required
+								minlength="6"
+							/>
+						</div>
+						<div class="form-group">
+							<label
+								for="confirm-password"
+								data-translation="confirm-new-password"
+								>Confirm New Password</label
+							>
+							<input
+								type="password"
+								id="confirm-password"
+								name="confirmPassword"
+								required
+								minlength="6"
+							/>
+						</div>
+					</form>
+				</div>
+				<div class="modal-footer">
+					<button
+						type="button"
+						class="btn btn-secondary"
+						onclick="closeChangePasswordModal()"
+						data-translation="cancel"
+					>
+						Cancel
+					</button>
+					<button
+						type="button"
+						class="btn btn-primary"
+						onclick="updatePassword()"
+						data-translation="update-password"
+					>
+						Update Password
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Edit Profile Modal -->
+		<div
+			id="edit-profile-modal"
+			class="modal"
+			onclick="closeEditProfileModal()"
+		>
+			<div class="modal-content" onclick="event.stopPropagation()">
+				<div class="modal-header">
+					<h3 data-translation="edit-profile">Edit Profile</h3>
+					<span class="close" onclick="closeEditProfileModal()">&times;</span>
+				</div>
+				<div class="modal-body">
+					<form id="edit-profile-form">
+						<div class="form-group">
+							<label for="edit-full-name" data-translation="full-name"
+								>Full Name</label
+							>
+							<input
+								type="text"
+								id="edit-full-name"
+								name="fullName"
+								required
+								minlength="2"
+							/>
+						</div>
+						<div class="form-group">
+							<label for="edit-email" data-translation="email-address"
+								>Email Address</label
+							>
+							<input type="email" id="edit-email" name="email" required />
+						</div>
+						<div class="form-group">
+							<label for="edit-phone" data-translation="phone-number"
+								>Phone Number</label
+							>
+							<input
+								type="tel"
+								id="edit-phone"
+								name="phoneNumber"
+								required
+								pattern="[0-9+\-\s\(\)]+"
+							/>
+						</div>
+
+						<h4 data-translation="address-information">Address Information</h4>
+
+						<div class="form-group">
+							<label for="edit-street">Street Address</label>
+							<input type="text" id="edit-street" name="street" required />
+						</div>
+						<div class="form-row">
+							<div class="form-group half">
+								<label for="edit-city">City</label>
+								<input type="text" id="edit-city" name="city" required />
+							</div>
+							<div class="form-group half">
+								<label for="edit-state">State/Province</label>
+								<input type="text" id="edit-state" name="state" required />
+							</div>
+						</div>
+						<div class="form-row">
+							<div class="form-group half">
+								<label for="edit-zipcode">ZIP Code</label>
+								<input type="text" id="edit-zipcode" name="zipCode" required />
+							</div>
+							<div class="form-group half">
+								<label for="edit-country">Country</label>
+								<input type="text" id="edit-country" name="country" required />
+							</div>
+						</div>
+					</form>
+				</div>
+				<div class="modal-footer">
+					<button
+						type="button"
+						class="btn btn-secondary"
+						onclick="closeEditProfileModal()"
+						data-translation="cancel"
+					>
+						Cancel
+					</button>
+					<button
+						type="button"
+						class="btn btn-primary"
+						onclick="updateProfile()"
+						data-translation="update-profile"
+					>
+						Update Profile
+					</button>
 				</div>
 			</div>
 		</div>
@@ -3376,6 +3586,149 @@
 					window.location.href = "signin.html";
 					return null;
 				}
+			}
+
+			// Language switching functionality
+			let currentLanguage = localStorage.getItem("selectedLanguage") || "en";
+
+			// Translation dictionaries
+			const translations = {
+				en: {
+					// Profile section
+					"profile-settings": "Profile Settings",
+					"manage-personal-info":
+						"Manage your personal information and preferences",
+					"member-since": "Member Since",
+					"last-login": "Last Login",
+					"account-status": "Account Status",
+					"your-profile": "Your Profile",
+					"account-role": "Account Role",
+					"address-information": "Address Information",
+					"edit-profile": "Edit Profile",
+					"change-password": "Change Password",
+
+					// Common fields
+					"full-name": "Full Name",
+					"email-address": "Email Address",
+					"phone-number": "Phone Number",
+
+					// Change password functionality
+					"current-password": "Current Password",
+					"new-password": "New Password",
+					"confirm-new-password": "Confirm New Password",
+					"update-password": "Update Password",
+					"password-changed-success": "Password changed successfully",
+					"password-mismatch": "Passwords do not match",
+					"password-too-short": "Password must be at least 6 characters long",
+					"current-password-incorrect": "Current password is incorrect",
+					"password-change-error": "Error changing password",
+
+					// Edit profile functionality
+					"update-profile": "Update Profile",
+					"profile-updated-success": "Profile updated successfully",
+					"profile-update-error": "Error updating profile",
+					"invalid-email": "Please enter a valid email address",
+					"invalid-phone": "Please enter a valid phone number",
+
+					// Common UI elements
+					cancel: "Cancel",
+					error: "Error",
+				},
+				de: {
+					// Profile section
+					"profile-settings": "Profileinstellungen",
+					"manage-personal-info":
+						"Verwalten Sie Ihre persönlichen Informationen und Einstellungen",
+					"member-since": "Mitglied seit",
+					"last-login": "Letzte Anmeldung",
+					"account-status": "Kontostatus",
+					"your-profile": "Ihr Profil",
+					"account-role": "Kontorolle",
+					"address-information": "Adressinformationen",
+					"edit-profile": "Profil bearbeiten",
+					"change-password": "Passwort ändern",
+
+					// Common fields
+					"full-name": "Vollständiger Name",
+					"email-address": "E-Mail-Adresse",
+					"phone-number": "Telefonnummer",
+
+					// Change password functionality
+					"current-password": "Aktuelles Passwort",
+					"new-password": "Neues Passwort",
+					"confirm-new-password": "Neues Passwort bestätigen",
+					"update-password": "Passwort aktualisieren",
+					"password-changed-success": "Passwort erfolgreich geändert",
+					"password-mismatch": "Passwörter stimmen nicht überein",
+					"password-too-short": "Passwort muss mindestens 6 Zeichen lang sein",
+					"current-password-incorrect": "Aktuelles Passwort ist falsch",
+					"password-change-error": "Fehler beim Ändern des Passworts",
+
+					// Edit profile functionality
+					"update-profile": "Profil aktualisieren",
+					"profile-updated-success": "Profil erfolgreich aktualisiert",
+					"profile-update-error": "Fehler beim Aktualisieren des Profils",
+					"invalid-email": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+					"invalid-phone": "Bitte geben Sie eine gültige Telefonnummer ein",
+
+					// Common UI elements
+					cancel: "Abbrechen",
+					error: "Fehler",
+				},
+			};
+
+			function switchLanguage(lang) {
+				currentLanguage = lang;
+				localStorage.setItem("selectedLanguage", lang);
+
+				// Update HTML lang attribute
+				document.getElementById("html-root").setAttribute("lang", lang);
+
+				// Update page content
+				updatePageLanguage();
+
+				// Show confirmation message
+				showMessage(
+					`Language switched to ${lang === "en" ? "English" : "German"}`,
+					"success"
+				);
+			}
+
+			function updatePageLanguage() {
+				try {
+					// Update elements with data-translation attributes
+					const elements = document.querySelectorAll("[data-translation]");
+					elements.forEach((element) => {
+						const key = element.getAttribute("data-translation");
+						if (
+							translations[currentLanguage] &&
+							translations[currentLanguage][key]
+						) {
+							if (
+								element.tagName === "INPUT" &&
+								element.type === "placeholder"
+							) {
+								element.placeholder = translations[currentLanguage][key];
+							} else {
+								element.textContent = translations[currentLanguage][key];
+							}
+						}
+					});
+				} catch (error) {
+					console.error("Language update error:", error);
+				}
+			}
+
+			// Debug function to check API configuration
+			function checkApiConfig() {
+				console.log("🔍 API Configuration Check:");
+				console.log("Current hostname:", window.location.hostname);
+				console.log("API_BASE_URL:", API_BASE_URL);
+				console.log("Current token exists:", !!currentToken);
+				console.log(
+					"Current token length:",
+					currentToken ? currentToken.length : 0
+				);
 			}
 
 			// Enhanced fetch function with automatic token refresh
@@ -3628,11 +3981,258 @@
 			}
 
 			function editProfile() {
-				showMessage("Profile editing feature coming soon!", "success");
+				// Populate the form with current user data
+				if (currentUser) {
+					document.getElementById("edit-full-name").value =
+						currentUser.name || "";
+					document.getElementById("edit-email").value = currentUser.email || "";
+					document.getElementById("edit-phone").value =
+						currentUser.phoneNumber || "";
+
+					// Populate address fields
+					if (currentUser.address) {
+						document.getElementById("edit-street").value =
+							currentUser.address.street || "";
+						document.getElementById("edit-city").value =
+							currentUser.address.city || "";
+						document.getElementById("edit-state").value =
+							currentUser.address.state || "";
+						document.getElementById("edit-zipcode").value =
+							currentUser.address.zipCode || "";
+						document.getElementById("edit-country").value =
+							currentUser.address.country || "";
+					}
+				}
+
+				// Show the modal
+				document.getElementById("edit-profile-modal").style.display = "block";
+			}
+
+			function closeEditProfileModal() {
+				document.getElementById("edit-profile-modal").style.display = "none";
+				document.getElementById("edit-profile-form").reset();
+			}
+
+			async function updateProfile() {
+				// Get form values
+				const fullName = document.getElementById("edit-full-name").value.trim();
+				const email = document.getElementById("edit-email").value.trim();
+				const phoneNumber = document.getElementById("edit-phone").value.trim();
+				const street = document.getElementById("edit-street").value.trim();
+				const city = document.getElementById("edit-city").value.trim();
+				const state = document.getElementById("edit-state").value.trim();
+				const zipCode = document.getElementById("edit-zipcode").value.trim();
+				const country = document.getElementById("edit-country").value.trim();
+
+				// Basic validation
+				if (
+					!fullName ||
+					!email ||
+					!phoneNumber ||
+					!street ||
+					!city ||
+					!state ||
+					!zipCode ||
+					!country
+				) {
+					showMessage(
+						translations[currentLanguage]["error"] || "Error",
+						"error"
+					);
+					return;
+				}
+
+				// Email validation
+				const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+				if (!emailRegex.test(email)) {
+					showMessage(
+						translations[currentLanguage]["invalid-email"] ||
+							"Please enter a valid email address",
+						"error"
+					);
+					return;
+				}
+
+				// Phone validation (basic)
+				const phoneRegex = /^[\+]?[0-9\s\-\(\)]{10,}$/;
+				if (!phoneRegex.test(phoneNumber)) {
+					showMessage(
+						translations[currentLanguage]["invalid-phone"] ||
+							"Please enter a valid phone number",
+						"error"
+					);
+					return;
+				}
+
+				// Prepare update data
+				const updateData = {
+					name: fullName,
+					email: email,
+					phoneNumber: phoneNumber,
+					address: {
+						street: street,
+						city: city,
+						state: state,
+						zipCode: zipCode,
+						country: country,
+					},
+				};
+
+				try {
+					showLoading(true, "Updating your profile...");
+
+					const response = await authenticatedFetch(
+						`${API_BASE_URL}/auth/profile`,
+						{
+							method: "PUT",
+							headers: {
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify(updateData),
+						}
+					);
+
+					if (response.ok) {
+						const data = await response.json();
+
+						// Update currentUser with new data
+						currentUser = data.data.user;
+
+						// Update the UI with new data
+						document.getElementById("user-name").textContent = currentUser.name;
+						document.getElementById("user-email").textContent =
+							currentUser.email;
+						document.getElementById("user-phone").textContent =
+							currentUser.phoneNumber;
+
+						// Update address display
+						const addressText = `${currentUser.address.street}, ${currentUser.address.city}, ${currentUser.address.state} ${currentUser.address.zipCode}, ${currentUser.address.country}`;
+						document.getElementById("user-address").textContent = addressText;
+
+						// Update welcome message
+						document.getElementById("welcome-user-name").textContent =
+							currentUser.name;
+
+						// Close modal and show success message
+						closeEditProfileModal();
+						showMessage(
+							translations[currentLanguage]["profile-updated-success"] ||
+								"Profile updated successfully",
+							"success"
+						);
+					} else {
+						const errorData = await response.json();
+						throw new Error(errorData.message || "Failed to update profile");
+					}
+				} catch (error) {
+					console.error("Profile update error:", error);
+					showMessage(
+						translations[currentLanguage]["profile-update-error"] ||
+							"Error updating profile",
+						"error"
+					);
+				} finally {
+					showLoading(false);
+				}
 			}
 
 			function changePassword() {
-				showMessage("Password change feature coming soon!", "success");
+				document.getElementById("change-password-modal").style.display =
+					"block";
+				document.getElementById("change-password-form").reset();
+			}
+
+			function closeChangePasswordModal() {
+				document.getElementById("change-password-modal").style.display = "none";
+			}
+
+			async function updatePassword() {
+				const currentPassword =
+					document.getElementById("current-password").value;
+				const newPassword = document.getElementById("new-password").value;
+				const confirmPassword =
+					document.getElementById("confirm-password").value;
+
+				// Validation
+				if (!currentPassword || !newPassword || !confirmPassword) {
+					showMessage(
+						translations[currentLanguage]["error"] || "Error",
+						"error"
+					);
+					return;
+				}
+
+				if (newPassword.length < 6) {
+					showMessage(
+						translations[currentLanguage]["password-too-short"] ||
+							"Password must be at least 6 characters long",
+						"error"
+					);
+					return;
+				}
+
+				if (newPassword !== confirmPassword) {
+					showMessage(
+						translations[currentLanguage]["password-mismatch"] ||
+							"Passwords do not match",
+						"error"
+					);
+					return;
+				}
+
+				try {
+					console.log("🔍 Change Password Debug:");
+					console.log("API_BASE_URL:", API_BASE_URL);
+					console.log("Full URL:", `${API_BASE_URL}/auth/change-password`);
+					console.log("Current token exists:", !!currentToken);
+
+					const response = await authenticatedFetch(
+						`${API_BASE_URL}/auth/change-password`,
+						{
+							method: "PUT",
+							headers: {
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({
+								currentPassword: currentPassword,
+								newPassword: newPassword,
+							}),
+						}
+					);
+
+					const data = await response.json();
+
+					if (response.ok) {
+						showMessage(
+							translations[currentLanguage]["password-changed-success"] ||
+								"Password changed successfully",
+							"success"
+						);
+						closeChangePasswordModal();
+					} else {
+						if (data.message && data.message.includes("current password")) {
+							showMessage(
+								translations[currentLanguage]["current-password-incorrect"] ||
+									"Current password is incorrect",
+								"error"
+							);
+						} else {
+							showMessage(
+								data.message ||
+									translations[currentLanguage]["password-change-error"] ||
+									"Error changing password",
+								"error"
+							);
+						}
+					}
+				} catch (error) {
+					console.error("Error changing password:", error);
+					showMessage(
+						translations[currentLanguage]["password-change-error"] ||
+							"Error changing password",
+						"error"
+					);
+				}
 			}
 
 			function logout() {
@@ -7498,44 +8098,6 @@
 				}
 			}
 
-			async function loadUsersForRiderModal() {
-				try {
-					const token = currentToken;
-					const response = await fetch(`${API_BASE_URL}/auth/users`, {
-						method: "GET",
-						headers: {
-							Authorization: `Bearer ${token}`,
-							"Content-Type": "application/json",
-						},
-					});
-					if (response.ok) {
-						const data = await response.json();
-						const userSelect = document.getElementById("rider-user");
-						userSelect.innerHTML =
-							'<option value="">-- Select User --</option>';
-
-						// Debug: Log user data
-						console.log("Loading users for rider modal:", data.data.users);
-
-						// Filter out users who are already riders
-						data.data.users.forEach((user) => {
-							if (user.role === "customer" || user.role === "staff") {
-								userSelect.innerHTML += `<option value="${user._id}">${user.name} (${user.email})</option>`;
-							}
-						});
-
-						// Debug: Log final select element state
-						console.log(
-							"User select options count:",
-							userSelect.options.length
-						);
-						console.log("User select HTML:", userSelect.innerHTML);
-					}
-				} catch (error) {
-					console.error("Error loading users:", error);
-				}
-			}
-
 			function closeRiderModal() {
 				document.getElementById("rider-modal").style.display = "none";
 			}
@@ -7933,18 +8495,23 @@
 			// Profile Section Functions
 			function loadProfileSection() {
 				if (currentUser) {
-					document.getElementById("profile-user-name").textContent =
-						currentUser.name;
-					document.getElementById("profile-user-email").textContent =
-						currentUser.email;
-					document.getElementById("profile-user-phone").textContent =
-						currentUser.phoneNumber;
-					document.getElementById("profile-user-role").textContent =
-						currentUser.role.toUpperCase();
+					// Use correct element IDs that match the HTML
+					const userNameEl = document.getElementById("user-name");
+					const userEmailEl = document.getElementById("user-email");
+					const userPhoneEl = document.getElementById("user-phone");
+					const userRoleEl = document.getElementById("user-role");
+					const userAddressEl = document.getElementById("user-address");
 
-					const addressText = `${currentUser.address.street}, ${currentUser.address.city}, ${currentUser.address.state} ${currentUser.address.zipCode}, ${currentUser.address.country}`;
-					document.getElementById("profile-user-address").textContent =
-						addressText;
+					if (userNameEl) userNameEl.textContent = currentUser.name;
+					if (userEmailEl) userEmailEl.textContent = currentUser.email;
+					if (userPhoneEl) userPhoneEl.textContent = currentUser.phoneNumber;
+					if (userRoleEl)
+						userRoleEl.textContent = currentUser.role.toUpperCase();
+
+					if (userAddressEl && currentUser.address) {
+						const addressText = `${currentUser.address.street}, ${currentUser.address.city}, ${currentUser.address.state} ${currentUser.address.zipCode}, ${currentUser.address.country}`;
+						userAddressEl.textContent = addressText;
+					}
 				}
 			}
 
@@ -7958,6 +8525,8 @@
 				loadUserProfile();
 				// Set dashboard as default active section
 				showSection("dashboard");
+				// Initialize language
+				updatePageLanguage();
 			});
 
 			// Handle window resize for responsive sidebar
@@ -10118,7 +10687,7 @@
 
 					// Load users and zones for the dropdowns
 					loadUsersForRiderModal();
-					loadZonesForRiderModal();
+					loadZonesForRiderModal(); // Function not implemented yet
 
 					riderModal.style.display = "block";
 				} catch (error) {
@@ -10135,8 +10704,8 @@
 			}
 
 			function refreshRiders() {
-				loadAllRiders();
-				showMessage("Riders list refreshed", "success");
+				// loadAllRiders(); // Function not implemented yet
+				showMessage("Riders list refresh not available yet", "info");
 			}
 
 			async function loadUsersForRiderModal() {
@@ -10153,11 +10722,14 @@
 						userDropdown.remove(1);
 					}
 
-					const response = await fetch(`${API_BASE_URL}/auth/users`, {
-						headers: {
-							Authorization: `Bearer ${currentToken}`,
-						},
-					});
+					const response = await fetch(
+						`${API_BASE_URL}/auth/users?includeRoles=rider`,
+						{
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+							},
+						}
+					);
 
 					if (!response.ok) {
 						throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -10169,10 +10741,7 @@
 
 					// For editing, include all users (not just riders) to ensure current rider's user is available
 					const availableUsers = allUsers.filter(
-						(user) =>
-							user.role === "rider" ||
-							user.role === "customer" ||
-							user.role === "staff"
+						(user) => user.role === "rider"
 					);
 
 					console.log(
@@ -10216,8 +10785,11 @@
 				// We don't auto-fill other fields as they're rider-specific and
 				// not directly tied to user data in the new model
 
-				// Focus on the zone field as the next field to complete
-				document.getElementById("rider-zone").focus();
+				// Focus on the zone field as the next field to complete (if it exists)
+				const zoneField = document.getElementById("rider-zone");
+				if (zoneField) {
+					zoneField.focus();
+				}
 			}
 
 			async function saveRider() {
@@ -10375,7 +10947,7 @@
 						"success"
 					);
 					closeRiderModal();
-					await loadAllRiders(); // Refresh riders list
+					// await loadAllRiders(); // Function not implemented yet
 				} catch (error) {
 					console.error("Error saving rider:", error);
 					showMessage(`Failed to save rider: ${error.message}`, "error");
@@ -10436,37 +11008,50 @@
 					const workingHoursEndField =
 						document.getElementById("rider-working-end");
 
+					// Check if all required elements exist
+					if (!modalTitle || !form || !riderIdField || !userField) {
+						throw new Error(
+							"Rider modal elements not found. Please refresh the page."
+						);
+					}
+
 					// Clear form first
 					form.reset();
 
 					// Set modal title
 					modalTitle.textContent = "Edit Rider";
 
-					// Set rider fields
-					riderIdField.value = rider._id || "";
-					vehicleField.value = rider.vehicleType || "";
-					vehicleNumberField.value = rider.vehicleNumber || "";
-					statusField.value = rider.status || "offline";
+					// Set rider fields (with null checks)
+					if (riderIdField) riderIdField.value = rider._id || "";
+					if (vehicleField) vehicleField.value = rider.vehicleType || "";
+					if (vehicleNumberField)
+						vehicleNumberField.value = rider.vehicleNumber || "";
+					if (statusField) statusField.value = rider.status || "offline";
 
 					// Set boolean fields
-					isVerifiedField.value = rider.isVerified ? "true" : "false";
-					isActiveField.value = rider.isActive ? "true" : "false";
+					if (isVerifiedField)
+						isVerifiedField.value = rider.isVerified ? "true" : "false";
+					if (isActiveField)
+						isActiveField.value = rider.isActive ? "true" : "false";
 
 					// Set working hours
 					if (rider.workingHours) {
-						workingHoursStartField.value = rider.workingHours.start || "09:00";
-						workingHoursEndField.value = rider.workingHours.end || "21:00";
+						if (workingHoursStartField)
+							workingHoursStartField.value =
+								rider.workingHours.start || "09:00";
+						if (workingHoursEndField)
+							workingHoursEndField.value = rider.workingHours.end || "21:00";
 					}
 
 					// Load users dropdown and select the user if available
 					await loadUsersForRiderModal();
-					if (rider.user && rider.user._id) {
+					if (rider.user && rider.user._id && userField) {
 						userField.value = rider.user._id;
 						userField.disabled = true; // Can't change user after creation
 					}
 
 					// Load zones checkboxes and select the rider's zones
-					await loadZonesForRiderModal();
+					// await loadZonesForRiderModal(); // Function not implemented yet
 
 					// Select the rider's zones
 					const riderZones = Array.isArray(rider.zones)
@@ -10485,7 +11070,12 @@
 					});
 
 					// Show the modal
-					document.getElementById("rider-modal").style.display = "block";
+					const riderModal = document.getElementById("rider-modal");
+					if (riderModal) {
+						riderModal.style.display = "block";
+					} else {
+						throw new Error("Rider modal not found");
+					}
 				} catch (error) {
 					console.error("Error editing rider:", error);
 					showMessage(`Failed to load rider data: ${error.message}`, "error");
@@ -10528,7 +11118,7 @@
 					showMessage(result.message || "Rider permanently deleted", "success");
 
 					// Refresh riders list
-					await loadAllRiders();
+					// await loadAllRiders(); // Function not implemented yet
 				} catch (error) {
 					console.error("Error deleting rider:", error);
 					showMessage(`Failed to delete rider: ${error.message}`, "error");

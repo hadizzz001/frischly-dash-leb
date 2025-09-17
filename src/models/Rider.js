@@ -9,9 +9,23 @@ const riderSchema = new mongoose.Schema(
 			unique: true,
 		},
 		// Rider specific details
+		zones: [
+			{
+				type: String,
+				required: [true, "At least one zone is required"],
+				trim: true,
+				maxlength: [100, "Zone cannot be more than 100 characters"],
+				validate: {
+					validator: function (v) {
+						return v && v.length > 0;
+					},
+					message: "Zone name cannot be empty",
+				},
+			},
+		],
+		// Keep zone field for backward compatibility (deprecated)
 		zone: {
 			type: String,
-			required: [true, "Zone is required"],
 			trim: true,
 			maxlength: [100, "Zone cannot be more than 100 characters"],
 		},
@@ -151,12 +165,46 @@ riderSchema.virtual("currentOrders", {
 });
 
 // Index for efficient queries
-riderSchema.index({ zone: 1, status: 1 });
+riderSchema.index({ zones: 1, status: 1 });
+riderSchema.index({ zones: 1 });
 riderSchema.index({ user: 1 });
 riderSchema.index({ isActive: 1, status: 1 });
 
+// Custom validation to ensure zones array is not empty
+riderSchema.path("zones").validate(function (value) {
+	return value && value.length > 0;
+}, "At least one zone must be specified");
+
 // Pre-save middleware to update lastActiveAt when status changes to available or busy
 riderSchema.pre("save", function (next) {
+	// Migrate old zone field to zones array if needed
+	if (this.zone && (!this.zones || this.zones.length === 0)) {
+		this.zones = [this.zone];
+		console.log(
+			`Auto-migrating rider ${this._id}: zone "${
+				this.zone
+			}" -> zones [${this.zones.join(", ")}]`
+		);
+	}
+
+	// Ensure zones array is not empty - if no zones and no zone, set a default
+	if (!this.zones || this.zones.length === 0) {
+		if (this.zone) {
+			this.zones = [this.zone];
+		} else {
+			// Set a default zone if none exists (this shouldn't happen in normal operation)
+			this.zones = ["Default"];
+			console.warn(
+				`Warning: Rider ${this._id} had no zones, setting default zone`
+			);
+		}
+	}
+
+	// Update the deprecated zone field for backward compatibility
+	if (this.zones && this.zones.length > 0 && !this.zone) {
+		this.zone = this.zones[0];
+	}
+
 	if (
 		this.isModified("status") &&
 		(this.status === "available" || this.status === "busy")
@@ -178,7 +226,8 @@ riderSchema.methods.getCompletionRate = function () {
 riderSchema.methods.getSummary = function () {
 	return {
 		riderId: this._id,
-		zone: this.zone,
+		zones: this.zones, // Return array of zones
+		zone: this.zones && this.zones.length > 0 ? this.zones[0] : this.zone, // Backward compatibility
 		status: this.status,
 		ordersPickedCount: this.ordersPickedCount,
 		ordersDeliveredCount: this.ordersDeliveredCount,
@@ -193,7 +242,7 @@ riderSchema.methods.getSummary = function () {
 // Static method to find available riders in a zone
 riderSchema.statics.findAvailableInZone = function (zone) {
 	return this.find({
-		zone: zone,
+		zones: zone, // Check if zone is in the zones array
 		status: "available",
 		isActive: true,
 		isVerified: true,
@@ -247,7 +296,20 @@ riderSchema.statics.getRidersWithStats = function (filter = {}) {
 		},
 		{
 			$project: {
-				zone: 1,
+				zones: {
+					$cond: {
+						if: { $ifNull: ["$zones", false] },
+						then: "$zones",
+						else: { $cond: { if: "$zone", then: ["$zone"], else: [] } },
+					},
+				},
+				zone: {
+					$cond: {
+						if: { $ifNull: ["$zones", false] },
+						then: { $arrayElemAt: ["$zones", 0] },
+						else: "$zone",
+					},
+				},
 				status: 1,
 				vehicleType: 1,
 				vehicleNumber: 1,
@@ -267,6 +329,34 @@ riderSchema.statics.getRidersWithStats = function (filter = {}) {
 		},
 		{ $sort: { createdAt: -1 } },
 	]);
+};
+
+// Static method to migrate old zone field to zones array
+riderSchema.statics.migrateZones = async function () {
+	try {
+		const riders = await this.find({
+			zone: { $exists: true, $ne: null },
+			$or: [{ zones: { $exists: false } }, { zones: { $size: 0 } }],
+		});
+
+		console.log(`Found ${riders.length} riders to migrate`);
+
+		for (const rider of riders) {
+			rider.zones = [rider.zone];
+			await rider.save();
+			console.log(
+				`Migrated rider ${rider._id}: ${rider.zone} -> [${rider.zones.join(
+					", "
+				)}]`
+			);
+		}
+
+		console.log("Migration completed successfully");
+		return { migrated: riders.length };
+	} catch (error) {
+		console.error("Migration failed:", error);
+		throw error;
+	}
 };
 
 module.exports = mongoose.model("Rider", riderSchema);
