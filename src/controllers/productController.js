@@ -83,7 +83,7 @@ exports.getProducts = async (req, res) => {
 			page = 1,
 			limit = 10,
 			search,
-			category, // Keep for backward compatibility - will filter by parent category
+			category, // Filter by direct category field
 			subcategory,
 			shelfNumber,
 			isActive = true,
@@ -96,6 +96,15 @@ exports.getProducts = async (req, res) => {
 		if (isActive !== "all") {
 			filter.isActive = isActive === "true" || isActive === true;
 		}
+		if (category) {
+			// Filter by direct category field
+			if (mongoose.Types.ObjectId.isValid(category)) {
+				filter.category = category;
+			} else {
+				// Will need to lookup category by name in aggregation pipeline
+				filter.categoryName = new RegExp(category, "i");
+			}
+		}
 		if (subcategory) {
 			// Direct subcategory filtering
 			if (mongoose.Types.ObjectId.isValid(subcategory)) {
@@ -103,14 +112,6 @@ exports.getProducts = async (req, res) => {
 			} else {
 				// Will need to lookup subcategory by name in aggregation pipeline
 				filter.subcategoryName = new RegExp(subcategory, "i");
-			}
-		} else if (category) {
-			// Filter by parent category - requires aggregation pipeline
-			if (mongoose.Types.ObjectId.isValid(category)) {
-				filter.parentCategory = category;
-			} else {
-				// Will need to lookup category by name in aggregation pipeline
-				filter.categoryName = new RegExp(category, "i");
 			}
 		}
 		if (shelfNumber) {
@@ -190,7 +191,9 @@ exports.getProducts = async (req, res) => {
 		} else {
 			// Regular query without category name filtering
 			delete filter.categoryName;
+			delete filter.subcategoryName;
 			productsQuery = Product.find(filter)
+				.populate("category", "name color icon")
 				.populate({
 					path: "subcategory",
 					select: "name slug parentCategory",
@@ -257,6 +260,7 @@ exports.getProduct = async (req, res) => {
 		}
 
 		const product = await Product.findById(id)
+			.populate("category", "name color icon")
 			.populate({
 				path: "subcategory",
 				select: "name slug parentCategory",
@@ -296,6 +300,7 @@ exports.getProductByBarcode = async (req, res) => {
 		const { barcode } = req.params;
 
 		const product = await Product.findByBarcode(barcode)
+			.populate("category", "name color icon")
 			.populate({
 				path: "subcategory",
 				select: "name slug parentCategory",
@@ -335,6 +340,7 @@ exports.getProductsByShelfNumber = async (req, res) => {
 		const { shelfNumber } = req.params;
 
 		const products = await Product.findByShelfNumber(shelfNumber)
+			.populate("category", "name color icon")
 			.populate({
 				path: "subcategory",
 				select: "name slug parentCategory",
@@ -392,6 +398,7 @@ exports.createProduct = async (req, res) => {
 
 		// Populate the created product
 		await product.populate([
+			{ path: "category", select: "name color icon" },
 			{
 				path: "subcategory",
 				select: "name slug parentCategory",
@@ -477,6 +484,7 @@ exports.updateProduct = async (req, res) => {
 			new: true,
 			runValidators: true,
 		})
+			.populate("category", "name color icon")
 			.populate({
 				path: "subcategory",
 				select: "name slug parentCategory",
@@ -551,6 +559,7 @@ exports.updateProductStock = async (req, res) => {
 		}
 
 		await product.populate([
+			{ path: "category", select: "name color icon" },
 			{
 				path: "subcategory",
 				select: "name slug parentCategory",

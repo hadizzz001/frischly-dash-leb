@@ -122,6 +122,11 @@ app.get("/ordermanagement", (req, res) => {
 	res.sendFile(__dirname + "/public/ordermanagement.html");
 });
 
+// Route for rider dashboard page
+app.get("/rider", (req, res) => {
+	res.sendFile(__dirname + "/public/rider.html");
+});
+
 // Health check route
 app.get("/api/health", (req, res) => {
 	res.json({

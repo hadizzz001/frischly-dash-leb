@@ -9110,6 +9110,13 @@
 						</div>
 
 						<div class="form-group">
+							<label for="product-category">Category</label>
+							<select id="product-category" name="category" onchange="loadSubcategoriesByCategory()">
+								<option value="">Select Category (Optional)</option>
+							</select>
+						</div>
+
+						<div class="form-group">
 							<label for="product-subcategory">Subcategory *</label>
 							<select id="product-subcategory" name="subcategory" required>
 								<option value="">Select Subcategory</option>

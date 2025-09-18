@@ -302,6 +302,9 @@
 							if (userRole === "customer") {
 								dashboardUrl = "/shop";
 								dashboardText = "Go to Shop";
+							} else if (userRole === "rider") {
+								dashboardUrl = "/rider";
+								dashboardText = "Go to Rider Dashboard";
 							} else if (userRole === "staff") {
 								dashboardUrl = "/ordermanagement";
 								dashboardText = "Go to Staff Dashboard";
@@ -416,6 +419,11 @@
 							let redirectUrl = result.data.redirectUrl || "profile.html";
 							if (result.data.user && result.data.user.role === "customer") {
 								redirectUrl = "/shop";
+							} else if (
+								result.data.user &&
+								result.data.user.role === "rider"
+							) {
+								redirectUrl = "/rider";
 							} else if (
 								result.data.user &&
 								result.data.user.role === "staff"
