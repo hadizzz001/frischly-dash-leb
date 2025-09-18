@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Dashboard - FRISCHLY Server</title>
+
+		<!-- Favicon and App Icons -->
+		<link
+			rel="icon"
+			type="image/png"
+			sizes="16x16"
+			href="icons/favicon_16x16.png"
+		/>
+		<link
+			rel="icon"
+			type="image/png"
+			sizes="32x32"
+			href="icons/favicon_32x32.png"
+		/>
+		<link
+			rel="icon"
+			type="image/png"
+			sizes="48x48"
+			href="icons/favicon_48x48.png"
+		/>
+
+		<!-- Apple Touch Icons -->
+		<link
+			rel="apple-touch-icon"
+			sizes="72x72"
+			href="icons/app_icon_72x72.png"
+		/>
+		<link
+			rel="apple-touch-icon"
+			sizes="96x96"
+			href="icons/app_icon_96x96.png"
+		/>
+		<link
+			rel="apple-touch-icon"
+			sizes="128x128"
+			href="icons/app_icon_128x128.png"
+		/>
+		<link
+			rel="apple-touch-icon"
+			sizes="192x192"
+			href="icons/app_icon_192x192.png"
+		/>
+		<link
+			rel="apple-touch-icon"
+			sizes="256x256"
+			href="icons/app_icon_256x256.png"
+		/>
+		<link
+			rel="apple-touch-icon"
+			sizes="512x512"
+			href="icons/app_icon_512x512.png"
+		/>
+		<link
+			rel="apple-touch-icon"
+			sizes="1024x1024"
+			href="icons/app_icon_1024x1024.png"
+		/>
+
+		<!-- Manifest for PWA -->
+		<meta name="theme-color" content="#FFC300" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+		<meta name="apple-mobile-web-app-title" content="FRISCHLY " />
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			body {
+				font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+				background: #f8f9fa;
+				min-height: 100vh;
+			}
+
+			/* Header Styles */
+			.header {
+				background: #ffffff;
+				border-bottom: 3px solid #ffc300;
+				padding: 15px 30px;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				box-shadow: 0 2px 10px rgba(255, 195, 0, 0.2);
+			}
+
+			.header-left {
+				display: flex;
+				align-items: center;
+				gap: 20px;
+			}
+
+			.header h1 {
+				color: #ffc300;
+				font-size: 24px;
+				font-weight: 700;
+			}
+
+			.user-info {
+				display: flex;
+				align-items: center;
+				gap: 15px;
+				color: #333;
+			}
+
+			.user-avatar {
+				width: 40px;
+				height: 40px;
+				border-radius: 50%;
+				background: #ffc300;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-weight: bold;
+				color: #000;
+			}
+
+			.logout-btn {
+				background: #dc3545;
+				color: white;
+				border: none;
+				padding: 8px 16px;
+				border-radius: 6px;
+				cursor: pointer;
+				font-size: 14px;
+				transition: background 0.3s ease;
+			}
+
+			.logout-btn:hover {
+				background: #c82333;
+			}
+
+			/* Main Content */
+			.main-content {
+				padding: 30px;
+				max-width: 1400px;
+				margin: 0 auto;
+			}
+
+			/* Stats Cards */
+			.stats-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+				gap: 20px;
+				margin-bottom: 30px;
+			}
+
+			.stat-card {
+				background: white;
+				border-radius: 12px;
+				padding: 25px;
+				box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+				border-left: 4px solid #ffc300;
+				transition: transform 0.3s ease;
+			}
+
+			.stat-card:hover {
+				transform: translateY(-2px);
+			}
+
+			.stat-card h3 {
+				color: #333;
+				font-size: 14px;
+				margin-bottom: 10px;
+				text-transform: uppercase;
+				font-weight: 600;
+			}
+
+			.stat-card .value {
+				font-size: 32px;
+				font-weight: bold;
+				color: #ffc300;
+				margin-bottom: 5px;
+			}
+
+			.stat-card .label {
+				color: #666;
+				font-size: 12px;
+			}
+
+			/* Content Sections */
+			.content-section {
+				background: white;
+				border-radius: 12px;
+				box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+				margin-bottom: 30px;
+				overflow: hidden;
+			}
+
+			.section-header {
+				background: #f8f9fa;
+				padding: 20px 25px;
+				border-bottom: 1px solid #e9ecef;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+
+			.section-header h2 {
+				color: #333;
+				font-size: 20px;
+				font-weight: 600;
+			}
+
+			.section-header .actions {
+				display: flex;
+				gap: 10px;
+			}
+
+			.btn {
+				padding: 8px 16px;
+				border: none;
+				border-radius: 6px;
+				cursor: pointer;
+				font-size: 14px;
+				font-weight: 500;
+				transition: all 0.3s ease;
+				text-decoration: none;
+				display: inline-block;
+				text-align: center;
+			}
+
+			.btn-primary {
+				background: #ffc300;
+				color: #000;
+			}
+
+			.btn-primary:hover {
+				background: #e6b800;
+				transform: translateY(-1px);
+			}
+
+			.btn-secondary {
+				background: #6c757d;
+				color: white;
+			}
+
+			.btn-secondary:hover {
+				background: #5a6268;
+			}
+
+			/* Table Styles */
+			.table-container {
+				overflow-x: auto;
+			}
+
+			.data-table {
+				width: 100%;
+				border-collapse: collapse;
+			}
+
+			.data-table th,
+			.data-table td {
+				padding: 12px 15px;
+				text-align: left;
+				border-bottom: 1px solid #e9ecef;
+			}
+
+			.data-table th {
+				background: #f8f9fa;
+				font-weight: 600;
+				color: #333;
+				font-size: 14px;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+			}
+
+			.data-table tbody tr:hover {
+				background: #f8f9fa;
+			}
+
+			/* Status Badges */
+			.status-badge {
+				padding: 4px 8px;
+				border-radius: 4px;
+				font-size: 12px;
+				font-weight: 500;
+				text-transform: uppercase;
+			}
+
+			.status-pending {
+				background: #fff3cd;
+				color: #856404;
+			}
+
+			.status-processing {
+				background: #cce5ff;
+				color: #004085;
+			}
+
+			.status-ready {
+				background: #d1ecf1;
+				color: #0c5460;
+			}
+
+			.status-delivered {
+				background: #d4edda;
+				color: #155724;
+			}
+
+			.status-confirmed {
+				background: #cce5ff;
+				color: #004085;
+			}
+
+			.status-shipped {
+				background: #d1ecf1;
+				color: #0c5460;
+			}
+
+			/* Action Buttons */
+			.table-actions {
+				display: flex;
+				gap: 5px;
+			}
+
+			.action-btn {
+				padding: 6px 10px;
+				border: none;
+				border-radius: 4px;
+				cursor: pointer;
+				font-size: 12px;
+				font-weight: 500;
+				text-decoration: none;
+				display: inline-block;
+				transition: all 0.2s ease;
+			}
+
+			.action-btn.edit {
+				background: #ffc300;
+				color: #000;
+			}
+
+			.action-btn.edit:hover {
+				background: #e6b800;
+			}
+
+			.action-btn.delete {
+				background: #dc3545;
+				color: white;
+			}
+
+			.action-btn.delete:hover {
+				background: #c82333;
+			}
+
+			.action-btn.view {
+				background: #17a2b8;
+				color: white;
+			}
+
+			.action-btn.view:hover {
+				background: #138496;
+			}
+
+			/* Filters */
+			.filters {
+				display: flex;
+				gap: 15px;
+				margin-bottom: 20px;
+				flex-wrap: wrap;
+			}
+
+			.filter-group {
+				display: flex;
+				flex-direction: column;
+				gap: 5px;
+			}
+
+			.filter-group label {
+				font-size: 14px;
+				font-weight: 500;
+				color: #333;
+			}
+
+			.filter-group select,
+			.filter-group input {
+				padding: 8px 12px;
+				border: 1px solid #ddd;
+				border-radius: 6px;
+				font-size: 14px;
+			}
+
+			/* Loading and Empty States */
+			.loading {
+				text-align: center;
+				padding: 40px;
+				color: #666;
+			}
+
+			.spinner {
+				border: 4px solid #f3f3f3;
+				border-top: 4px solid #ffc300;
+				border-radius: 50%;
+				width: 40px;
+				height: 40px;
+				animation: spin 1s linear infinite;
+				margin: 0 auto 20px;
+			}
+
+			.empty-state {
+				text-align: center;
+				padding: 60px 20px;
+				color: #666;
+			}
+
+			.empty-state .icon {
+				font-size: 48px;
+				margin-bottom: 16px;
+			}
+
+			.empty-state h3 {
+				margin-bottom: 8px;
+				color: #333;
+			}
+
+			/* Modal Styles */
+			.modal {
+				display: none;
+				position: fixed;
+				z-index: 1000;
+				left: 0;
+				top: 0;
+				width: 100%;
+				height: 100%;
+				background: rgba(0, 0, 0, 0.5);
+			}
+
+			.modal-content {
+				background: white;
+				margin: 5% auto;
+				padding: 0;
+				border-radius: 12px;
+				width: 90%;
+				max-width: 800px;
+				max-height: 90vh;
+				overflow-y: auto;
+				box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+			}
+
+			.modal-header {
+				padding: 20px 25px;
+				border-bottom: 1px solid #e9ecef;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+
+			.modal-header h2 {
+				color: #333;
+				font-size: 20px;
+				font-weight: 600;
+			}
+
+			.close {
+				color: #aaa;
+				font-size: 28px;
+				font-weight: bold;
+				cursor: pointer;
+			}
+
+			.close:hover {
+				color: #000;
+			}
+
+			.modal-body {
+				padding: 25px;
+			}
+
+			/* Responsive Design */
+			@media (max-width: 768px) {
+				.header {
+					padding: 15px 20px;
+					flex-direction: column;
+					gap: 15px;
+				}
+
+				.main-content {
+					padding: 20px 15px;
+				}
+
+				.stats-grid {
+					grid-template-columns: 1fr;
+				}
+
+				.filters {
+					flex-direction: column;
+				}
+
+				.table-actions {
+					flex-direction: column;
+					gap: 3px;
+				}
+			}
+
+			/* Barcode Input Styles */
+			.barcode-input-group {
+				display: flex;
+				gap: 10px;
+				margin-bottom: 15px;
+			}
+
+			.barcode-input-group input {
+				flex: 1;
+				padding: 12px;
+				border: 2px solid #ffc300;
+				border-radius: 6px;
+				font-size: 16px;
+				transition: border-color 0.3s ease;
+			}
+
+			.barcode-input-group input:focus {
+				outline: none;
+				border-color: #000;
+				box-shadow: 0 0 0 3px rgba(255, 195, 0, 0.1);
+			}
+
+			/* Processing Status */
+			.processing-status {
+				padding: 10px 15px;
+				border-radius: 6px;
+				font-weight: 500;
+				margin-bottom: 15px;
+			}
+
+			.processing-status.pending {
+				background: #fff3cd;
+				color: #856404;
+				border: 1px solid #ffeaa7;
+			}
+
+			.processing-status.processing {
+				background: #cce5ff;
+				color: #004085;
+				border: 1px solid #99d6ff;
+			}
+
+			.processing-status.completed {
+				background: #d4edda;
+				color: #155724;
+				border: 1px solid #c3e6cb;
+			}
+		</style>
+	</head>
+	<body>
+		<!-- Header -->
+		<header class="header">
+			<div class="header-left">
+				<h1>🍎 FRISCHLY</h1>
+			</div>
+			<div class="user-info">
+				<div class="user-avatar" id="user-avatar">S</div>
+				<span id="user-name">Staff User</span>
+				<button class="logout-btn" onclick="logout()">Logout</button>
+			</div>
+		</header>
+
+		<!-- Main Content -->
+		<main class="main-content">
+			<!-- Stats Cards -->
+			<div class="stats-grid">
+				<div class="stat-card">
+					<h3>Total Orders</h3>
+					<div class="value" id="total-orders">0</div>
+					<div class="label">All time</div>
+				</div>
+				<div class="stat-card">
+					<h3>Pending Orders</h3>
+					<div class="value" id="pending-orders">0</div>
+					<div class="label">Awaiting confirmation</div>
+				</div>
+				<div class="stat-card">
+					<h3>Confirmed Orders</h3>
+					<div class="value" id="confirmed-orders">0</div>
+					<div class="label">Ready to process</div>
+				</div>
+				<div class="stat-card">
+					<h3>Processing</h3>
+					<div class="value" id="processing-orders">0</div>
+					<div class="label">Currently being prepared</div>
+				</div>
+				<div class="stat-card">
+					<h3>Ready for Delivery</h3>
+					<div class="value" id="ready-orders">0</div>
+					<div class="label">Ready to be picked up</div>
+				</div>
+				<div class="stat-card">
+					<h3>Shipped</h3>
+					<div class="value" id="shipped-orders">0</div>
+					<div class="label">Out for delivery</div>
+				</div>
+			</div>
+
+			<!-- Orders Management Section -->
+			<div class="content-section">
+				<div class="section-header">
+					<h2>📦 Order Management</h2>
+					<div class="actions">
+						<button class="btn btn-secondary" onclick="refreshOrders()">
+							🔄 Refresh
+						</button>
+					</div>
+				</div>
+
+				<!-- Filters -->
+				<div class="filters">
+					<div class="filter-group">
+						<label for="status-filter">Status</label>
+						<select id="status-filter" onchange="filterOrders()">
+							<option value="all">All Orders</option>
+							<option value="pending">Pending</option>
+							<option value="confirmed">Confirmed</option>
+							<option value="processing">Processing</option>
+							<option value="ready for pickup">Ready for Delivery</option>
+							<option value="shipped">Shipped</option>
+							<option value="delivered">Delivered</option>
+							<option value="cancelled">Cancelled</option>
+						</select>
+					</div>
+					<div class="filter-group">
+						<label for="search-input">Search</label>
+						<input
+							type="text"
+							id="search-input"
+							placeholder="Search by order number or customer..."
+							oninput="filterOrders()"
+						/>
+					</div>
+				</div>
+
+				<!-- Orders Table -->
+				<div class="table-container">
+					<table class="data-table" id="orders-table">
+						<thead>
+							<tr>
+								<th>Order #</th>
+								<th>Customer</th>
+								<th>Items</th>
+								<th>Total</th>
+								<th>Status</th>
+								<th>Shelf #</th>
+								<th>Order Date</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody id="orders-table-body">
+							<tr>
+								<td colspan="8" class="loading">
+									<div class="spinner"></div>
+									<p>Loading orders...</p>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</main>
+
+		<!-- Order Details Modal -->
+		<div id="order-details-modal" class="modal">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h2>Order Details</h2>
+					<span class="close" onclick="closeOrderDetailsModal()">&times;</span>
+				</div>
+				<div class="modal-body" id="order-details-content">
+					<!-- Order details will be populated here -->
+				</div>
+			</div>
+		</div>
+
+		<!-- Process Order Modal -->
+		<div id="process-order-modal" class="modal">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h2>Process Order</h2>
+					<span class="close" onclick="closeProcessOrderModal()">&times;</span>
+				</div>
+				<div class="modal-body">
+					<div style="margin-bottom: 20px">
+						<h3 style="color: #333; margin-bottom: 15px">Order Information</h3>
+						<div
+							id="process-order-info"
+							style="
+								background: #f8f9fa;
+								padding: 15px;
+								border-radius: 8px;
+								margin-bottom: 20px;
+							"
+						>
+							<!-- Order info will be populated here -->
+						</div>
+
+						<div style="margin-bottom: 20px">
+							<label
+								for="barcode-input"
+								style="
+									display: block;
+									margin-bottom: 8px;
+									font-weight: 600;
+									color: #333;
+								"
+								>Scan Barcode</label
+							>
+							<div class="barcode-input-group">
+								<input
+									type="text"
+									id="barcode-input"
+									placeholder="Scan or enter barcode..."
+									oninput="handleBarcodeInput(event)"
+									onkeypress="handleBarcodeKeypress(event)"
+								/>
+								<button class="btn btn-primary" onclick="processBarcode()">
+									Process
+								</button>
+							</div>
+							<small style="color: #666; margin-top: 5px; display: block">
+								Barcode will auto-process on scan/input or press Enter
+							</small>
+						</div>
+					</div>
+
+					<div>
+						<h4 style="color: #333; margin-bottom: 10px">Order Items</h4>
+						<div class="table-container">
+							<table class="data-table">
+								<thead>
+									<tr>
+										<th>Product</th>
+										<th>Shelf #</th>
+										<th>Barcode</th>
+										<th>Quantity</th>
+										<th>Status</th>
+										<th>Actions</th>
+									</tr>
+								</thead>
+								<tbody id="process-items-table">
+									<!-- Items will be populated here -->
+								</tbody>
+							</table>
+						</div>
+					</div>
+
+					<div
+						style="
+							margin-top: 20px;
+							padding-top: 20px;
+							border-top: 1px solid #e9ecef;
+							display: flex;
+							justify-content: space-between;
+							align-items: center;
+						"
+					>
+						<div id="process-status" class="processing-status pending">
+							Ready to scan items...
+						</div>
+						<div>
+							<button
+								class="btn btn-secondary"
+								onclick="closeProcessOrderModal()"
+								style="margin-right: 10px"
+							>
+								Cancel
+							</button>
+							<button
+								class="btn btn-primary"
+								onclick="completeOrderProcessing()"
+								id="complete-btn"
+								style="display: none"
+							>
+								Complete Processing
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Global Config -->
+		<script src="js/config.js"></script>
+
+		<script>
+			// Global variables
+			let currentToken = localStorage.getItem("authToken");
+			let currentUser = null;
+			let allOrders = [];
+			let filteredOrders = [];
+
+			// Initialize the page
+			document.addEventListener("DOMContentLoaded", function () {
+				checkAuthentication();
+				loadUserProfile();
+				loadOrders();
+			});
+
+			// Check if user is authenticated
+			function checkAuthentication() {
+				if (!currentToken) {
+					//window.location.href = "signin.html";
+					//return;
+				}
+			}
+
+			// Load user profile
+			async function loadUserProfile() {
+				try {
+					const response = await fetch(`${API_BASE_URL}/auth/me`, {
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					const result = await response.json();
+
+					if (response.ok) {
+						currentUser = result.data.user;
+						console.log("User profile loaded:", currentUser); // Debug log
+						updateUserInfo();
+					} else {
+						console.log("Authentication error:", result.message);
+						handleAuthError();
+					}
+				} catch (error) {
+					console.error("Error loading user profile:", error);
+					handleAuthError();
+				}
+			}
+
+			// Update user info in header
+			function updateUserInfo() {
+				if (currentUser) {
+					const userAvatar = document.getElementById("user-avatar");
+					const userName = document.getElementById("user-name");
+
+					if (userAvatar && currentUser.name) {
+						userAvatar.textContent = currentUser.name.charAt(0).toUpperCase();
+					} else if (userAvatar) {
+						userAvatar.textContent = "U"; // Default avatar for unknown user
+					}
+					if (userName) {
+						userName.textContent = currentUser.name || "Staff User";
+					}
+				}
+			}
+
+			// Handle authentication errors
+			function handleAuthError() {
+				console.log("error");
+				localStorage.removeItem("authToken");
+				localStorage.removeItem("refreshToken");
+				window.location.href = "signin.html";
+			}
+
+			// Logout function
+			function logout() {
+				localStorage.removeItem("authToken");
+				localStorage.removeItem("refreshToken");
+				window.location.href = "signin.html";
+			}
+
+			// Load orders
+			async function loadOrders() {
+				showTableLoading(true);
+
+				try {
+					const response = await fetch(`${API_BASE_URL}/orders`, {
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					const result = await response.json();
+
+					if (response.ok) {
+						allOrders = result.data || [];
+						filteredOrders = [...allOrders];
+						displayOrders(filteredOrders);
+						updateStats();
+					} else {
+						showMessage("Failed to load orders", "error");
+					}
+				} catch (error) {
+					console.error("Error loading orders:", error);
+					showMessage("Error loading orders", "error");
+				} finally {
+					showTableLoading(false);
+				}
+			}
+
+			// Display orders in table
+			function displayOrders(orders) {
+				const tbody = document.getElementById("orders-table-body");
+				tbody.innerHTML = "";
+
+				if (orders.length === 0) {
+					tbody.innerHTML = `
+						<tr>
+							<td colspan="8" class="empty-state">
+								<div class="icon">📦</div>
+								<h3>No orders found</h3>
+								<p>No orders match your current filters.</p>
+							</td>
+						</tr>
+					`;
+					return;
+				}
+
+				orders.forEach((order) => {
+					const customerName = order.customer?.name || "N/A";
+					const itemCount = order.items?.length || 0;
+					const totalAmount = order.total || 0;
+					const status = order.status || "pending";
+					const shelfNumber = order.shelfNumber || "N/A";
+					const orderDate = new Date(order.createdAt).toLocaleDateString();
+
+					const row = document.createElement("tr");
+					row.innerHTML = `
+						<td><strong>${order.orderNumber}</strong></td>
+						<td>${customerName}</td>
+						<td>${itemCount} item${itemCount !== 1 ? "s" : ""}</td>
+						<td>$${totalAmount.toFixed(2)}</td>
+						<td><span class="status-badge status-${status}">${status}</span></td>
+						<td>${shelfNumber}</td>
+						<td>${orderDate}</td>
+						<td>
+							<div class="table-actions">
+								<button class="action-btn view" onclick="viewOrderDetails('${order._id}')">
+									View
+								</button>
+								${getStatusActionButton(order)}
+							</div>
+						</td>
+					`;
+					tbody.appendChild(row);
+				});
+			}
+
+			// Get status-specific action button
+			function getStatusActionButton(order) {
+				const status = order.status || "pending";
+
+				switch (status) {
+					case "pending":
+						return `<button class="action-btn edit" onclick="updateOrderStatus('${order._id}', 'confirmed')">
+							Confirm Order
+						</button>`;
+					case "confirmed":
+						return `<button class="action-btn edit" onclick="updateOrderStatus('${order._id}', 'processing')">
+							Start Processing
+						</button>`;
+					case "processing":
+						return `<button class="action-btn edit" onclick="processOrder('${order._id}')">
+							Process Order
+						</button>
+						<button class="action-btn edit" onclick="updateOrderStatus('${order._id}', 'ready for pickup')">
+							Mark Ready
+						</button>`;
+					case "ready for pickup":
+						return `<button class="action-btn edit" onclick="updateOrderStatus('${order._id}', 'shipped')">
+							Mark Shipped
+						</button>`;
+					case "shipped":
+						return `<button class="action-btn edit" onclick="updateOrderStatus('${order._id}', 'delivered')">
+							Mark Delivered
+						</button>`;
+					default:
+						return "";
+				}
+			}
+
+			// Update order status
+			async function updateOrderStatus(orderId, newStatus) {
+				try {
+					const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+						method: "PUT",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({ status: newStatus }),
+					});
+
+					const result = await response.json();
+
+					if (response.ok) {
+						showMessage(`Order status updated to ${newStatus}`, "success");
+
+						// If status changed to processing, automatically open the process modal
+						if (newStatus === "processing") {
+							// Get the updated order data and open process modal
+							setTimeout(() => {
+								processOrder(orderId);
+							}, 500); // Small delay to ensure status update is processed
+						} else {
+							loadOrders(); // Refresh the orders list for other status changes
+						}
+					} else {
+						showMessage(
+							result.message || "Failed to update order status",
+							"error"
+						);
+					}
+				} catch (error) {
+					console.error("Error updating order status:", error);
+					showMessage("Error updating order status", "error");
+				}
+			}
+
+			// View order details
+			async function viewOrderDetails(orderId) {
+				try {
+					const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					const result = await response.json();
+
+					if (response.ok) {
+						showOrderDetailsModal(result.data);
+					} else {
+						showMessage("Failed to load order details", "error");
+					}
+				} catch (error) {
+					console.error("Error loading order details:", error);
+					showMessage("Error loading order details", "error");
+				}
+			}
+
+			// Show order details modal
+			function showOrderDetailsModal(order) {
+				const modal = document.getElementById("order-details-modal");
+				const content = document.getElementById("order-details-content");
+
+				const customerName = order.customer?.name || "N/A";
+				const customerEmail = order.customer?.email || "N/A";
+				const customerPhone = order.customer?.phoneNumber || "N/A";
+				const orderDate = new Date(order.createdAt).toLocaleString();
+				const status = order.status || "pending";
+
+				let itemsHtml = "";
+				if (order.items && order.items.length > 0) {
+					itemsHtml = order.items
+						.map(
+							(item) => `
+						<tr>
+							<td>${item.product?.name || "N/A"}</td>
+							<td>${item.product?.shelfNumber || "N/A"}</td>
+							<td>${item.quantity}</td>
+							<td>$${item.price?.toFixed(2) || "0.00"}</td>
+							<td>$${(item.quantity * (item.price || 0)).toFixed(2)}</td>
+						</tr>
+					`
+						)
+						.join("");
+				}
+
+				content.innerHTML = `
+					<div style="margin-bottom: 20px;">
+						<h3 style="color: #333; margin-bottom: 15px;">Order #${order.orderNumber}</h3>
+						<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+							<div>
+								<h4 style="color: #666; margin-bottom: 10px;">Customer Information</h4>
+								<p><strong>Name:</strong> ${customerName}</p>
+								<p><strong>Email:</strong> ${customerEmail}</p>
+								<p><strong>Phone:</strong> ${customerPhone}</p>
+							</div>
+							<div>
+								<h4 style="color: #666; margin-bottom: 10px;">Order Information</h4>
+								<p><strong>Status:</strong> <span class="status-badge status-${status}">${status}</span></p>
+								<p><strong>Order Date:</strong> ${orderDate}</p>
+								<p><strong>Total:</strong> $${order.total?.toFixed(2) || "0.00"}</p>
+							</div>
+						</div>
+					</div>
+
+					<div>
+						<h4 style="color: #666; margin-bottom: 10px;">Order Items</h4>
+						<table class="data-table">
+							<thead>
+								<tr>
+									<th>Product</th>
+									<th>Shelf #</th>
+									<th>Quantity</th>
+									<th>Unit Price</th>
+									<th>Total</th>
+								</tr>
+							</thead>
+							<tbody>
+								${itemsHtml}
+							</tbody>
+						</table>
+					</div>
+
+					<div style="margin-top: 20px; text-align: right;">
+						${getStatusActionButton(order)}
+					</div>
+				`;
+
+				modal.style.display = "block";
+			}
+
+			// Close order details modal
+			function closeOrderDetailsModal() {
+				document.getElementById("order-details-modal").style.display = "none";
+			}
+
+			// Filter orders
+			function filterOrders() {
+				const statusFilter = document.getElementById("status-filter").value;
+				const searchTerm = document
+					.getElementById("search-input")
+					.value.toLowerCase()
+					.trim();
+
+				filteredOrders = allOrders.filter((order) => {
+					const matchesStatus =
+						statusFilter === "all" || order.status === statusFilter;
+					const matchesSearch =
+						!searchTerm ||
+						order.orderNumber.toLowerCase().includes(searchTerm) ||
+						order.customer?.name.toLowerCase().includes(searchTerm) ||
+						order.customer?.email.toLowerCase().includes(searchTerm);
+
+					return matchesStatus && matchesSearch;
+				});
+
+				displayOrders(filteredOrders);
+			}
+
+			// Update statistics
+			function updateStats() {
+				const totalOrders = allOrders.length;
+				const pendingOrders = allOrders.filter(
+					(order) => order.status === "pending"
+				).length;
+				const confirmedOrders = allOrders.filter(
+					(order) => order.status === "confirmed"
+				).length;
+				const processingOrders = allOrders.filter(
+					(order) => order.status === "processing"
+				).length;
+				const readyOrders = allOrders.filter(
+					(order) => order.status === "ready for pickup"
+				).length;
+				const shippedOrders = allOrders.filter(
+					(order) => order.status === "shipped"
+				).length;
+
+				document.getElementById("total-orders").textContent = totalOrders;
+				document.getElementById("pending-orders").textContent = pendingOrders;
+				document.getElementById("confirmed-orders").textContent =
+					confirmedOrders;
+				document.getElementById("processing-orders").textContent =
+					processingOrders;
+				document.getElementById("ready-orders").textContent = readyOrders;
+				document.getElementById("shipped-orders").textContent = shippedOrders;
+			}
+
+			// Refresh orders
+			function refreshOrders() {
+				loadOrders();
+				showMessage("Orders refreshed", "success");
+			}
+
+			// Show table loading state
+			function showTableLoading(show) {
+				const tbody = document.getElementById("orders-table-body");
+				if (show) {
+					tbody.innerHTML = `
+						<tr>
+							<td colspan="8" class="loading">
+								<div class="spinner"></div>
+								<p>Loading orders...</p>
+							</td>
+						</tr>
+					`;
+				}
+			}
+
+			// Show message (you can implement this based on your existing message system)
+			function showMessage(message, type) {
+				// Simple alert for now - you can enhance this with a proper notification system
+				alert(`${type.toUpperCase()}: ${message}`);
+			}
+
+			// Process Order Functions
+			let currentProcessingOrder = null;
+			let processedItems = new Set();
+
+			// Process order function
+			async function processOrder(orderId) {
+				try {
+					const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					const result = await response.json();
+
+					if (response.ok) {
+						currentProcessingOrder = result.data;
+						processedItems.clear();
+						showProcessOrderModal(result.data);
+					} else {
+						showMessage("Failed to load order details", "error");
+					}
+				} catch (error) {
+					console.error("Error loading order for processing:", error);
+					showMessage("Error loading order details", "error");
+				}
+			}
+
+			// Show process order modal
+			function showProcessOrderModal(order) {
+				const modal = document.getElementById("process-order-modal");
+				const orderInfo = document.getElementById("process-order-info");
+				const itemsTable = document.getElementById("process-items-table");
+
+				// Populate order info
+				const customerName = order.customer?.name || "N/A";
+				const orderDate = new Date(order.createdAt).toLocaleString();
+
+				orderInfo.innerHTML = `
+					<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+						<div>
+							<strong>Order #:</strong> ${order.orderNumber}<br>
+							<strong>Customer:</strong> ${customerName}<br>
+							<strong>Status:</strong> <span class="status-badge status-${order.status}">${
+					order.status
+				}</span>
+						</div>
+						<div>
+							<strong>Order Date:</strong> ${orderDate}<br>
+							<strong>Total Items:</strong> ${order.items?.length || 0}<br>
+							<strong>Total Amount:</strong> $${order.total?.toFixed(2) || "0.00"}
+						</div>
+					</div>
+				`;
+
+				// Populate items table
+				itemsTable.innerHTML = "";
+				if (order.items && order.items.length > 0) {
+					order.items.forEach((item, index) => {
+						const row = document.createElement("tr");
+						const productName = item.product?.name || "N/A";
+						const shelfNumber = item.product?.shelfNumber || "N/A";
+						const barcode = item.product?.barcode || "N/A";
+						const quantity = item.quantity || 0;
+						const itemId = item.product?._id || `item-${index}`;
+
+						row.innerHTML = `
+							<td>${productName}</td>
+							<td>${shelfNumber}</td>
+							<td>${barcode}</td>
+							<td>${quantity}</td>
+							<td>
+								<span id="status-${itemId}" class="status-badge status-pending">
+									Pending
+								</span>
+							</td>
+							<td>
+								<button class="action-btn edit" onclick="markItemProcessed('${itemId}', '${barcode}')">
+									Mark Processed
+								</button>
+							</td>
+						`;
+						itemsTable.appendChild(row);
+					});
+				} else {
+					itemsTable.innerHTML = `
+						<tr>
+							<td colspan="6" style="text-align: center; padding: 20px; color: #666;">
+								No items found in this order
+							</td>
+						</tr>
+					`;
+				}
+
+				// Reset barcode input
+				document.getElementById("barcode-input").value = "";
+				document.getElementById("process-status").textContent =
+					"Ready to scan items...";
+				document.getElementById("process-status").className =
+					"processing-status pending";
+
+				// Hide complete button initially
+				document.getElementById("complete-btn").style.display = "none";
+
+				modal.style.display = "block";
+			}
+
+			// Close process order modal
+			function closeProcessOrderModal() {
+				document.getElementById("process-order-modal").style.display = "none";
+				currentProcessingOrder = null;
+				processedItems.clear();
+			}
+
+			// Handle barcode keypress (Enter key)
+			function handleBarcodeKeypress(event) {
+				if (event.key === "Enter") {
+					event.preventDefault();
+					processBarcode();
+				}
+			}
+
+			// Handle barcode input change (for auto-processing)
+			let barcodeInputTimeout = null;
+			function handleBarcodeInput(event) {
+				const input = event.target;
+				const value = input.value.trim();
+
+				// Clear any existing timeout
+				if (barcodeInputTimeout) {
+					clearTimeout(barcodeInputTimeout);
+				}
+
+				// If input is empty, don't process
+				if (!value) return;
+
+				// Set a timeout to process the barcode after a short delay
+				// This prevents processing while the barcode scanner is still typing
+				barcodeInputTimeout = setTimeout(() => {
+					// Only auto-process if we have a reasonable barcode length
+					// Most barcodes are at least 8-12 characters
+					if (value.length >= 8) {
+						processBarcode();
+					}
+				}, 300); // 300ms delay to allow barcode scanner to finish input
+			}
+
+			// Process scanned barcode
+			function processBarcode() {
+				const barcodeInput = document.getElementById("barcode-input");
+				const barcode = barcodeInput.value.trim();
+
+				// Clear any pending input timeout to prevent double processing
+				if (barcodeInputTimeout) {
+					clearTimeout(barcodeInputTimeout);
+					barcodeInputTimeout = null;
+				}
+
+				if (!barcode) {
+					showMessage("Please enter a barcode", "error");
+					return;
+				}
+
+				if (!currentProcessingOrder || !currentProcessingOrder.items) {
+					showMessage("No order is currently being processed", "error");
+					return;
+				}
+
+				// Find item with matching barcode
+				const matchingItem = currentProcessingOrder.items.find(
+					(item) => item.product?.barcode === barcode
+				);
+
+				if (matchingItem) {
+					// Use the same ID generation logic as in showProcessOrderModal
+					const itemIndex = currentProcessingOrder.items.indexOf(matchingItem);
+					const itemId = matchingItem.product?._id || `item-${itemIndex}`;
+
+					if (itemId) {
+						// Automatically mark item as processed
+						markItemProcessed(itemId, barcode);
+						barcodeInput.value = "";
+
+						// Clear input and focus back for next scan
+						barcodeInput.focus();
+
+						// Show brief success feedback (inline, not alert)
+						const statusElement = document.getElementById("process-status");
+						statusElement.innerHTML = `✅ "${
+							matchingItem.product?.name || "Item"
+						}" scanned and processed!`;
+						statusElement.className = "processing-status completed";
+
+						// Reset status message after 2 seconds
+						setTimeout(() => {
+							updateProcessStatus();
+						}, 2000);
+
+						// Visual feedback - briefly highlight the processed row
+						const row = document
+							.getElementById(`status-${itemId}`)
+							.closest("tr");
+						if (row) {
+							row.style.backgroundColor = "#d4edda";
+							setTimeout(() => {
+								row.style.backgroundColor = "";
+							}, 1000);
+						}
+					} else {
+						showMessage("Unable to identify item for processing", "error");
+					}
+				} else {
+					showMessage(`Barcode "${barcode}" not found in this order`, "error");
+					// Clear input on error too
+					barcodeInput.value = "";
+					barcodeInput.focus();
+				}
+			}
+
+			// Mark item as processed
+			function markItemProcessed(itemId, barcode) {
+				const statusElement = document.getElementById(`status-${itemId}`);
+				if (statusElement) {
+					statusElement.className = "status-badge status-processing";
+					statusElement.textContent = "Processed";
+					processedItems.add(itemId);
+				}
+
+				// Check if all items are processed
+				checkAllItemsProcessed();
+
+				// Update status message
+				updateProcessStatus();
+			}
+
+			// Check if all items are processed
+			function checkAllItemsProcessed() {
+				if (!currentProcessingOrder || !currentProcessingOrder.items) return;
+
+				const totalItems = currentProcessingOrder.items.length;
+				const processedCount = processedItems.size;
+
+				if (processedCount === totalItems) {
+					document.getElementById("complete-btn").style.display =
+						"inline-block";
+					const statusElement = document.getElementById("process-status");
+					statusElement.innerHTML = `✅ All items processed! Ready to complete.`;
+					statusElement.className = "processing-status completed";
+				}
+			}
+
+			// Update process status
+			function updateProcessStatus() {
+				if (!currentProcessingOrder || !currentProcessingOrder.items) return;
+
+				const totalItems = currentProcessingOrder.items.length;
+				const processedCount = processedItems.size;
+
+				const statusElement = document.getElementById("process-status");
+				statusElement.innerHTML = `${processedCount} of ${totalItems} items processed`;
+				statusElement.className = "processing-status processing";
+			}
+
+			// Complete order processing
+			async function completeOrderProcessing() {
+				if (!currentProcessingOrder) {
+					showMessage("No order is currently being processed", "error");
+					return;
+				}
+
+				// Ask for shelf number before completing
+				const shelfNumber = prompt(
+					"Enter the shelf number for this completed order:"
+				);
+
+				if (shelfNumber === null) {
+					// User cancelled
+					return;
+				}
+
+				if (!shelfNumber.trim()) {
+					showMessage("Shelf number is required", "error");
+					return;
+				}
+
+				try {
+					// First, update the order with the shelf number
+					const updateResponse = await fetch(
+						`${API_BASE_URL}/orders/${currentProcessingOrder._id}`,
+						{
+							method: "PUT",
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({
+								shelfNumber: shelfNumber.trim(),
+								status: "ready for pickup",
+							}),
+						}
+					);
+
+					const updateResult = await updateResponse.json();
+
+					if (!updateResponse.ok) {
+						showMessage(
+							updateResult.message || "Failed to update shelf number",
+							"error"
+						);
+						return;
+					}
+
+					// Update the current processing order with the shelf number
+					currentProcessingOrder.shelfNumber = shelfNumber.trim();
+
+					showMessage("Order processing completed successfully!", "success");
+					closeProcessOrderModal();
+					loadOrders(); // Refresh the orders list
+				} catch (error) {
+					console.error("Error completing order processing:", error);
+					showMessage("Error completing order processing", "error");
+				}
+			}
+
+			// Close modal when clicking outside
+			window.onclick = function (event) {
+				const orderDetailsModal = document.getElementById(
+					"order-details-modal"
+				);
+				const processOrderModal = document.getElementById(
+					"process-order-modal"
+				);
+
+				if (event.target === orderDetailsModal) {
+					orderDetailsModal.style.display = "none";
+				}
+				if (event.target === processOrderModal) {
+					closeProcessOrderModal();
+				}
+			};
+		</script>
+	</body>
+</html>

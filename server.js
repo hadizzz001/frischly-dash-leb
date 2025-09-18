@@ -117,6 +117,11 @@ app.get("/shop", (req, res) => {
 	res.sendFile(__dirname + "/public/shop.html");
 });
 
+// Route for staff dashboard page
+app.get("/ordermanagement", (req, res) => {
+	res.sendFile(__dirname + "/public/ordermanagement.html");
+});
+
 // Health check route
 app.get("/api/health", (req, res) => {
 	res.json({

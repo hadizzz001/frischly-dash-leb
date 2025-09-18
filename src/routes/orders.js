@@ -34,7 +34,12 @@ router.post(
 	authorize("admin", "manager", "staff", "customer"),
 	createOrder
 );
-router.put("/:id", protect, authorize("admin", "manager"), updateOrder);
+router.put(
+	"/:id",
+	protect,
+	authorize("admin", "manager", "staff"),
+	updateOrder
+);
 router.patch(
 	"/:id/cancel",
 	protect,

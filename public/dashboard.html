@@ -2933,6 +2933,12 @@
 						<button class="btn btn-primary" onclick="showOrderFilters()">
 							🔍 Filter Orders
 						</button>
+						<button
+							class="btn btn-success"
+							onclick="window.location.href='/ordermanagement'"
+						>
+							📋 Manage All Orders
+						</button>
 					</div>
 
 					<div class="data-table">
@@ -5031,6 +5037,7 @@
 						allCategories = data.data || [];
 
 						const categoriesCount = allCategories.length;
+						refreshSubcategories();
 					}
 				} catch (error) {
 					console.error("Error loading categories count:", error);
@@ -7926,6 +7933,7 @@
 				// Load data based on active tab
 				if (tabName === "categories") {
 					refreshCategories();
+
 					loadCategoriesForSubcategoryFilter();
 				} else if (tabName === "subcategories") {
 					if (!filter) {
