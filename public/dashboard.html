@@ -2603,7 +2603,7 @@
 						</button>
 						<button
 							class="category-tab-btn"
-							onclick="showCategoryTab('subcategories')"
+							onclick="showCategoryTab('subcategories',false)"
 						>
 							📁 Subcategories
 						</button>
@@ -5193,7 +5193,16 @@
 									📁
 								</div>
 							</td>
-							<td style="font-weight: 600; color: #333;">${categoryName}</td>
+							<td style="font-weight: 600; color: #333;">
+								<a href="#" onclick="navigateToCategorySubcategories('${
+									category._id
+								}', '${categoryName.replace(/'/g, "\\'")}')" 
+								   style="color: #007bff; text-decoration: none; cursor: pointer;" 
+								   onmouseover="this.style.textDecoration='underline'" 
+								   onmouseout="this.style.textDecoration='none'">
+									${categoryName}
+								</a>
+							</td>
 							<td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${description}</td>
 							<td>
 								<span id="product-count-${
@@ -5509,6 +5518,38 @@
 				const modal = document.getElementById("category-modal");
 				if (modal) {
 					modal.style.display = "none";
+				}
+			}
+
+			// Function to navigate to subcategory tab and filter by category
+			function navigateToCategorySubcategories(categoryId, categoryName) {
+				try {
+					// Switch to subcategory tab
+					showCategoryTab("subcategories", true);
+
+					// Set the parent category filter to the clicked category
+					const parentFilter = document.getElementById(
+						"subcategory-parent-filter"
+					);
+					if (parentFilter) {
+						parentFilter.value = categoryId;
+					}
+
+					// Clear other filters
+					const searchInput = document.getElementById("subcategory-search");
+					const statusFilter = document.getElementById("subcategory-filter");
+
+					if (searchInput) searchInput.value = "";
+					if (statusFilter) statusFilter.value = "all";
+
+					// Apply the filter
+					filterSubcategories();
+
+					// Show success message
+					showMessage(`Showing subcategories for "${categoryName}"`, "info");
+				} catch (error) {
+					console.error("Error navigating to category subcategories:", error);
+					showMessage("Error navigating to subcategories", "error");
 				}
 			}
 
@@ -7867,7 +7908,7 @@
 			}
 
 			// Category Tabs Management
-			function showCategoryTab(tabName) {
+			function showCategoryTab(tabName, filter) {
 				// Remove active class from all tabs and content
 				document
 					.querySelectorAll(".category-tab-btn")
@@ -7887,7 +7928,9 @@
 					refreshCategories();
 					loadCategoriesForSubcategoryFilter();
 				} else if (tabName === "subcategories") {
-					refreshSubcategories();
+					if (!filter) {
+						refreshSubcategories();
+					}
 					loadCategoriesForSubcategoryFilter();
 				}
 			}
@@ -10830,6 +10873,7 @@
 					// Load users and zones for the dropdowns
 					loadUsersForRiderModal();
 					loadZonesForRiderModal(); // Function not implemented yet
+					document.getElementById("rider-user").disabled = false; // Enable user selection for new rider
 
 					riderModal.style.display = "block";
 				} catch (error) {
@@ -11098,6 +11142,8 @@
 
 			async function editRider(riderId) {
 				try {
+					loadZonesForRiderModal(); // Function not implemented yet
+
 					if (!riderId) {
 						showMessage("Rider ID is required", "error");
 						return;
@@ -11136,6 +11182,7 @@
 					const form = document.getElementById("rider-form");
 					const riderIdField = document.getElementById("rider-id");
 					const userField = document.getElementById("rider-user");
+					userField.disabled = true; // Disable user selection when editing
 					const vehicleField = document.getElementById("rider-vehicle");
 					const vehicleNumberField = document.getElementById(
 						"rider-vehicle-number"
@@ -11189,7 +11236,7 @@
 					await loadUsersForRiderModal();
 					if (rider.user && rider.user._id && userField) {
 						userField.value = rider.user._id;
-						userField.disabled = false;
+						//userField.disabled = false;
 					}
 
 					// Load zones checkboxes and select the rider's zones

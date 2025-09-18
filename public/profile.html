@@ -266,7 +266,10 @@
 					</div>
 
 					<div class="actions">
-						<a href="index.html" class="btn">← Back to Home</a>
+						<a href="shop.html" class="btn">← Back to Shop</a>
+						<button onclick="changePassword()" class="btn">
+							Change Password
+						</button>
 						<button onclick="signOut()" class="btn logout">Sign Out</button>
 					</div>
 				</div>
@@ -328,6 +331,92 @@
 				setTimeout(() => {
 					window.location.href = "index.html";
 				}, 1500);
+			}
+
+			// Change password function
+			function changePassword() {
+				// Show password change form
+				const profileContent = document.getElementById("profile-content");
+				profileContent.innerHTML = `
+					<div style="text-align: center; padding: 20px;">
+						<h3 style="color: #333; margin-bottom: 20px;">Change Password</h3>
+						<div style="max-width: 400px; margin: 0 auto;">
+							<div style="margin-bottom: 15px;">
+								<input type="password" id="current-password" placeholder="Current Password" 
+									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+							</div>
+							<div style="margin-bottom: 15px;">
+								<input type="password" id="new-password" placeholder="New Password" 
+									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+							</div>
+							<div style="margin-bottom: 20px;">
+								<input type="password" id="confirm-password" placeholder="Confirm New Password" 
+									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+							</div>
+							<div style="display: flex; gap: 10px; justify-content: center;">
+								<button onclick="submitPasswordChange()" class="btn" style="background: #28a745;">Update Password</button>
+								<button onclick="window.location.reload()" class="btn" style="background: #6c757d;">Back to Profile</button>
+							</div>
+						</div>
+					</div>
+				`;
+			}
+
+			// Submit password change
+			async function submitPasswordChange() {
+				const currentPassword =
+					document.getElementById("current-password").value;
+				const newPassword = document.getElementById("new-password").value;
+				const confirmPassword =
+					document.getElementById("confirm-password").value;
+
+				// Validation
+				if (!currentPassword || !newPassword || !confirmPassword) {
+					showMessage("Please fill in all fields", "error");
+					return;
+				}
+
+				if (newPassword !== confirmPassword) {
+					showMessage("New passwords do not match", "error");
+					return;
+				}
+
+				if (newPassword.length < 6) {
+					showMessage(
+						"New password must be at least 6 characters long",
+						"error"
+					);
+					return;
+				}
+
+				try {
+					const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+						method: "PUT",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							currentPassword,
+							newPassword,
+						}),
+					});
+
+					if (response.ok) {
+						showMessage("Password changed successfully!", "success");
+						setTimeout(() => {
+							window.location.reload(); // Refresh the page
+						}, 2000);
+					} else {
+						const errorData = await response.json();
+						showMessage(
+							errorData.message || "Failed to change password",
+							"error"
+						);
+					}
+				} catch (error) {
+					showMessage("Failed to change password. Please try again.", "error");
+				}
 			}
 
 			// Load user profile
