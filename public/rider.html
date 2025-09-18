@@ -564,9 +564,19 @@
 						"Content-Type": "application/json",
 					},
 				})
-					.then((response) => response.json())
+					.then(async (response) => {
+						if (!response.ok) {
+							if (response.status === 401) {
+								localStorage.removeItem("authToken");
+								localStorage.removeItem("refreshToken");
+							}
+							window.location.href = "signin.html";
+							return;
+						}
+						return response.json();
+					})
 					.then((data) => {
-						if (data.success && data.data.user) {
+						if (data && data.success && data.data.user) {
 							const user = data.data.user;
 							if (user.role !== "rider") {
 								showMessage("Access denied. Rider access only.", "error");
@@ -582,9 +592,40 @@
 						}
 					})
 					.catch((error) => {
-						console.error("Auth check error:", error);
 						window.location.href = "signin.html";
 					});
+			}
+
+			// Function to refresh authentication token
+			async function refreshAuthToken() {
+				if (!currentRefreshToken) {
+					return false;
+				}
+
+				try {
+					const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							refreshToken: currentRefreshToken,
+						}),
+					});
+
+					if (response.ok) {
+						const data = await response.json();
+						if (data.success && data.data.accessToken) {
+							currentToken = data.data.accessToken;
+							localStorage.setItem("authToken", currentToken);
+							return true;
+						}
+					}
+
+					return false;
+				} catch (error) {
+					return false;
+				}
 			}
 
 			// Update welcome message
@@ -601,7 +642,9 @@
 
 				try {
 					const response = await fetch(
-						`${API_BASE_URL}/orders?status=ready for pickup&limit=50`,
+						`${API_BASE_URL}/orders?status=${encodeURIComponent(
+							"ready for pickup"
+						)}&limit=50`,
 						{
 							headers: {
 								Authorization: `Bearer ${currentToken}`,
@@ -612,11 +655,44 @@
 
 					if (response.ok) {
 						const data = await response.json();
-						allOrders = data.data.orders || [];
+						allOrders = data.data || [];
 						displayOrders(allOrders);
 						updateStats(allOrders);
 					} else {
-						showMessage("Failed to load orders", "error");
+						const errorData = await response.json().catch(() => ({}));
+
+						if (response.status === 403) {
+							showMessage(
+								"Access denied. Please check your rider permissions or refresh your login.",
+								"error"
+							);
+							// Optionally redirect to login if repeatedly failing
+							setTimeout(() => {
+								if (confirm("Would you like to sign in again?")) {
+									window.location.href = "signin.html";
+								}
+							}, 3000);
+						} else if (response.status === 401) {
+							const refreshed = await refreshAuthToken();
+							if (refreshed) {
+								// Retry the request with new token
+								loadReadyOrders();
+								return;
+							} else {
+								showMessage(
+									"Authentication failed. Please sign in again.",
+									"error"
+								);
+								localStorage.removeItem("authToken");
+								localStorage.removeItem("refreshToken");
+								window.location.href = "signin.html";
+							}
+						} else {
+							showMessage(
+								`Failed to load orders (${response.status})`,
+								"error"
+							);
+						}
 					}
 				} catch (error) {
 					console.error("Error loading orders:", error);
@@ -632,7 +708,9 @@
 
 				try {
 					const response = await fetch(
-						`${API_BASE_URL}/orders?assignedRider=${currentRider._id}&status=On the way&limit=50`,
+						`${API_BASE_URL}/orders?assignedRider=${
+							currentRider._id
+						}&status=${encodeURIComponent("On the way")}&limit=50`,
 						{
 							headers: {
 								Authorization: `Bearer ${currentToken}`,
@@ -650,7 +728,26 @@
 							"info"
 						);
 					} else {
-						showMessage("Failed to load deliveries", "error");
+						const errorData = await response.json().catch(() => ({}));
+						if (response.status === 403) {
+							showMessage(
+								"Access denied. Please check your rider permissions.",
+								"error"
+							);
+						} else if (response.status === 401) {
+							showMessage(
+								"Authentication failed. Please sign in again.",
+								"error"
+							);
+							localStorage.removeItem("authToken");
+							localStorage.removeItem("refreshToken");
+							window.location.href = "signin.html";
+						} else {
+							showMessage(
+								`Failed to load deliveries (${response.status})`,
+								"error"
+							);
+						}
 					}
 				} catch (error) {
 					console.error("Error loading deliveries:", error);
@@ -765,7 +862,7 @@
 							"Content-Type": "application/json",
 						},
 						body: JSON.stringify({
-							status: "On the way",
+							status: "shipped",
 							assignedRider: currentRider._id,
 							riderAssignedAt: new Date().toISOString(),
 						}),

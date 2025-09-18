@@ -61,6 +61,7 @@ exports.getOrders = async (req, res) => {
 		const orders = await Order.find(filter)
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
+			.populate("assignedRider", "name email phone")
 			.populate("items.product", "name barcode")
 			.sort(sortOptions)
 			.skip(skip)
@@ -107,6 +108,7 @@ exports.getOrder = async (req, res) => {
 		const order = await Order.findById(id)
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
+			.populate("assignedRider", "name email phone")
 			.populate("items.product", "name barcode shelfNumber");
 
 		if (!order) {
@@ -274,6 +276,8 @@ exports.updateOrder = async (req, res) => {
 			notes,
 			tax,
 			discount,
+			assignedRider,
+			riderAssignedAt,
 		} = req.body;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -308,6 +312,8 @@ exports.updateOrder = async (req, res) => {
 		if (notes !== undefined) order.notes = notes;
 		if (tax !== undefined) order.tax = tax;
 		if (discount !== undefined) order.discount = discount;
+		if (assignedRider !== undefined) order.assignedRider = assignedRider;
+		if (riderAssignedAt !== undefined) order.riderAssignedAt = riderAssignedAt;
 
 		order.updatedBy = req.user.id;
 
@@ -316,6 +322,7 @@ exports.updateOrder = async (req, res) => {
 		const updatedOrder = await Order.findById(id)
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
+			.populate("assignedRider", "name email phone")
 			.populate("items.product", "name barcode");
 
 		res.json({

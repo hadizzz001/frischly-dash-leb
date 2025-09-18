@@ -15,17 +15,22 @@ const { protect, authorize } = require("../middleware/auth");
 const router = express.Router();
 
 // Protected routes (require authentication)
-router.get("/stats", protect, authorize("admin", "manager"), getOrderStats);
+router.get(
+	"/stats",
+	protect,
+	authorize("admin", "manager", "staff", "rider", "customer"),
+	getOrderStats
+);
 router.get(
 	"/",
 	protect,
-	authorize("admin", "manager", "staff", "customer"),
+	authorize("admin", "manager", "staff", "customer", "rider"),
 	getOrders
 );
 router.get(
 	"/:id",
 	protect,
-	authorize("admin", "manager", "staff", "customer"),
+	authorize("admin", "manager", "staff", "customer", "rider"),
 	getOrder
 );
 router.post(
@@ -37,7 +42,7 @@ router.post(
 router.put(
 	"/:id",
 	protect,
-	authorize("admin", "manager", "staff"),
+	authorize("admin", "manager", "staff", "rider"),
 	updateOrder
 );
 router.patch(
