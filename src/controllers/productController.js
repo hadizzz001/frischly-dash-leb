@@ -735,5 +735,27 @@ exports.uploadImage = async (req, res) => {
 	}
 };
 
+// @desc    Get total count of all products
+// @route   GET /api/products/count
+// @access  Public
+exports.getProductsCount = async (req, res) => {
+	try {
+		const totalProducts = await Product.countDocuments({ isActive: true });
+
+		res.json({
+			success: true,
+			count: totalProducts,
+			message: `Total active products: ${totalProducts}`,
+		});
+	} catch (error) {
+		console.error("Error getting products count:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error retrieving products count",
+			error: error.message,
+		});
+	}
+};
+
 // Export multer upload middleware
 exports.uploadMiddleware = upload.single("image");

@@ -91,7 +91,7 @@ const sampleOrders = [
 		tax: 0.85,
 		discount: 1.5,
 		paymentMethod: "wallet",
-		status: "shipped",
+		status: "OnTheWay",
 		paymentStatus: "paid",
 		notes: "Healthy breakfast items",
 	},

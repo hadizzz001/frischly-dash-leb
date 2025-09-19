@@ -7,6 +7,7 @@ const {
 	deleteOrder,
 	getOrderStats,
 	cancelOrder,
+	getOrdersCount,
 } = require("../controllers/orderController");
 
 // Import middleware
@@ -20,6 +21,12 @@ router.get(
 	protect,
 	authorize("admin", "manager", "staff", "rider", "customer"),
 	getOrderStats
+);
+router.get(
+	"/count",
+	protect,
+	authorize("admin", "manager", "staff"),
+	getOrdersCount
 );
 router.get(
 	"/",

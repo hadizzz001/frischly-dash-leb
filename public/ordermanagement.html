@@ -311,7 +311,7 @@
 				color: #004085;
 			}
 
-			.status-shipped {
+			.status-OnTheWay {
 				background: #d1ecf1;
 				color: #0c5460;
 			}
@@ -593,8 +593,8 @@
 					<div class="label">Ready to be picked up</div>
 				</div>
 				<div class="stat-card">
-					<h3>Shipped</h3>
-					<div class="value" id="shipped-orders">0</div>
+					<h3>OnTheWay</h3>
+					<div class="value" id="OnTheWay-orders">0</div>
 					<div class="label">Out for delivery</div>
 				</div>
 			</div>
@@ -620,7 +620,7 @@
 							<option value="confirmed">Confirmed</option>
 							<option value="processing">Processing</option>
 							<option value="ready for pickup">Ready for Delivery</option>
-							<option value="shipped">Shipped</option>
+							<option value="OnTheWay">OnTheWay</option>
 							<option value="delivered">Delivered</option>
 							<option value="cancelled">Cancelled</option>
 						</select>
@@ -968,10 +968,10 @@
 							Mark Ready
 						</button>`;
 					case "ready for pickup":
-						return `<button class="action-btn edit" onclick="updateOrderStatus('${order._id}', 'shipped')">
-							Mark Shipped
+						return `<button class="action-btn edit" onclick="updateOrderStatus('${order._id}', 'OnTheWay')">
+							Mark OnTheWay
 						</button>`;
-					case "shipped":
+					case "OnTheWay":
 						return `<button class="action-btn edit" onclick="updateOrderStatus('${order._id}', 'delivered')">
 							Mark Delivered
 						</button>`;
@@ -1158,8 +1158,8 @@
 				const readyOrders = allOrders.filter(
 					(order) => order.status === "ready for pickup"
 				).length;
-				const shippedOrders = allOrders.filter(
-					(order) => order.status === "shipped"
+				const OnTheWayOrders = allOrders.filter(
+					(order) => order.status === "OnTheWay"
 				).length;
 
 				document.getElementById("total-orders").textContent = totalOrders;
@@ -1169,7 +1169,7 @@
 				document.getElementById("processing-orders").textContent =
 					processingOrders;
 				document.getElementById("ready-orders").textContent = readyOrders;
-				document.getElementById("shipped-orders").textContent = shippedOrders;
+				document.getElementById("OnTheWay-orders").textContent = OnTheWayOrders;
 			}
 
 			// Refresh orders

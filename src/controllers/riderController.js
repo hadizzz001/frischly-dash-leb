@@ -66,7 +66,7 @@ exports.getRiders = async (req, res) => {
 							{
 								$match: {
 									$expr: { $eq: ["$assignedRider", "$$riderId"] },
-									status: { $in: ["confirmed", "processing", "shipped"] },
+									status: { $in: ["confirmed", "processing", "OnTheWay"] },
 								},
 							},
 						],
@@ -607,7 +607,7 @@ exports.deleteRider = async (req, res) => {
 		// Check for active orders
 		const activeOrders = await Order.countDocuments({
 			assignedRider: id,
-			status: { $in: ["confirmed", "processing", "shipped"] },
+			status: { $in: ["confirmed", "processing", "OnTheWay"] },
 		});
 
 		if (activeOrders > 0) {

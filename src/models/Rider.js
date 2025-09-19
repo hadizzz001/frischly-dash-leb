@@ -161,7 +161,7 @@ riderSchema.virtual("currentOrders", {
 	ref: "Order",
 	localField: "_id",
 	foreignField: "assignedRider",
-	match: { status: { $in: ["confirmed", "processing", "shipped"] } },
+	match: { status: { $in: ["confirmed", "processing", "OnTheWay"] } },
 });
 
 // Index for efficient queries
@@ -270,7 +270,7 @@ riderSchema.statics.getRidersWithStats = function (filter = {}) {
 					{
 						$match: {
 							$expr: { $eq: ["$assignedRider", "$$riderId"] },
-							status: { $in: ["confirmed", "processing", "shipped"] },
+							status: { $in: ["confirmed", "processing", "OnTheWay"] },
 						},
 					},
 				],

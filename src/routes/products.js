@@ -12,6 +12,7 @@ const {
 	getShelfNumbers,
 	uploadImage,
 	uploadMiddleware,
+	getProductsCount,
 } = require("../controllers/productController");
 
 // Import middleware (assuming auth middleware exists)
@@ -21,6 +22,7 @@ const router = express.Router();
 
 // Public routes
 router.get("/", getProducts);
+router.get("/count", getProductsCount);
 router.get("/shelves", getShelfNumbers);
 router.get("/barcode/:barcode", getProductByBarcode);
 router.get("/shelf/:shelfNumber", getProductsByShelfNumber);

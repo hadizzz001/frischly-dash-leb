@@ -510,3 +510,25 @@ exports.cancelOrder = async (req, res) => {
 		});
 	}
 };
+
+// @desc    Get total count of all orders
+// @route   GET /api/orders/count
+// @access  Private (Admin, Manager, Staff)
+exports.getOrdersCount = async (req, res) => {
+	try {
+		const totalOrders = await Order.countDocuments({ isActive: true });
+
+		res.json({
+			success: true,
+			count: totalOrders,
+			message: `Total active orders: ${totalOrders}`,
+		});
+	} catch (error) {
+		console.error("Error getting orders count:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error retrieving orders count",
+			error: error.message,
+		});
+	}
+};
