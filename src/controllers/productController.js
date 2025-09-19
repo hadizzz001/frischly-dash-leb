@@ -89,6 +89,8 @@ exports.getProducts = async (req, res) => {
 			isActive = true,
 			sortBy = "createdAt",
 			sortOrder = "desc",
+			priceRange,
+			stockLevel,
 		} = req.query;
 
 		// Build filter object
@@ -123,6 +125,38 @@ exports.getProducts = async (req, res) => {
 				{ barcode: new RegExp(search, "i") },
 				{ description: new RegExp(search, "i") },
 			];
+		}
+
+		// Price range filtering
+		if (priceRange && priceRange !== "all") {
+			const [minPrice, maxPrice] = priceRange
+				.split("-")
+				.map((p) => parseFloat(p));
+			if (maxPrice) {
+				filter.price = { $gte: minPrice, $lte: maxPrice };
+			} else if (priceRange.endsWith("+")) {
+				filter.price = { $gte: minPrice };
+			} else {
+				filter.price = { $lt: minPrice };
+			}
+		}
+
+		// Stock level filtering
+		if (stockLevel && stockLevel !== "all") {
+			switch (stockLevel) {
+				case "out":
+					filter.stock = 0;
+					break;
+				case "low":
+					filter.stock = { $lte: 10 };
+					break;
+				case "medium":
+					filter.stock = { $gte: 11, $lte: 50 };
+					break;
+				case "high":
+					filter.stock = { $gte: 51 };
+					break;
+			}
 		}
 
 		// Calculate pagination
@@ -188,6 +222,7 @@ exports.getProducts = async (req, res) => {
 				},
 				{ $count: "total" },
 			]);
+			delete countQuery[1].$match.categoryName; // Remove the helper field from count query
 		} else {
 			// Regular query without category name filtering
 			delete filter.categoryName;

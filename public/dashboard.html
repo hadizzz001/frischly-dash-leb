@@ -2802,6 +2802,31 @@
 							<option value="active" selected>Active Only</option>
 							<option value="inactive">Inactive Only</option>
 						</select>
+						<select id="product-price-filter" class="filter-select">
+							<option value="all">All Prices</option>
+							<option value="0-10">Under €10</option>
+							<option value="10-25">€10 - €25</option>
+							<option value="25-50">€25 - €50</option>
+							<option value="50-100">€50 - €100</option>
+							<option value="100+">Over €100</option>
+						</select>
+						<select id="product-stock-filter" class="filter-select">
+							<option value="all">All Stock Levels</option>
+							<option value="out">Out of Stock</option>
+							<option value="low">Low Stock (≤10)</option>
+							<option value="medium">Medium Stock (11-50)</option>
+							<option value="high">High Stock (51+)</option>
+						</select>
+						<select id="product-sort-filter" class="filter-select">
+							<option value="name-asc">Name A-Z</option>
+							<option value="name-desc">Name Z-A</option>
+							<option value="price-asc">Price Low-High</option>
+							<option value="price-desc">Price High-Low</option>
+							<option value="stock-asc">Stock Low-High</option>
+							<option value="stock-desc">Stock High-Low</option>
+							<option value="createdAt-desc" selected>Newest First</option>
+							<option value="createdAt-asc">Oldest First</option>
+						</select>
 						<button
 							class="btn btn-primary"
 							onclick="searchProducts()"
@@ -7133,10 +7158,16 @@
 					"product-category-filter"
 				);
 				const statusFilter = document.getElementById("product-status-filter");
+				const priceFilter = document.getElementById("product-price-filter");
+				const stockFilter = document.getElementById("product-stock-filter");
+				const sortFilter = document.getElementById("product-sort-filter");
 
 				const searchTerm = searchInput ? searchInput.value.trim() : "";
 				const categoryId = categoryFilter ? categoryFilter.value : "all";
 				const status = statusFilter ? statusFilter.value : "all";
+				const priceRange = priceFilter ? priceFilter.value : "all";
+				const stockLevel = stockFilter ? stockFilter.value : "all";
+				const sortOption = sortFilter ? sortFilter.value : "createdAt-desc";
 
 				showSectionLoading("products", true, "Searching products...");
 
@@ -7157,6 +7188,18 @@
 					} else {
 						url += `&isActive=all`;
 					}
+
+					if (priceRange && priceRange !== "all") {
+						url += `&priceRange=${priceRange}`;
+					}
+
+					if (stockLevel && stockLevel !== "all") {
+						url += `&stockLevel=${stockLevel}`;
+					}
+
+					// Parse sort option
+					const [sortBy, sortOrder] = sortOption.split("-");
+					url += `&sortBy=${sortBy}&sortOrder=${sortOrder}`;
 
 					const response = await fetch(url, {
 						method: "GET",
@@ -7233,10 +7276,16 @@
 					"product-category-filter"
 				);
 				const statusFilter = document.getElementById("product-status-filter");
+				const priceFilter = document.getElementById("product-price-filter");
+				const stockFilter = document.getElementById("product-stock-filter");
+				const sortFilter = document.getElementById("product-sort-filter");
 
 				if (searchInput) searchInput.value = "";
 				if (categoryFilter) categoryFilter.value = "all";
 				if (statusFilter) statusFilter.value = "all";
+				if (priceFilter) priceFilter.value = "all";
+				if (stockFilter) stockFilter.value = "all";
+				if (sortFilter) sortFilter.value = "createdAt-desc";
 
 				// Reset table title
 				const tableTitle = document.querySelector(

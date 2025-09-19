@@ -642,9 +642,7 @@
 
 				try {
 					const response = await fetch(
-						`${API_BASE_URL}/orders?status=${encodeURIComponent(
-							"ready for pickup"
-						)}&limit=50`,
+						`${API_BASE_URL}/orders/runningOrder?page=1&limit=10&sortBy=createdAt&sortOrder=desc`,
 						{
 							headers: {
 								Authorization: `Bearer ${currentToken}`,
@@ -710,7 +708,7 @@
 					const response = await fetch(
 						`${API_BASE_URL}/orders?assignedRider=${
 							currentRider._id
-						}&status=${encodeURIComponent("On the way")}&limit=50`,
+						}&status=${encodeURIComponent("OnTheWay")}&limit=50`,
 						{
 							headers: {
 								Authorization: `Bearer ${currentToken}`,
@@ -721,7 +719,7 @@
 
 					if (response.ok) {
 						const data = await response.json();
-						const deliveries = data.data.orders || [];
+						const deliveries = data.data || [];
 						displayOrders(deliveries);
 						showMessage(
 							`Found ${deliveries.length} deliveries in progress`,
@@ -824,7 +822,7 @@
 					(order) => order.status === "ready for pickup"
 				).length;
 				const inTransitOrders = orders.filter(
-					(order) => order.status === "On the way"
+					(order) => order.status === "OnTheWay"
 				).length;
 				const deliveredOrders = orders.filter(
 					(order) => order.status === "delivered"

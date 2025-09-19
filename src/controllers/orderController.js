@@ -91,6 +91,99 @@ exports.getOrders = async (req, res) => {
 	}
 };
 
+// @desc    Get all orders excluding pending, confirmed, and processing
+// @route   GET /api/orders/runningOrder
+// @access  Private
+exports.getOrdersForRiders = async (req, res) => {
+	try {
+		const {
+			page = 1,
+			limit = 20,
+			status,
+			paymentStatus,
+			isActive = "true",
+			sortBy = "createdAt",
+			sortOrder = "desc",
+			search,
+		} = req.query;
+
+		const pageNum = parseInt(page);
+		const limitNum = parseInt(limit);
+		const skip = (pageNum - 1) * limitNum;
+
+		// Build filter object
+		const filter = {};
+
+		// Exclude pending, confirmed, and processing orders
+		filter.status = { $nin: ["pending", "confirmed", "processing"] };
+
+		// Handle isActive filter
+		if (isActive !== "all") {
+			filter.isActive = isActive === "true";
+		}
+
+		// Additional status filter if provided (will be combined with exclusion)
+		if (status) {
+			filter.status = { ...filter.status, $eq: status };
+		}
+
+		if (paymentStatus) {
+			filter.paymentStatus = paymentStatus;
+		}
+
+		// Filter orders based on user role
+		// Customers can only see their own orders
+		if (req.user.role === "customer") {
+			filter["customer.email"] = req.user.email;
+		}
+
+		// Search functionality
+		if (search) {
+			filter.$or = [
+				{ orderNumber: { $regex: search, $options: "i" } },
+				{ "customer.name": { $regex: search, $options: "i" } },
+				{ "customer.email": { $regex: search, $options: "i" } },
+				{ "customer.phone": { $regex: search, $options: "i" } },
+			];
+		}
+
+		// Build sort object
+		const sortOptions = {};
+		sortOptions[sortBy] = sortOrder === "desc" ? -1 : 1;
+
+		const orders = await Order.find(filter)
+			.populate("createdBy", "name email")
+			.populate("updatedBy", "name email")
+			.populate("assignedRider", "name email phone")
+			.populate("items.product", "name barcode")
+			.sort(sortOptions)
+			.skip(skip)
+			.limit(limitNum);
+
+		const totalOrders = await Order.countDocuments(filter);
+		const totalPages = Math.ceil(totalOrders / limitNum);
+
+		res.json({
+			success: true,
+			data: orders,
+			pagination: {
+				currentPage: pageNum,
+				totalPages,
+				totalOrders,
+				hasNextPage: pageNum < totalPages,
+				hasPrevPage: pageNum > 1,
+			},
+		});
+	} catch (error) {
+		console.error("Error fetching completed orders:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error fetching completed orders",
+			error: error.message,
+		});
+	}
+};
+
 // @desc    Get single order
 // @route   GET /api/orders/:id
 // @access  Private

@@ -8,6 +8,7 @@ const {
 	getOrderStats,
 	cancelOrder,
 	getOrdersCount,
+	getOrdersForRiders,
 } = require("../controllers/orderController");
 
 // Import middleware
@@ -33,6 +34,12 @@ router.get(
 	protect,
 	authorize("admin", "manager", "staff", "customer", "rider"),
 	getOrders
+);
+router.get(
+	"/runningOrder",
+	protect,
+	authorize("admin", "manager", "staff", "customer", "rider"),
+	getOrdersForRiders
 );
 router.get(
 	"/:id",
