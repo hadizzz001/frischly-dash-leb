@@ -95,6 +95,23 @@
 				border-color: #000000;
 			}
 
+			.form-group select {
+				width: 100%;
+				padding: 12px;
+				border: 2px solid #ffc300;
+				border-radius: 8px;
+				font-size: 14px;
+				transition: border-color 0.3s ease;
+				background: #ffffff;
+				color: #000000;
+				cursor: pointer;
+			}
+
+			.form-group select:focus {
+				outline: none;
+				border-color: #000000;
+			}
+
 			.address-section {
 				background: rgba(255, 195, 0, 0.1);
 				padding: 25px;
@@ -252,59 +269,21 @@
 	<body>
 		<div class="container">
 			<div class="header">
-				<h1>🚫 Sign Up Disabled</h1>
-				<p>Account registration is currently disabled</p>
+				<h1>Sign Up</h1>
+				<p>Create your FRISCHLY account</p>
 			</div>
 
+			<div id="message"></div>
 			<div
-				style="
-					text-align: center;
-					padding: 40px 20px;
-					background: #f8f9fa;
-					border-radius: 10px;
-					border: 2px solid #dc3545;
-				"
+				id="loading"
+				style="display: none; text-align: center; margin: 20px 0"
 			>
-				<div style="font-size: 48px; margin-bottom: 20px">🔒</div>
-				<h2 style="color: #dc3545; margin-bottom: 15px">
-					Registration Temporarily Unavailable
-				</h2>
-				<p style="color: #6c757d; margin-bottom: 20px; line-height: 1.6">
-					New account registration is currently disabled. If you need access to
-					the system, please contact your system administrator.
-				</p>
-				<div
-					style="
-						background: #fff3cd;
-						border: 1px solid #ffeaa7;
-						border-radius: 8px;
-						padding: 15px;
-						margin: 20px 0;
-						color: #856404;
-					"
-				>
-					<strong>📧 Need an Account?</strong><br />
-					Contact your administrator for account creation assistance.
-				</div>
-				<a
-					href="signin.html"
-					style="
-						display: inline-block;
-						background: #ffc300;
-						color: #000;
-						padding: 12px 30px;
-						text-decoration: none;
-						border-radius: 8px;
-						font-weight: 600;
-						margin-top: 10px;
-					"
-				>
-					← Back to Sign In
-				</a>
+				<div style="font-size: 24px">⏳</div>
+				<p>Creating your account...</p>
 			</div>
 
-			<!-- Keep the original form hidden for potential future re-enabling -->
-			<form id="signup-form" style="display: none">
+			<!-- Signup Form -->
+			<form id="signup-form">
 				<div class="form-group">
 					<label for="name">Full Name</label>
 					<input
@@ -388,13 +367,10 @@
 						</div>
 						<div class="form-group">
 							<label for="zipCode">Zip/Postal Code</label>
-							<input
-								type="text"
-								id="zipCode"
-								name="zipCode"
-								required
-								placeholder="10001"
-							/>
+							<select id="zipCode" name="zipCode" required>
+								<option value="">Select Zip Code</option>
+								<!-- Zip codes will be loaded dynamically -->
+							</select>
 						</div>
 						<div class="form-group">
 							<label for="country">Country</label>
@@ -450,6 +426,47 @@
 				}
 			}
 
+			// Load zip codes from active zones
+			async function loadZipCodes() {
+				const zipCodeSelect = document.getElementById("zipCode");
+				if (!zipCodeSelect) return;
+
+				try {
+					const response = await fetch(`${API_BASE_URL}/zones/active`);
+					const data = await response.json();
+
+					if (data.success && data.data) {
+						// Clear existing options except the first one
+						zipCodeSelect.innerHTML =
+							'<option value="">Select Zip Code</option>';
+
+						// Add zip codes from active zones
+						data.data.forEach((zone) => {
+							const option = document.createElement("option");
+							option.value = zone.zipCode;
+							option.textContent = `${zone.zipCode} - ${zone.zoneName}`;
+							zipCodeSelect.appendChild(option);
+						});
+					} else {
+						console.error("Failed to load zip codes:", data.message);
+						// Fallback to text input if API fails
+						const container = zipCodeSelect.parentElement;
+						container.innerHTML = `
+							<label for="zipCode">Zip/Postal Code</label>
+							<input type="text" id="zipCode" name="zipCode" required placeholder="10001" style="width: 100%; padding: 12px; border: 2px solid #ffc300; border-radius: 8px; font-size: 14px; background: #ffffff; color: #000000;" />
+						`;
+					}
+				} catch (error) {
+					console.error("Error loading zip codes:", error);
+					// Fallback to text input if API fails
+					const container = zipCodeSelect.parentElement;
+					container.innerHTML = `
+						<label for="zipCode">Zip/Postal Code</label>
+						<input type="text" id="zipCode" name="zipCode" required placeholder="10001" style="width: 100%; padding: 12px; border: 2px solid #ffc300; border-radius: 8px; font-size: 14px; background: #ffffff; color: #000000;" />
+					`;
+				}
+			}
+
 			// Sign out function for users who are already logged in - Define globally first
 			function signOut() {
 				localStorage.removeItem("authToken");
@@ -493,6 +510,11 @@
 					</div>
 				`;
 			}
+
+			// Load zip codes when page loads
+			document.addEventListener("DOMContentLoaded", function () {
+				loadZipCodes();
+			});
 
 			// Sign Up Form Handler
 			document

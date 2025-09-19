@@ -1,6 +1,8 @@
 const Order = require("../models/Order");
 const Product = require("../models/Product");
+const Rider = require("../models/Rider");
 const mongoose = require("mongoose");
+const Zone = require("../models/Zone");
 
 // @desc    Get all orders
 // @route   GET /api/orders
@@ -135,6 +137,32 @@ exports.getOrdersForRiders = async (req, res) => {
 		// Customers can only see their own orders
 		if (req.user.role === "customer") {
 			filter["customer.email"] = req.user.email;
+		}
+
+		// Riders can only see orders in their assigned zones
+		if (req.user.role === "rider") {
+			console.log("Rider email:", req.user.email);
+			const rider = await Rider.findOne({ user: req.user.id });
+			console.log("Rider zones:", rider ? rider.zones : "No rider found");
+			if (rider && rider.zones && rider.zones.length > 0) {
+				// Get zip codes for the rider's zone names
+				const zones = await Zone.find({
+					zoneName: { $in: rider.zones },
+					isActive: true,
+				});
+				const zipCodes = zones.map((zone) => zone.zipCode);
+				console.log("Rider zone zip codes:", zipCodes);
+
+				if (zipCodes.length > 0) {
+					filter["customer.address.zipCode"] = { $in: zipCodes };
+				} else {
+					// If no valid zones found, return no orders
+					filter["customer.address.zipCode"] = null;
+				}
+			} else {
+				// If rider has no zones assigned, return no orders
+				filter["customer.address.zipCode"] = null;
+			}
 		}
 
 		// Search functionality
