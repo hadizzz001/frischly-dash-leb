@@ -36,13 +36,14 @@ app.use(
 					"https://unpkg.com",
 				],
 				scriptSrcAttr: ["'unsafe-inline'"], // Allow inline event handlers
-				styleSrc: ["'self'", "'unsafe-inline'"],
+				styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
 				imgSrc: ["'self'", "data:", "https:"],
 				connectSrc: ["'self'", "http://localhost:*", "https://localhost:*"], // Allow API calls
 				fontSrc: [
 					"'self'",
 					"https://fonts.gstatic.com",
 					"https://fonts.googleapis.com",
+					"https://cdnjs.cloudflare.com",
 				],
 			},
 		},
