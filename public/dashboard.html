@@ -7008,7 +7008,7 @@
 					);
 					if (fileInput) fileInput.value = "";
 					closeProductModal();
-					await loadProducts();
+					await searchProducts();
 				} catch (error) {
 					console.error("Error saving product:", error);
 					showMessage("Error saving product: " + error.message, "error");
