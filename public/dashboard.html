@@ -4919,7 +4919,7 @@
 				}
 			}
 
-			function showSection(sectionName) {
+			function showSection(sectionName, fromMenu = true) {
 				// Hide all sections
 				const sections = document.querySelectorAll(".content-section");
 				sections.forEach((section) => {
@@ -4945,7 +4945,7 @@
 				}
 
 				// Load section-specific data
-				loadSectionData(sectionName);
+				loadSectionData(sectionName, fromMenu);
 
 				// Close sidebar on mobile after selection
 				if (window.innerWidth <= 768) {
@@ -4953,7 +4953,7 @@
 				}
 			}
 
-			function loadSectionData(sectionName) {
+			function loadSectionData(sectionName, fromMenu = true) {
 				switch (sectionName) {
 					case "dashboard":
 						loadDashboardStats();
@@ -4976,7 +4976,9 @@
 						break;
 					case "products":
 						// Always refresh products data when section is opened
-						loadProducts();
+						if (fromMenu) {
+							loadProducts();
+						}
 						// Load categories for the filter dropdown
 						loadSubcategoriesForProductFilter();
 						// Attach search event listeners
@@ -5857,7 +5859,11 @@
 								<td>${index + 1}</td>
 								<td>
 									<div class="item-info">
-										<strong>${subcategory.name}</strong>
+										<strong style="cursor: pointer; color: #007bff; text-decoration: underline;" 
+											onclick="viewProductsBySubcategory('${subcategory._id}', '${subcategory.name}')"
+											onmouseover="this.style.color='#0056b3'"
+											onmouseout="this.style.color='#007bff'"
+											title="Click to view products in this subcategory">${subcategory.name}</strong>
 									</div>
 								</td>
 								<td>
@@ -6146,6 +6152,32 @@
 						error.message || "Failed to update subcategory status",
 						"error"
 					);
+				}
+			}
+
+			// Function to view products by subcategory
+			function viewProductsBySubcategory(subcategoryId, subcategoryName) {
+				// Switch to products section
+				showSection("products", false);
+
+				// Set the subcategory filter to the selected subcategory
+				const subcategoryFilter = document.getElementById(
+					"product-category-filter"
+				);
+				if (subcategoryFilter) {
+					subcategoryFilter.value = subcategoryId;
+
+					// Trigger the search function to apply the filter
+					searchProducts();
+
+					// Show a message indicating the filter has been applied
+					showMessage(
+						`Showing products in "${subcategoryName}" subcategory`,
+						"info"
+					);
+				} else {
+					console.warn("Product category filter not found");
+					showMessage("Switched to products section", "info");
 				}
 			}
 
@@ -7257,7 +7289,8 @@
 					closeImageUpdateModal();
 
 					// Refresh the products list to show the updated image
-					loadProducts(currentProductsPage, productsPageSize);
+					searchProducts();
+					//loadProducts(currentProductsPage, productsPageSize);
 				} catch (error) {
 					console.error("Error updating product image:", error);
 					showMessage(

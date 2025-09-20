@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Test Clickable Subcategories</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				padding: 20px;
+			}
+			.test-section {
+				margin: 20px 0;
+				padding: 15px;
+				border: 1px solid #ddd;
+				border-radius: 8px;
+			}
+			.subcategory-link {
+				color: #007bff;
+				text-decoration: underline;
+				cursor: pointer;
+				padding: 5px;
+			}
+			.subcategory-link:hover {
+				color: #0056b3;
+			}
+			.mock-table {
+				border-collapse: collapse;
+				width: 100%;
+				margin: 10px 0;
+			}
+			.mock-table th,
+			.mock-table td {
+				border: 1px solid #ddd;
+				padding: 8px;
+				text-align: left;
+			}
+			.mock-table th {
+				background-color: #f2f2f2;
+			}
+			.message {
+				margin: 10px 0;
+				padding: 10px;
+				border-radius: 4px;
+			}
+			.success {
+				background-color: #d4edda;
+				color: #155724;
+				border: 1px solid #c3e6cb;
+			}
+			.info {
+				background-color: #d1ecf1;
+				color: #0c5460;
+				border: 1px solid #bee5eb;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Test Clickable Subcategories Feature</h1>
+
+		<div class="test-section">
+			<h2>Mock Subcategories Table</h2>
+			<table class="mock-table">
+				<thead>
+					<tr>
+						<th>#</th>
+						<th>Subcategory Name</th>
+						<th>Parent Category</th>
+						<th>Status</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>1</td>
+						<td>
+							<div class="item-info">
+								<strong
+									class="subcategory-link"
+									onclick="viewProductsBySubcategory('mock-subcategory-1', 'Fresh Fruits')"
+									>Fresh Fruits</strong
+								>
+							</div>
+						</td>
+						<td><span class="category-badge">Produce</span></td>
+						<td><span class="status-badge active">Active</span></td>
+						<td><button>Edit</button></td>
+					</tr>
+					<tr>
+						<td>2</td>
+						<td>
+							<div class="item-info">
+								<strong
+									class="subcategory-link"
+									onclick="viewProductsBySubcategory('mock-subcategory-2', 'Dairy Products')"
+									>Dairy Products</strong
+								>
+							</div>
+						</td>
+						<td><span class="category-badge">Refrigerated</span></td>
+						<td><span class="status-badge active">Active</span></td>
+						<td><button>Edit</button></td>
+					</tr>
+					<tr>
+						<td>3</td>
+						<td>
+							<div class="item-info">
+								<strong
+									class="subcategory-link"
+									onclick="viewProductsBySubcategory('mock-subcategory-3', 'Bakery Items')"
+									>Bakery Items</strong
+								>
+							</div>
+						</td>
+						<td><span class="category-badge">Bakery</span></td>
+						<td><span class="status-badge active">Active</span></td>
+						<td><button>Edit</button></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<div class="test-section">
+			<h2>Test Results</h2>
+			<div id="test-results"></div>
+		</div>
+
+		<script>
+			// Mock functions to simulate the dashboard behavior
+			function showMessage(message, type) {
+				const resultsDiv = document.getElementById("test-results");
+				const messageDiv = document.createElement("div");
+				messageDiv.className = `message ${type}`;
+				messageDiv.textContent = `${type.toUpperCase()}: ${message}`;
+				resultsDiv.appendChild(messageDiv);
+
+				// Auto-remove after 5 seconds
+				setTimeout(() => {
+					messageDiv.remove();
+				}, 5000);
+			}
+
+			function showSection(sectionName) {
+				console.log(`Switching to section: ${sectionName}`);
+				showMessage(`Switched to ${sectionName} section`, "info");
+			}
+
+			function searchProducts() {
+				console.log("Searching/filtering products...");
+				showMessage("Products filtered by selected subcategory", "success");
+			}
+
+			// The actual function from the dashboard
+			function viewProductsBySubcategory(subcategoryId, subcategoryName) {
+				console.log(
+					`Clicked subcategory: ${subcategoryName} (ID: ${subcategoryId})`
+				);
+
+				// Switch to products section
+				showSection("products");
+
+				// Set the subcategory filter to the selected subcategory
+				const subcategoryFilter = document.getElementById(
+					"product-category-filter"
+				);
+				if (subcategoryFilter) {
+					subcategoryFilter.value = subcategoryId;
+
+					// Trigger the search function to apply the filter
+					searchProducts();
+
+					// Show a message indicating the filter has been applied
+					showMessage(
+						`Showing products in "${subcategoryName}" subcategory`,
+						"info"
+					);
+				} else {
+					console.warn("Product category filter not found");
+					showMessage("Switched to products section", "info");
+				}
+			}
+
+			// Add some initial instructions
+			document.addEventListener("DOMContentLoaded", function () {
+				showMessage(
+					"Click on any subcategory name to test the clickable functionality",
+					"info"
+				);
+			});
+		</script>
+	</body>
+</html>
