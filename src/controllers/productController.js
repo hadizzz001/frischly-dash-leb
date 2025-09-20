@@ -148,7 +148,7 @@ exports.getProducts = async (req, res) => {
 					filter.stock = 0;
 					break;
 				case "low":
-					filter.stock = { $lte: 10 };
+					filter.stock = { $gte: 1, $lte: 10 };
 					break;
 				case "medium":
 					filter.stock = { $gte: 11, $lte: 50 };
@@ -156,6 +156,8 @@ exports.getProducts = async (req, res) => {
 				case "high":
 					filter.stock = { $gte: 51 };
 					break;
+				case "Available":
+					filter.stock = { $gte: 1 };
 			}
 		}
 

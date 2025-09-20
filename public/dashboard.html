@@ -2619,8 +2619,8 @@
 								<input
 									type="text"
 									id="category-search"
-									placeholder="Search categories..."
-									oninput="filterCategories()"
+									placeholder="Search categories by name or description..."
+									oninput="debounceCategorySearch()"
 									class="search-input"
 								/>
 								<select
@@ -2631,6 +2631,17 @@
 									<option value="all">All Categories</option>
 									<option value="active">Active Only</option>
 									<option value="inactive">Inactive Only</option>
+								</select>
+								<select
+									id="category-sort"
+									onchange="filterCategories()"
+									class="filter-select"
+								>
+									<option value="name-asc">Name (A-Z)</option>
+									<option value="name-desc">Name (Z-A)</option>
+									<option value="createdAt-desc">Newest First</option>
+									<option value="createdAt-asc">Oldest First</option>
+									<option value="updatedAt-desc">Recently Updated</option>
 								</select>
 								<button
 									class="btn btn-secondary"
@@ -2691,8 +2702,8 @@
 								<input
 									type="text"
 									id="subcategory-search"
-									placeholder="Search subcategories..."
-									oninput="filterSubcategories()"
+									placeholder="Search subcategories by name or description..."
+									oninput="debounceSubcategorySearch()"
 									class="search-input"
 								/>
 								<select
@@ -2786,6 +2797,7 @@
 							type="text"
 							id="product-search"
 							placeholder="Search products by name, barcode, or description..."
+							oninput="debounceProductSearch()"
 							class="search-input"
 							style="flex: 1; min-width: 250px"
 						/>
@@ -2816,6 +2828,7 @@
 							<option value="low">Low Stock (≤10)</option>
 							<option value="medium">Medium Stock (11-50)</option>
 							<option value="high">High Stock (51+)</option>
+							<option value="Available">Available</option>
 						</select>
 						<select id="product-sort-filter" class="filter-select">
 							<option value="name-asc">Name A-Z</option>
@@ -3781,6 +3794,24 @@
 				},
 			};
 
+			// Debounce utility function for search inputs
+			function debounce(func, wait) {
+				let timeout;
+				return function executedFunction(...args) {
+					const later = () => {
+						clearTimeout(timeout);
+						func(...args);
+					};
+					clearTimeout(timeout);
+					timeout = setTimeout(later, wait);
+				};
+			}
+
+			// Debounced search functions
+			const debounceCategorySearch = debounce(filterCategories, 300);
+			const debounceSubcategorySearch = debounce(filterSubcategories, 300);
+			const debounceProductSearch = debounce(searchProducts, 300);
+
 			function switchLanguage(lang) {
 				currentLanguage = lang;
 				localStorage.setItem("selectedLanguage", lang);
@@ -4363,6 +4394,7 @@
 			let allUsers = [];
 			let allProducts = [];
 			let allCategories = [];
+			let allSubcategories = [];
 
 			// Check if user has management access and show/hide user management section
 			function checkAdminAccess(user) {
@@ -4977,7 +5009,16 @@
 					case "products":
 						// Always refresh products data when section is opened
 						if (fromMenu) {
-							loadProducts();
+							// Load products with default filters (no filters applied)
+							const defaultFilters = {
+								searchTerm: "",
+								categoryId: "all",
+								status: "all",
+								priceRange: "all",
+								stockLevel: "all",
+								sortOption: "createdAt-desc",
+							};
+							loadProducts(1, productsPageSize, defaultFilters);
 						}
 						// Load categories for the filter dropdown
 						loadSubcategoriesForProductFilter();
@@ -5148,6 +5189,9 @@
 						displayCategories(allCategories);
 						updateCategoriesCount(allCategories.length);
 						updateCategorySummary();
+
+						// Synchronize filters across sections
+						synchronizeFilters();
 					} else if (response.status === 401) {
 						showMessage("Session expired. Please sign in again.", "error");
 						setTimeout(() => logout(), 2000);
@@ -5597,10 +5641,12 @@
 			function filterCategories() {
 				const filterSelect = document.getElementById("category-filter");
 				const searchInput = document.getElementById("category-search");
+				const sortSelect = document.getElementById("category-sort");
 				const filterValue = filterSelect.value;
 				const searchValue = searchInput
 					? searchInput.value.toLowerCase().trim()
 					: "";
+				const sortValue = sortSelect ? sortSelect.value : "name-asc";
 				const tableTitle = document.getElementById("categories-table-title");
 
 				let filteredCategories = [];
@@ -5643,8 +5689,135 @@
 					}
 				}
 
+				// Apply sorting
+				filteredCategories = sortCategories(filteredCategories, sortValue);
+
+				// Update title to reflect sort
+				const sortLabel = getSortLabel(sortValue);
+				if (sortValue !== "name-asc") {
+					titleText += ` (${sortLabel})`;
+				}
+
+				// Add count to title
+				titleText += ` (${filteredCategories.length})`;
+
 				if (tableTitle) tableTitle.textContent = titleText;
 				displayCategories(filteredCategories);
+			}
+
+			// Helper function to sort categories
+			function sortCategories(categories, sortValue) {
+				const [field, order] = sortValue.split("-");
+				return categories.sort((a, b) => {
+					let aValue, bValue;
+
+					switch (field) {
+						case "name":
+							aValue = (a.name || "").toLowerCase();
+							bValue = (b.name || "").toLowerCase();
+							break;
+						case "createdAt":
+							aValue = new Date(a.createdAt || 0);
+							bValue = new Date(b.createdAt || 0);
+							break;
+						case "updatedAt":
+							aValue = new Date(a.updatedAt || 0);
+							bValue = new Date(b.updatedAt || 0);
+							break;
+						default:
+							return 0;
+					}
+
+					if (order === "desc") {
+						return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
+					} else {
+						return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+					}
+				});
+			}
+
+			// Helper function to get sort label
+			function getSortLabel(sortValue) {
+				const labels = {
+					"name-asc": "Name A-Z",
+					"name-desc": "Name Z-A",
+					"createdAt-desc": "Newest First",
+					"createdAt-asc": "Oldest First",
+					"updatedAt-desc": "Recently Updated",
+				};
+				return labels[sortValue] || "Name A-Z";
+			}
+
+			// Function to clear all category filters
+			function clearCategoryFilters() {
+				const searchInput = document.getElementById("category-search");
+				const filterSelect = document.getElementById("category-filter");
+				const sortSelect = document.getElementById("category-sort");
+
+				if (searchInput) searchInput.value = "";
+				if (filterSelect) filterSelect.value = "all";
+				if (sortSelect) sortSelect.value = "name-asc";
+
+				filterCategories();
+				showMessage("Category filters cleared", "info");
+			}
+
+			// Function to update product category filter options
+			function updateProductCategoryFilter() {
+				const productCategoryFilter = document.getElementById(
+					"product-category-filter"
+				);
+				if (!productCategoryFilter || !allSubcategories) return;
+
+				// Clear existing options except "All Subcategories"
+				const currentValue = productCategoryFilter.value;
+				productCategoryFilter.innerHTML =
+					'<option value="all">All Subcategories</option>';
+
+				// Add subcategories as options
+				allSubcategories
+					.filter((subcategory) => subcategory.isActive)
+					.forEach((subcategory) => {
+						const option = document.createElement("option");
+						option.value = subcategory._id;
+						option.textContent = subcategory.name;
+						if (currentValue === subcategory._id) {
+							option.selected = true;
+						}
+						productCategoryFilter.appendChild(option);
+					});
+			}
+
+			// Function to update subcategory parent filter options
+			function updateSubcategoryParentFilter() {
+				const parentFilter = document.getElementById(
+					"subcategory-parent-filter"
+				);
+				if (!parentFilter || !allCategories) return;
+
+				// Clear existing options except "All Parent Categories"
+				const currentValue = parentFilter.value;
+				parentFilter.innerHTML =
+					'<option value="all">All Parent Categories</option>';
+
+				// Add categories as options
+				allCategories
+					.filter((category) => category.isActive)
+					.forEach((category) => {
+						const option = document.createElement("option");
+						option.value = category._id;
+						option.textContent = category.name;
+						if (currentValue === category._id) {
+							option.selected = true;
+						}
+						parentFilter.appendChild(option);
+					});
+			}
+
+			// Function to synchronize filters across sections
+			function synchronizeFilters() {
+				updateProductCategoryFilter();
+				updateSubcategoryParentFilter();
 			}
 
 			// Function to fetch product count for a specific category (kept for backward compatibility)
@@ -6184,21 +6357,23 @@
 			// Products Management Functions
 			async function loadProducts(
 				page = currentProductsPage,
-				pageSize = productsPageSize
+				pageSize = productsPageSize,
+				filters = null
 			) {
 				showSectionLoading("products", true, "Loading products...");
 
 				try {
-					const response = await fetch(
-						`${API_BASE_URL}/products?page=${page}&limit=${pageSize}&isActive=true`,
-						{
-							method: "GET",
-							headers: {
-								Authorization: `Bearer ${currentToken}`,
-								"Content-Type": "application/json",
-							},
-						}
-					);
+					// Use provided filters or get current ones
+					const currentFilters = filters || getCurrentProductFilters();
+					const url = buildProductsUrl(page, pageSize, currentFilters);
+
+					const response = await fetch(url, {
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
 
 					if (response.ok) {
 						const data = await response.json();
@@ -6562,14 +6737,19 @@
 					page <= totalProductsPages &&
 					page !== currentProductsPage
 				) {
-					loadProducts(page, productsPageSize);
+					// Preserve current filters when navigating pages
+					const currentFilters = getCurrentProductFilters();
+					loadProducts(page, productsPageSize, currentFilters);
 				}
 			}
 
 			function changeProductsPageSize(newPageSize) {
 				productsPageSize = parseInt(newPageSize);
 				currentProductsPage = 1; // Reset to first page when changing page size
-				loadProducts(1, productsPageSize);
+
+				// Preserve current filters when changing page size
+				const currentFilters = getCurrentProductFilters();
+				loadProducts(1, productsPageSize, currentFilters);
 			}
 
 			async function showAddProductModal() {
@@ -6911,7 +7091,9 @@
 							`Product "${productName}" deleted successfully`,
 							"success"
 						);
-						loadProducts();
+						// Preserve current filters when reloading after deletion
+						const currentFilters = getCurrentProductFilters();
+						loadProducts(currentProductsPage, productsPageSize, currentFilters);
 					} else {
 						showMessage(result.message || "Failed to delete product", "error");
 					}
@@ -7174,7 +7356,9 @@
 							"success"
 						);
 						closeStockModal();
-						loadProducts();
+						// Preserve current filters when reloading after stock update
+						const currentFilters = getCurrentProductFilters();
+						loadProducts(currentProductsPage, productsPageSize, currentFilters);
 					} else {
 						showMessage(result.message || "Failed to update stock", "error");
 					}
@@ -7184,7 +7368,9 @@
 			}
 
 			function refreshProducts() {
-				loadProducts(currentProductsPage, productsPageSize);
+				// Preserve current filters when refreshing
+				const currentFilters = getCurrentProductFilters();
+				loadProducts(currentProductsPage, productsPageSize, currentFilters);
 				showMessage("Products refreshed", "success");
 			}
 
@@ -7304,7 +7490,7 @@
 			}
 
 			// Product Search and Filter Functions
-			async function searchProducts() {
+			function getCurrentProductFilters() {
 				const searchInput = document.getElementById("product-search");
 				const categoryFilter = document.getElementById(
 					"product-category-filter"
@@ -7314,44 +7500,56 @@
 				const stockFilter = document.getElementById("product-stock-filter");
 				const sortFilter = document.getElementById("product-sort-filter");
 
-				const searchTerm = searchInput ? searchInput.value.trim() : "";
-				const categoryId = categoryFilter ? categoryFilter.value : "all";
-				const status = statusFilter ? statusFilter.value : "all";
-				const priceRange = priceFilter ? priceFilter.value : "all";
-				const stockLevel = stockFilter ? stockFilter.value : "all";
-				const sortOption = sortFilter ? sortFilter.value : "createdAt-desc";
+				return {
+					searchTerm: searchInput ? searchInput.value.trim() : "",
+					categoryId: categoryFilter ? categoryFilter.value : "all",
+					status: statusFilter ? statusFilter.value : "all",
+					priceRange: priceFilter ? priceFilter.value : "all",
+					stockLevel: stockFilter ? stockFilter.value : "all",
+					sortOption: sortFilter ? sortFilter.value : "createdAt-desc",
+				};
+			}
+
+			function buildProductsUrl(page, pageSize, filters) {
+				let url = `${API_BASE_URL}/products?page=${page}&limit=${pageSize}`;
+
+				// Add search parameters
+				if (filters.searchTerm) {
+					url += `&search=${encodeURIComponent(filters.searchTerm)}`;
+				}
+
+				if (filters.categoryId && filters.categoryId !== "all") {
+					url += `&subcategory=${filters.categoryId}`;
+				}
+
+				if (filters.status && filters.status !== "all") {
+					url += `&isActive=${filters.status === "active"}`;
+				} else {
+					url += `&isActive=all`;
+				}
+
+				if (filters.priceRange && filters.priceRange !== "all") {
+					url += `&priceRange=${filters.priceRange}`;
+				}
+
+				if (filters.stockLevel && filters.stockLevel !== "all") {
+					url += `&stockLevel=${filters.stockLevel}`;
+				}
+
+				// Parse sort option
+				const [sortBy, sortOrder] = filters.sortOption.split("-");
+				url += `&sortBy=${sortBy}&sortOrder=${sortOrder}`;
+
+				return url;
+			}
+
+			async function searchProducts() {
+				const filters = getCurrentProductFilters();
 
 				showSectionLoading("products", true, "Searching products...");
 
 				try {
-					let url = `${API_BASE_URL}/products?page=1&limit=${productsPageSize}`;
-
-					// Add search parameters
-					if (searchTerm) {
-						url += `&search=${encodeURIComponent(searchTerm)}`;
-					}
-
-					if (categoryId && categoryId !== "all") {
-						url += `&subcategory=${categoryId}`;
-					}
-
-					if (status && status !== "all") {
-						url += `&isActive=${status === "active"}`;
-					} else {
-						url += `&isActive=all`;
-					}
-
-					if (priceRange && priceRange !== "all") {
-						url += `&priceRange=${priceRange}`;
-					}
-
-					if (stockLevel && stockLevel !== "all") {
-						url += `&stockLevel=${stockLevel}`;
-					}
-
-					// Parse sort option
-					const [sortBy, sortOrder] = sortOption.split("-");
-					url += `&sortBy=${sortBy}&sortOrder=${sortOrder}`;
+					const url = buildProductsUrl(1, productsPageSize, filters);
 
 					const response = await fetch(url, {
 						method: "GET",
@@ -7387,9 +7585,12 @@
 							"#products-section .table-header h3"
 						);
 						if (tableTitle) {
-							if (searchTerm) {
-								tableTitle.textContent = `Search Results: "${searchTerm}"`;
-							} else if (categoryId !== "all" || status !== "all") {
+							if (filters.searchTerm) {
+								tableTitle.textContent = `Search Results: "${filters.searchTerm}"`;
+							} else if (
+								filters.categoryId !== "all" ||
+								filters.status !== "all"
+							) {
 								tableTitle.textContent = "Filtered Products";
 							} else {
 								tableTitle.textContent = "All Products";
@@ -7447,8 +7648,16 @@
 					tableTitle.textContent = "All Products";
 				}
 
-				// Reload all products
-				loadProducts(1, productsPageSize);
+				// Reload all products with cleared filters
+				const clearedFilters = {
+					searchTerm: "",
+					categoryId: "all",
+					status: "all",
+					priceRange: "all",
+					stockLevel: "all",
+					sortOption: "createdAt-desc",
+				};
+				loadProducts(1, productsPageSize, clearedFilters);
 				showMessage("Search filters cleared", "success");
 			}
 
@@ -7492,6 +7701,12 @@
 								}
 							});
 						}
+
+						// Store subcategories globally for filter synchronization
+						allSubcategories = subcategories;
+
+						// Synchronize filters across sections
+						synchronizeFilters();
 					}
 				} catch (error) {
 					console.error("Error loading subcategories for filter:", error);
