@@ -6293,9 +6293,18 @@
 									${
 										product.picture
 											? `<img src="${product.picture}" alt="${productName}" 
-											style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;"
-											onerror="this.style.display='none';">`
-											: `<div style="width: 40px; height: 40px; background: #f8f9fa; border-radius: 4px; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; color: #6c757d; font-size: 12px;">No Image</div>`
+											style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd; cursor: pointer; transition: opacity 0.2s;"
+											onerror="this.style.display='none';"
+											onclick="openImageUpdateModal('${product._id}', '${productName}', '${
+													product.picture || ""
+											  }')"
+											onmouseover="this.style.opacity='0.8'"
+											onmouseout="this.style.opacity='1'">`
+											: `<div style="width: 40px; height: 40px; background: #f8f9fa; border-radius: 4px; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; color: #6c757d; font-size: 12px; cursor: pointer; transition: background-color 0.2s;"
+											onclick="openImageUpdateModal('${product._id}', '${productName}', '')"
+											onmouseover="this.style.backgroundColor='#e9ecef'"
+											onmouseout="this.style.backgroundColor='#f8f9fa'"
+											title="Click to add image">No Image</div>`
 									}
 									<div>
 										<strong>${productName}</strong>
@@ -6920,8 +6929,8 @@
 					const fileInput = document.getElementById("product-picture");
 					if (fileInput && fileInput.files && fileInput.files[0]) {
 						const imageFormData = new FormData();
-						imageFormData.append("image", fileInput.files[0]);
 
+						imageFormData.append("image", fileInput.files[0]);
 						const uploadResponse = await fetch(
 							`${API_BASE_URL}/products/upload-image`,
 							{
@@ -6963,13 +6972,12 @@
 							: 0,
 						stock: parseInt(formData.get("stock")) || 0,
 						isActive: formData.get("status") === "true",
+						productId: productId || undefined,
 					};
-
 					// Only include picture field if a new image was uploaded
 					if (pictureUrl) {
 						productData.picture = pictureUrl;
 					}
-
 					const url = productId
 						? `${API_BASE_URL}/products/${productId}`
 						: `${API_BASE_URL}/products`;
@@ -6998,6 +7006,7 @@
 							`Product ${productId ? "updated" : "created"} successfully`,
 						"success"
 					);
+					if (fileInput) fileInput.value = "";
 					closeProductModal();
 					await loadProducts();
 				} catch (error) {
@@ -7149,6 +7158,116 @@
 
 			function importProducts() {
 				showMessage("Product import feature coming soon!", "success");
+			}
+
+			// Image Update Functions
+			function openImageUpdateModal(productId, productName, currentImageUrl) {
+				const modal = document.getElementById("image-update-modal");
+				const modalTitle = document.getElementById("image-update-modal-title");
+				const productIdInput = document.getElementById(
+					"image-update-product-id"
+				);
+				const currentImage = document.getElementById("current-image");
+				const noCurrentImage = document.getElementById("no-current-image");
+				const newImageInput = document.getElementById("new-product-image");
+				const newImagePreview = document.getElementById("new-image-preview");
+
+				// Set modal title and product ID
+				modalTitle.textContent = `Update Image for "${productName}"`;
+				productIdInput.value = productId;
+
+				// Show current image or no image placeholder
+				if (currentImageUrl && currentImageUrl.trim() !== "") {
+					currentImage.src = currentImageUrl;
+					currentImage.style.display = "block";
+					noCurrentImage.style.display = "none";
+				} else {
+					currentImage.style.display = "none";
+					noCurrentImage.style.display = "block";
+				}
+
+				// Reset form
+				newImageInput.value = "";
+				newImagePreview.style.display = "none";
+
+				// Show modal
+				modal.style.display = "block";
+			}
+
+			function closeImageUpdateModal() {
+				const modal = document.getElementById("image-update-modal");
+				modal.style.display = "none";
+			}
+
+			async function updateProductImage() {
+				const productId = document.getElementById(
+					"image-update-product-id"
+				).value;
+				const imageInput = document.getElementById("new-product-image");
+				const updateBtn = document.getElementById("update-image-btn");
+
+				if (!imageInput.files || !imageInput.files[0]) {
+					showMessage("Please select an image file", "error");
+					return;
+				}
+
+				const file = imageInput.files[0];
+
+				// Validate file type
+				if (!file.type.startsWith("image/")) {
+					showMessage("Please select a valid image file", "error");
+					return;
+				}
+
+				// Validate file size (5MB)
+				if (file.size > 5 * 1024 * 1024) {
+					showMessage("Image file size must be less than 5MB", "error");
+					return;
+				}
+
+				try {
+					updateBtn.disabled = true;
+					updateBtn.textContent = "Updating...";
+
+					// Create FormData with only the image
+					const formData = new FormData();
+					formData.append("image", file);
+
+					const response = await fetch(
+						`${API_BASE_URL}/products/${productId}`,
+						{
+							method: "PUT",
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+							},
+							body: formData,
+						}
+					);
+
+					if (!response.ok) {
+						const errorData = await response.json().catch(() => ({}));
+						throw new Error(
+							errorData.message || "Failed to update product image"
+						);
+					}
+
+					const result = await response.json();
+
+					showMessage("Product image updated successfully!", "success");
+					closeImageUpdateModal();
+
+					// Refresh the products list to show the updated image
+					loadProducts(currentProductsPage, productsPageSize);
+				} catch (error) {
+					console.error("Error updating product image:", error);
+					showMessage(
+						error.message || "Failed to update product image",
+						"error"
+					);
+				} finally {
+					updateBtn.disabled = false;
+					updateBtn.textContent = "Update Image";
+				}
 			}
 
 			// Product Search and Filter Functions
@@ -9484,6 +9603,116 @@
 			</div>
 		</div>
 
+		<!-- Image Update Modal -->
+		<div id="image-update-modal" class="modal">
+			<div class="modal-content" style="max-width: 500px">
+				<div class="modal-header">
+					<h2 id="image-update-modal-title">Update Product Image</h2>
+					<span class="close" onclick="closeImageUpdateModal()">&times;</span>
+				</div>
+
+				<form
+					id="image-update-form"
+					onsubmit="event.preventDefault(); updateProductImage();"
+				>
+					<input type="hidden" id="image-update-product-id" name="productId" />
+
+					<div class="form-group">
+						<label>Current Image</label>
+						<div
+							id="current-image-container"
+							style="text-align: center; margin-bottom: 20px"
+						>
+							<img
+								id="current-image"
+								src=""
+								alt="Current product image"
+								style="
+									max-width: 200px;
+									max-height: 200px;
+									object-fit: cover;
+									border-radius: 8px;
+									border: 1px solid #ddd;
+									display: none;
+								"
+							/>
+							<div
+								id="no-current-image"
+								style="
+									display: none;
+									padding: 40px;
+									background: #f8f9fa;
+									border-radius: 8px;
+									color: #6c757d;
+									border: 1px solid #ddd;
+								"
+							>
+								No current image
+							</div>
+						</div>
+					</div>
+
+					<div class="form-group">
+						<label for="new-product-image">Select New Image *</label>
+						<input
+							type="file"
+							id="new-product-image"
+							name="image"
+							accept="image/*"
+							required
+							style="margin-bottom: 10px"
+						/>
+						<div
+							id="new-image-preview"
+							style="display: none; margin-top: 10px; text-align: center"
+						>
+							<img
+								id="new-preview-img"
+								src=""
+								alt="Preview"
+								style="
+									max-width: 200px;
+									max-height: 200px;
+									border-radius: 8px;
+									border: 1px solid #ddd;
+								"
+							/>
+						</div>
+						<small
+							style="
+								color: #666;
+								font-size: 12px;
+								display: block;
+								margin-top: 5px;
+							"
+						>
+							Upload an image file (JPG, PNG, GIF, WebP, etc. - Max 5MB)
+						</small>
+					</div>
+
+					<div
+						style="
+							display: flex;
+							gap: 10px;
+							justify-content: flex-end;
+							margin-top: 30px;
+						"
+					>
+						<button
+							type="button"
+							class="btn btn-secondary"
+							onclick="closeImageUpdateModal()"
+						>
+							Cancel
+						</button>
+						<button type="submit" class="btn btn-primary" id="update-image-btn">
+							Update Image
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+
 		<!-- Stock Management Modal -->
 		<div id="stock-modal" class="modal">
 			<div class="modal-content">
@@ -10000,6 +10229,42 @@
 						fileInput.value = "";
 						imagePreview.style.display = "none";
 						previewImg.src = "";
+					});
+				}
+
+				// Image update modal image handling
+				const newImageInput = document.getElementById("new-product-image");
+				const newImagePreview = document.getElementById("new-image-preview");
+				const newPreviewImg = document.getElementById("new-preview-img");
+
+				if (newImageInput) {
+					newImageInput.addEventListener("change", function (e) {
+						const file = e.target.files[0];
+						if (file) {
+							// Validate file type
+							if (!file.type.startsWith("image/")) {
+								showMessage("Please select an image file", "error");
+								newImageInput.value = "";
+								return;
+							}
+
+							// Validate file size (5MB)
+							if (file.size > 5 * 1024 * 1024) {
+								showMessage("Image file size must be less than 5MB", "error");
+								newImageInput.value = "";
+								return;
+							}
+
+							// Show preview
+							const reader = new FileReader();
+							reader.onload = function (e) {
+								newPreviewImg.src = e.target.result;
+								newImagePreview.style.display = "block";
+							};
+							reader.readAsDataURL(file);
+						} else {
+							newImagePreview.style.display = "none";
+						}
 					});
 				}
 
