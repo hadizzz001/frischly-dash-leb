@@ -42,7 +42,7 @@ const uploadToCloudinary = (buffer, folder = "products") => {
 			quality: "auto",
 			format: "webp",
 			transformation: [
-				{ quality: "auto:eco", crop: "scale" }, // Resize to the specified width, maintaining aspect ratio
+				{ quality: "auto:eco", width: 500, crop: "scale" }, // Resize to the specified width, maintaining aspect ratio
 			],
 		};
 
