@@ -2878,6 +2878,7 @@
 									<tr>
 										<th>#</th>
 										<th>Product Name</th>
+										<th>Category</th>
 										<th>Subcategory</th>
 										<th>Price</th>
 										<th>Bottle Refund</th>
@@ -2889,7 +2890,7 @@
 								<tbody id="products-table-body">
 									<tr>
 										<td
-											colspan="8"
+											colspan="9"
 											style="text-align: center; padding: 40px; color: #666"
 										>
 											No products found. Click "Add Product" to create one.
@@ -5004,6 +5005,7 @@
 							updateCategorySummary();
 						} else {
 							loadCategories();
+							refreshSubcategories();
 						}
 						break;
 					case "products":
@@ -5598,6 +5600,7 @@
 			function navigateToCategorySubcategories(categoryId, categoryName) {
 				try {
 					// Switch to subcategory tab
+
 					showCategoryTab("subcategories", true);
 
 					// Set the parent category filter to the clicked category
@@ -6428,7 +6431,7 @@
 				if (!products || products.length === 0) {
 					tbody.innerHTML = `
 						<tr>
-							<td colspan="7" style="text-align: center; padding: 40px; color: #666;">
+							<td colspan="9" style="text-align: center; padding: 40px; color: #666;">
 								No products found. Click "Add Product" to create one.
 							</td>
 						</tr>
@@ -6446,10 +6449,6 @@
 						const parentCategoryName = product.subcategory?.parentCategory
 							? product.subcategory.parentCategory.name || "N/A"
 							: "N/A";
-						const categoryDisplay =
-							subcategoryName !== "Uncategorized"
-								? `${subcategoryName} (${parentCategoryName})`
-								: "Uncategorized";
 						// Calculate pricing information
 						const basePrice = product.price || 0;
 						const tax = product.tax || 0;
@@ -6522,7 +6521,8 @@
 									</div>
 								</div>
 							</td>
-							<td>${categoryDisplay}</td>
+							<td>${parentCategoryName}</td>
+							<td>${subcategoryName}</td>
 							<td>
 								<div style="position: relative;">
 									<div style="display: flex; flex-direction: column; gap: 2px;">
@@ -8431,7 +8431,7 @@
 					.forEach((content) => content.classList.remove("active"));
 
 				// Add active class to clicked tab and corresponding content
-				event.target.classList.add("active");
+				//event.target.classList.add("active");
 				document
 					.getElementById(`${tabName}-tab-content`)
 					.classList.add("active");
