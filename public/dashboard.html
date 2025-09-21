@@ -5263,7 +5263,10 @@
 							<td style="text-align: center;">
 								${
 									category.image
-										? `<img src="${category.image}" alt="${categoryName}" 
+										? `<img src="${category.image.replace(
+												"https://res.cloudinary.com/dbgnsnrto/image/upload/",
+												"https://res.cloudinary.com/dbgnsnrto/image/upload/w_500/q_auto:eco/"
+										  )}" alt="${categoryName}" 
 										style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 2px solid #e9ecef; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
 										onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
 										: ""
@@ -5435,7 +5438,10 @@
 					);
 
 					if (category.image) {
-						previewImg.src = category.image;
+						previewImg.src = category.image.replace(
+							"https://res.cloudinary.com/dbgnsnrto/image/upload/",
+							"https://res.cloudinary.com/dbgnsnrto/image/upload/w_500/q_auto:eco/"
+						);
 						imagePreview.style.display = "block";
 						if (currentImageField) currentImageField.value = category.image;
 					} else {
@@ -6052,7 +6058,10 @@
 									<div style="display: flex; align-items: center;">
 										${
 											subcategory.parentCategory?.image
-												? `<img src="${subcategory.parentCategory.image}" alt="${subcategory.parentCategory.name}" 
+												? `<img src="${subcategory.parentCategory.image.replace(
+														"https://res.cloudinary.com/dbgnsnrto/image/upload/",
+														"https://res.cloudinary.com/dbgnsnrto/image/upload/w_500/q_auto:eco/"
+												  )}" alt="${subcategory.parentCategory.name}" 
 												style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd; margin-right: 8px;"
 												onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
 												: ""
@@ -6504,7 +6513,10 @@
 								<div style="display: flex; align-items: center; gap: 10px;">
 									${
 										product.picture
-											? `<img src="${product.picture}" alt="${productName}" 
+											? `<img src="${product.picture.replace(
+													"https://res.cloudinary.com/dbgnsnrto/image/upload/",
+													"https://res.cloudinary.com/dbgnsnrto/image/upload/w_500/q_auto:eco/"
+											  )}" alt="${productName}" 
 											style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd; cursor: pointer; transition: opacity 0.2s;"
 											onerror="this.style.display='none';"
 											onclick="openImageUpdateModal('${product._id}', '${productName}', '${
@@ -6983,7 +6995,10 @@
 					const imagePreview = document.getElementById("image-preview");
 					const previewImg = document.getElementById("preview-img");
 					if (product.picture) {
-						previewImg.src = product.picture;
+						previewImg.src = product.picture.replace(
+							"https://res.cloudinary.com/dbgnsnrto/image/upload/",
+							"https://res.cloudinary.com/dbgnsnrto/image/upload/w_500/q_auto:eco/"
+						);
 						imagePreview.style.display = "block";
 					} else {
 						imagePreview.style.display = "none";

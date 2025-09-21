@@ -1024,7 +1024,12 @@
 
 				gridDiv.innerHTML = products
 					.map((product) => {
-						const imageUrl = product.picture || "";
+						const imageUrl = product.picture
+							? product.picture.replace(
+									"https://res.cloudinary.com/dbgnsnrto/image/upload/",
+									"https://res.cloudinary.com/dbgnsnrto/image/upload/w_500/q_auto:eco/"
+							  )
+							: "";
 						const price = product.price || 0;
 						const finalPrice = calculateFinalPrice(product);
 						const categoryName =
