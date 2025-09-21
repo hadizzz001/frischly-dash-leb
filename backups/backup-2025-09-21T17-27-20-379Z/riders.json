@@ -1,0 +1,136 @@
+{
+  "collection": "riders",
+  "timestamp": "2025-09-21T17:27:25.971Z",
+  "documentCount": 4,
+  "documents": [
+    {
+      "_id": "68ca8d5025535537e123e65c",
+      "user": "68c54e555c064b9607b8d72f",
+      "zones": [
+        "Clues (Niedersachsen)"
+      ],
+      "status": "offline",
+      "vehicleType": "motorbike",
+      "vehicleNumber": "amsnd",
+      "ordersPickedCount": 0,
+      "ordersDeliveredCount": 0,
+      "totalEarnings": 0,
+      "currentLocation": {
+        "lastUpdated": "2025-09-17T10:28:32.506Z"
+      },
+      "workingHours": {
+        "start": "09:00",
+        "end": "21:00"
+      },
+      "rating": {
+        "average": 0,
+        "totalRatings": 0
+      },
+      "isVerified": false,
+      "isActive": true,
+      "lastActiveAt": "2025-09-17T10:28:32.506Z",
+      "createdAt": "2025-09-17T10:28:32.512Z",
+      "updatedAt": "2025-09-17T10:55:19.446Z",
+      "__v": 1,
+      "zone": "Clues (Niedersachsen)"
+    },
+    {
+      "_id": "68ca9351e0c2d7e00f26ed90",
+      "user": "68c54e555c064b9607b8d72c",
+      "zones": [
+        "Süstedt"
+      ],
+      "status": "available",
+      "vehicleType": "bike",
+      "vehicleNumber": "sdsdf",
+      "ordersPickedCount": 0,
+      "ordersDeliveredCount": 0,
+      "totalEarnings": 0,
+      "currentLocation": {
+        "lastUpdated": "2025-09-17T10:54:09.383Z"
+      },
+      "workingHours": {
+        "start": "09:00",
+        "end": "21:00"
+      },
+      "rating": {
+        "average": 0,
+        "totalRatings": 0
+      },
+      "isVerified": false,
+      "isActive": true,
+      "lastActiveAt": "2025-09-17T15:15:34.091Z",
+      "createdAt": "2025-09-17T10:54:09.386Z",
+      "updatedAt": "2025-09-17T15:15:34.091Z",
+      "zone": "Emtinghausen",
+      "__v": 1
+    },
+    {
+      "_id": "68ca947db5951671b6ab0a7f",
+      "user": "68c54e545c064b9607b8d729",
+      "zones": [
+        "Emtinghausen",
+        "Bassum",
+        "Süstedt",
+        "Weyhe"
+      ],
+      "status": "available",
+      "vehicleType": "car",
+      "vehicleNumber": "asd",
+      "ordersPickedCount": 0,
+      "ordersDeliveredCount": 0,
+      "totalEarnings": 0,
+      "currentLocation": {
+        "lastUpdated": "2025-09-17T10:59:09.062Z"
+      },
+      "workingHours": {
+        "start": "09:00",
+        "end": "21:00"
+      },
+      "rating": {
+        "average": 0,
+        "totalRatings": 0
+      },
+      "isVerified": false,
+      "isActive": true,
+      "lastActiveAt": "2025-09-17T15:15:37.666Z",
+      "createdAt": "2025-09-17T10:59:09.065Z",
+      "updatedAt": "2025-09-19T12:11:34.430Z",
+      "zone": "Emtinghausen",
+      "__v": 2
+    },
+    {
+      "_id": "68cd5ed44c5ce6b249ce4b2a",
+      "user": "68c401747e9636a2cd9f295d",
+      "zones": [
+        "Emtinghausen",
+        "Bassum",
+        "Süstedt"
+      ],
+      "status": "available",
+      "vehicleType": "motorbike",
+      "vehicleNumber": "asda",
+      "ordersPickedCount": 0,
+      "ordersDeliveredCount": 0,
+      "totalEarnings": 0,
+      "currentLocation": {
+        "lastUpdated": "2025-09-19T13:47:00.517Z"
+      },
+      "workingHours": {
+        "start": "09:00",
+        "end": "21:00"
+      },
+      "rating": {
+        "average": 0,
+        "totalRatings": 0
+      },
+      "isVerified": false,
+      "isActive": true,
+      "lastActiveAt": "2025-09-19T14:00:12.497Z",
+      "createdAt": "2025-09-19T13:47:00.519Z",
+      "updatedAt": "2025-09-19T14:00:12.497Z",
+      "zone": "Emtinghausen",
+      "__v": 1
+    }
+  ]
+}

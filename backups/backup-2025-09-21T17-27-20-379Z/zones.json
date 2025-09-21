@@ -1,0 +1,230 @@
+{
+  "collection": "zones",
+  "timestamp": "2025-09-21T17:27:26.112Z",
+  "documentCount": 10,
+  "documents": [
+    {
+      "_id": "68c94fdd083c0e5140445c67",
+      "zoneName": "Barrien-Heide",
+      "zipCode": "28857",
+      "distance": 3.9,
+      "distanceUnit": "km",
+      "description": "Delivery zone for Barrien-Heide area",
+      "isActive": true,
+      "deliveryFee": 2.49,
+      "estimatedDeliveryTime": 25,
+      "priority": 1,
+      "createdBy": "68c400fb4903f9c0c3c98b49",
+      "boundaries": [],
+      "createdAt": "2025-09-16T11:54:05.509Z",
+      "updatedAt": "2025-09-21T10:16:18.179Z",
+      "__v": 0,
+      "updatedBy": "68c400fb4903f9c0c3c98b49"
+    },
+    {
+      "_id": "68c94fdd083c0e5140445c69",
+      "zoneName": "Clues (Niedersachsen)",
+      "zipCode": "28857",
+      "distance": 3.9,
+      "distanceUnit": "km",
+      "description": "Delivery zone for Clues, Niedersachsen area",
+      "isActive": true,
+      "deliveryFee": 2.49,
+      "estimatedDeliveryTime": 25,
+      "priority": 2,
+      "createdBy": "68c400fb4903f9c0c3c98b49",
+      "boundaries": [],
+      "createdAt": "2025-09-16T11:54:05.733Z",
+      "updatedAt": "2025-09-21T10:16:30.492Z",
+      "__v": 0,
+      "updatedBy": "68c400fb4903f9c0c3c98b49"
+    },
+    {
+      "_id": "68c94fdd083c0e5140445c6b",
+      "zoneName": "Ristedt bei Syke",
+      "zipCode": "28857",
+      "distance": 4,
+      "distanceUnit": "km",
+      "description": "Delivery zone for Ristedt bei Syke area",
+      "isActive": true,
+      "deliveryFee": 2.49,
+      "estimatedDeliveryTime": 30,
+      "priority": 3,
+      "createdBy": "68c400fb4903f9c0c3c98b49",
+      "boundaries": [],
+      "createdAt": "2025-09-16T11:54:05.975Z",
+      "updatedAt": "2025-09-21T10:16:38.983Z",
+      "__v": 0,
+      "updatedBy": "68c400fb4903f9c0c3c98b49"
+    },
+    {
+      "_id": "68c94fde083c0e5140445c6d",
+      "zoneName": "Sörhausen bei Syke",
+      "zipCode": "28857",
+      "distance": 4.5,
+      "distanceUnit": "km",
+      "description": "Delivery zone for Sörhausen bei Syke area",
+      "isActive": true,
+      "deliveryFee": 2.49,
+      "estimatedDeliveryTime": 30,
+      "priority": 4,
+      "createdBy": "68c400fb4903f9c0c3c98b49",
+      "boundaries": [],
+      "createdAt": "2025-09-16T11:54:06.442Z",
+      "updatedAt": "2025-09-21T10:17:09.547Z",
+      "__v": 0,
+      "updatedBy": "68c400fb4903f9c0c3c98b49"
+    },
+    {
+      "_id": "68c94fde083c0e5140445c6f",
+      "zoneName": "Osterholz bei Syke",
+      "zipCode": "28857",
+      "distance": 4.7,
+      "distanceUnit": "km",
+      "description": "Delivery zone for Osterholz bei Syke area",
+      "isActive": true,
+      "deliveryFee": 2.49,
+      "estimatedDeliveryTime": 35,
+      "priority": 5,
+      "createdBy": "68c400fb4903f9c0c3c98b49",
+      "boundaries": [],
+      "createdAt": "2025-09-16T11:54:06.709Z",
+      "updatedAt": "2025-09-21T10:17:37.238Z",
+      "__v": 0,
+      "updatedBy": "68c400fb4903f9c0c3c98b49"
+    },
+    {
+      "_id": "68c94fde083c0e5140445c71",
+      "zoneName": "Halbetzen, Niedersachsen",
+      "zipCode": "28857",
+      "distance": 4.8,
+      "distanceUnit": "km",
+      "description": "Delivery zone for Halbetzen, Niedersachsen area",
+      "isActive": true,
+      "deliveryFee": 2.49,
+      "estimatedDeliveryTime": 35,
+      "priority": 6,
+      "createdBy": "68c400fb4903f9c0c3c98b49",
+      "boundaries": [],
+      "createdAt": "2025-09-16T11:54:06.933Z",
+      "updatedAt": "2025-09-21T10:17:51.201Z",
+      "__v": 0,
+      "updatedBy": "68c400fb4903f9c0c3c98b49"
+    },
+    {
+      "_id": "68c94fdf083c0e5140445c73",
+      "zoneName": "Weyhe",
+      "zipCode": "28844",
+      "distance": 6.7,
+      "distanceUnit": "km",
+      "description": "Delivery zone for Weyhe area",
+      "isActive": true,
+      "deliveryFee": 2.99,
+      "estimatedDeliveryTime": 40,
+      "priority": 7,
+      "createdBy": "68c400fb4903f9c0c3c98b49",
+      "boundaries": [],
+      "createdAt": "2025-09-16T11:54:07.183Z",
+      "updatedAt": "2025-09-21T10:18:05.125Z",
+      "__v": 1,
+      "additionalZipCodes": [
+        "28844",
+        "28845"
+      ],
+      "deliveryRestrictions": {
+        "minOrderValue": 15,
+        "maxOrderWeight": 25,
+        "blackoutDates": [],
+        "excludedDays": [
+          "sunday"
+        ]
+      },
+      "deliveryTimeRanges": {
+        "morning": {
+          "start": "08:00",
+          "end": "12:00",
+          "estimatedTime": 35
+        },
+        "afternoon": {
+          "start": "12:00",
+          "end": "18:00",
+          "estimatedTime": 40
+        },
+        "evening": {
+          "start": "18:00",
+          "end": "22:00",
+          "estimatedTime": 50
+        }
+      },
+      "dynamicPricing": {
+        "enabled": true,
+        "peakHours": {
+          "start": "18:00",
+          "end": "21:00",
+          "multiplier": 1.3
+        }
+      },
+      "statistics": {
+        "avgDeliveryTime": 35,
+        "successRate": 66.66666666666666,
+        "totalOrders": 3,
+        "lastOrderDate": "2025-09-16T11:57:21.741Z"
+      },
+      "updatedBy": "68c400fb4903f9c0c3c98b49"
+    },
+    {
+      "_id": "68c94fdf083c0e5140445c75",
+      "zoneName": "Süstedt",
+      "zipCode": "27305",
+      "distance": 9.2,
+      "distanceUnit": "km",
+      "description": "Delivery zone for Süstedt area",
+      "isActive": true,
+      "deliveryFee": 3.49,
+      "estimatedDeliveryTime": 50,
+      "priority": 8,
+      "createdBy": "68c400fb4903f9c0c3c98b49",
+      "boundaries": [],
+      "createdAt": "2025-09-16T11:54:07.414Z",
+      "updatedAt": "2025-09-21T10:18:22.733Z",
+      "__v": 0,
+      "updatedBy": "68c400fb4903f9c0c3c98b49"
+    },
+    {
+      "_id": "68c94fdf083c0e5140445c77",
+      "zoneName": "Bassum",
+      "zipCode": "27211",
+      "distance": 9.7,
+      "distanceUnit": "km",
+      "description": "Delivery zone for Bassum area",
+      "isActive": true,
+      "deliveryFee": 3.49,
+      "estimatedDeliveryTime": 55,
+      "priority": 9,
+      "createdBy": "68c400fb4903f9c0c3c98b49",
+      "boundaries": [],
+      "createdAt": "2025-09-16T11:54:07.573Z",
+      "updatedAt": "2025-09-21T10:18:35.475Z",
+      "__v": 0,
+      "updatedBy": "68c400fb4903f9c0c3c98b49"
+    },
+    {
+      "_id": "68c94fdf083c0e5140445c79",
+      "zoneName": "Emtinghausen",
+      "zipCode": "27321",
+      "distance": 9.9,
+      "distanceUnit": "km",
+      "description": "Delivery zone for Emtinghausen area",
+      "isActive": true,
+      "deliveryFee": 3.49,
+      "estimatedDeliveryTime": 55,
+      "priority": 10,
+      "createdBy": "68c400fb4903f9c0c3c98b49",
+      "boundaries": [],
+      "createdAt": "2025-09-16T11:54:07.733Z",
+      "updatedAt": "2025-09-21T10:18:43.523Z",
+      "__v": 0,
+      "updatedBy": "68c400fb4903f9c0c3c98b49"
+    }
+  ]
+}
