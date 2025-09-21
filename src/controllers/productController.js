@@ -772,6 +772,240 @@ exports.uploadImage = async (req, res) => {
 	}
 };
 
+// @desc    Get products by category name
+// @route   GET /api/products/category
+// @access  Public
+exports.getProductsByCategory = async (req, res) => {
+	try {
+		const {
+			categoryName,
+			page = 1,
+			limit = 10,
+			search,
+			isActive = true,
+			sortBy = "createdAt",
+			sortOrder = "desc",
+			priceRange,
+			stockLevel,
+		} = req.query;
+
+		if (!categoryName) {
+			return res.status(400).json({
+				success: false,
+				message: "Category name is required",
+			});
+		}
+
+		// Build base filter
+		const baseFilter = {};
+		if (isActive !== "all") {
+			baseFilter.isActive = isActive === "true" || isActive === true;
+		}
+
+		// Add search filter if provided
+		if (search) {
+			baseFilter.$or = [
+				{ name: new RegExp(search, "i") },
+				{ barcode: new RegExp(search, "i") },
+				{ description: new RegExp(search, "i") },
+			];
+		}
+
+		// Price range filtering
+		if (priceRange && priceRange !== "all") {
+			if (priceRange.includes("-")) {
+				const [minPrice, maxPrice] = priceRange
+					.split("-")
+					.map((p) => parseFloat(p));
+				if (maxPrice) {
+					baseFilter.price = { $gte: minPrice, $lte: maxPrice };
+				} else {
+					baseFilter.price = { $gte: minPrice };
+				}
+			} else if (priceRange.endsWith("+")) {
+				const minPrice = parseFloat(priceRange.replace("+", ""));
+				baseFilter.price = { $gte: minPrice };
+			}
+		}
+
+		// Stock level filtering
+		if (stockLevel && stockLevel !== "all") {
+			switch (stockLevel) {
+				case "out":
+					baseFilter.stock = 0;
+					break;
+				case "low":
+					baseFilter.stock = { $gte: 1, $lte: 10 };
+					break;
+				case "medium":
+					baseFilter.stock = { $gte: 11, $lte: 50 };
+					break;
+				case "high":
+					baseFilter.stock = { $gte: 51 };
+					break;
+				case "Available":
+					baseFilter.stock = { $gte: 1 };
+					break;
+			}
+		}
+
+		// Calculate pagination
+		const pageNumber = parseInt(page);
+		const limitNumber = parseInt(limit);
+		const skip = (pageNumber - 1) * limitNumber;
+
+		// Build sort object
+		const sort = {};
+		sort[sortBy] = sortOrder === "desc" ? -1 : 1;
+
+		// Aggregation pipeline to find products by category name
+		const pipeline = [
+			{
+				$lookup: {
+					from: "subcategories",
+					localField: "subcategory",
+					foreignField: "_id",
+					as: "subcategoryInfo",
+				},
+			},
+			{
+				$lookup: {
+					from: "categories",
+					localField: "subcategoryInfo.parentCategory",
+					foreignField: "_id",
+					as: "categoryInfo",
+				},
+			},
+			{
+				$match: {
+					...baseFilter,
+					"categoryInfo.name": new RegExp(categoryName, "i"),
+				},
+			},
+			{
+				$lookup: {
+					from: "categories",
+					localField: "subcategoryInfo.parentCategory",
+					foreignField: "_id",
+					as: "category",
+					pipeline: [{ $project: { name: 1, color: 1, icon: 1 } }],
+				},
+			},
+			{
+				$lookup: {
+					from: "subcategories",
+					localField: "subcategory",
+					foreignField: "_id",
+					as: "subcategory",
+					pipeline: [
+						{
+							$lookup: {
+								from: "categories",
+								localField: "parentCategory",
+								foreignField: "_id",
+								as: "parentCategory",
+								pipeline: [{ $project: { name: 1, color: 1, icon: 1 } }],
+							},
+						},
+						{
+							$project: {
+								name: 1,
+								slug: 1,
+								parentCategory: { $arrayElemAt: ["$parentCategory", 0] },
+							},
+						},
+					],
+				},
+			},
+			{
+				$lookup: {
+					from: "users",
+					localField: "createdBy",
+					foreignField: "_id",
+					as: "createdBy",
+					pipeline: [{ $project: { name: 1, email: 1 } }],
+				},
+			},
+			{
+				$addFields: {
+					category: { $arrayElemAt: ["$category", 0] },
+					subcategory: { $arrayElemAt: ["$subcategory", 0] },
+					createdBy: { $arrayElemAt: ["$createdBy", 0] },
+				},
+			},
+			{
+				$project: {
+					subcategoryInfo: 0,
+					categoryInfo: 0,
+				},
+			},
+			{ $sort: sort },
+			{ $skip: skip },
+			{ $limit: limitNumber },
+		];
+
+		// Count pipeline for pagination
+		const countPipeline = [
+			{
+				$lookup: {
+					from: "subcategories",
+					localField: "subcategory",
+					foreignField: "_id",
+					as: "subcategoryInfo",
+				},
+			},
+			{
+				$lookup: {
+					from: "categories",
+					localField: "subcategoryInfo.parentCategory",
+					foreignField: "_id",
+					as: "categoryInfo",
+				},
+			},
+			{
+				$match: {
+					...baseFilter,
+					"categoryInfo.name": new RegExp(categoryName, "i"),
+				},
+			},
+			{ $count: "total" },
+		];
+
+		const [products, totalResult] = await Promise.all([
+			Product.aggregate(pipeline),
+			Product.aggregate(countPipeline),
+		]);
+
+		const total = totalResult[0]?.total || 0;
+
+		// Calculate pagination info
+		const totalPages = Math.ceil(total / limitNumber);
+		const hasNextPage = pageNumber < totalPages;
+		const hasPrevPage = pageNumber > 1;
+
+		res.json({
+			success: true,
+			data: products,
+			pagination: {
+				currentPage: pageNumber,
+				totalPages,
+				totalProducts: total,
+				hasNextPage,
+				hasPrevPage,
+				limit: limitNumber,
+			},
+			message: `Found ${total} products in category "${categoryName}"`,
+		});
+	} catch (error) {
+		console.error("Error getting products by category:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error retrieving products by category",
+			error: error.message,
+		});
+	}
+};
+
 // @desc    Get total count of all products
 // @route   GET /api/products/count
 // @access  Public
