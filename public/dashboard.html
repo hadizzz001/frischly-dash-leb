@@ -6608,9 +6608,21 @@
 									<button class="action-btn" style="background: #17a2b8; color: white;" onclick="updateStock('${
 										product._id
 									}')">Stock</button>
-									<button class="action-btn delete" onclick="deleteProduct('${
-										product._id
-									}', '${productName.replace(/'/g, "\\'")}')">Delete</button>
+									${
+										product.isActive
+											? `<button class="action-btn delete" onclick="deleteProduct('${
+													product._id
+											  }', '${productName.replace(
+													/'/g,
+													"\\'"
+											  )}')">Delete</button>`
+											: `<button class="action-btn" style="background: #dc3545; color: white;" onclick="permanentDeleteProduct('${
+													product._id
+											  }', '${productName.replace(
+													/'/g,
+													"\\'"
+											  )}')">Permanent Delete</button>`
+									}
 								</div>
 							</td>
 						`;
@@ -7089,10 +7101,55 @@
 				showStockModal(product);
 			}
 
+			async function permanentDeleteProduct(productId, productName) {
+				if (
+					!confirm(
+						`Are you sure you want to PERMANENTLY delete product "${productName}"? This will completely remove the product and its image from the system. This action cannot be undone.`
+					)
+				) {
+					return;
+				}
+
+				try {
+					const response = await fetch(
+						`${API_BASE_URL}/products/${productId}/permanent`,
+						{
+							method: "DELETE",
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+						}
+					);
+
+					const result = await response.json();
+
+					if (response.ok) {
+						showMessage(
+							`Product "${productName}" permanently deleted successfully`,
+							"success"
+						);
+						// Preserve current filters when reloading after deletion
+						const currentFilters = getCurrentProductFilters();
+						loadProducts(currentProductsPage, productsPageSize, currentFilters);
+					} else {
+						showMessage(
+							result.message || "Failed to permanently delete product",
+							"error"
+						);
+					}
+				} catch (error) {
+					showMessage(
+						"Error permanently deleting product: " + error.message,
+						"error"
+					);
+				}
+			}
+
 			async function deleteProduct(productId, productName) {
 				if (
 					!confirm(
-						`Are you sure you want to delete product "${productName}"? This action cannot be undone.`
+						`Are you sure you want to delete product "${productName}"? This will deactivate the product but keep it in the database.`
 					)
 				) {
 					return;
