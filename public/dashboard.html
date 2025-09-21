@@ -8049,7 +8049,7 @@
 						</td>
 						<td><code>${zone.zipCode}</code></td>
 						<td>${zone.distance} km</td>
-						<td>$${zone.deliveryFee ? zone.deliveryFee.toFixed(2) : "0.00"}</td>
+						<td>€${zone.deliveryFee ? zone.deliveryFee.toFixed(2) : "0.00"}</td>
 						<td>${zone.estimatedDeliveryTime || "N/A"}</td>
 						<td>
 							<span class="status-badge ${zone.isActive ? "active" : "inactive"}">
@@ -12172,7 +12172,7 @@
 						</div>
 
 						<div class="form-group">
-							<label for="zone-delivery-fee">Delivery Fee ($)</label>
+							<label for="zone-delivery-fee">Delivery Fee (€)</label>
 							<input
 								type="number"
 								id="zone-delivery-fee"
