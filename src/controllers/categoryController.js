@@ -42,6 +42,9 @@ const uploadToCloudinary = (buffer, folder = "categories") => {
 			resource_type: "image",
 			quality: "auto",
 			format: "webp",
+			transformation: [
+				{ quality: "auto:eco", width: 500, crop: "scale" }, // Resize to the specified width, maintaining aspect ratio
+			],
 		};
 
 		const stream = cloudinary.uploader.upload_stream(
