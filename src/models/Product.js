@@ -132,6 +132,10 @@ const productSchema = new mongoose.Schema(
 			type: Boolean,
 			default: true,
 		},
+		inAds: {
+			type: Boolean,
+			default: false,
+		},
 		tags: [
 			{
 				type: String,
@@ -193,6 +197,7 @@ productSchema.index({ shelfNumber: 1 });
 productSchema.index({ name: 1 });
 productSchema.index({ subcategory: 1 });
 productSchema.index({ isActive: 1 });
+productSchema.index({ inAds: 1 });
 productSchema.index({ createdAt: -1 });
 productSchema.index({ tax: 1 });
 productSchema.index({ discount: 1 });

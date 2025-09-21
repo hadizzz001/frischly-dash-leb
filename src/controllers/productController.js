@@ -87,6 +87,7 @@ exports.getProducts = async (req, res) => {
 			subcategory,
 			shelfNumber,
 			isActive = true,
+			inAds,
 			sortBy = "createdAt",
 			sortOrder = "desc",
 			priceRange,
@@ -97,6 +98,9 @@ exports.getProducts = async (req, res) => {
 		const filter = {};
 		if (isActive !== "all") {
 			filter.isActive = isActive === "true" || isActive === true;
+		}
+		if (inAds !== undefined && inAds !== "all") {
+			filter.inAds = inAds === "true" || inAds === true;
 		}
 		if (category) {
 			// Filter by direct category field

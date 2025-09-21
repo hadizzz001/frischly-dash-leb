@@ -415,6 +415,7 @@
 						const result = await response.json();
 
 						if (response.ok) {
+							console.log("Login successful:", result);
 							showMessage("Login successful! Redirecting...", "success");
 							localStorage.setItem("authToken", result.data.token);
 							localStorage.setItem("refreshToken", result.data.refreshToken);
@@ -442,7 +443,7 @@
 							}
 							setTimeout(() => {
 								window.location.href = redirectUrl;
-							}, 1500);
+							}, 500);
 						} else {
 							showMessage(
 								result.message ||

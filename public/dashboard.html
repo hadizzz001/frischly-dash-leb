@@ -2814,6 +2814,11 @@
 							<option value="active" selected>Active Only</option>
 							<option value="inactive">Inactive Only</option>
 						</select>
+						<select id="product-ads-filter" class="filter-select">
+							<option value="all">All Ads Status</option>
+							<option value="in-ads">In Ads</option>
+							<option value="not-in-ads">Not In Ads</option>
+						</select>
 						<select id="product-price-filter" class="filter-select">
 							<option value="all">All Prices</option>
 							<option value="0-10">Under €10</option>
@@ -2884,6 +2889,7 @@
 										<th>Bottle Refund</th>
 										<th>Stock</th>
 										<th>Status</th>
+										<th>In Ads</th>
 										<th>Actions</th>
 									</tr>
 								</thead>
@@ -6431,7 +6437,7 @@
 				if (!products || products.length === 0) {
 					tbody.innerHTML = `
 						<tr>
-							<td colspan="9" style="text-align: center; padding: 40px; color: #666;">
+							<td colspan="10" style="text-align: center; padding: 40px; color: #666;">
 								No products found. Click "Add Product" to create one.
 							</td>
 						</tr>
@@ -6579,6 +6585,9 @@
 							<td><span class="status-badge ${
 								product.isActive ? "active" : "inactive"
 							}">${status}</span></td>
+							<td><span class="status-badge ${product.inAds ? "active" : "inactive"}">${
+							product.inAds ? "Yes" : "No"
+						}</span></td>
 							<td>
 								<div class="action-buttons">
 									<button class="action-btn edit" onclick="editProduct('${
@@ -6942,6 +6951,7 @@
 						productDiscount: document.getElementById("product-discount"),
 						productStock: document.getElementById("product-stock"),
 						productStatus: document.getElementById("product-status"),
+						productInAds: document.getElementById("product-in-ads"),
 						productModal: document.getElementById("product-modal"),
 					};
 
@@ -6985,6 +6995,7 @@
 					elements.productDiscount.value = product.discount || 0;
 					elements.productStock.value = product.stock || 0;
 					elements.productStatus.value = product.isActive ? "true" : "false";
+					elements.productInAds.checked = product.inAds || false;
 
 					// Update price calculation display for editing
 					setTimeout(() => {
@@ -7186,6 +7197,7 @@
 							: 0,
 						stock: parseInt(formData.get("stock")) || 0,
 						isActive: formData.get("status") === "true",
+						inAds: formData.get("inAds") === "on",
 						productId: productId || undefined,
 					};
 					// Only include picture field if a new image was uploaded
@@ -7498,12 +7510,14 @@
 				const statusFilter = document.getElementById("product-status-filter");
 				const priceFilter = document.getElementById("product-price-filter");
 				const stockFilter = document.getElementById("product-stock-filter");
+				const adsFilter = document.getElementById("product-ads-filter");
 				const sortFilter = document.getElementById("product-sort-filter");
 
 				return {
 					searchTerm: searchInput ? searchInput.value.trim() : "",
 					categoryId: categoryFilter ? categoryFilter.value : "all",
 					status: statusFilter ? statusFilter.value : "all",
+					inAds: adsFilter ? adsFilter.value : "all",
 					priceRange: priceFilter ? priceFilter.value : "all",
 					stockLevel: stockFilter ? stockFilter.value : "all",
 					sortOption: sortFilter ? sortFilter.value : "createdAt-desc",
@@ -7526,6 +7540,12 @@
 					url += `&isActive=${filters.status === "active"}`;
 				} else {
 					url += `&isActive=all`;
+				}
+
+				if (filters.inAds && filters.inAds !== "all") {
+					url += `&inAds=${filters.inAds === "in-ads"}`;
+				} else {
+					url += `&inAds=all`;
 				}
 
 				if (filters.priceRange && filters.priceRange !== "all") {
@@ -7631,6 +7651,7 @@
 				const statusFilter = document.getElementById("product-status-filter");
 				const priceFilter = document.getElementById("product-price-filter");
 				const stockFilter = document.getElementById("product-stock-filter");
+				const adsFilter = document.getElementById("product-ads-filter");
 				const sortFilter = document.getElementById("product-sort-filter");
 
 				if (searchInput) searchInput.value = "";
@@ -7638,6 +7659,7 @@
 				if (statusFilter) statusFilter.value = "all";
 				if (priceFilter) priceFilter.value = "all";
 				if (stockFilter) stockFilter.value = "all";
+				if (adsFilter) adsFilter.value = "all";
 				if (sortFilter) sortFilter.value = "createdAt-desc";
 
 				// Reset table title
@@ -7653,6 +7675,7 @@
 					searchTerm: "",
 					categoryId: "all",
 					status: "all",
+					inAds: "all",
 					priceRange: "all",
 					stockLevel: "all",
 					sortOption: "createdAt-desc",
@@ -9786,6 +9809,11 @@
 								<option value="true">Active</option>
 								<option value="false">Inactive</option>
 							</select>
+						</div>
+
+						<div class="form-group">
+							<label for="product-in-ads">In Ads</label>
+							<input type="checkbox" id="product-in-ads" name="inAds" />
 						</div>
 
 						<!-- Price Calculation Display -->
