@@ -3,6 +3,7 @@ const Product = require("../models/Product");
 const Rider = require("../models/Rider");
 const mongoose = require("mongoose");
 const Zone = require("../models/Zone");
+const User = require("../models/User");
 
 // @desc    Get all orders
 // @route   GET /api/orders
@@ -273,15 +274,15 @@ exports.createOrder = async (req, res) => {
 		const {
 			customer,
 			items,
-			tax = 0,
-			discount = 0,
+
 			paymentMethod = "card",
 			shelfNumber = 0,
 			notes,
 		} = req.body;
 
 		// Validate required fields
-		if (!customer || !customer.name || !customer.id) {
+		const dbCustomer = await User.findById(customer.id);
+		if (!dbCustomer || !dbCustomer.name || !dbCustomer.id) {
 			return res.status(400).json({
 				success: false,
 				message: "Customer name and ID are required",
@@ -324,7 +325,10 @@ exports.createOrder = async (req, res) => {
 				});
 			}
 
-			const totalPrice = item.quantity * item.unitPrice;
+			const totalPrice =
+				item.quantity * product.price * (1 + (product.tax || 0) / 100) -
+				(product.discount || 0) +
+				(product.bottlerefund || 0);
 			subtotal += totalPrice;
 
 			processedItems.push({
@@ -332,21 +336,42 @@ exports.createOrder = async (req, res) => {
 				productName: product.name,
 				productBarcode: product.barcode,
 				quantity: item.quantity,
-				unitPrice: item.unitPrice,
+				unitPrice:
+					product.price * (1 + (product.tax || 0) / 100) -
+					(product.discount || 0) +
+					(product.bottlerefund || 0),
 				totalPrice,
 			});
 		}
 
 		// Create order
-		const total = subtotal + tax - discount;
+		// Calculate delivery charge based on customer's zone
+		let delivery = 0;
+		if (dbCustomer.address && dbCustomer.address.zipCode) {
+			try {
+				const zone = await Zone.findOne({
+					zipCode: dbCustomer.address.zipCode,
+					isActive: true,
+				});
+				if (zone && zone.deliveryFee) {
+					delivery = zone.deliveryFee;
+				}
+			} catch (error) {
+				console.warn("Error fetching delivery fee from zone:", error.message);
+				// Continue with delivery = 0 if zone lookup fails
+			}
+		}
+
+		const total = subtotal + delivery;
 
 		const order = new Order({
-			customer,
+			customer: dbCustomer,
 			items: processedItems,
-			subtotal,
+			subtotal: subtotal,
 			tax,
-			discount,
-			total,
+			discount: 0,
+			delivery: delivery,
+			total: total,
 			paymentMethod,
 			shelfNumber,
 			notes,

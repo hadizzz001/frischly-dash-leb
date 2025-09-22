@@ -25,15 +25,7 @@ const wasteSchema = new mongoose.Schema(
 		reason: {
 			type: String,
 			required: [true, "Please provide a reason for waste"],
-			enum: [
-				"Expired",
-				"Damaged",
-				"Quality Issues",
-				"Overproduction",
-				"Spoiled",
-				"Recall",
-				"Other",
-			],
+			enum: ["Expired", "Damaged", "Quality Issues", "Other"],
 		},
 		notes: {
 			type: String,

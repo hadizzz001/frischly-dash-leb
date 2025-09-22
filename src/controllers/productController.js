@@ -630,6 +630,69 @@ exports.updateProductStock = async (req, res) => {
 	}
 };
 
+// @desc    Update product shelf number
+// @route   PATCH /api/products/:id/shelf
+// @access  Private (Admin/Manager/Staff)
+exports.updateProductShelfNumber = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { shelfNumber } = req.body;
+
+		if (!mongoose.Types.ObjectId.isValid(id)) {
+			return res.status(400).json({
+				success: false,
+				message: "Invalid product ID",
+			});
+		}
+
+		if (!shelfNumber || typeof shelfNumber !== "string") {
+			return res.status(400).json({
+				success: false,
+				message: "Shelf number is required and must be a string",
+			});
+		}
+
+		const product = await Product.findById(id);
+
+		if (!product) {
+			return res.status(404).json({
+				success: false,
+				message: "Product not found",
+			});
+		}
+
+		product.shelfNumber = shelfNumber.trim();
+		product.updatedAt = new Date();
+		await product.save();
+
+		await product.populate([
+			{ path: "category", select: "name color icon" },
+			{
+				path: "subcategory",
+				select: "name slug parentCategory",
+				populate: {
+					path: "parentCategory",
+					select: "name color icon",
+				},
+			},
+			{ path: "createdBy", select: "name email" },
+		]);
+
+		res.json({
+			success: true,
+			message: "Product shelf number updated successfully",
+			data: product,
+		});
+	} catch (error) {
+		console.error("Error updating product shelf number:", error);
+		res.status(400).json({
+			success: false,
+			message: "Error updating product shelf number",
+			error: error.message,
+		});
+	}
+};
+
 // @desc    Delete product (soft delete)
 // @route   DELETE /api/products/:id
 // @access  Private (Admin)

@@ -90,6 +90,12 @@ const orderSchema = new mongoose.Schema(
 			default: 0,
 			min: [0, "Discount cannot be negative"],
 		},
+		delivery: {
+			type: Number,
+			default: 0,
+			min: [0, "delivery cannot be negative"],
+		},
+
 		total: {
 			type: Number,
 			default: 0,
@@ -103,7 +109,6 @@ const orderSchema = new mongoose.Schema(
 					"confirmed",
 					"processing",
 					"ready for pickup",
-
 					"OnTheWay",
 					"delivered",
 					"cancelled",
@@ -210,8 +215,8 @@ orderSchema.pre("save", async function (next) {
 	}
 
 	// Calculate totals
-	this.subtotal = this.items.reduce((sum, item) => sum + item.totalPrice, 0);
-	this.total = this.subtotal + this.tax - this.discount;
+	//this.subtotal = this.items.reduce((sum, item) => sum + item.totalPrice, 0);
+	//this.total = this.subtotal + this.tax - this.discount;
 
 	next();
 });

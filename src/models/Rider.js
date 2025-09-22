@@ -35,7 +35,7 @@ const riderSchema = new mongoose.Schema(
 				values: ["available", "busy", "offline", "on-break"],
 				message: "Status must be one of: available, busy, offline, on-break",
 			},
-			default: "offline",
+			default: "available",
 			index: true,
 		},
 		vehicleType: {
@@ -245,7 +245,6 @@ riderSchema.statics.findAvailableInZone = function (zone) {
 		zones: zone, // Check if zone is in the zones array
 		status: "available",
 		isActive: true,
-		isVerified: true,
 	}).populate("user", "name email phoneNumber");
 };
 

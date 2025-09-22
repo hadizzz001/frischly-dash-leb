@@ -1469,6 +1469,9 @@
 						product: item.id,
 						quantity: item.quantity,
 						unitPrice: item.price,
+						tax: item.tax, // Assuming tax is included in price
+						bottlerefund: item.bottlerefund,
+						discount: item.discount || 0, // Assuming no bottle refund for simplicity
 					}));
 
 					// Calculate totals
@@ -1476,23 +1479,16 @@
 						(sum, item) => sum + item.price * item.quantity,
 						0
 					);
-					const tax = subtotal * 0.1; // 10% tax
+					const tax = subtotal; // 10% tax
 					const total = subtotal + tax;
 
 					// Prepare order data
 					const orderData = {
 						customer: {
 							id: userData.data.user._id,
-							name: userData.data.user.name,
-							email: userData.data.user.email,
-							phoneNumber: userData.data.user.phoneNumber,
-							address: userData.data.user.address,
 						},
 						items: orderItems,
-						subtotal: subtotal,
-						tax: tax,
-						discount: 0,
-						total: total,
+
 						paymentMethod: "card",
 						notes: "Order placed from shop",
 					};

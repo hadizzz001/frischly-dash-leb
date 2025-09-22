@@ -14,6 +14,7 @@ const {
 	uploadImage,
 	uploadMiddleware,
 	getProductsCount,
+	updateProductShelfNumber,
 } = require("../controllers/productController");
 
 // Import middleware (assuming auth middleware exists)
@@ -57,6 +58,12 @@ router.patch(
 	protect,
 	authorize("admin", "manager"),
 	updateProductStock
+);
+router.patch(
+	"/:id/shelf",
+	protect,
+	authorize("admin", "manager", "staff"),
+	updateProductShelfNumber
 );
 router.delete("/:id", protect, authorize("admin"), deleteProduct);
 router.delete(
