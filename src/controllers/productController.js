@@ -1165,6 +1165,137 @@ exports.getProductsBySubcategory = async (req, res) => {
 		});
 	}
 };
+
+// @desc    Get products with discount
+// @route   GET /api/products/discount
+// @access  Public
+exports.getProductsWithDiscount = async (req, res) => {
+	try {
+		const {
+			page = 1,
+			limit = 10,
+			search,
+			isActive = true,
+			sortBy = "discount",
+			sortOrder = "desc",
+			priceRange,
+			stockLevel,
+			minDiscount = 0,
+		} = req.query;
+
+		// Build base filter - products with discount > minDiscount
+		const baseFilter = {
+			discount: { $gt: parseFloat(minDiscount) },
+		};
+
+		if (isActive !== "all") {
+			baseFilter.isActive = isActive === "true" || isActive === true;
+		}
+
+		// Add search filter if provided
+		if (search) {
+			baseFilter.$or = [
+				{ name: new RegExp(search, "i") },
+				{ barcode: new RegExp(search, "i") },
+				{ description: new RegExp(search, "i") },
+			];
+		}
+
+		// Price range filtering
+		if (priceRange && priceRange !== "all") {
+			if (priceRange.includes("-")) {
+				const [minPrice, maxPrice] = priceRange
+					.split("-")
+					.map((p) => parseFloat(p));
+				if (maxPrice) {
+					baseFilter.price = { $gte: minPrice, $lte: maxPrice };
+				} else {
+					baseFilter.price = { $gte: minPrice };
+				}
+			} else if (priceRange.endsWith("+")) {
+				const minPrice = parseFloat(priceRange.replace("+", ""));
+				baseFilter.price = { $gte: minPrice };
+			}
+		}
+
+		// Stock level filtering
+		if (stockLevel && stockLevel !== "all") {
+			switch (stockLevel) {
+				case "out":
+					baseFilter.stock = 0;
+					break;
+				case "low":
+					baseFilter.stock = { $gte: 1, $lte: 10 };
+					break;
+				case "medium":
+					baseFilter.stock = { $gte: 11, $lte: 50 };
+					break;
+				case "high":
+					baseFilter.stock = { $gte: 51 };
+					break;
+				case "Available":
+					baseFilter.stock = { $gte: 1 };
+					break;
+			}
+		}
+
+		// Calculate pagination
+		const pageNumber = parseInt(page);
+		const limitNumber = parseInt(limit);
+		const skip = (pageNumber - 1) * limitNumber;
+
+		// Build sort object
+		const sort = {};
+		sort[sortBy] = sortOrder === "desc" ? -1 : 1;
+
+		// Execute queries with population
+		const [products, total] = await Promise.all([
+			Product.find(baseFilter)
+				.populate("category", "name color icon")
+				.populate({
+					path: "subcategory",
+					select: "name slug parentCategory",
+					populate: {
+						path: "parentCategory",
+						select: "name color icon",
+					},
+				})
+				.populate("createdBy", "name email")
+				.sort(sort)
+				.skip(skip)
+				.limit(limitNumber)
+				.lean(),
+			Product.countDocuments(baseFilter),
+		]);
+
+		// Calculate pagination info
+		const totalPages = Math.ceil(total / limitNumber);
+		const hasNextPage = pageNumber < totalPages;
+		const hasPrevPage = pageNumber > 1;
+
+		res.json({
+			success: true,
+			data: products,
+			pagination: {
+				currentPage: pageNumber,
+				totalPages,
+				totalProducts: total,
+				hasNextPage,
+				hasPrevPage,
+				limit: limitNumber,
+			},
+			message: `Found ${total} products with discount greater than ${minDiscount}%`,
+		});
+	} catch (error) {
+		console.error("Error getting products with discount:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error retrieving products with discount",
+			error: error.message,
+		});
+	}
+};
+
 // @route   GET /api/products/count
 // @access  Public
 exports.getProductsCount = async (req, res) => {

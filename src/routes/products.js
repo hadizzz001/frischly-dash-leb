@@ -6,6 +6,7 @@ const {
 	getProductsByShelfNumber,
 	getProductsByCategory,
 	getProductsBySubcategory,
+	getProductsWithDiscount,
 	createProduct,
 	updateProduct,
 	updateProductStock,
@@ -28,6 +29,7 @@ router.get("/", getProducts);
 router.get("/count", getProductsCount);
 router.get("/category", getProductsByCategory);
 router.get("/subcategory", getProductsBySubcategory);
+router.get("/discount", getProductsWithDiscount);
 router.get("/shelves", getShelfNumbers);
 router.get("/barcode/:barcode", getProductByBarcode);
 router.get("/shelf/:shelfNumber", getProductsByShelfNumber);
