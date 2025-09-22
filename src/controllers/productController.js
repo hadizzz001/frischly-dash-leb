@@ -343,18 +343,14 @@ exports.getProductByBarcode = async (req, res) => {
 	try {
 		const { barcode } = req.params;
 
-		const product = await Product.findByBarcode(barcode)
-			.populate("category", "name color icon")
-			.populate({
-				path: "subcategory",
-				select: "name slug parentCategory",
-				populate: {
-					path: "parentCategory",
-					select: "name color icon",
-				},
-			})
-			.populate("createdBy", "name email");
-
+		const product = await Product.findByBarcode(barcode).populate({
+			path: "subcategory",
+			select: "name parentCategory",
+			populate: {
+				path: "parentCategory",
+				select: "name",
+			},
+		});
 		if (!product) {
 			return res.status(404).json({
 				success: false,

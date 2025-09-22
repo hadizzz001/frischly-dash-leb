@@ -278,7 +278,7 @@ productSchema.pre("save", function (next) {
 });
 
 // Schema options to include virtuals in JSON output
-productSchema.set("toJSON", { virtuals: true });
-productSchema.set("toObject", { virtuals: true });
+productSchema.set("toJSON", { virtuals: false });
+productSchema.set("toObject", { virtuals: false });
 
 module.exports = mongoose.model("Product", productSchema);
