@@ -803,8 +803,25 @@ exports.getProductsByCategory = async (req, res) => {
 			});
 		}
 
-		// Build base filter
-		const baseFilter = {};
+		// First, find the category by name to get its ID
+		const Category = require("../models/Category");
+		const category = await Category.findOne({
+			name: new RegExp(categoryName, "i"),
+			isActive: true,
+		});
+
+		if (!category) {
+			return res.status(404).json({
+				success: false,
+				message: `Category "${categoryName}" not found`,
+			});
+		}
+
+		// Build base filter with the category ID
+		const baseFilter = {
+			category: category._id, // Products must have this category ID
+		};
+
 		if (isActive !== "all") {
 			baseFilter.isActive = isActive === "true" || isActive === true;
 		}
@@ -865,125 +882,25 @@ exports.getProductsByCategory = async (req, res) => {
 		const sort = {};
 		sort[sortBy] = sortOrder === "desc" ? -1 : 1;
 
-		// Aggregation pipeline to find products by category name
-		const pipeline = [
-			{
-				$lookup: {
-					from: "subcategories",
-					localField: "subcategory",
-					foreignField: "_id",
-					as: "subcategoryInfo",
-				},
-			},
-			{
-				$lookup: {
-					from: "categories",
-					localField: "subcategoryInfo.parentCategory",
-					foreignField: "_id",
-					as: "categoryInfo",
-				},
-			},
-			{
-				$match: {
-					...baseFilter,
-					"categoryInfo.name": new RegExp(categoryName, "i"),
-				},
-			},
-			{
-				$lookup: {
-					from: "categories",
-					localField: "subcategoryInfo.parentCategory",
-					foreignField: "_id",
-					as: "category",
-					pipeline: [{ $project: { name: 1, color: 1, icon: 1 } }],
-				},
-			},
-			{
-				$lookup: {
-					from: "subcategories",
-					localField: "subcategory",
-					foreignField: "_id",
-					as: "subcategory",
-					pipeline: [
-						{
-							$lookup: {
-								from: "categories",
-								localField: "parentCategory",
-								foreignField: "_id",
-								as: "parentCategory",
-								pipeline: [{ $project: { name: 1, color: 1, icon: 1 } }],
-							},
-						},
-						{
-							$project: {
-								name: 1,
-								slug: 1,
-								parentCategory: { $arrayElemAt: ["$parentCategory", 0] },
-							},
-						},
-					],
-				},
-			},
-			{
-				$lookup: {
-					from: "users",
-					localField: "createdBy",
-					foreignField: "_id",
-					as: "createdBy",
-					pipeline: [{ $project: { name: 1, email: 1 } }],
-				},
-			},
-			{
-				$addFields: {
-					category: { $arrayElemAt: ["$category", 0] },
-					subcategory: { $arrayElemAt: ["$subcategory", 0] },
-					createdBy: { $arrayElemAt: ["$createdBy", 0] },
-				},
-			},
-			{
-				$project: {
-					subcategoryInfo: 0,
-					categoryInfo: 0,
-				},
-			},
-			{ $sort: sort },
-			{ $skip: skip },
-			{ $limit: limitNumber },
-		];
-
-		// Count pipeline for pagination
-		const countPipeline = [
-			{
-				$lookup: {
-					from: "subcategories",
-					localField: "subcategory",
-					foreignField: "_id",
-					as: "subcategoryInfo",
-				},
-			},
-			{
-				$lookup: {
-					from: "categories",
-					localField: "subcategoryInfo.parentCategory",
-					foreignField: "_id",
-					as: "categoryInfo",
-				},
-			},
-			{
-				$match: {
-					...baseFilter,
-					"categoryInfo.name": new RegExp(categoryName, "i"),
-				},
-			},
-			{ $count: "total" },
-		];
-
-		const [products, totalResult] = await Promise.all([
-			Product.aggregate(pipeline),
-			Product.aggregate(countPipeline),
+		// Execute queries with population
+		const [products, total] = await Promise.all([
+			Product.find(baseFilter)
+				.populate("category", "name color icon")
+				.populate({
+					path: "subcategory",
+					select: "name slug parentCategory",
+					populate: {
+						path: "parentCategory",
+						select: "name color icon",
+					},
+				})
+				.populate("createdBy", "name email")
+				.sort(sort)
+				.skip(skip)
+				.limit(limitNumber)
+				.lean(),
+			Product.countDocuments(baseFilter),
 		]);
-
-		const total = totalResult[0]?.total || 0;
 
 		// Calculate pagination info
 		const totalPages = Math.ceil(total / limitNumber);

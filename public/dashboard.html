@@ -2964,8 +2964,26 @@
 				<!-- Orders Management Section -->
 				<div id="orders-section" class="content-section">
 					<div class="section-header">
-						<h2>Orders Management</h2>
-						<p>Track and manage customer orders</p>
+						<h2>
+							Orders Management
+							<span
+								id="orders-live-indicator"
+								style="
+									display: none;
+									color: #28a745;
+									font-size: 14px;
+									margin-left: 10px;
+								"
+								>● Live</span
+							>
+						</h2>
+						<p>
+							Track and manage customer orders
+							<span
+								id="orders-last-update"
+								style="font-size: 12px; color: #666; margin-left: 10px"
+							></span>
+						</p>
 					</div>
 
 					<div class="section-actions">
@@ -4959,6 +4977,18 @@
 			}
 
 			function showSection(sectionName, fromMenu = true) {
+				// Stop live updates for orders if switching away from orders section
+				const currentActiveSection = document.querySelector(
+					".content-section.active"
+				);
+				if (
+					currentActiveSection &&
+					currentActiveSection.id === "orders-section" &&
+					sectionName !== "orders"
+				) {
+					stopOrdersLiveUpdates();
+				}
+
 				// Hide all sections
 				const sections = document.querySelectorAll(".content-section");
 				sections.forEach((section) => {
@@ -5034,7 +5064,7 @@
 						setTimeout(attachProductSearchListeners, 100);
 						break;
 					case "orders":
-						loadOrders();
+						startOrdersLiveUpdates();
 						break;
 					case "riders":
 						// Default to riders tab, load riders data
@@ -10745,6 +10775,11 @@
 			let isEditingOrder = false;
 			let currentOrderId = null;
 
+			// Live updates variables
+			let ordersPollingInterval = null;
+			let lastOrderCount = 0;
+			const ORDERS_POLLING_INTERVAL = 30000; // 30 seconds
+
 			// Load orders with pagination
 			async function loadOrders(
 				page = currentOrdersPage,
@@ -10770,6 +10805,10 @@
 						displayOrders(result.data || []);
 						updateOrdersPagination(result.pagination);
 						currentOrdersPage = page;
+						// Update last update timestamp
+						document.getElementById(
+							"orders-last-update"
+						).textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
 					} else {
 						showMessage(result.message || "Failed to load orders", "error");
 					}
@@ -10777,6 +10816,75 @@
 					showMessage("Error loading orders: " + error.message, "error");
 				} finally {
 					showSectionLoading("orders", false);
+				}
+			}
+
+			// Start live updates for orders section
+			function startOrdersLiveUpdates() {
+				if (ordersPollingInterval) {
+					clearInterval(ordersPollingInterval);
+				}
+
+				// Initial load to get current state
+				loadOrders();
+
+				// Start polling for new orders
+				ordersPollingInterval = setInterval(
+					checkForNewOrders,
+					ORDERS_POLLING_INTERVAL
+				);
+				document.getElementById("orders-live-indicator").style.display =
+					"inline";
+				console.log("Started live updates for orders section");
+			}
+
+			// Stop live updates for orders section
+			function stopOrdersLiveUpdates() {
+				if (ordersPollingInterval) {
+					clearInterval(ordersPollingInterval);
+					ordersPollingInterval = null;
+					document.getElementById("orders-live-indicator").style.display =
+						"none";
+					console.log("Stopped live updates for orders section");
+				}
+			}
+
+			// Check for new orders
+			async function checkForNewOrders() {
+				try {
+					// Get the latest order count
+					const response = await fetch(`${API_BASE_URL}/orders/count`, {
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					if (response.ok) {
+						const result = await response.json();
+						const currentOrderCount = result.count || 0;
+
+						// Check if there are new orders
+						if (currentOrderCount > lastOrderCount && lastOrderCount > 0) {
+							const newOrdersCount = currentOrderCount - lastOrderCount;
+							showMessage(
+								`🆕 ${newOrdersCount} new order${
+									newOrdersCount > 1 ? "s" : ""
+								} received!`,
+								"success",
+								5000
+							);
+
+							// Reload orders to show the new ones
+							loadOrders(1, ordersPageSize); // Go back to first page to show latest orders
+						}
+
+						lastOrderCount = currentOrderCount;
+					}
+				} catch (error) {
+					console.error("Error checking for new orders:", error);
+					// Don't show error message for polling failures to avoid spam
 				}
 			}
 
