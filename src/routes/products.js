@@ -5,6 +5,7 @@ const {
 	getProductByBarcode,
 	getProductsByShelfNumber,
 	getProductsByCategory,
+	getProductsBySubcategory,
 	createProduct,
 	updateProduct,
 	updateProductStock,
@@ -26,6 +27,7 @@ const router = express.Router();
 router.get("/", getProducts);
 router.get("/count", getProductsCount);
 router.get("/category", getProductsByCategory);
+router.get("/subcategory", getProductsBySubcategory);
 router.get("/shelves", getShelfNumbers);
 router.get("/barcode/:barcode", getProductByBarcode);
 router.get("/shelf/:shelfNumber", getProductsByShelfNumber);

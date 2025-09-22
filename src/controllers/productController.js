@@ -846,13 +846,14 @@ exports.getProductsByCategory = async (req, res) => {
 		const {
 			categoryName,
 			page = 1,
-			limit = 10,
+			limit = 100,
 			search,
 			isActive = true,
 			sortBy = "createdAt",
 			sortOrder = "desc",
 			priceRange,
 			stockLevel,
+			subcategoryName,
 		} = req.query;
 
 		if (!categoryName) {
@@ -876,9 +877,34 @@ exports.getProductsByCategory = async (req, res) => {
 			});
 		}
 
-		// Build base filter with the category ID
+		// Find all subcategories in this category
+		const Subcategory = require("../models/Subcategory");
+		const subcategories = await Subcategory.find({
+			parentCategory: category._id,
+			isActive: true,
+		}).select("_id");
+
+		if (subcategories.length === 0) {
+			return res.json({
+				success: true,
+				data: [],
+				pagination: {
+					currentPage: parseInt(page),
+					totalPages: 0,
+					totalProducts: 0,
+					hasNextPage: false,
+					hasPrevPage: false,
+					limit: parseInt(limit),
+				},
+				message: `No subcategories found in category "${categoryName}"`,
+			});
+		}
+
+		const subcategoryIds = subcategories.map((sub) => sub._id);
+
+		// Build base filter with subcategory IDs
 		const baseFilter = {
-			category: category._id, // Products must have this category ID
+			subcategory: { $in: subcategoryIds }, // Products must have subcategory in this category's subcategories
 		};
 
 		if (isActive !== "all") {
@@ -989,7 +1015,156 @@ exports.getProductsByCategory = async (req, res) => {
 	}
 };
 
-// @desc    Get total count of all products
+// @desc    Get products by subcategory name
+// @route   GET /api/products/subcategory
+// @access  Public
+exports.getProductsBySubcategory = async (req, res) => {
+	try {
+		const {
+			subcategoryName,
+			page = 1,
+			limit = 10,
+			search,
+			isActive = true,
+			sortBy = "createdAt",
+			sortOrder = "desc",
+			priceRange,
+			stockLevel,
+		} = req.query;
+
+		if (!subcategoryName) {
+			return res.status(400).json({
+				success: false,
+				message: "Subcategory name is required",
+			});
+		}
+
+		// First, find the subcategory by name to get its ID
+		const Subcategory = require("../models/Subcategory");
+		const subcategory = await Subcategory.findOne({
+			name: new RegExp(subcategoryName, "i"),
+			isActive: true,
+		}).populate("parentCategory", "name");
+
+		if (!subcategory) {
+			return res.status(404).json({
+				success: false,
+				message: `Subcategory "${subcategoryName}" not found`,
+			});
+		}
+
+		// Build base filter with the subcategory ID
+		const baseFilter = {
+			subcategory: subcategory._id, // Products must have this subcategory ID
+		};
+
+		if (isActive !== "all") {
+			baseFilter.isActive = isActive === "true" || isActive === true;
+		}
+
+		// Add search filter if provided
+		if (search) {
+			baseFilter.$or = [
+				{ name: new RegExp(search, "i") },
+				{ barcode: new RegExp(search, "i") },
+				{ description: new RegExp(search, "i") },
+			];
+		}
+
+		// Price range filtering
+		if (priceRange && priceRange !== "all") {
+			if (priceRange.includes("-")) {
+				const [minPrice, maxPrice] = priceRange
+					.split("-")
+					.map((p) => parseFloat(p));
+				if (maxPrice) {
+					baseFilter.price = { $gte: minPrice, $lte: maxPrice };
+				} else {
+					baseFilter.price = { $gte: minPrice };
+				}
+			} else if (priceRange.endsWith("+")) {
+				const minPrice = parseFloat(priceRange.replace("+", ""));
+				baseFilter.price = { $gte: minPrice };
+			}
+		}
+
+		// Stock level filtering
+		if (stockLevel && stockLevel !== "all") {
+			switch (stockLevel) {
+				case "out":
+					baseFilter.stock = 0;
+					break;
+				case "low":
+					baseFilter.stock = { $gte: 1, $lte: 10 };
+					break;
+				case "medium":
+					baseFilter.stock = { $gte: 11, $lte: 50 };
+					break;
+				case "high":
+					baseFilter.stock = { $gte: 51 };
+					break;
+				case "Available":
+					baseFilter.stock = { $gte: 1 };
+					break;
+			}
+		}
+
+		// Calculate pagination
+		const pageNumber = parseInt(page);
+		const limitNumber = parseInt(limit);
+		const skip = (pageNumber - 1) * limitNumber;
+
+		// Build sort object
+		const sort = {};
+		sort[sortBy] = sortOrder === "desc" ? -1 : 1;
+
+		// Execute queries with population
+		const [products, total] = await Promise.all([
+			Product.find(baseFilter)
+				.populate("category", "name color icon")
+				.populate({
+					path: "subcategory",
+					select: "name slug parentCategory",
+					populate: {
+						path: "parentCategory",
+						select: "name color icon",
+					},
+				})
+				.populate("createdBy", "name email")
+				.sort(sort)
+				.skip(skip)
+				.limit(limitNumber)
+				.lean(),
+			Product.countDocuments(baseFilter),
+		]);
+
+		// Calculate pagination info
+		const totalPages = Math.ceil(total / limitNumber);
+		const hasNextPage = pageNumber < totalPages;
+		const hasPrevPage = pageNumber > 1;
+
+		res.json({
+			success: true,
+			data: products,
+			pagination: {
+				currentPage: pageNumber,
+				totalPages,
+				totalProducts: total,
+				hasNextPage,
+				hasPrevPage,
+				limit: limitNumber,
+			},
+			message: `Found ${total} products in subcategory "${subcategoryName}"`,
+		});
+	} catch (error) {
+		console.error("Error getting products by subcategory:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error retrieving products by subcategory",
+			error: error.message,
+		});
+	}
+};
 // @route   GET /api/products/count
 // @access  Public
 exports.getProductsCount = async (req, res) => {

@@ -224,7 +224,9 @@ orderSchema.pre("save", async function (next) {
 // Pre-save middleware to calculate item totals
 orderSchema.pre("save", function (next) {
 	this.items.forEach((item) => {
-		item.totalPrice = item.quantity * item.unitPrice;
+		item.totalPrice =
+			item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100) +
+			(this.delivery || 0);
 	});
 	next();
 });
