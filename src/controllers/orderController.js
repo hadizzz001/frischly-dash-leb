@@ -5,7 +5,7 @@ const mongoose = require("mongoose");
 const Zone = require("../models/Zone");
 const User = require("../models/User");
 
-// @desc    Get all orders
+// @desc    Get all orders with enhanced filtering options
 // @route   GET /api/orders
 // @access  Private
 exports.getOrders = async (req, res) => {
@@ -19,6 +19,11 @@ exports.getOrders = async (req, res) => {
 			sortBy = "createdAt",
 			sortOrder = "desc",
 			search,
+			dateFrom,
+			dateTo,
+			assignedRider,
+			minTotal,
+			maxTotal,
 		} = req.query;
 
 		const pageNum = parseInt(page);
@@ -33,12 +38,87 @@ exports.getOrders = async (req, res) => {
 			filter.isActive = isActive === "true";
 		}
 
+		// Enhanced status filtering
 		if (status) {
-			filter.status = status;
+			if (status.includes(",")) {
+				// Multiple status values separated by comma
+				const statusArray = status.split(",").map((s) => s.trim());
+				filter.status = { $in: statusArray };
+			} else if (status.startsWith("!")) {
+				// Exclude specific status (e.g., !cancelled)
+				const excludeStatus = status.substring(1);
+				filter.status = { $ne: excludeStatus };
+			} else {
+				// Single status value
+				filter.status = status;
+			}
 		}
 
 		if (paymentStatus) {
-			filter.paymentStatus = paymentStatus;
+			if (paymentStatus.includes(",")) {
+				// Multiple payment status values separated by comma
+				const paymentStatusArray = paymentStatus
+					.split(",")
+					.map((s) => s.trim());
+				filter.paymentStatus = { $in: paymentStatusArray };
+			} else {
+				// Single payment status value
+				filter.paymentStatus = paymentStatus;
+			}
+		}
+
+		// Date range filtering
+		if (dateFrom || dateTo) {
+			const dateFilter = {};
+			if (dateFrom) {
+				const fromDate = new Date(dateFrom);
+				if (!isNaN(fromDate.getTime())) {
+					dateFilter.$gte = fromDate;
+				}
+			}
+			if (dateTo) {
+				const toDate = new Date(dateTo);
+				if (!isNaN(toDate.getTime())) {
+					// Include the entire day by setting to end of day
+					toDate.setHours(23, 59, 59, 999);
+					dateFilter.$lte = toDate;
+				}
+			}
+			if (Object.keys(dateFilter).length > 0) {
+				filter.createdAt = dateFilter;
+			}
+		}
+
+		// Assigned rider filtering
+		if (assignedRider) {
+			if (assignedRider === "unassigned") {
+				filter.assignedRider = { $exists: false };
+			} else if (assignedRider === "assigned") {
+				filter.assignedRider = { $exists: true };
+			} else {
+				// Specific rider ID
+				filter.assignedRider = assignedRider;
+			}
+		}
+
+		// Total amount filtering
+		if (minTotal || maxTotal) {
+			const totalFilter = {};
+			if (minTotal) {
+				const min = parseFloat(minTotal);
+				if (!isNaN(min)) {
+					totalFilter.$gte = min;
+				}
+			}
+			if (maxTotal) {
+				const max = parseFloat(maxTotal);
+				if (!isNaN(max)) {
+					totalFilter.$lte = max;
+				}
+			}
+			if (Object.keys(totalFilter).length > 0) {
+				filter.total = totalFilter;
+			}
 		}
 
 		// Filter orders based on user role

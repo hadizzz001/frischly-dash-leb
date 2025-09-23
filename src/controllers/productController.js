@@ -77,7 +77,7 @@ const deleteFromCloudinary = (publicId) => {
 	});
 };
 
-// @desc    Get all products
+// @desc    Get all products with filter options including discount
 // @route   GET /api/products
 // @access  Public
 exports.getProducts = async (req, res) => {
@@ -95,6 +95,8 @@ exports.getProducts = async (req, res) => {
 			sortOrder = "desc",
 			priceRange,
 			stockLevel,
+			discount,
+			minDiscount,
 		} = req.query;
 
 		// Build filter object
@@ -165,6 +167,25 @@ exports.getProducts = async (req, res) => {
 					break;
 				case "Available":
 					filter.stock = { $gte: 1 };
+			}
+		}
+
+		// Discount filtering
+		if (discount !== undefined && discount !== "all") {
+			if (discount === "true" || discount === true) {
+				// Products with any discount (> 0)
+				filter.discount = { $gt: 0 };
+			} else if (discount === "false" || discount === false) {
+				// Products without discount (= 0)
+				filter.discount = { $lte: 0 };
+			}
+		}
+
+		// Minimum discount filtering
+		if (minDiscount !== undefined && minDiscount !== "") {
+			const minDiscountValue = parseFloat(minDiscount);
+			if (!isNaN(minDiscountValue)) {
+				filter.discount = { $gte: minDiscountValue };
 			}
 		}
 
