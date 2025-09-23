@@ -53,14 +53,14 @@ router.post(
 router.put(
 	"/:id",
 	protect,
-	authorize("admin", "manager"),
+	authorize("admin", "manager", "staff"),
 	uploadMiddleware,
 	updateProduct
 );
 router.patch(
 	"/:id/stock",
 	protect,
-	authorize("admin", "manager"),
+	authorize("admin", "manager", "staff"),
 	updateProductStock
 );
 router.patch(
