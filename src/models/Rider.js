@@ -24,11 +24,11 @@ const riderSchema = new mongoose.Schema(
 			},
 		],
 		// Keep zone field for backward compatibility (deprecated)
-		zone: {
-			type: String,
-			trim: true,
-			maxlength: [100, "Zone cannot be more than 100 characters"],
-		},
+		// zone: {
+		// 	type: String,
+		// 	trim: true,
+		// 	maxlength: [100, "Zone cannot be more than 100 characters"],
+		// },
 		status: {
 			type: String,
 			enum: {

@@ -362,10 +362,16 @@ exports.createOrder = async (req, res) => {
 
 		// Validate required fields
 		const dbCustomer = await User.findById(customer.id);
-		if (!dbCustomer || !dbCustomer.name || !dbCustomer.id) {
+		if (
+			!dbCustomer ||
+			!dbCustomer.name ||
+			!dbCustomer.id ||
+			!dbCustomer.email ||
+			!dbCustomer.phoneNumber
+		) {
 			return res.status(400).json({
 				success: false,
-				message: "Customer name and ID are required",
+				message: "Customer name, ID, email, and phone are required",
 			});
 		}
 
@@ -406,9 +412,10 @@ exports.createOrder = async (req, res) => {
 			}
 
 			const totalPrice =
-				item.quantity * product.price * (1 + (product.tax || 0) / 100) -
-				(product.discount || 0) +
-				(product.bottlerefund || 0);
+				item.quantity *
+				(product.price * (1 + (product.tax || 0) / 100) -
+					product.price * (product.discount || 0) +
+					(product.bottlerefund || 0));
 			subtotal += totalPrice;
 
 			processedItems.push({
@@ -418,7 +425,7 @@ exports.createOrder = async (req, res) => {
 				quantity: item.quantity,
 				unitPrice:
 					product.price * (1 + (product.tax || 0) / 100) -
-					(product.discount || 0) +
+					product.price * (product.discount || 0) +
 					(product.bottlerefund || 0),
 				totalPrice,
 			});
