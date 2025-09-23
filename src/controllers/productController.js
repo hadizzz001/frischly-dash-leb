@@ -561,7 +561,7 @@ exports.updateProduct = async (req, res) => {
 
 // @desc    Update product stock
 // @route   PATCH /api/products/:id/stock
-// @access  Private (Admin/Manager)
+// @access  Private (Admin/Manager/Staff)
 exports.updateProductStock = async (req, res) => {
 	try {
 		const { id } = req.params;
