@@ -657,6 +657,249 @@ exports.cancelOrder = async (req, res) => {
 	}
 };
 
+// @desc    Update order shelf number
+// @route   PATCH /api/orders/:id/shelf
+// @access  Private (Admin, Manager, Staff)
+exports.updateOrderShelfNumber = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { shelfNumber } = req.body;
+
+		if (!mongoose.Types.ObjectId.isValid(id)) {
+			return res.status(400).json({
+				success: false,
+				message: "Invalid order ID",
+			});
+		}
+
+		if (shelfNumber === undefined || shelfNumber === null) {
+			return res.status(400).json({
+				success: false,
+				message: "Shelf number is required",
+			});
+		}
+
+		// Convert to number if it's a valid number string
+		const shelfNum =
+			typeof shelfNumber === "string" ? parseFloat(shelfNumber) : shelfNumber;
+
+		if (isNaN(shelfNum) || shelfNum < 0) {
+			return res.status(400).json({
+				success: false,
+				message: "Shelf number must be a valid non-negative number",
+			});
+		}
+
+		const order = await Order.findById(id);
+
+		if (!order) {
+			return res.status(404).json({
+				success: false,
+				message: "Order not found",
+			});
+		}
+
+		// Check if order can be modified
+		if (order.status === "cancelled" || order.status === "delivered") {
+			return res.status(400).json({
+				success: false,
+				message: "Cannot modify shelf number for cancelled or delivered orders",
+			});
+		}
+
+		order.shelfNumber = shelfNum;
+		order.updatedBy = req.user.id;
+		order.updatedAt = new Date();
+		await order.save();
+
+		const updatedOrder = await Order.findById(id)
+			.populate("createdBy", "name email")
+			.populate("updatedBy", "name email")
+			.populate("assignedRider", "name email phone")
+			.populate("items.product", "name barcode");
+
+		res.json({
+			success: true,
+			message: "Order shelf number updated successfully",
+			data: updatedOrder,
+		});
+	} catch (error) {
+		console.error("Error updating order shelf number:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error updating order shelf number",
+			error: error.message,
+		});
+	}
+};
+
+// @desc    Update order status
+// @route   PATCH /api/orders/:id/status
+// @access  Private (Admin, Manager, Staff, Rider)
+exports.updateOrderStatus = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { status } = req.body;
+
+		if (!mongoose.Types.ObjectId.isValid(id)) {
+			return res.status(400).json({
+				success: false,
+				message: "Invalid order ID",
+			});
+		}
+
+		if (!status) {
+			return res.status(400).json({
+				success: false,
+				message: "Status is required",
+			});
+		}
+
+		// Valid status values from the Order model
+		const validStatuses = [
+			"pending",
+			"confirmed",
+			"processing",
+			"ready for pickup",
+			"OnTheWay",
+			"delivered",
+			"cancelled",
+		];
+
+		if (!validStatuses.includes(status)) {
+			return res.status(400).json({
+				success: false,
+				message: `Status must be one of: ${validStatuses.join(", ")}`,
+			});
+		}
+
+		const order = await Order.findById(id);
+
+		if (!order) {
+			return res.status(404).json({
+				success: false,
+				message: "Order not found",
+			});
+		}
+
+		// Role-based status update permissions
+		const userRole = req.user.role;
+
+		// Define which roles can update to which statuses
+		const statusPermissions = {
+			admin: validStatuses, // Admin can update to any status
+			manager: validStatuses, // Manager can update to any status
+			staff: validStatuses, // Staff can update to any status
+			rider: ["ready for pickup", "OnTheWay", "delivered"], // Riders can only update delivery-related statuses
+		};
+
+		const allowedStatuses = statusPermissions[userRole] || [];
+
+		if (!allowedStatuses.includes(status)) {
+			return res.status(403).json({
+				success: false,
+				message: `${userRole} role is not permitted to update status to '${status}'`,
+			});
+		}
+
+		// Additional business logic for riders
+		if (userRole === "rider") {
+			// Check if the rider is assigned to this order
+			const rider = await Rider.findOne({ user: req.user.id });
+
+			if (!rider) {
+				return res.status(403).json({
+					success: false,
+					message: "Rider profile not found",
+				});
+			}
+
+			// Check if the order is assigned to this rider or if rider can access orders in their zones
+			if (order.assignedRider && !order.assignedRider.equals(rider._id)) {
+				// If order has an assigned rider and it's not this rider, check zone permissions
+				if (rider.zones && rider.zones.length > 0) {
+					const orderZone = order.customer?.address?.zipCode;
+					if (orderZone) {
+						const zones = await Zone.find({
+							zoneName: { $in: rider.zones },
+							zipCode: orderZone,
+						});
+
+						if (zones.length === 0) {
+							return res.status(403).json({
+								success: false,
+								message: "You are not authorized to update this order",
+							});
+						}
+					}
+				} else {
+					return res.status(403).json({
+						success: false,
+						message: "You are not authorized to update this order",
+					});
+				}
+			}
+
+			// Assign rider to order if not already assigned and status is being updated to delivery-related
+			if (
+				!order.assignedRider &&
+				["ready for pickup", "OnTheWay", "delivered"].includes(status)
+			) {
+				order.assignedRider = rider._id;
+				order.riderAssignedAt = new Date();
+			}
+		}
+
+		// Prevent updating already completed orders
+		if (["delivered", "cancelled"].includes(order.status)) {
+			return res.status(400).json({
+				success: false,
+				message: "Cannot update status of delivered or cancelled orders",
+			});
+		}
+
+		// Business logic validations
+		if (status === "cancelled" && order.status === "delivered") {
+			return res.status(400).json({
+				success: false,
+				message: "Cannot cancel a delivered order",
+			});
+		}
+
+		// Update the order status
+		const previousStatus = order.status;
+		order.status = status;
+		order.updatedBy = req.user.id;
+		order.updatedAt = new Date();
+
+		// Set delivery date if status is delivered
+		if (status === "delivered" && previousStatus !== "delivered") {
+			order.deliveredAt = new Date();
+		}
+
+		await order.save();
+
+		const updatedOrder = await Order.findById(id)
+			.populate("createdBy", "name email")
+			.populate("updatedBy", "name email")
+			.populate("assignedRider", "name email phone")
+			.populate("items.product", "name barcode");
+
+		res.json({
+			success: true,
+			message: `Order status updated from '${previousStatus}' to '${status}' successfully`,
+			data: updatedOrder,
+		});
+	} catch (error) {
+		console.error("Error updating order status:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error updating order status",
+			error: error.message,
+		});
+	}
+};
+
 // @desc    Get total count of all orders
 // @route   GET /api/orders/count
 // @access  Private (Admin, Manager, Staff)

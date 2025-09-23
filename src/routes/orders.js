@@ -4,6 +4,8 @@ const {
 	getOrder,
 	createOrder,
 	updateOrder,
+	updateOrderShelfNumber,
+	updateOrderStatus,
 	deleteOrder,
 	getOrderStats,
 	cancelOrder,
@@ -58,6 +60,18 @@ router.put(
 	protect,
 	authorize("admin", "manager", "staff", "rider"),
 	updateOrder
+);
+router.patch(
+	"/:id/shelf",
+	protect,
+	authorize("admin", "manager", "staff"),
+	updateOrderShelfNumber
+);
+router.patch(
+	"/:id/status",
+	protect,
+	authorize("admin", "manager", "staff", "rider"),
+	updateOrderStatus
 );
 router.patch(
 	"/:id/cancel",
