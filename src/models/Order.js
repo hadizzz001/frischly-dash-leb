@@ -80,16 +80,7 @@ const orderSchema = new mongoose.Schema(
 			default: 0,
 			min: [0, "Subtotal cannot be negative"],
 		},
-		tax: {
-			type: Number,
-			default: 0,
-			min: [0, "Tax cannot be negative"],
-		},
-		discount: {
-			type: Number,
-			default: 0,
-			min: [0, "Discount cannot be negative"],
-		},
+
 		delivery: {
 			type: Number,
 			default: 0,

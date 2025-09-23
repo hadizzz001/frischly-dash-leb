@@ -413,8 +413,9 @@ exports.createOrder = async (req, res) => {
 
 			const totalPrice =
 				item.quantity *
-				(product.price * (1 + (product.tax || 0) / 100) -
-					product.price * (product.discount || 0) +
+				(product.price *
+					(1 + (product.tax || 0) / 100) *
+					(1 - (product.discount || 0) / 100) +
 					(product.bottlerefund || 0));
 			subtotal += totalPrice;
 
@@ -424,8 +425,9 @@ exports.createOrder = async (req, res) => {
 				productBarcode: product.barcode,
 				quantity: item.quantity,
 				unitPrice:
-					product.price * (1 + (product.tax || 0) / 100) -
-					product.price * (product.discount || 0) +
+					product.price *
+						(1 + (product.tax || 0) / 100) *
+						(1 - (product.discount || 0) / 100) +
 					(product.bottlerefund || 0),
 				totalPrice,
 			});
@@ -455,8 +457,7 @@ exports.createOrder = async (req, res) => {
 			customer: dbCustomer,
 			items: processedItems,
 			subtotal: subtotal,
-			tax,
-			discount: 0,
+
 			delivery: delivery,
 			total: total,
 			paymentMethod,
