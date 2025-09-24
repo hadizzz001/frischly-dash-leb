@@ -10431,8 +10431,8 @@
 								<span class="summary-value" id="modal-subtotal">$0.00</span>
 							</div>
 							<div class="summary-row">
-								<span class="summary-label">Tax:</span>
-								<span class="summary-value" id="modal-tax">$0.00</span>
+								<span class="summary-label">Delivery Fee:</span>
+								<span class="summary-value" id="modal-delivery">$0.00</span>
 							</div>
 							<div class="summary-row">
 								<span class="summary-label">Total:</span>
@@ -11440,8 +11440,10 @@
 				document.getElementById(
 					"modal-subtotal"
 				).textContent = `$${order.subtotal.toFixed(2)}`;
-				const tax = order.total - order.subtotal;
-				document.getElementById("modal-tax").textContent = `$${tax.toFixed(2)}`;
+				const delivery = order.delivery;
+				document.getElementById(
+					"modal-delivery"
+				).textContent = `$${delivery.toFixed(2)}`;
 				document.getElementById(
 					"modal-total"
 				).textContent = `$${order.total.toFixed(2)}`;
