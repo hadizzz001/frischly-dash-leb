@@ -53,7 +53,7 @@ const orderSchema = new mongoose.Schema(
 					"Please provide a valid email address",
 				],
 			},
-			phone: {
+			phoneNumber: {
 				type: String,
 				trim: true,
 			},
