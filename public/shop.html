@@ -522,6 +522,15 @@
 				margin-bottom: 15px;
 			}
 
+			.cart-delivery {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				font-size: 16px;
+				color: #666;
+				margin-bottom: 10px;
+			}
+
 			.checkout-btn {
 				width: 100%;
 				padding: 12px;
@@ -825,6 +834,10 @@
 				</div>
 			</div>
 			<div class="cart-footer">
+				<div class="cart-delivery">
+					<span>Delivery Fee:</span>
+					<span id="cart-delivery">€2.00</span>
+				</div>
 				<div class="cart-total">
 					<span>Total:</span>
 					<span id="cart-total">€0.00</span>
@@ -856,10 +869,10 @@
 			};
 
 			// Initialize the page
-			document.addEventListener("DOMContentLoaded", function () {
+			document.addEventListener("DOMContentLoaded", async function () {
 				loadCategories();
 				loadProducts();
-				loadCart();
+				await loadCart();
 			});
 
 			// Load categories for filter dropdown
@@ -1275,11 +1288,11 @@
 			}
 
 			// Cart Functions
-			function loadCart() {
+			async function loadCart() {
 				const savedCart = localStorage.getItem("cart");
 				if (savedCart) {
 					cart = JSON.parse(savedCart);
-					updateCartDisplay();
+					await updateCartDisplay();
 				}
 			}
 
@@ -1287,7 +1300,7 @@
 				localStorage.setItem("cart", JSON.stringify(cart));
 			}
 
-			function addToCart(productId, productName, price, imageUrl) {
+			async function addToCart(productId, productName, price, imageUrl) {
 				const existingItem = cart.find((item) => item.id === productId);
 
 				if (existingItem) {
@@ -1303,19 +1316,19 @@
 				}
 
 				saveCart();
-				updateCartDisplay();
+				await updateCartDisplay();
 				showAddToCartFeedback(productId);
 			}
 
-			function removeFromCart(productId) {
+			async function removeFromCart(productId) {
 				cart = cart.filter((item) => item.id !== productId);
 				saveCart();
-				updateCartDisplay();
+				await updateCartDisplay();
 			}
 
-			function updateQuantity(productId, newQuantity) {
+			async function updateQuantity(productId, newQuantity) {
 				if (newQuantity <= 0) {
-					removeFromCart(productId);
+					await removeFromCart(productId);
 					return;
 				}
 
@@ -1323,14 +1336,69 @@
 				if (item) {
 					item.quantity = newQuantity;
 					saveCart();
-					updateCartDisplay();
+					await updateCartDisplay();
 				}
 			}
 
-			function updateCartDisplay() {
+			// Get delivery fee from API
+			async function getDeliveryFee() {
+				try {
+					// Get current user information
+					const authToken = localStorage.getItem("authToken");
+					if (!authToken) {
+						return 2.0; // Default delivery fee if not logged in
+					}
+
+					const userResponse = await fetch(`${API_BASE_URL}/auth/me`, {
+						headers: {
+							Authorization: `Bearer ${authToken}`,
+						},
+					});
+
+					if (!userResponse.ok) {
+						return 2.0; // Default delivery fee if user fetch fails
+					}
+
+					const userData = await userResponse.json();
+					const zipCode = userData.data?.user?.address?.zipCode;
+
+					if (!zipCode) {
+						return 2.0; // Default delivery fee if no zip code
+					}
+
+					// Calculate delivery fee
+					const deliveryResponse = await fetch(
+						`${API_BASE_URL}/zones/calculate-delivery`,
+						{
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({
+								zipCode: zipCode,
+								baseRate: 0,
+							}),
+						}
+					);
+
+					if (!deliveryResponse.ok) {
+						return 2.0; // Default delivery fee if calculation fails
+					}
+
+					const deliveryData = await deliveryResponse.json();
+					return deliveryData.data?.deliveryFee || 2.0;
+				} catch (error) {
+					console.error("Error calculating delivery fee:", error);
+					return 2.0; // Default delivery fee on error
+				}
+			}
+
+			async function updateCartDisplay() {
 				const cartCount = document.getElementById("cart-count");
 				const cartItems = document.getElementById("cart-items");
 				const cartTotal = document.getElementById("cart-total");
+				const cartDelivery = document.getElementById("cart-delivery");
+				const cartDeliveryContainer = document.querySelector(".cart-delivery");
 				const checkoutBtn = document.querySelector(".checkout-btn");
 
 				const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -1342,6 +1410,21 @@
 				// Update cart count
 				cartCount.textContent = totalItems;
 				cartCount.classList.toggle("show", totalItems > 0);
+
+				// Get delivery fee
+				let deliveryFee = 0.0;
+				if (cart.length > 0) {
+					try {
+						deliveryFee = await getDeliveryFee();
+					} catch (error) {
+						console.error("Error getting delivery fee:", error);
+						deliveryFee = 2.0; // Fallback to default
+					}
+				}
+
+				// Update delivery fee display
+				cartDelivery.textContent = `€${deliveryFee.toFixed(2)}`;
+				cartDeliveryContainer.style.display = cart.length > 0 ? "flex" : "none";
 
 				// Update cart items
 				if (cart.length === 0) {
@@ -1387,7 +1470,8 @@
 				}
 
 				// Update total
-				cartTotal.textContent = `€${totalPrice.toFixed(2)}`;
+				const finalTotal = totalPrice + deliveryFee;
+				cartTotal.textContent = `€${finalTotal.toFixed(2)}`;
 
 				// Update checkout button
 				checkoutBtn.disabled = cart.length === 0;
@@ -1515,7 +1599,7 @@
 					// Success! Clear cart and show confirmation
 					cart = [];
 					saveCart();
-					updateCartDisplay();
+					await updateCartDisplay();
 
 					// Show success message
 					showOrderSuccess(orderResult.data);
