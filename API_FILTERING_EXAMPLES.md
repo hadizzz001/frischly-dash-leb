@@ -83,6 +83,9 @@ GET /api/products?discount=true&priceRange=1-15&sortBy=discount&sortOrder=desc&p
 // 5. Category + Subcategory + Discount (Note: subcategory overrides category)
 GET /api/products?category=Obst&subcategory=Äpfel&discount=true&page=1&limit=10
 
+// 6. ALL FILTERS COMBINED EXAMPLE
+GET /api/products?search=apple&category=Obst&subcategory=Äpfel&shelfNumber=A-01&isActive=true&inAds=false&sortBy=price&sortOrder=asc&priceRange=1-20&stockLevel=medium&discount=true&minDiscount=5&page=1&limit=10
+
 // ==========================================
 // ADDITIONAL FILTER PARAMETERS
 // ==========================================
@@ -175,5 +178,10 @@ fetch('http://localhost:3001/api/products/discount?minDiscount=10&page=1&limit=1
 
 // Combined filtering
 fetch('http://localhost:3001/api/products?category=Obst&discount=true&priceRange=1-20&sortBy=discount&sortOrder=desc&page=1&limit=10')
+.then(response => response.json())
+.then(data => console.log(data));
+
+// All filters combined
+fetch('http://localhost:3001/api/products?search=apple&category=Obst&subcategory=Äpfel&shelfNumber=A-01&isActive=true&inAds=false&sortBy=price&sortOrder=asc&priceRange=1-20&stockLevel=medium&discount=true&minDiscount=5&page=1&limit=10')
 .then(response => response.json())
 .then(data => console.log(data));
