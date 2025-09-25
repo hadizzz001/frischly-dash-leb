@@ -257,7 +257,7 @@ exports.getProducts = async (req, res) => {
 				{
 					$match: {
 						...filter,
-						"subcategoryInfo.name": filter.subcategoryName,
+						"subcategoryInfo.name": { $regex: filter.subcategoryName.source, $options: "i" },
 					},
 				},
 				// Lookup category
@@ -317,7 +317,7 @@ exports.getProducts = async (req, res) => {
 			delete pipeline[2].$match.subcategoryName; // Remove the helper field
 
 			productsQuery = Product.aggregate(pipeline);
-			countQuery = Product.aggregate([
+			const countPipeline = [
 				{
 					$lookup: {
 						from: "subcategories",
@@ -330,12 +330,13 @@ exports.getProducts = async (req, res) => {
 				{
 					$match: {
 						...filter,
-						"subcategoryInfo.name": filter.subcategoryName,
+						"subcategoryInfo.name": { $regex: filter.subcategoryName.source, $options: "i" },
 					},
 				},
 				{ $count: "total" },
-			]);
-			delete countQuery[2].$match.subcategoryName; // Remove the helper field from count query
+			];
+			delete countPipeline[2].$match.subcategoryName; // Remove the helper field from count pipeline
+			countQuery = Product.aggregate(countPipeline);
 		} else {
 			// Regular query
 			delete filter.subcategoryName;
