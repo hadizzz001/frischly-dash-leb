@@ -9033,8 +9033,10 @@
 									<div><strong>📞 Phone:</strong><br><span style="color: #555;">${
 										rider.user.phoneNumber || "Not provided"
 									}</span></div>
-									<div><strong>🏢 Zone:</strong><br><span style="color: #555;">${
-										rider.zone
+									<div><strong>🏢 Zones:</strong><br><span style="color: #555;">${
+										Array.isArray(rider.zones)
+											? rider.zones.join(", ")
+											: rider.zone || "No zones assigned"
 									}</span></div>
 									<div><strong>🚗 Vehicle:</strong><br><span style="color: #555;">${
 										rider.vehicleType

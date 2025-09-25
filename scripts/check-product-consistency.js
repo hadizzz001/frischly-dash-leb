@@ -1,8 +1,8 @@
-require("dotenv").config();
+srequire("dotenv").config();
 const mongoose = require("mongoose");
-const Product = require("./src/models/Product");
-const Category = require("./src/models/Category");
-const Subcategory = require("./src/models/Subcategory");
+const Product = require("../src/models/Product");
+const Category = require("../src/models/Category");
+const Subcategory = require("../src/models/Subcategory");
 
 async function checkProductCategorySubcategoryConsistency() {
 	try {

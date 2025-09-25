@@ -115,7 +115,7 @@ const riderSchema = new mongoose.Schema(
 		// Additional info
 		isVerified: {
 			type: Boolean,
-			default: false,
+			default: true,
 		},
 		verificationDocuments: {
 			license: {
