@@ -14,6 +14,10 @@ const orderItemSchema = new mongoose.Schema({
 		type: String,
 		required: [true, "Product barcode is required"],
 	},
+	productImage: {
+		type: String,
+		trim: true,
+	},
 	quantity: {
 		type: Number,
 		required: [true, "Quantity is required"],
