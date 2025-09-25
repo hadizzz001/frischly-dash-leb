@@ -289,7 +289,12 @@ exports.getProducts = async (req, res) => {
 									pipeline: [{ $project: { name: 1, color: 1, icon: 1 } }],
 								},
 							},
-							{ $unwind: { path: "$parentCategory", preserveNullAndEmptyArrays: true } },
+							{
+								$unwind: {
+									path: "$parentCategory",
+									preserveNullAndEmptyArrays: true,
+								},
+							},
 						],
 					},
 				},
