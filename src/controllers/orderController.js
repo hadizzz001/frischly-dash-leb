@@ -386,10 +386,10 @@ exports.createOrder = async (req, res) => {
 		let subtotal = 0;
 
 		for (const item of items) {
-			if (!item.product || !item.quantity || !item.unitPrice) {
+			if (!item.product || !item.quantity) {
 				return res.status(400).json({
 					success: false,
-					message: "Each item must have product, quantity, and unit price",
+					message: "Each item must have product, quantity",
 				});
 			}
 

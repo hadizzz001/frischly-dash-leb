@@ -8,11 +8,11 @@ const orderItemSchema = new mongoose.Schema({
 	},
 	productName: {
 		type: String,
-		required: [true, "Product name is required"],
+		//	required: [true, "Product name is required"],
 	},
 	productBarcode: {
 		type: String,
-		required: [true, "Product barcode is required"],
+		//	required: [true, "Product barcode is required"],
 	},
 	productImage: {
 		type: String,
@@ -23,11 +23,7 @@ const orderItemSchema = new mongoose.Schema({
 		required: [true, "Quantity is required"],
 		min: [1, "Quantity must be at least 1"],
 	},
-	unitPrice: {
-		type: Number,
-		required: [true, "Unit price is required"],
-		min: [0, "Unit price cannot be negative"],
-	},
+
 	totalPrice: {
 		type: Number,
 		required: [true, "Total price is required"],
