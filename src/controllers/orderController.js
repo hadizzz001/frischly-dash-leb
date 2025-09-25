@@ -354,7 +354,6 @@ exports.createOrder = async (req, res) => {
 		const {
 			customer,
 			items,
-
 			paymentMethod = "card",
 			shelfNumber = 0,
 			notes,

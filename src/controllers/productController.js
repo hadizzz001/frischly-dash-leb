@@ -100,22 +100,62 @@ exports.getProducts = async (req, res) => {
 		} = req.query;
 
 		// Build filter object
-		const filter = {};
+		let filter = {};
 		if (isActive !== "all") {
 			filter.isActive = isActive === "true" || isActive === true;
 		}
 		if (inAds !== undefined && inAds !== "all") {
 			filter.inAds = inAds === "true" || inAds === true;
 		}
+
+		// Handle category filtering (same as getProductsByCategory)
 		if (category) {
-			// Filter by direct category field
+			const Category = require("../models/Category");
+			let categoryDoc;
+
 			if (mongoose.Types.ObjectId.isValid(category)) {
-				filter.category = category;
+				categoryDoc = await Category.findById(category);
 			} else {
-				// Will need to lookup category by name in aggregation pipeline
-				filter.categoryName = new RegExp(category, "i");
+				categoryDoc = await Category.findOne({
+					name: new RegExp(category, "i"),
+					isActive: true,
+				});
 			}
+
+			if (!categoryDoc) {
+				return res.status(404).json({
+					success: false,
+					message: `Category "${category}" not found`,
+				});
+			}
+
+			// Find all subcategories in this category
+			const Subcategory = require("../models/Subcategory");
+			const subcategories = await Subcategory.find({
+				parentCategory: categoryDoc._id,
+				isActive: true,
+			}).select("_id");
+
+			if (subcategories.length === 0) {
+				return res.json({
+					success: true,
+					data: [],
+					pagination: {
+						currentPage: parseInt(page),
+						totalPages: 0,
+						totalProducts: 0,
+						hasNextPage: false,
+						hasPrevPage: false,
+						limit: parseInt(limit),
+					},
+					message: `No subcategories found in category "${categoryDoc.name}"`,
+				});
+			}
+
+			const subcategoryIds = subcategories.map((sub) => sub._id);
+			filter.subcategory = { $in: subcategoryIds };
 		}
+
 		if (subcategory) {
 			// Direct subcategory filtering
 			if (mongoose.Types.ObjectId.isValid(subcategory)) {
@@ -198,27 +238,63 @@ exports.getProducts = async (req, res) => {
 		const sort = {};
 		sort[sortBy] = sortOrder === "desc" ? -1 : 1;
 
-		// Execute queries with category lookup if needed
+		// Execute queries
 		let productsQuery;
 		let countQuery;
 
-		if (filter.categoryName) {
-			// Use aggregation pipeline for category name filtering
+		if (filter.subcategoryName) {
+			// Use aggregation pipeline for subcategory name filtering
 			const pipeline = [
+				{
+					$lookup: {
+						from: "subcategories",
+						localField: "subcategory",
+						foreignField: "_id",
+						as: "subcategoryInfo",
+					},
+				},
+				{ $unwind: "$subcategoryInfo" },
+				{
+					$match: {
+						...filter,
+						"subcategoryInfo.name": filter.subcategoryName,
+					},
+				},
+				// Lookup category
 				{
 					$lookup: {
 						from: "categories",
 						localField: "category",
 						foreignField: "_id",
-						as: "categoryInfo",
+						as: "category",
+						pipeline: [{ $project: { name: 1, color: 1, icon: 1 } }],
 					},
 				},
+				{ $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
+				// Lookup subcategory with parentCategory
 				{
-					$match: {
-						...filter,
-						"categoryInfo.name": filter.categoryName,
+					$lookup: {
+						from: "subcategories",
+						localField: "subcategory",
+						foreignField: "_id",
+						as: "subcategory",
+						pipeline: [
+							{ $project: { name: 1, slug: 1, parentCategory: 1 } },
+							{
+								$lookup: {
+									from: "categories",
+									localField: "parentCategory",
+									foreignField: "_id",
+									as: "parentCategory",
+									pipeline: [{ $project: { name: 1, color: 1, icon: 1 } }],
+								},
+							},
+							{ $unwind: { path: "$parentCategory", preserveNullAndEmptyArrays: true } },
+						],
 					},
 				},
+				{ $unwind: { path: "$subcategory", preserveNullAndEmptyArrays: true } },
+				// Lookup createdBy
 				{
 					$lookup: {
 						from: "users",
@@ -228,34 +304,35 @@ exports.getProducts = async (req, res) => {
 						pipeline: [{ $project: { name: 1, email: 1 } }],
 					},
 				},
+				{ $unwind: { path: "$createdBy", preserveNullAndEmptyArrays: true } },
 				{ $sort: sort },
 				{ $skip: skip },
 				{ $limit: limitNumber },
 			];
-			delete pipeline[1].$match.categoryName; // Remove the helper field
+			delete pipeline[2].$match.subcategoryName; // Remove the helper field
 
 			productsQuery = Product.aggregate(pipeline);
 			countQuery = Product.aggregate([
 				{
 					$lookup: {
-						from: "categories",
-						localField: "category",
+						from: "subcategories",
+						localField: "subcategory",
 						foreignField: "_id",
-						as: "categoryInfo",
+						as: "subcategoryInfo",
 					},
 				},
+				{ $unwind: "$subcategoryInfo" },
 				{
 					$match: {
 						...filter,
-						"categoryInfo.name": filter.categoryName,
+						"subcategoryInfo.name": filter.subcategoryName,
 					},
 				},
 				{ $count: "total" },
 			]);
-			delete countQuery[1].$match.categoryName; // Remove the helper field from count query
+			delete countQuery[2].$match.subcategoryName; // Remove the helper field from count query
 		} else {
-			// Regular query without category name filtering
-			delete filter.categoryName;
+			// Regular query
 			delete filter.subcategoryName;
 			productsQuery = Product.find(filter)
 				.populate("category", "name color icon")
