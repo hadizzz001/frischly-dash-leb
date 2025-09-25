@@ -101,58 +101,58 @@ GET /api/products?category=Obst&subcategory=Äpfel&discount=true&page=1&limit=10
 // RESPONSE FORMAT
 // ==========================================
 
-/*
+/_
 {
-  "success": true,
-  "data": [
-    {
-      "_id": "product_id",
-      "name": "Product Name",
-      "price": 5.99,
-      "discount": 10,
-      "stock": 50,
-      "category": {
-        "_id": "category_id",
-        "name": "Obst",
-        "color": "#FF0000",
-        "icon": "apple"
-      },
-      "subcategory": {
-        "_id": "subcategory_id",
-        "name": "Äpfel",
-        "slug": "aepfel",
-        "parentCategory": {
-          "_id": "category_id",
-          "name": "Obst",
-          "color": "#FF0000",
-          "icon": "apple"
-        }
-      },
-      "createdBy": {
-        "_id": "user_id",
-        "name": "Admin User",
-        "email": "admin@example.com"
-      },
-      "picture": "cloudinary_url",
-      "barcode": "123456789",
-      "description": "Product description",
-      "isActive": true,
-      "inAds": false,
-      "shelfNumber": "A-01",
-      "createdAt": "2025-09-25T10:00:00.000Z",
-      "updatedAt": "2025-09-25T10:00:00.000Z"
-    }
-  ],
-  "pagination": {
-    "currentPage": 1,
-    "totalPages": 5,
-    "totalProducts": 50,
-    "hasNextPage": true,
-    "hasPrevPage": false,
-    "limit": 10
-  }
+"success": true,
+"data": [
+{
+"_id": "product_id",
+"name": "Product Name",
+"price": 5.99,
+"discount": 10,
+"stock": 50,
+"category": {
+"_id": "category_id",
+"name": "Obst",
+"color": "#FF0000",
+"icon": "apple"
+},
+"subcategory": {
+"_id": "subcategory_id",
+"name": "Äpfel",
+"slug": "aepfel",
+"parentCategory": {
+"_id": "category_id",
+"name": "Obst",
+"color": "#FF0000",
+"icon": "apple"
 }
-*/
+},
+"createdBy": {
+"_id": "user_id",
+"name": "Admin User",
+"email": "admin@example.com"
+},
+"picture": "cloudinary_url",
+"barcode": "123456789",
+"description": "Product description",
+"isActive": true,
+"inAds": false,
+"shelfNumber": "A-01",
+"createdAt": "2025-09-25T10:00:00.000Z",
+"updatedAt": "2025-09-25T10:00:00.000Z"
+}
+],
+"pagination": {
+"currentPage": 1,
+"totalPages": 5,
+"totalProducts": 50,
+"hasNextPage": true,
+"hasPrevPage": false,
+"limit": 10
+}
+}
+_/
 
 // ==========================================
 // JAVASCRIPT FETCH EXAMPLES
@@ -160,20 +160,20 @@ GET /api/products?category=Obst&subcategory=Äpfel&discount=true&page=1&limit=10
 
 // Category filtering
 fetch('http://localhost:3001/api/products?category=Obst&page=1&limit=10')
-  .then(response => response.json())
-  .then(data => console.log(data));
+.then(response => response.json())
+.then(data => console.log(data));
 
 // Subcategory filtering
 fetch('http://localhost:3001/api/products?subcategory=Äpfel&page=1&limit=10')
-  .then(response => response.json())
-  .then(data => console.log(data));
+.then(response => response.json())
+.then(data => console.log(data));
 
 // Discount filtering
 fetch('http://localhost:3001/api/products/discount?minDiscount=10&page=1&limit=10')
-  .then(response => response.json())
-  .then(data => console.log(data));
+.then(response => response.json())
+.then(data => console.log(data));
 
 // Combined filtering
 fetch('http://localhost:3001/api/products?category=Obst&discount=true&priceRange=1-20&sortBy=discount&sortOrder=desc&page=1&limit=10')
-  .then(response => response.json())
-  .then(data => console.log(data));
+.then(response => response.json())
+.then(data => console.log(data));

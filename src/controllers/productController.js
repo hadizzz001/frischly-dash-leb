@@ -257,7 +257,10 @@ exports.getProducts = async (req, res) => {
 				{
 					$match: {
 						...filter,
-						"subcategoryInfo.name": { $regex: filter.subcategoryName.source, $options: "i" },
+						"subcategoryInfo.name": {
+							$regex: filter.subcategoryName.source,
+							$options: "i",
+						},
 					},
 				},
 				// Lookup category
@@ -330,7 +333,10 @@ exports.getProducts = async (req, res) => {
 				{
 					$match: {
 						...filter,
-						"subcategoryInfo.name": { $regex: filter.subcategoryName.source, $options: "i" },
+						"subcategoryInfo.name": {
+							$regex: filter.subcategoryName.source,
+							$options: "i",
+						},
 					},
 				},
 				{ $count: "total" },
