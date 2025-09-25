@@ -424,7 +424,7 @@ exports.createOrder = async (req, res) => {
 				productName: product.name,
 				productBarcode: product.barcode,
 				quantity: item.quantity,
-				Image: product.image || "",
+				image: product.image || "",
 				unitPrice:
 					product.price *
 						(1 + (product.tax || 0) / 100) *
