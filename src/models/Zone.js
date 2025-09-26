@@ -128,7 +128,7 @@ zoneSchema.statics.findActiveZones = function () {
 };
 
 // Instance method to calculate delivery fee based on distance
-zoneSchema.methods.calculateDeliveryFee = function (baseRate = 2) {
+zoneSchema.methods.calculateDeliveryFee = function (baseRate = 1) {
 	if (this.deliveryFee > 0) {
 		return this.deliveryFee;
 	}
