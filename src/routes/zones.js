@@ -3,7 +3,7 @@ const {
 	getZones,
 	getZone,
 	getZoneByZipCode,
-	getActiveZones,
+
 	createZone,
 	updateZone,
 	updateZoneStatus,
@@ -20,7 +20,7 @@ const router = express.Router();
 
 // Public routes
 router.get("/", getZones);
-router.get("/active", getActiveZones);
+//router.get("/active", getActiveZones);
 router.get("/zipcode/:zipCode", getZoneByZipCode);
 router.post("/calculate-delivery", calculateDeliveryFee);
 router.get("/:id", getZone);

@@ -141,26 +141,26 @@ exports.getZoneByZipCode = async (req, res) => {
 	}
 };
 
-// @desc    Get active zones
-// @route   GET /api/zones/active
-// @access  Public
-exports.getActiveZones = async (req, res) => {
-	try {
-		const zones = await Zone.findActiveZones();
+// // @desc    Get active zones
+// // @route   GET /api/zones/active
+// // @access  Public
+// exports.getActiveZones = async (req, res) => {
+// 	try {
+// 		const zones = await Zone.findActiveZones();
 
-		res.status(200).json({
-			success: true,
-			data: zones,
-			count: zones.length,
-		});
-	} catch (error) {
-		console.error("Error fetching active zones:", error);
-		res.status(500).json({
-			success: false,
-			error: "Server error while fetching active zones",
-		});
-	}
-};
+// 		res.status(200).json({
+// 			success: true,
+// 			data: zones,
+// 			count: zones.length,
+// 		});
+// 	} catch (error) {
+// 		console.error("Error fetching active zones:", error);
+// 		res.status(500).json({
+// 			success: false,
+// 			error: "Server error while fetching active zones",
+// 		});
+// 	}
+// };
 
 // @desc    Create new zone
 // @route   POST /api/zones
