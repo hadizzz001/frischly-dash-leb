@@ -282,7 +282,7 @@ exports.getProducts = async (req, res) => {
 						foreignField: "_id",
 						as: "subcategory",
 						pipeline: [
-							{ $project: { name: 1, slug: 1, parentCategory: 1 } },
+							{ $project: { name: 1, parentCategory: 1 } },
 							{
 								$lookup: {
 									from: "categories",
@@ -350,7 +350,7 @@ exports.getProducts = async (req, res) => {
 				.populate("category", "name color icon")
 				.populate({
 					path: "subcategory",
-					select: "name slug parentCategory",
+					select: "name parentCategory",
 					populate: {
 						path: "parentCategory",
 						select: "name color icon",
@@ -417,7 +417,7 @@ exports.getProduct = async (req, res) => {
 			.populate("category", "name color icon")
 			.populate({
 				path: "subcategory",
-				select: "name slug parentCategory",
+				select: "name parentCategory",
 				populate: {
 					path: "parentCategory",
 					select: "name color icon",
@@ -493,7 +493,7 @@ exports.getProductsByShelfNumber = async (req, res) => {
 			.populate("category", "name color icon")
 			.populate({
 				path: "subcategory",
-				select: "name slug parentCategory",
+				select: "name parentCategory",
 				populate: {
 					path: "parentCategory",
 					select: "name color icon",
@@ -551,7 +551,7 @@ exports.createProduct = async (req, res) => {
 			{ path: "category", select: "name color icon" },
 			{
 				path: "subcategory",
-				select: "name slug parentCategory",
+				select: "name parentCategory",
 				populate: {
 					path: "parentCategory",
 					select: "name color icon",
@@ -637,7 +637,7 @@ exports.updateProduct = async (req, res) => {
 			.populate("category", "name color icon")
 			.populate({
 				path: "subcategory",
-				select: "name slug parentCategory",
+				select: "name parentCategory",
 				populate: {
 					path: "parentCategory",
 					select: "name color icon",
@@ -712,7 +712,7 @@ exports.updateProductStock = async (req, res) => {
 			{ path: "category", select: "name color icon" },
 			{
 				path: "subcategory",
-				select: "name slug parentCategory",
+				select: "name parentCategory",
 				populate: {
 					path: "parentCategory",
 					select: "name color icon",
@@ -775,7 +775,7 @@ exports.updateProductShelfNumber = async (req, res) => {
 			{ path: "category", select: "name color icon" },
 			{
 				path: "subcategory",
-				select: "name slug parentCategory",
+				select: "name parentCategory",
 				populate: {
 					path: "parentCategory",
 					select: "name color icon",
@@ -1083,7 +1083,7 @@ exports.getProductsByCategory = async (req, res) => {
 				.populate("category", "name color icon")
 				.populate({
 					path: "subcategory",
-					select: "name slug parentCategory",
+					select: "name parentCategory",
 					populate: {
 						path: "parentCategory",
 						select: "name color icon",
@@ -1234,7 +1234,7 @@ exports.getProductsBySubcategory = async (req, res) => {
 				.populate("category", "name color icon")
 				.populate({
 					path: "subcategory",
-					select: "name slug parentCategory",
+					select: "name parentCategory",
 					populate: {
 						path: "parentCategory",
 						select: "name color icon",
@@ -1364,7 +1364,7 @@ exports.getProductsWithDiscount = async (req, res) => {
 				.populate("category", "name color icon")
 				.populate({
 					path: "subcategory",
-					select: "name slug parentCategory",
+					select: "name parentCategory",
 					populate: {
 						path: "parentCategory",
 						select: "name color icon",
