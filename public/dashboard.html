@@ -10265,7 +10265,7 @@
 									/>
 								</div>
 								<div class="form-group">
-									<label>Unit Price *</label>
+									<label>Price *</label>
 									<input
 										type="number"
 										class="price-input"
@@ -10418,8 +10418,8 @@
 								<tr>
 									<th>Product</th>
 									<th>Quantity</th>
-									<th>Unit Price</th>
-									<th>Total Price</th>
+									<th>Price</th>
+									<th>Total Price + tax</th>
 								</tr>
 							</thead>
 							<tbody id="modal-order-items">
@@ -10772,7 +10772,6 @@
 
 			let currentOrdersPage = 1;
 			const ordersPageSize = 20;
-			let isEditingOrder = false;
 			let currentOrderId = null;
 
 			// Live updates variables
@@ -10945,9 +10944,6 @@
 								<button class="action-btn view" onclick="viewOrder('${
 									order._id
 								}')">View</button>
-								<button class="action-btn edit" onclick="editOrder('${
-									order._id
-								}')">Edit</button>
 								<button class="action-btn cancel" onclick="cancelOrder('${order._id}', '${
 						order.orderNumber
 					}')">Cancel</button>
@@ -11016,7 +11012,6 @@
 
 			// Show add order modal
 			function showAddOrderModal() {
-				isEditingOrder = false;
 				currentOrderId = null;
 				document.getElementById("order-modal-title").textContent =
 					"Create New Order";
@@ -11033,7 +11028,6 @@
 			function closeOrderModal() {
 				document.getElementById("order-modal").style.display = "none";
 				document.getElementById("order-form").reset();
-				isEditingOrder = false;
 				currentOrderId = null;
 			}
 
@@ -11089,7 +11083,7 @@
 						/>
 					</div>
 					<div class="form-group">
-						<label>Unit Price *</label>
+						<label>Price *</label>
 						<input
 							type="number"
 							class="price-input"
@@ -11241,11 +11235,8 @@
 						const quantity = parseInt(
 							item.querySelector(".quantity-input").value
 						);
-						const unitPrice = parseFloat(
-							item.querySelector(".price-input").value
-						);
 
-						if (!productId || !quantity || !unitPrice) {
+						if (!productId || !quantity) {
 							showMessage("Please fill in all item details", "error");
 							return;
 						}
@@ -11253,7 +11244,7 @@
 						items.push({
 							product: productId,
 							quantity: quantity,
-							unitPrice: unitPrice,
+							//unitPrice: unitPrice,
 						});
 					}
 
@@ -11421,14 +11412,14 @@
 					row.innerHTML = `
 						<td>
 							<div class="product-info">
-								<div class="product-name">${item.productName}</div>
-								<div class="product-barcode">${item.productBarcode}</div>
+								<div class="product-name">${item.product?.name || "Unknown"}</div>
+								<div class="product-barcode">${item.product?.barcode || "N/A"}</div>
 							</div>
 						</td>
 						<td>
 							<div class="quantity-badge">${item.quantity}</div>
 						</td>
-						<td>$${item.unitPrice.toFixed(2)}</td>
+						<td>$${item.product?.price?.toFixed(2) || "0.00"}</td>
 						<td>
 							<div class="price-info">
 								<div class="total-price">$${item.totalPrice.toFixed(2)}</div>
@@ -12198,15 +12189,6 @@
 			function showRiderMap() {
 				// Placeholder for rider map feature
 				showMessage("Rider map feature is coming soon!", "info");
-			}
-
-			// Edit order
-			function editOrder(orderId) {
-				// For now, show a simple message. Full edit functionality can be added later
-				showMessage(
-					"Order editing will be implemented in the next update",
-					"info"
-				);
 			}
 
 			// Cancel order

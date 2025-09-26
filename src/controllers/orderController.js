@@ -311,7 +311,10 @@ exports.getOrder = async (req, res) => {
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
 			.populate("assignedRider", "name email phone")
-			.populate("items.product", "name barcode shelfNumber");
+			.populate(
+				"items.product",
+				"name barcode shelfNumber price discount tax bottlerefund "
+			);
 
 		if (!order) {
 			return res.status(404).json({
@@ -395,6 +398,7 @@ exports.createOrder = async (req, res) => {
 
 			// Verify product exists
 			const product = await Product.findById(item.product);
+
 			if (!product) {
 				return res.status(400).json({
 					success: false,
@@ -419,17 +423,10 @@ exports.createOrder = async (req, res) => {
 			subtotal += totalPrice;
 
 			processedItems.push({
-				product: product._id,
-				productName: product.name,
-				productBarcode: product.barcode,
-				productImage: product.picture,
+				product: product,
+
 				quantity: item.quantity,
 
-				unitPrice:
-					product.price *
-						(1 + (product.tax || 0) / 100) *
-						(1 - (product.discount || 0) / 100) +
-					(product.bottlerefund || 0),
 				totalPrice,
 			});
 		}
@@ -479,8 +476,11 @@ exports.createOrder = async (req, res) => {
 		// Populate the created order
 		const populatedOrder = await Order.findById(order._id)
 			.populate("createdBy", "name email")
-			.populate("items.product", "name barcode");
-
+			.populate("updatedBy", "name email")
+			.populate(
+				"items.product",
+				"name barcode shelfNumber price discount tax bottlerefund"
+			);
 		res.status(201).json({
 			success: true,
 			message: "Order created successfully",

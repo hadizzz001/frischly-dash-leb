@@ -6,18 +6,7 @@ const orderItemSchema = new mongoose.Schema({
 		ref: "Product",
 		required: [true, "Product is required"],
 	},
-	productName: {
-		type: String,
-		//	required: [true, "Product name is required"],
-	},
-	productBarcode: {
-		type: String,
-		//	required: [true, "Product barcode is required"],
-	},
-	productImage: {
-		type: String,
-		trim: true,
-	},
+
 	quantity: {
 		type: Number,
 		required: [true, "Quantity is required"],
