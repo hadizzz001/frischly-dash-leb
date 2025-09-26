@@ -19,12 +19,7 @@ const { protect, authorize } = require("../middleware/auth");
 const router = express.Router();
 
 // Protected routes (require authentication)
-router.get(
-	"/stats",
-	protect,
-	authorize("admin", "manager", "staff", "rider", "customer"),
-	getOrderStats
-);
+router.get("/stats", protect, authorize("admin", "manager"), getOrderStats);
 router.get(
 	"/count",
 	protect,

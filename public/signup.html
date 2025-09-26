@@ -432,7 +432,7 @@
 				if (!zipCodeSelect) return;
 
 				try {
-					const response = await fetch(`${API_BASE_URL}/zones/active`);
+					const response = await fetch(`${API_BASE_URL}/zones?isActive=true`);
 					const data = await response.json();
 
 					if (data.success && data.data) {

@@ -9,7 +9,7 @@ async function testZonesAPI() {
 	try {
 		// Test 1: Get active zones
 		console.log("1. Fetching active zones...");
-		const response = await axios.get(`${baseURL}/zones/active`);
+		const response = await axios.get(`${baseURL}/zones?isActive=true`);
 		console.log(`✅ Found ${response.data.data.length} active zones`);
 
 		if (response.data.data.length > 0) {
