@@ -9,6 +9,7 @@ const CONFIG = {
 	isDevelopment:
 		window.location.hostname === "localhost" ||
 		window.location.hostname === "127.0.0.1",
+	isProductionAlt: window.location.hostname === "frischly-server.onrender.com",
 
 	// API URLs
 	API_URLS: {
@@ -19,9 +20,13 @@ const CONFIG = {
 
 	// Get current API base URL based on environment
 	getApiBaseUrl() {
-		return this.isDevelopment
-			? this.API_URLS.development
-			: this.API_URLS.production;
+		if (this.isDevelopment) {
+			return this.API_URLS.development;
+		} else if (this.isProductionAlt) {
+			return this.API_URLS.production_alt;
+		} else {
+			return this.API_URLS.production;
+		}
 	},
 
 	// Manual override (for testing)
@@ -41,7 +46,13 @@ const API_BASE_URL = CONFIG.getApiUrl();
 
 // Console info for debugging
 console.log(
-	`🌍 Environment: ${CONFIG.isDevelopment ? "Development" : "Production"}`
+	`🌍 Environment: ${
+		CONFIG.isDevelopment
+			? "Development"
+			: CONFIG.isProductionAlt
+			? "Production Alt"
+			: "Production"
+	}`
 );
 console.log(`🔗 API Base URL: ${API_BASE_URL}`);
 
