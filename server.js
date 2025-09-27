@@ -21,7 +21,7 @@ connectDB();
 
 const app = express();
 
-// Security middleware - Configure CSP to allow inline scripts for development
+// Security middleware - Configure CSP to allow inline scripts and eval for development and production
 app.use(
 	helmet({
 		contentSecurityPolicy: {
@@ -34,11 +34,22 @@ app.use(
 					"https://cdn.jsdelivr.net",
 					"https://cdnjs.cloudflare.com",
 					"https://unpkg.com",
+					// Add onrender.com domains
+					"https://*.onrender.com",
+					"https://frischly-server.onrender.com",
+					"https://frischly-server-v1.onrender.com",
 				],
 				scriptSrcAttr: ["'unsafe-inline'"], // Allow inline event handlers
 				styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
 				imgSrc: ["'self'", "data:", "https:"],
-				connectSrc: ["'self'", "http://localhost:*", "https://localhost:*"], // Allow API calls
+				connectSrc: [
+					"'self'",
+					"http://localhost:*",
+					"https://localhost:*",
+					// Add production API URLs
+					"https://frischly-server.onrender.com",
+					"https://frischly-server-v1.onrender.com",
+				], // Allow API calls
 				fontSrc: [
 					"'self'",
 					"https://fonts.gstatic.com",

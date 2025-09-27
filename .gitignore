@@ -112,3 +112,5 @@ dist
 .yarn/install-state.gz
 .pnp.*
 backups/*
+.env.example
+
