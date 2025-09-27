@@ -482,39 +482,39 @@ exports.getProductByBarcode = async (req, res) => {
 	}
 };
 
-// @desc    Get products by shelf number
-// @route   GET /api/products/shelf/:shelfNumber
-// @access  Public
-exports.getProductsByShelfNumber = async (req, res) => {
-	try {
-		const { shelfNumber } = req.params;
+// // @desc    Get products by shelf number
+// // @route   GET /api/products/shelf/:shelfNumber
+// // @access  Public
+// exports.getProductsByShelfNumber = async (req, res) => {
+// 	try {
+// 		const { shelfNumber } = req.params;
 
-		const products = await Product.findByShelfNumber(shelfNumber)
-			.populate("category", "name color icon")
-			.populate({
-				path: "subcategory",
-				select: "name parentCategory",
-				populate: {
-					path: "parentCategory",
-					select: "name color icon",
-				},
-			})
-			.populate("createdBy", "name email");
+// 		const products = await Product.findByShelfNumber(shelfNumber)
+// 			.populate("category", "name color icon")
+// 			.populate({
+// 				path: "subcategory",
+// 				select: "name parentCategory",
+// 				populate: {
+// 					path: "parentCategory",
+// 					select: "name color icon",
+// 				},
+// 			})
+// 			.populate("createdBy", "name email");
 
-		res.json({
-			success: true,
-			data: products,
-			count: products.length,
-		});
-	} catch (error) {
-		console.error("Error getting products by shelf number:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error retrieving products by shelf number",
-			error: error.message,
-		});
-	}
-};
+// 		res.json({
+// 			success: true,
+// 			data: products,
+// 			count: products.length,
+// 		});
+// 	} catch (error) {
+// 		console.error("Error getting products by shelf number:", error);
+// 		res.status(500).json({
+// 			success: false,
+// 			message: "Error retrieving products by shelf number",
+// 			error: error.message,
+// 		});
+// 	}
+// };
 
 // @desc    Create new product
 // @route   POST /api/products

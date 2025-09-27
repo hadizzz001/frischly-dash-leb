@@ -216,30 +216,6 @@ The system supports the following user roles with different permission levels:
     }
     ```
 
-#### e. Get Products by Shelf Number
-
-- **Method**: GET
-- **URL**: `/api/products/shelf/:shelfNumber`
-- **Description**: Get all products located on a specific shelf.
-- **Authentication**: Not required
-- **Response**:
-  - **Status Code**: 200 OK
-  - **Body**:
-    ```json
-    {
-    	"success": true,
-    	"data": [
-    		{
-    			"id": "60d0fe4f5311236168a109d0",
-    			"name": "Organic Apples",
-    			"price": 4.99,
-    			"shelfNumber": "A1",
-    			"stock": 50
-    		}
-    	]
-    }
-    ```
-
 #### f. Get Shelf Numbers
 
 - **Method**: GET
@@ -433,6 +409,7 @@ The system supports the following user roles with different permission levels:
 - **Description**: Get specific category details by ID.
 - **Authentication**: Not required
 - **Response**:
+
   - **Status Code**: 200 OK
   - **Body**:
     ```json
@@ -450,29 +427,6 @@ The system supports the following user roles with different permission levels:
     	}
     }
     ```
-
-#### c. Get Category by Name
-
-- **Method**: GET
-- **URL**: `/api/categories/name/:name`
-- **Description**: Get category details by name.
-- **Authentication**: Not required
-- **Response**:
-  - **Status Code**: 200 OK
-  - **Body**:
-    ```json
-    {
-    	"success": true,
-    	"data": {
-    		"id": "60d0fe4f5311236168a109d1",
-    		"name": "Fruits",
-    		"description": "Fresh fruits and berries",
-    		"productCount": 25
-    	}
-    }
-    ```
-
-#### d. Get Product Count by Category
 
 - **Method**: GET
 - **URL**: `/api/categories/:id/product-count`

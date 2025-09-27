@@ -566,7 +566,7 @@ exports.getZoneStats = async (req, res) => {
 // @access  Public
 exports.calculateDeliveryFee = async (req, res) => {
 	try {
-		const { zipCode, baseRate } = req.body;
+		const { zipCode } = req.body;
 
 		if (!zipCode) {
 			return res.status(400).json({
@@ -584,20 +584,13 @@ exports.calculateDeliveryFee = async (req, res) => {
 			});
 		}
 
-		const deliveryFee = zone.calculateDeliveryFee(baseRate);
+		const deliveryFee = zone.deliveryFee ? zone.deliveryFee : 4;
 
 		res.status(200).json({
 			success: true,
 			data: {
-				zone: {
-					id: zone._id,
-					name: zone.zoneName,
-					zipCode: zone.zipCode,
-					distance: zone.formattedDistance,
-				},
 				deliveryFee,
 				estimatedDeliveryTime: zone.estimatedDeliveryTime,
-				formattedDeliveryTime: `${zone.estimatedDeliveryTime} minutes`,
 			},
 		});
 	} catch (error) {

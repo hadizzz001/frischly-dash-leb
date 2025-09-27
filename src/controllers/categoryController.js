@@ -203,42 +203,42 @@ exports.getCategory = async (req, res) => {
 // @desc    Get category by name
 // @route   GET /api/categories/name/:name
 // @access  Public
-exports.getCategoryByName = async (req, res) => {
-	try {
-		const { name } = req.params;
-		const { withProductCount = false } = req.query;
+// exports.getCategoryByName = async (req, res) => {
+// 	try {
+// 		const { name } = req.params;
+// 		const { withProductCount = false } = req.query;
 
-		let query = Category.findOne({
-			name: new RegExp(`^${name}$`, "i"),
-			isActive: true,
-		}).populate("createdBy", "name email");
+// 		let query = Category.findOne({
+// 			name: new RegExp(`^${name}$`, "i"),
+// 			isActive: true,
+// 		}).populate("createdBy", "name email");
 
-		if (withProductCount === "true") {
-			query = query.populate("productCount");
-		}
+// 		if (withProductCount === "true") {
+// 			query = query.populate("productCount");
+// 		}
 
-		const category = await query;
+// 		const category = await query;
 
-		if (!category) {
-			return res.status(404).json({
-				success: false,
-				message: "Category not found with this name",
-			});
-		}
+// 		if (!category) {
+// 			return res.status(404).json({
+// 				success: false,
+// 				message: "Category not found with this name",
+// 			});
+// 		}
 
-		res.json({
-			success: true,
-			data: category,
-		});
-	} catch (error) {
-		console.error("Error getting category by name:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error retrieving category by name",
-			error: error.message,
-		});
-	}
-};
+// 		res.json({
+// 			success: true,
+// 			data: category,
+// 		});
+// 	} catch (error) {
+// 		console.error("Error getting category by name:", error);
+// 		res.status(500).json({
+// 			success: false,
+// 			message: "Error retrieving category by name",
+// 			error: error.message,
+// 		});
+// 	}
+// };
 
 // @desc    Create new category
 // @route   POST /api/categories
@@ -504,95 +504,95 @@ exports.permanentDeleteCategory = async (req, res) => {
 // @desc    Get categories with product counts
 // @route   GET /api/categories/stats
 // @access  Public
-exports.getCategoryStats = async (req, res) => {
-	try {
-		const stats = await Category.aggregate([
-			{ $match: { isActive: true } },
-			{
-				$lookup: {
-					from: "products",
-					localField: "_id",
-					foreignField: "category",
-					as: "products",
-				},
-			},
-			{
-				$project: {
-					name: 1,
-					color: 1,
-					icon: 1,
-					sortOrder: 1,
-					productCount: { $size: "$products" },
-					activeProductCount: {
-						$size: {
-							$filter: {
-								input: "$products",
-								as: "product",
-								cond: { $eq: ["$$product.isActive", true] },
-							},
-						},
-					},
-				},
-			},
-			{ $sort: { sortOrder: 1, name: 1 } },
-		]);
+// exports.getCategoryStats = async (req, res) => {
+// 	try {
+// 		const stats = await Category.aggregate([
+// 			{ $match: { isActive: true } },
+// 			{
+// 				$lookup: {
+// 					from: "products",
+// 					localField: "_id",
+// 					foreignField: "category",
+// 					as: "products",
+// 				},
+// 			},
+// 			{
+// 				$project: {
+// 					name: 1,
+// 					color: 1,
+// 					icon: 1,
+// 					sortOrder: 1,
+// 					productCount: { $size: "$products" },
+// 					activeProductCount: {
+// 						$size: {
+// 							$filter: {
+// 								input: "$products",
+// 								as: "product",
+// 								cond: { $eq: ["$$product.isActive", true] },
+// 							},
+// 						},
+// 					},
+// 				},
+// 			},
+// 			{ $sort: { sortOrder: 1, name: 1 } },
+// 		]);
 
-		res.json({
-			success: true,
-			data: stats,
-		});
-	} catch (error) {
-		console.error("Error getting category stats:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error retrieving category statistics",
-			error: error.message,
-		});
-	}
-};
+// 		res.json({
+// 			success: true,
+// 			data: stats,
+// 		});
+// 	} catch (error) {
+// 		console.error("Error getting category stats:", error);
+// 		res.status(500).json({
+// 			success: false,
+// 			message: "Error retrieving category statistics",
+// 			error: error.message,
+// 		});
+// 	}
+// };
 
 // @desc    Reorder categories
 // @route   PATCH /api/categories/reorder
 // @access  Private (Admin/Manager)
-exports.reorderCategories = async (req, res) => {
-	try {
-		const { categoryOrders } = req.body;
+// exports.reorderCategories = async (req, res) => {
+// 	try {
+// 		const { categoryOrders } = req.body;
 
-		if (!Array.isArray(categoryOrders)) {
-			return res.status(400).json({
-				success: false,
-				message: "categoryOrders must be an array",
-			});
-		}
+// 		if (!Array.isArray(categoryOrders)) {
+// 			return res.status(400).json({
+// 				success: false,
+// 				message: "categoryOrders must be an array",
+// 			});
+// 		}
 
-		const updatePromises = categoryOrders.map((item) => {
-			if (!mongoose.Types.ObjectId.isValid(item.id)) {
-				throw new Error(`Invalid category ID: ${item.id}`);
-			}
+// 		const updatePromises = categoryOrders.map((item) => {
+// 			if (!mongoose.Types.ObjectId.isValid(item.id)) {
+// 				throw new Error(`Invalid category ID: ${item.id}`);
+// 			}
 
-			return Category.findByIdAndUpdate(
-				item.id,
-				{ sortOrder: item.sortOrder },
-				{ new: true }
-			);
-		});
+// 			return Category.findByIdAndUpdate(
+// 				item.id,
+// 				{ sortOrder: item.sortOrder },
+// 				{ new: true }
+// 			);
+// 		});
 
-		const updatedCategories = await Promise.all(updatePromises);
+// 		const updatedCategories = await Promise.all(updatePromises);
 
-		res.json({
-			success: true,
-			message: "Categories reordered successfully",
-			data: updatedCategories.filter(Boolean), // Remove any null results
-		});
-	} catch (error) {
-		console.error("Error reordering categories:", error);
-		res.status(400).json({
-			success: false,
-			message: "Error reordering categories",
-			error: error.message,
-		});
-	}
-};
+// 		res.json({
+// 			success: true,
+// 			message: "Categories reordered successfully",
+// 			data: updatedCategories.filter(Boolean), // Remove any null results
+// 		});
+// 	} catch (error) {
+// 		console.error("Error reordering categories:", error);
+// 		res.status(400).json({
+// 			success: false,
+// 			message: "Error reordering categories",
+// 			error: error.message,
+// 		});
+// 	}
+// };
 
 // @desc    Upload category image
 // @route   POST /api/categories/upload-image

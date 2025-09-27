@@ -3,7 +3,7 @@ const {
 	getProducts,
 	getProduct,
 	getProductByBarcode,
-	getProductsByShelfNumber,
+	//getProductsByShelfNumber,
 	getProductsByCategory,
 	getProductsBySubcategory,
 	getProductsWithDiscount,
@@ -32,7 +32,7 @@ router.get("/subcategory", getProductsBySubcategory);
 router.get("/discount", getProductsWithDiscount);
 router.get("/shelves", getShelfNumbers);
 router.get("/barcode/:barcode", getProductByBarcode);
-router.get("/shelf/:shelfNumber", getProductsByShelfNumber);
+//router.get("/shelf/:shelfNumber", getProductsByShelfNumber);
 router.get("/:id", getProduct);
 
 // Protected routes (require authentication)
