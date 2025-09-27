@@ -37,7 +37,7 @@ app.use(
 					// Add onrender.com domains
 					"https://*.onrender.com",
 					"https://frischly-server.onrender.com",
-					"https://frischlyshop-server.onrender.com.com",
+					"https://frischlyshop-server.onrender.com",
 				],
 				scriptSrcAttr: ["'unsafe-inline'"], // Allow inline event handlers
 				styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
@@ -48,7 +48,7 @@ app.use(
 					"https://localhost:*",
 					// Add production API URLs
 					"https://frischly-server.onrender.com",
-					"https://frischlyshop-server.onrender.com.com",
+					"https://frischlyshop-server.onrender.com",
 				], // Allow API calls
 				fontSrc: [
 					"'self'",
