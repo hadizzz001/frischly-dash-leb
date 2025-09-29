@@ -6427,22 +6427,50 @@
 					if (response.ok) {
 						const data = await response.json();
 						allProducts = data.data || [];
-						displayProducts(allProducts);
 
-						// Update pagination info
+						// Update pagination info FIRST before displaying products
 						if (data.pagination) {
-							totalProducts = data.pagination.totalProducts || 0;
-							currentProductsPage = page;
-							productsPageSize = pageSize;
-							totalProductsPages = Math.ceil(totalProducts / pageSize) || 1;
+							totalProducts = Math.max(0, data.pagination.totalProducts || 0);
+							productsPageSize = Math.max(1, pageSize);
+							totalProductsPages =
+								totalProducts > 0
+									? Math.ceil(totalProducts / productsPageSize)
+									: 1;
+
+							// Ensure current page is within valid bounds
+							currentProductsPage = Math.max(
+								1,
+								Math.min(page, totalProductsPages)
+							);
+
+							// If we're on a page that doesn't exist anymore (due to filtering), go to last valid page
+							if (page > totalProductsPages && totalProductsPages > 0) {
+								goToProductsPage(totalProductsPages);
+								return;
+							}
+
+							// Now display products with correct pagination variables
+							displayProducts(allProducts);
 
 							updateProductsCount(totalProducts);
 							updateProductsPagination();
 						} else {
+							// Fallback for non-paginated responses
 							totalProducts = allProducts.length;
+							currentProductsPage = 1;
+							totalProductsPages = 1;
+
+							// Display products with updated pagination variables
+							displayProducts(allProducts);
+
 							updateProductsCount(totalProducts);
-							document.getElementById("products-pagination").style.display =
-								"none";
+
+							const paginationContainer = document.getElementById(
+								"products-pagination"
+							);
+							if (paginationContainer) {
+								paginationContainer.style.display = "none";
+							}
 						}
 					} else if (response.status === 401) {
 						showMessage("Session expired. Please sign in again.", "error");
@@ -6692,30 +6720,59 @@
 				const nextBtn = document.getElementById("products-next-btn");
 				const lastBtn = document.getElementById("products-last-btn");
 
-				if (!paginationContainer) return;
+				if (!paginationContainer || !paginationInfo) return;
 
-				// Show pagination if there are multiple pages
-				if (totalProductsPages > 1) {
+				// Ensure pagination variables are valid
+				totalProductsPages = Math.max(
+					1,
+					Math.ceil(totalProducts / productsPageSize)
+				);
+				currentProductsPage = Math.max(
+					1,
+					Math.min(currentProductsPage, totalProductsPages)
+				);
+
+				// Show/hide pagination based on total products and pages
+				if (totalProducts > 0 && totalProductsPages > 1) {
 					paginationContainer.style.display = "flex";
 
-					// Update info text
-					const startItem = (currentProductsPage - 1) * productsPageSize + 1;
+					// Update info text with proper calculation
+					const startItem = Math.min(
+						(currentProductsPage - 1) * productsPageSize + 1,
+						totalProducts
+					);
 					const endItem = Math.min(
 						currentProductsPage * productsPageSize,
 						totalProducts
 					);
-					paginationInfo.textContent = `Showing ${startItem}-${endItem} of ${totalProducts} products`;
 
-					// Update button states
-					firstBtn.disabled = currentProductsPage === 1;
-					prevBtn.disabled = currentProductsPage === 1;
-					nextBtn.disabled = currentProductsPage === totalProductsPages;
-					lastBtn.disabled = currentProductsPage === totalProductsPages;
+					if (totalProducts === 0) {
+						paginationInfo.textContent = "No products found";
+					} else if (startItem === endItem) {
+						paginationInfo.textContent = `Showing ${startItem} of ${totalProducts} products`;
+					} else {
+						paginationInfo.textContent = `Showing ${startItem}-${endItem} of ${totalProducts} products`;
+					}
+
+					// Update button states with proper validation
+					if (firstBtn) firstBtn.disabled = currentProductsPage <= 1;
+					if (prevBtn) prevBtn.disabled = currentProductsPage <= 1;
+					if (nextBtn)
+						nextBtn.disabled = currentProductsPage >= totalProductsPages;
+					if (lastBtn)
+						lastBtn.disabled = currentProductsPage >= totalProductsPages;
 
 					// Generate page numbers
 					generateProductsPageNumbers();
 				} else {
 					paginationContainer.style.display = "none";
+
+					// Update info for single page or no products
+					if (totalProducts === 0) {
+						paginationInfo.textContent = "No products found";
+					} else {
+						paginationInfo.textContent = `Showing all ${totalProducts} products`;
+					}
 				}
 			}
 
@@ -6723,11 +6780,23 @@
 				const paginationNumbers = document.getElementById(
 					"products-pagination-numbers"
 				);
-				if (!paginationNumbers) return;
+				if (!paginationNumbers || totalProductsPages <= 1) return;
 
 				paginationNumbers.innerHTML = "";
 
 				const maxVisiblePages = 5;
+
+				// Handle edge cases
+				if (totalProductsPages <= maxVisiblePages) {
+					// Show all pages if total pages is small
+					for (let i = 1; i <= totalProductsPages; i++) {
+						const pageBtn = createPageButton(i, i.toString());
+						paginationNumbers.appendChild(pageBtn);
+					}
+					return;
+				}
+
+				// Calculate start and end pages for complex pagination
 				let startPage = Math.max(
 					1,
 					currentProductsPage - Math.floor(maxVisiblePages / 2)
@@ -6742,7 +6811,7 @@
 					startPage = Math.max(1, endPage - maxVisiblePages + 1);
 				}
 
-				// Add ellipsis at start if needed
+				// Show first page and ellipsis if needed
 				if (startPage > 1) {
 					const firstPageBtn = createPageButton(1, "1");
 					paginationNumbers.appendChild(firstPageBtn);
@@ -6751,26 +6820,26 @@
 						const ellipsis = document.createElement("span");
 						ellipsis.textContent = "...";
 						ellipsis.className = "pagination-ellipsis";
-						ellipsis.style.padding = "8px 4px";
-						ellipsis.style.color = "#666";
+						ellipsis.style.cssText =
+							"padding: 8px 4px; color: #666; user-select: none;";
 						paginationNumbers.appendChild(ellipsis);
 					}
 				}
 
-				// Add page number buttons
+				// Add visible page number buttons
 				for (let i = startPage; i <= endPage; i++) {
 					const pageBtn = createPageButton(i, i.toString());
 					paginationNumbers.appendChild(pageBtn);
 				}
 
-				// Add ellipsis at end if needed
+				// Show ellipsis and last page if needed
 				if (endPage < totalProductsPages) {
 					if (endPage < totalProductsPages - 1) {
 						const ellipsis = document.createElement("span");
 						ellipsis.textContent = "...";
 						ellipsis.className = "pagination-ellipsis";
-						ellipsis.style.padding = "8px 4px";
-						ellipsis.style.color = "#666";
+						ellipsis.style.cssText =
+							"padding: 8px 4px; color: #666; user-select: none;";
 						paginationNumbers.appendChild(ellipsis);
 					}
 
@@ -6795,25 +6864,63 @@
 				return button;
 			}
 
+			function validateProductsPaginationState() {
+				// Ensure all pagination variables are valid
+				totalProducts = Math.max(0, totalProducts || 0);
+				productsPageSize = Math.max(1, productsPageSize || 25);
+				totalProductsPages =
+					totalProducts > 0 ? Math.ceil(totalProducts / productsPageSize) : 1;
+				currentProductsPage = Math.max(
+					1,
+					Math.min(currentProductsPage || 1, totalProductsPages)
+				);
+
+				return {
+					totalProducts,
+					currentProductsPage,
+					totalProductsPages,
+					productsPageSize,
+				};
+			}
+
 			function goToProductsPage(page) {
-				if (
-					page >= 1 &&
-					page <= totalProductsPages &&
-					page !== currentProductsPage
-				) {
+				// Validate page number
+				const targetPage = parseInt(page);
+				if (isNaN(targetPage)) {
+					console.error("Invalid page number:", page);
+					return;
+				}
+
+				// Ensure we have valid pagination bounds
+				const maxPage = Math.max(1, totalProductsPages);
+				const validPage = Math.max(1, Math.min(targetPage, maxPage));
+
+				if (validPage !== currentProductsPage) {
 					// Preserve current filters when navigating pages
 					const currentFilters = getCurrentProductFilters();
-					loadProducts(page, productsPageSize, currentFilters);
+					loadProducts(validPage, productsPageSize, currentFilters);
 				}
 			}
 
 			function changeProductsPageSize(newPageSize) {
-				productsPageSize = parseInt(newPageSize);
-				currentProductsPage = 1; // Reset to first page when changing page size
+				const newSize = parseInt(newPageSize);
+
+				// Validate page size
+				if (isNaN(newSize) || newSize <= 0) {
+					console.error("Invalid page size:", newPageSize);
+					return;
+				}
+
+				// Calculate what page the current first visible item should be on with new page size
+				const currentFirstItem =
+					(currentProductsPage - 1) * productsPageSize + 1;
+				const newPage = Math.max(1, Math.ceil(currentFirstItem / newSize));
+
+				productsPageSize = newSize;
 
 				// Preserve current filters when changing page size
 				const currentFilters = getCurrentProductFilters();
-				loadProducts(1, productsPageSize, currentFilters);
+				loadProducts(newPage, productsPageSize, currentFilters);
 			}
 
 			async function showAddProductModal() {
