@@ -2945,12 +2945,16 @@
 						"0 orders";
 				}
 
-				// Rider stats section removed
+				// Load rider stats for dashboard
+				try {
+					await loadRiderStats();
+				} catch (error) {
+					console.error("Error loading rider stats:", error);
+					document.getElementById("total-riders-stat").textContent = "0";
+				}
 
 				showSectionLoading("dashboard", false);
-			}
-
-			// Categories Management Functions
+			} // Categories Management Functions
 			async function loadCategories() {
 				showSectionLoading("categories", true, "Loading categories...");
 
@@ -7127,17 +7131,16 @@
 					});
 					if (response.ok) {
 						const data = await response.json();
-						const stats = data.data;
+						const stats = data.data.overall; // API returns stats in data.overall
 
 						// Update any rider stats displays if they exist
 						const statsElements = {
 							"riders-total": stats.totalRiders,
-							"riders-active": stats.activeRiders,
+							"riders-active": stats.availableRiders, // API uses availableRiders instead of activeRiders
 							"riders-busy": stats.busyRiders,
 							"riders-offline": stats.offlineRiders,
-							"total-riders-stat": stats.activeRiders, // For dashboard
+							"total-riders-stat": stats.availableRiders, // For dashboard - show available riders
 						};
-
 						Object.entries(statsElements).forEach(([id, value]) => {
 							const element = document.getElementById(id);
 							if (element) {
