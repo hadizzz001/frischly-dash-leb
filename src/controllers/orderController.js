@@ -313,7 +313,7 @@ exports.getOrder = async (req, res) => {
 			.populate("assignedRider", "name email phone")
 			.populate(
 				"items.product",
-				"name barcode shelfNumber price discount tax bottlerefund "
+				"name barcode shelfNumber price discount tax bottlerefund picture"
 			);
 
 		if (!order) {

@@ -471,6 +471,93 @@ exports.updateRiderStatus = async (req, res) => {
 	}
 };
 
+// @desc    Update rider current location
+// @route   PATCH /api/riders/:id/location
+// @access  Private (Admin, Manager, Rider themselves)
+exports.updateRiderLocation = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { latitude, longitude } = req.body;
+
+		// Validate rider ID
+		if (!mongoose.Types.ObjectId.isValid(id)) {
+			return res.status(400).json({
+				success: false,
+				message: "Invalid rider ID",
+			});
+		}
+
+		// Validate required fields
+		if (latitude === undefined || longitude === undefined) {
+			return res.status(400).json({
+				success: false,
+				message: "Latitude and longitude are required",
+			});
+		}
+
+		// Validate latitude range
+		if (latitude < -90 || latitude > 90) {
+			return res.status(400).json({
+				success: false,
+				message: "Latitude must be between -90 and 90",
+			});
+		}
+
+		// Validate longitude range
+		if (longitude < -180 || longitude > 180) {
+			return res.status(400).json({
+				success: false,
+				message: "Longitude must be between -180 and 180",
+			});
+		}
+
+		const rider = await Rider.findById(id);
+		if (!rider) {
+			return res.status(404).json({
+				success: false,
+				message: "Rider not found",
+			});
+		}
+
+		// Check authorization
+		if (
+			req.user.role !== "admin" &&
+			req.user.role !== "manager" &&
+			rider.user.toString() !== req.user.id
+		) {
+			return res.status(403).json({
+				success: false,
+				message: "Not authorized to update this rider's location",
+			});
+		}
+
+		// Update location
+		rider.currentLocation = {
+			latitude,
+			longitude,
+			lastUpdated: new Date(),
+		};
+
+		await rider.save();
+
+		res.json({
+			success: true,
+			data: {
+				riderId: rider._id,
+				currentLocation: rider.currentLocation,
+			},
+			message: "Rider location updated successfully",
+		});
+	} catch (error) {
+		console.error("Error updating rider location:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error updating rider location",
+			error: error.message,
+		});
+	}
+};
+
 // @desc    Get available riders in zone
 // @route   GET /api/riders/available/:zone
 // @access  Private (Admin, Manager)

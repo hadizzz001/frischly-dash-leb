@@ -5,6 +5,7 @@ const {
 	createRider,
 	updateRider,
 	updateRiderStatus,
+	updateRiderLocation,
 	getAvailableRiders,
 	getRiderStats,
 	deleteRider,
@@ -45,6 +46,13 @@ router.patch(
 	protect,
 	authorize("admin", "manager", "rider"),
 	updateRiderStatus
+);
+
+router.patch(
+	"/:id/location",
+	protect,
+	authorize("admin", "manager", "rider"),
+	updateRiderLocation
 );
 
 router.delete("/:id", protect, authorize("admin"), deleteRider);
