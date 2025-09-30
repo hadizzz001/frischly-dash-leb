@@ -568,7 +568,7 @@
 							<option value="not-in-ads">Not In Ads</option>
 						</select>
 						<select id="product-price-filter" class="filter-select">
-							<option value="all">All Prices</option>
+							<option value="all">All Prices (€)</option>
 							<option value="0-10">Under €10</option>
 							<option value="10-25">€10 - €25</option>
 							<option value="25-50">€25 - €50</option>
@@ -586,8 +586,8 @@
 						<select id="product-sort-filter" class="filter-select">
 							<option value="name-asc">Name A-Z</option>
 							<option value="name-desc">Name Z-A</option>
-							<option value="price-asc">Price Low-High</option>
-							<option value="price-desc">Price High-Low</option>
+							<option value="price-asc">Price (€) Low-High</option>
+							<option value="price-desc">Price (€) High-Low</option>
 							<option value="stock-asc">Stock Low-High</option>
 							<option value="stock-desc">Stock High-Low</option>
 							<option value="createdAt-desc" selected>Newest First</option>
@@ -633,7 +633,7 @@
 										<th>Product Name</th>
 										<th>Category</th>
 										<th>Subcategory</th>
-										<th>Price</th>
+										<th>Price (€)</th>
 										<th>Bottle Refund</th>
 										<th>Stock</th>
 										<th>Status</th>
@@ -1008,7 +1008,7 @@
 											<th>Zone Name</th>
 											<th>Zip Code</th>
 											<th>Distance</th>
-											<th>Delivery Fee</th>
+											<th>Delivery Fee (€)</th>
 											<th>Est. Time</th>
 											<th>Status</th>
 											<th>Created</th>
@@ -4696,13 +4696,13 @@
 
 					// Reset price calculation display
 					document.getElementById("calc-base-price").textContent =
-						"Base Price: $0.00";
+						"Base Price: €0.00";
 					document.getElementById("calc-discount").style.display = "none";
 					document.getElementById("calc-subtotal").textContent =
-						"After Discount: $0.00";
+						"After Discount: €0.00";
 					document.getElementById("calc-tax").style.display = "none";
 					document.getElementById("calc-final-price").textContent =
-						"Final Price: $0.00";
+						"Final Price: €0.00";
 
 					productModal.style.display = "block";
 				} catch (error) {
@@ -4924,36 +4924,34 @@
 
 						document.getElementById(
 							"calc-base-price"
-						).textContent = `Base Price: $${basePrice.toFixed(2)}`;
+						).textContent = `Base Price: €${basePrice.toFixed(2)}`;
 
 						const discountElement = document.getElementById("calc-discount");
 						if (discount > 0) {
-							discountElement.textContent = `Discount: ${discount}% (-$${discountAmount.toFixed(
+							discountElement.textContent = `Discount: ${discount}% (-€${discountAmount.toFixed(
 								2
 							)})`;
 							discountElement.style.display = "block";
 						} else {
 							discountElement.style.display = "none";
 						}
-
 						document.getElementById(
 							"calc-subtotal"
-						).textContent = `After Discount: $${discountedPrice.toFixed(2)}`;
+						).textContent = `After Discount: €${discountedPrice.toFixed(2)}`;
 
 						const taxElement = document.getElementById("calc-tax");
 						if (tax > 0) {
-							taxElement.textContent = `Tax: ${tax}% (+$${taxAmount.toFixed(
+							taxElement.textContent = `Tax: ${tax}% (+€${taxAmount.toFixed(
 								2
 							)})`;
 							taxElement.style.display = "block";
 						} else {
 							taxElement.style.display = "none";
 						}
-
 						const bottlerefundElement =
 							document.getElementById("calc-bottlerefund");
 						if (bottlerefund > 0) {
-							bottlerefundElement.textContent = `Bottle Refund: +$${bottlerefundAmount.toFixed(
+							bottlerefundElement.textContent = `Bottle Refund: +€${bottlerefundAmount.toFixed(
 								2
 							)}`;
 							bottlerefundElement.style.display = "block";
@@ -4963,7 +4961,7 @@
 
 						document.getElementById(
 							"calc-final-price"
-						).textContent = `Final Price: $${finalPrice.toFixed(2)}`;
+						).textContent = `Final Price: €${finalPrice.toFixed(2)}`;
 					}, 100);
 
 					elements.productModal.style.display = "block";
@@ -6099,7 +6097,7 @@
 								<span class="stat-label">Avg Distance</span>
 							</div>
 							<div class="stat-item">
-								<span class="stat-number">$${avgFee}</span>
+								<span class="stat-number">€${avgFee}</span>
 								<span class="stat-label">Avg Fee</span>
 							</div>
 						</div>
@@ -6327,13 +6325,12 @@
 					document.getElementById("avg-distance-stat").textContent = (
 						stats.averageDistance || 0
 					).toFixed(1);
-					document.getElementById("avg-fee-stat").textContent = `$${(
+					document.getElementById("avg-fee-stat").textContent = `€${(
 						stats.averageDeliveryFee || 0
 					).toFixed(2)}`;
 					document.getElementById("delivery-coverage-stat").textContent = `${(
 						stats.coverageEfficiency || 0
 					).toFixed(1)}%`;
-
 					document.getElementById("zone-stats-modal").style.display = "block";
 				} catch (error) {
 					console.error("Error loading zone statistics:", error);
@@ -6363,11 +6360,10 @@
 						inactiveZones;
 					document.getElementById("avg-distance-stat").textContent =
 						avgDistance;
-					document.getElementById("avg-fee-stat").textContent = `$${avgFee}`;
+					document.getElementById("avg-fee-stat").textContent = `€${avgFee}`;
 					document.getElementById("delivery-coverage-stat").textContent = `${
 						activeZones > 0 ? ((activeZones / totalZones) * 100).toFixed(1) : 0
 					}%`;
-
 					document.getElementById("zone-stats-modal").style.display = "block";
 				}
 			}
@@ -7638,7 +7634,7 @@
 						</div>
 
 						<div class="form-group">
-							<label for="product-price">Price ($)</label>
+							<label for="product-price">Price (€)</label>
 							<input
 								type="number"
 								id="product-price"
@@ -7792,14 +7788,14 @@
 								id="price-calculation"
 								style="font-size: 13px; color: #6c757d"
 							>
-								<div id="calc-base-price">Base Price: $0.00</div>
+								<div id="calc-base-price">Base Price: €0.00</div>
 								<div id="calc-discount" style="display: none">
-									Discount: 0% (-$0.00)
+									Discount: 0% (-€0.00)
 								</div>
-								<div id="calc-subtotal">After Discount: $0.00</div>
-								<div id="calc-tax" style="display: none">Tax: 0% (+$0.00)</div>
+								<div id="calc-subtotal">After Discount: €0.00</div>
+								<div id="calc-tax" style="display: none">Tax: 0% (+€0.00)</div>
 								<div id="calc-bottlerefund" style="display: none">
-									Bottle Refund: +$0.00
+									Bottle Refund: +€0.00
 								</div>
 								<div
 									id="calc-final-price"
@@ -7811,7 +7807,7 @@
 										border-top: 1px solid #dee2e6;
 									"
 								>
-									Final Price: $0.00
+									Final Price: €0.00
 								</div>
 							</div>
 						</div>
@@ -8287,15 +8283,15 @@
 						<div class="order-summary">
 							<div class="summary-row">
 								<span class="summary-label">Subtotal:</span>
-								<span class="summary-value" id="modal-subtotal">$0.00</span>
+								<span class="summary-value" id="modal-subtotal">€0.00</span>
 							</div>
 							<div class="summary-row">
 								<span class="summary-label">Delivery Fee:</span>
-								<span class="summary-value" id="modal-delivery">$0.00</span>
+								<span class="summary-value" id="modal-delivery">€0.00</span>
 							</div>
 							<div class="summary-row">
 								<span class="summary-label">Total:</span>
-								<span class="summary-value" id="modal-total">$0.00</span>
+								<span class="summary-value" id="modal-total">€0.00</span>
 							</div>
 						</div>
 					</div>
@@ -8579,11 +8575,11 @@
 					// Update display elements
 					document.getElementById(
 						"calc-base-price"
-					).textContent = `Base Price: $${basePrice.toFixed(2)}`;
+					).textContent = `Base Price: €${basePrice.toFixed(2)}`;
 
 					const discountElement = document.getElementById("calc-discount");
 					if (discount > 0) {
-						discountElement.textContent = `Discount: ${discount}% (-$${discountAmount.toFixed(
+						discountElement.textContent = `Discount: ${discount}% (-€${discountAmount.toFixed(
 							2
 						)})`;
 						discountElement.style.display = "block";
@@ -8593,11 +8589,11 @@
 
 					document.getElementById(
 						"calc-subtotal"
-					).textContent = `After Discount: $${discountedPrice.toFixed(2)}`;
+					).textContent = `After Discount: €${discountedPrice.toFixed(2)}`;
 
 					const taxElement = document.getElementById("calc-tax");
 					if (tax > 0) {
-						taxElement.textContent = `Tax: ${tax}% (+$${taxAmount.toFixed(2)})`;
+						taxElement.textContent = `Tax: ${tax}% (+€${taxAmount.toFixed(2)})`;
 						taxElement.style.display = "block";
 					} else {
 						taxElement.style.display = "none";
@@ -8605,7 +8601,7 @@
 
 					document.getElementById(
 						"calc-final-price"
-					).textContent = `Final Price: $${finalPrice.toFixed(2)}`;
+					).textContent = `Final Price: €${finalPrice.toFixed(2)}`;
 				}
 
 				// Add event listeners for real-time calculation
@@ -8785,7 +8781,7 @@
 								}
 							</td>
 							<td>${itemCount} item${itemCount !== 1 ? "s" : ""}</td>
-							<td><strong>$${order.total?.toFixed(2) || "0.00"}</strong></td>
+							<td><strong>€${order.total?.toFixed(2) || "0.00"}</strong></td>
 							<td>
 								<span class="status-badge" style="background-color: ${statusColor};">
 									${order.status}
@@ -8908,16 +8904,14 @@
 						productSelects.forEach((select) => {
 							select.innerHTML = '<option value="">Select a product</option>';
 							products.forEach((product) => {
-								select.innerHTML += `<option value="${product._id}" data-price="${product.price}" data-stock="${product.stock}">${product.name} - $${product.price} (Stock: ${product.stock})</option>`;
+								select.innerHTML += `<option value="${product._id}" data-price="${product.price}" data-stock="${product.stock}">${product.name} - €${product.price} (Stock: ${product.stock})</option>`;
 							});
 						});
 					}
 				} catch (error) {
 					console.error("Error loading products:", error);
 				}
-			}
-
-			// Add order item
+			} // Add order item
 			function addOrderItem() {
 				const container = document.getElementById("order-items-container");
 				const newItem = document.createElement("div");
@@ -9058,14 +9052,13 @@
 						const products = result.data || [];
 						select.innerHTML = '<option value="">Select a product</option>';
 						products.forEach((product) => {
-							select.innerHTML += `<option value="${product._id}" data-price="${product.price}" data-stock="${product.stock}">${product.name} - $${product.price} (Stock: ${product.stock})</option>`;
+							select.innerHTML += `<option value="${product._id}" data-price="${product.price}" data-stock="${product.stock}">${product.name} - €${product.price} (Stock: ${product.stock})</option>`;
 						});
 					}
 				} catch (error) {
 					console.error("Error loading products:", error);
 				}
 			}
-
 			// Save order
 			async function saveOrder(event) {
 				event.preventDefault();
@@ -9272,37 +9265,35 @@
 								<div class="product-name">${item.product?.name || "Unknown"}</div>
 								<div class="product-barcode">${item.product?.barcode || "N/A"}</div>
 							</div>
-						</td>
-						<td>
-							<div class="quantity-badge">${item.quantity}</div>
-						</td>
-						<td>$${item.product?.price?.toFixed(2) || "0.00"}</td>
-						<td>
-							<div class="price-info">
-								<div class="total-price">$${item.totalPrice.toFixed(2)}</div>
-							</div>
-						</td>
-					`;
+					</td>
+					<td>
+						<div class="quantity-badge">${item.quantity}</div>
+					</td>
+					<td>€${item.product?.price?.toFixed(2) || "0.00"}</td>
+					<td>
+						<div class="price-info">
+							<div class="total-price">€${item.totalPrice.toFixed(2)}</div>
+						</div>
+					</td>
+				`;
 					itemsContainer.appendChild(row);
 				});
 
 				// Set summary values
 				document.getElementById(
 					"modal-subtotal"
-				).textContent = `$${order.subtotal.toFixed(2)}`;
+				).textContent = `€${order.subtotal.toFixed(2)}`;
 				const delivery = order.delivery;
 				document.getElementById(
 					"modal-delivery"
-				).textContent = `$${delivery.toFixed(2)}`;
+				).textContent = `€${delivery.toFixed(2)}`;
 				document.getElementById(
 					"modal-total"
-				).textContent = `$${order.total.toFixed(2)}`;
+				).textContent = `€${order.total.toFixed(2)}`;
 
 				// Show the modal
 				document.getElementById("order-details-modal").style.display = "block";
-			}
-
-			// Close order details modal
+			} // Close order details modal
 			function closeOrderDetails() {
 				document.getElementById("order-details-modal").style.display = "none";
 			}
@@ -10408,7 +10399,7 @@
 					<div class="stat-card">
 						<div class="stat-icon">💰</div>
 						<div class="stat-info">
-							<div class="stat-value" id="avg-fee-stat">$0.00</div>
+							<div class="stat-value" id="avg-fee-stat">€0.00</div>
 							<div class="stat-label">Avg Delivery Fee</div>
 						</div>
 					</div>
