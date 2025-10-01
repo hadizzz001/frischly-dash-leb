@@ -3047,7 +3047,7 @@
 												"https://res.cloudinary.com/dbgnsnrto/image/upload/",
 												"https://res.cloudinary.com/dbgnsnrto/image/upload/"
 										  )}" alt="${categoryName}"
-										style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 2px solid #e9ecef; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
+										style="width: 60px; height: 60px; object-fit: contain; border-radius: 8px; border: 2px solid #e9ecef; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
 										onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
 										: ""
 								}
@@ -3844,7 +3844,7 @@
 														"https://res.cloudinary.com/dbgnsnrto/image/upload/",
 														"https://res.cloudinary.com/dbgnsnrto/image/upload/"
 												  )}" alt="${subcategory.parentCategory.name}"
-												style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd; margin-right: 8px;"
+												style="width: 30px; height: 30px; object-fit: contain; border-radius: 4px; border: 1px solid #ddd; margin-right: 8px;"
 												onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
 												: ""
 										}
@@ -4327,7 +4327,7 @@
 													"https://res.cloudinary.com/dbgnsnrto/image/upload/",
 													"https://res.cloudinary.com/dbgnsnrto/image/upload/"
 											  )}" alt="${productName}"
-											style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd; cursor: pointer; transition: opacity 0.2s;"
+											style="width: 40px; height: 40px; object-fit: contain; border-radius: 4px; border: 1px solid #ddd; cursor: pointer; transition: opacity 0.2s;"
 											onerror="this.style.display='none';"
 											onclick="openImageUpdateModal('${product._id}', '${productName}', '${
 													product.picture || ""
@@ -7864,7 +7864,7 @@
 								style="
 									max-width: 200px;
 									max-height: 200px;
-									object-fit: cover;
+									object-fit: contain;
 									border-radius: 8px;
 									border: 1px solid #ddd;
 									display: none;
