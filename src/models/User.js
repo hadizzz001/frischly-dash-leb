@@ -63,6 +63,38 @@ const userSchema = new mongoose.Schema(
 				maxlength: [100, "Country cannot be more than 100 characters"],
 			},
 		},
+		creditCard: {
+			cardNumber: {
+				type: String,
+				trim: true,
+				maxlength: [19, "Card number cannot be more than 19 characters"],
+			},
+			expiryMonth: {
+				type: String,
+				trim: true,
+				maxlength: [2, "Expiry month cannot be more than 2 characters"],
+			},
+			expiryYear: {
+				type: String,
+				trim: true,
+				maxlength: [4, "Expiry year cannot be more than 4 characters"],
+			},
+			cvv: {
+				type: String,
+				trim: true,
+				maxlength: [4, "CVV cannot be more than 4 characters"],
+			},
+			holderName: {
+				type: String,
+				trim: true,
+				maxlength: [100, "Cardholder name cannot be more than 100 characters"],
+			},
+			cardType: {
+				type: String,
+				enum: ["visa", "mastercard", "amex", "discover", "other"],
+				default: "other",
+			},
+		},
 		role: {
 			type: String,
 			enum: ["customer", "rider", "staff", "user", "manager", "admin"],
@@ -105,6 +137,27 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 userSchema.methods.toSafeObject = function () {
 	const userObject = this.toObject();
 	delete userObject.password;
+	delete userObject.creditCard; // Don't expose credit card info
+	return userObject;
+};
+
+// Instance method to get user with masked credit card info
+userSchema.methods.toMaskedObject = function () {
+	const userObject = this.toObject();
+	delete userObject.password;
+
+	// Mask credit card information if it exists
+	if (userObject.creditCard && userObject.creditCard.cardNumber) {
+		const cardNumber = userObject.creditCard.cardNumber;
+		const lastFour = cardNumber.slice(-4);
+		const maskedNumber = "**** **** **** " + lastFour;
+		userObject.creditCard = {
+			...userObject.creditCard,
+			cardNumber: maskedNumber,
+			cvv: "***", // Always mask CVV
+		};
+	}
+
 	return userObject;
 };
 

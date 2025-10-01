@@ -152,7 +152,7 @@ const getMe = async (req, res) => {
 		res.json({
 			success: true,
 			data: {
-				user: user.toSafeObject(),
+				user: user.toMaskedObject(),
 			},
 		});
 	} catch (error) {
@@ -180,7 +180,7 @@ const updateProfile = async (req, res) => {
 		}
 
 		const fieldsToUpdate = {};
-		const { name, phoneNumber, email, address } = req.body;
+		const { name, phoneNumber, email, address, creditCard } = req.body;
 
 		if (name) fieldsToUpdate.name = name;
 		if (phoneNumber) fieldsToUpdate.phoneNumber = phoneNumber;
@@ -199,6 +199,7 @@ const updateProfile = async (req, res) => {
 			fieldsToUpdate.email = email;
 		}
 		if (address) fieldsToUpdate.address = address;
+		if (creditCard) fieldsToUpdate.creditCard = creditCard;
 
 		const user = await User.findByIdAndUpdate(req.user._id, fieldsToUpdate, {
 			new: true,
@@ -322,7 +323,7 @@ const loginProfile = async (req, res) => {
 			success: true,
 			message: "Login successful",
 			data: {
-				user: user.toSafeObject(),
+				user: user.toMaskedObject(),
 				token,
 				refreshToken,
 				redirectUrl:

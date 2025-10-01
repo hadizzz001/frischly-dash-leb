@@ -117,6 +117,49 @@ const updateProfileValidation = [
 		.trim()
 		.isLength({ min: 1, max: 100 })
 		.withMessage("Country must be less than 100 characters"),
+	body("creditCard.cardNumber")
+		.optional()
+		.trim()
+		.matches(/^\d{13,19}$/)
+		.withMessage("Card number must be between 13 and 19 digits"),
+	body("creditCard.expiryMonth")
+		.optional()
+		.isIn([
+			"01",
+			"02",
+			"03",
+			"04",
+			"05",
+			"06",
+			"07",
+			"08",
+			"09",
+			"10",
+			"11",
+			"12",
+		])
+		.withMessage("Expiry month must be a valid month (01-12)"),
+	body("creditCard.expiryYear")
+		.optional()
+		.isLength({ min: 4, max: 4 })
+		.matches(/^\d{4}$/)
+		.withMessage("Expiry year must be a 4-digit year"),
+	body("creditCard.cvv")
+		.optional()
+		.trim()
+		.matches(/^\d{3,4}$/)
+		.withMessage("CVV must be 3 or 4 digits"),
+	body("creditCard.holderName")
+		.optional()
+		.trim()
+		.isLength({ min: 1, max: 100 })
+		.withMessage("Cardholder name must be less than 100 characters"),
+	body("creditCard.cardType")
+		.optional()
+		.isIn(["visa", "mastercard", "amex", "discover", "other"])
+		.withMessage(
+			"Card type must be one of: visa, mastercard, amex, discover, other"
+		),
 ];
 
 const changePasswordValidation = [

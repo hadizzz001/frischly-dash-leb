@@ -404,6 +404,62 @@
 								<input type="text" id="edit-country" value="${country}" 
 									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
 							</div>
+							<div style="margin-bottom: 15px; text-align: left;">
+								<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Cardholder Name:</label>
+								<input type="text" id="edit-cardholder" value="" 
+									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+							</div>
+							<div style="margin-bottom: 15px; text-align: left;">
+								<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Card Number:</label>
+								<input type="text" id="edit-cardnumber" value="" placeholder="1234 5678 9012 3456"
+									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+							</div>
+							<div style="display: flex; gap: 10px; margin-bottom: 15px;">
+								<div style="flex: 1; text-align: left;">
+									<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Expiry Month:</label>
+									<select id="edit-expmonth" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+										<option value="">MM</option>
+										<option value="01">01</option>
+										<option value="02">02</option>
+										<option value="03">03</option>
+										<option value="04">04</option>
+										<option value="05">05</option>
+										<option value="06">06</option>
+										<option value="07">07</option>
+										<option value="08">08</option>
+										<option value="09">09</option>
+										<option value="10">10</option>
+										<option value="11">11</option>
+										<option value="12">12</option>
+									</select>
+								</div>
+								<div style="flex: 1; text-align: left;">
+									<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Expiry Year:</label>
+									<select id="edit-expyear" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+										<option value="">YYYY</option>
+										${Array.from({ length: 10 }, (_, i) => {
+											const year = new Date().getFullYear() + i;
+											return `<option value="${year}">${year}</option>`;
+										}).join("")}
+									</select>
+								</div>
+							</div>
+							<div style="margin-bottom: 15px; text-align: left;">
+								<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">CVV:</label>
+								<input type="text" id="edit-cvv" value="" placeholder="123" maxlength="4"
+									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+							</div>
+							<div style="margin-bottom: 20px; text-align: left;">
+								<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Card Type:</label>
+								<select id="edit-cardtype" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+									<option value="other">Select Card Type</option>
+									<option value="visa">Visa</option>
+									<option value="mastercard">Mastercard</option>
+									<option value="amex">American Express</option>
+									<option value="discover">Discover</option>
+									<option value="other">Other</option>
+								</select>
+							</div>
 							<div style="display: flex; gap: 10px; justify-content: center;">
 								<button onclick="saveProfile()" class="btn" style="background: #28a745;">Save Changes</button>
 								<button onclick="window.location.reload()" class="btn" style="background: #6c757d;">Cancel</button>
@@ -423,6 +479,19 @@
 				const zipCode = document.getElementById("edit-zip").value.trim();
 				const country = document.getElementById("edit-country").value.trim();
 
+				// Credit card information
+				const cardholderName = document
+					.getElementById("edit-cardholder")
+					.value.trim();
+				const cardNumber = document
+					.getElementById("edit-cardnumber")
+					.value.trim()
+					.replace(/\s/g, "");
+				const expiryMonth = document.getElementById("edit-expmonth").value;
+				const expiryYear = document.getElementById("edit-expyear").value;
+				const cvv = document.getElementById("edit-cvv").value.trim();
+				const cardType = document.getElementById("edit-cardtype").value;
+
 				// Validation
 				if (!name) {
 					showMessage("Name is required", "error");
@@ -434,24 +503,54 @@
 					return;
 				}
 
+				// Credit card validation (optional)
+				if (cardNumber && !/^\d{13,19}$/.test(cardNumber)) {
+					showMessage("Please enter a valid card number", "error");
+					return;
+				}
+
+				if (cardNumber && (!expiryMonth || !expiryYear)) {
+					showMessage("Please select expiry month and year", "error");
+					return;
+				}
+
+				if (cardNumber && !cvv) {
+					showMessage("CVV is required when entering card details", "error");
+					return;
+				}
+
 				try {
+					const updateData = {
+						name,
+						phoneNumber,
+						address: {
+							street,
+							city,
+							state,
+							zipCode,
+							country,
+						},
+					};
+
+					// Add credit card data if provided
+					if (cardNumber || cardholderName) {
+						updateData.creditCard = {
+							holderName: cardholderName,
+							cardNumber: cardNumber,
+							expiryMonth: expiryMonth,
+							expiryYear: expiryYear,
+							cvv: cvv,
+							cardType: cardType,
+						};
+					}
+
 					const response = await fetch(`${API_BASE_URL}/auth/profile`, {
 						method: "PUT",
 						headers: {
 							Authorization: `Bearer ${currentToken}`,
 							"Content-Type": "application/json",
 						},
-						body: JSON.stringify({
-							name,
-							phoneNumber,
-							address: {
-								street,
-								city,
-								state,
-								zipCode,
-								country,
-							},
-						}),
+						body: JSON.stringify(updateData),
 					});
 
 					if (response.ok) {
