@@ -267,6 +267,13 @@
 
 					<div class="actions">
 						<a href="shop.html" class="btn">← Back to Shop</a>
+						<button
+							onclick="editProfile()"
+							class="btn"
+							style="background: #ffc300; color: #000"
+						>
+							Edit Profile
+						</button>
 						<button onclick="changePassword()" class="btn">
 							Change Password
 						</button>
@@ -331,6 +338,137 @@
 				setTimeout(() => {
 					window.location.href = "index.html";
 				}, 1500);
+			}
+
+			// Edit profile function
+			function editProfile() {
+				const profileContent = document.getElementById("profile-content");
+
+				// Get current values
+				const currentName = document.getElementById("user-name").textContent;
+				const currentEmail = document.getElementById("user-email").textContent;
+				const currentPhone = document.getElementById("user-phone").textContent;
+				const currentAddress =
+					document.getElementById("user-address").textContent;
+
+				// Parse address components (assuming format: "street, city, state zipCode, country")
+				const addressParts = currentAddress.split(", ");
+				const street = addressParts[0] || "";
+				const city = addressParts[1] || "";
+				const stateZip = addressParts[2] || "";
+				const [state, zipCode] = stateZip.split(" ");
+				const country = addressParts[3] || "";
+
+				profileContent.innerHTML = `
+					<div style="text-align: center; padding: 20px;">
+						<h3 style="color: #333; margin-bottom: 20px;">Edit Profile</h3>
+						<div style="max-width: 500px; margin: 0 auto;">
+							<div style="margin-bottom: 15px; text-align: left;">
+								<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Name:</label>
+								<input type="text" id="edit-name" value="${currentName}" 
+									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+							</div>
+							<div style="margin-bottom: 15px; text-align: left;">
+								<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Email:</label>
+								<input type="email" id="edit-email" value="${currentEmail}" readonly
+									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; background: #f5f5f5;">
+								<small style="color: #666; font-size: 12px;">Email cannot be changed</small>
+							</div>
+							<div style="margin-bottom: 15px; text-align: left;">
+								<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Phone:</label>
+								<input type="tel" id="edit-phone" value="${currentPhone}" 
+									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+							</div>
+							<div style="margin-bottom: 15px; text-align: left;">
+								<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Street Address:</label>
+								<input type="text" id="edit-street" value="${street}" 
+									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+							</div>
+							<div style="margin-bottom: 15px; text-align: left;">
+								<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">City:</label>
+								<input type="text" id="edit-city" value="${city}" 
+									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+							</div>
+							<div style="margin-bottom: 15px; text-align: left;">
+								<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">State:</label>
+								<input type="text" id="edit-state" value="${state || ""}" 
+									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+							</div>
+							<div style="margin-bottom: 15px; text-align: left;">
+								<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">ZIP Code:</label>
+								<input type="text" id="edit-zip" value="${zipCode || ""}" 
+									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+							</div>
+							<div style="margin-bottom: 20px; text-align: left;">
+								<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Country:</label>
+								<input type="text" id="edit-country" value="${country}" 
+									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+							</div>
+							<div style="display: flex; gap: 10px; justify-content: center;">
+								<button onclick="saveProfile()" class="btn" style="background: #28a745;">Save Changes</button>
+								<button onclick="window.location.reload()" class="btn" style="background: #6c757d;">Cancel</button>
+							</div>
+						</div>
+					</div>
+				`;
+			}
+
+			// Save profile changes
+			async function saveProfile() {
+				const name = document.getElementById("edit-name").value.trim();
+				const phoneNumber = document.getElementById("edit-phone").value.trim();
+				const street = document.getElementById("edit-street").value.trim();
+				const city = document.getElementById("edit-city").value.trim();
+				const state = document.getElementById("edit-state").value.trim();
+				const zipCode = document.getElementById("edit-zip").value.trim();
+				const country = document.getElementById("edit-country").value.trim();
+
+				// Validation
+				if (!name) {
+					showMessage("Name is required", "error");
+					return;
+				}
+
+				if (!street || !city || !zipCode || !country) {
+					showMessage("All address fields are required", "error");
+					return;
+				}
+
+				try {
+					const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+						method: "PUT",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							name,
+							phoneNumber,
+							address: {
+								street,
+								city,
+								state,
+								zipCode,
+								country,
+							},
+						}),
+					});
+
+					if (response.ok) {
+						showMessage("Profile updated successfully!", "success");
+						setTimeout(() => {
+							window.location.reload(); // Refresh the page to show updated data
+						}, 2000);
+					} else {
+						const errorData = await response.json();
+						showMessage(
+							errorData.message || "Failed to update profile",
+							"error"
+						);
+					}
+				} catch (error) {
+					showMessage("Failed to update profile. Please try again.", "error");
+				}
 			}
 
 			// Change password function
