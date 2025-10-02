@@ -444,11 +444,6 @@
 									</select>
 								</div>
 							</div>
-							<div style="margin-bottom: 15px; text-align: left;">
-								<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">CVV:</label>
-								<input type="text" id="edit-cvv" value="" placeholder="123" maxlength="4"
-									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
-							</div>
 							<div style="margin-bottom: 20px; text-align: left;">
 								<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Card Type:</label>
 								<select id="edit-cardtype" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
@@ -489,7 +484,6 @@
 					.replace(/\s/g, "");
 				const expiryMonth = document.getElementById("edit-expmonth").value;
 				const expiryYear = document.getElementById("edit-expyear").value;
-				const cvv = document.getElementById("edit-cvv").value.trim();
 				const cardType = document.getElementById("edit-cardtype").value;
 
 				// Validation
@@ -514,11 +508,6 @@
 					return;
 				}
 
-				if (cardNumber && !cvv) {
-					showMessage("CVV is required when entering card details", "error");
-					return;
-				}
-
 				try {
 					const updateData = {
 						name,
@@ -539,7 +528,7 @@
 							cardNumber: cardNumber,
 							expiryMonth: expiryMonth,
 							expiryYear: expiryYear,
-							cvv: cvv,
+
 							cardType: cardType,
 						};
 					}

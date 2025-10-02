@@ -79,11 +79,7 @@ const userSchema = new mongoose.Schema(
 				trim: true,
 				maxlength: [4, "Expiry year cannot be more than 4 characters"],
 			},
-			cvv: {
-				type: String,
-				trim: true,
-				maxlength: [4, "CVV cannot be more than 4 characters"],
-			},
+
 			holderName: {
 				type: String,
 				trim: true,
@@ -154,7 +150,6 @@ userSchema.methods.toMaskedObject = function () {
 		userObject.creditCard = {
 			...userObject.creditCard,
 			cardNumber: maskedNumber,
-			cvv: "***", // Always mask CVV
 		};
 	}
 
