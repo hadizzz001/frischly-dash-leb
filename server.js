@@ -64,31 +64,8 @@ app.use(
 // CORS
 app.use(
 	cors({
-		origin: function (origin, callback) {
-			// Allow requests with no origin (like mobile apps or curl requests)
-			if (!origin) return callback(null, true);
-
-			// Parse CLIENT_URL which can be comma-separated
-			const clientUrls = process.env.CLIENT_URL
-				? process.env.CLIENT_URL.split(",").map((url) => url.trim())
-				: [];
-			const allowedOrigins = [
-				...clientUrls,
-				"http://localhost:3000",
-				"http://localhost:3001",
-				"http://127.0.0.1:3001",
-			];
-
-			// Check if origin is in allowed list
-			if (allowedOrigins.includes(origin)) {
-				return callback(null, true);
-			}
-
-			// For development only - log rejected origins
-			console.log(`CORS blocked origin: ${origin}`);
-			callback(null, false);
-		},
-		credentials: true,
+		origin: "*",
+		credentials: false,
 		methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
 		allowedHeaders: ["Content-Type", "Authorization"],
 	})

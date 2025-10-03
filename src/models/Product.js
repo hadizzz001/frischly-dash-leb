@@ -26,14 +26,6 @@ const productSchema = new mongoose.Schema(
 			required: [true, "Please provide a shelf number"],
 			trim: true,
 			maxlength: [20, "Shelf number cannot be more than 20 characters"],
-			validate: {
-				validator: function (v) {
-					// Allow alphanumeric with dashes and underscores (e.g., A-1, B2-3, SHELF_01)
-					return /^[A-Za-z0-9\-_]{1,20}$/.test(v);
-				},
-				message:
-					"Shelf number can only contain letters, numbers, dashes, and underscores",
-			},
 		},
 		description: {
 			type: String,
