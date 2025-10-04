@@ -264,7 +264,10 @@ exports.getOrdersForRiders = async (req, res) => {
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
 			.populate("assignedRider", "name email phone")
-			.populate("items.product", "name barcode")
+			.populate(
+				"items.product",
+				"name barcode shelfNumber price discount tax bottlerefund picture"
+			)
 			.sort(sortOptions)
 			.skip(skip)
 			.limit(limitNum);
