@@ -12,6 +12,7 @@ exports.getRiders = async (req, res) => {
 			page = 1,
 			limit = 10,
 			zone,
+
 			status,
 			vehicleType,
 			search,
@@ -119,6 +120,7 @@ exports.getRiders = async (req, res) => {
 						rating: 1,
 						isVerified: 1,
 						lastActiveAt: 1,
+						currentLocation: 1,
 						createdAt: 1,
 						"userInfo.name": 1,
 						"userInfo.email": 1,

@@ -320,6 +320,7 @@ riderSchema.statics.getRidersWithStats = function (filter = {}) {
 				rating: 1,
 				isVerified: 1,
 				lastActiveAt: 1,
+				currentLocation: 1,
 				createdAt: 1,
 				"userInfo.name": 1,
 				"userInfo.email": 1,
