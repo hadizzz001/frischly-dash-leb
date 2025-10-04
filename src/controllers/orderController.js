@@ -145,7 +145,10 @@ exports.getOrders = async (req, res) => {
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
 			.populate("assignedRider", "name email phone")
-			.populate("items.product", "name barcode")
+			.populate(
+				"items.product",
+				"name barcode shelfNumber price discount tax bottlerefund picture"
+			)
 			.sort(sortOptions)
 			.skip(skip)
 			.limit(limitNum);
@@ -264,7 +267,10 @@ exports.getOrdersForRiders = async (req, res) => {
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
 			.populate("assignedRider", "name email phone")
-			.populate("items.product", "name barcode")
+			.populate(
+				"items.product",
+				"name barcode shelfNumber price discount tax bottlerefund picture"
+			)
 			.sort(sortOptions)
 			.skip(skip)
 			.limit(limitNum);
@@ -558,7 +564,10 @@ exports.updateOrder = async (req, res) => {
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
 			.populate("assignedRider", "name email phone")
-			.populate("items.product", "name barcode");
+			.populate(
+				"items.product",
+				"name barcode shelfNumber price discount tax bottlerefund picture"
+			);
 
 		res.json({
 			success: true,
@@ -729,7 +738,10 @@ exports.cancelOrder = async (req, res) => {
 		const updatedOrder = await Order.findById(id)
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
-			.populate("items.product", "name barcode");
+			.populate(
+				"items.product",
+				"name barcode shelfNumber price discount tax bottlerefund picture"
+			);
 
 		res.json({
 			success: true,
@@ -805,7 +817,10 @@ exports.updateOrderShelfNumber = async (req, res) => {
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
 			.populate("assignedRider", "name email phone")
-			.populate("items.product", "name barcode");
+			.populate(
+				"items.product",
+				"name barcode shelfNumber price discount tax bottlerefund picture"
+			);
 
 		res.json({
 			success: true,
@@ -972,7 +987,10 @@ exports.updateOrderStatus = async (req, res) => {
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
 			.populate("assignedRider", "name email phone")
-			.populate("items.product", "name barcode");
+			.populate(
+				"items.product",
+				"name barcode shelfNumber price discount tax bottlerefund picture"
+			);
 
 		res.json({
 			success: true,
