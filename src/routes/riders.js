@@ -49,7 +49,7 @@ router.patch(
 );
 
 router.patch(
-	"/:id/location",
+	"/location",
 	protect,
 	authorize("admin", "manager", "rider"),
 	updateRiderLocation

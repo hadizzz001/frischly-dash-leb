@@ -476,16 +476,7 @@ exports.updateRiderStatus = async (req, res) => {
 // @access  Private (Admin, Manager, Rider themselves)
 exports.updateRiderLocation = async (req, res) => {
 	try {
-		const { id } = req.params;
 		const { latitude, longitude } = req.body;
-
-		// Validate rider ID
-		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid rider ID",
-			});
-		}
 
 		// Validate required fields
 		if (latitude === undefined || longitude === undefined) {
@@ -511,23 +502,12 @@ exports.updateRiderLocation = async (req, res) => {
 			});
 		}
 
-		const rider = await Rider.findById(id);
+		// Get rider ID from token (req.user.id)
+		const rider = await Rider.findOne({ user: req.user.id });
 		if (!rider) {
 			return res.status(404).json({
 				success: false,
 				message: "Rider not found",
-			});
-		}
-
-		// Check authorization
-		if (
-			req.user.role !== "admin" &&
-			req.user.role !== "manager" &&
-			rider.user.toString() !== req.user.id
-		) {
-			return res.status(403).json({
-				success: false,
-				message: "Not authorized to update this rider's location",
 			});
 		}
 

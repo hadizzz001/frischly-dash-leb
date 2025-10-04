@@ -189,6 +189,16 @@
 				transform: translateY(-2px);
 			}
 
+			.btn-info {
+				background: #17a2b8;
+				color: white;
+			}
+
+			.btn-info:hover {
+				background: #138496;
+				transform: translateY(-2px);
+			}
+
 			.table-container {
 				overflow-x: auto;
 			}
@@ -486,6 +496,9 @@
 					</button>
 					<button class="btn btn-secondary" onclick="loadMyDeliveries()">
 						<i class="fas fa-truck"></i> My Deliveries
+					</button>
+					<button class="btn btn-info" onclick="updateLocation()">
+						<i class="fas fa-map-marker-alt"></i> Update Location
 					</button>
 					<button class="btn btn-success" onclick="logout()">
 						<i class="fas fa-sign-out-alt"></i> Logout
@@ -1065,6 +1078,74 @@
 				setTimeout(() => {
 					window.location.href = "signin.html";
 				}, 1500);
+			}
+
+			// Update rider location
+			async function updateLocation() {
+				if (!navigator.geolocation) {
+					showMessage("Geolocation is not supported by this browser.", "error");
+					return;
+				}
+
+				showMessage("Getting your location...", "info");
+
+				navigator.geolocation.getCurrentPosition(
+					async (position) => {
+						const { latitude, longitude } = position.coords;
+
+						try {
+							const response = await fetch(`${API_BASE_URL}/riders/location`, {
+								method: "PATCH",
+								headers: {
+									Authorization: `Bearer ${currentToken}`,
+									"Content-Type": "application/json",
+								},
+								body: JSON.stringify({
+									latitude,
+									longitude,
+								}),
+							});
+
+							if (response.ok) {
+								showMessage("Location updated successfully!", "success");
+							} else {
+								const errorData = await response.json();
+								showMessage(
+									errorData.message || "Failed to update location",
+									"error"
+								);
+							}
+						} catch (error) {
+							console.error("Error updating location:", error);
+							showMessage(
+								"Error updating location. Please try again.",
+								"error"
+							);
+						}
+					},
+					(error) => {
+						console.error("Geolocation error:", error);
+						let errorMessage = "Unable to get your location.";
+						switch (error.code) {
+							case error.PERMISSION_DENIED:
+								errorMessage =
+									"Location access denied. Please enable location permissions.";
+								break;
+							case error.POSITION_UNAVAILABLE:
+								errorMessage = "Location information is unavailable.";
+								break;
+							case error.TIMEOUT:
+								errorMessage = "Location request timed out.";
+								break;
+						}
+						showMessage(errorMessage, "error");
+					},
+					{
+						enableHighAccuracy: true,
+						timeout: 10000,
+						maximumAge: 300000, // 5 minutes
+					}
+				);
 			}
 
 			// Close modal when clicking outside
