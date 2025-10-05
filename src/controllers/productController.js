@@ -235,16 +235,23 @@ exports.getProducts = async (req, res) => {
 		const skip = (pageNumber - 1) * limitNumber;
 
 		// Build sort object
-		const sort = {};
-		sort[sortBy] = sortOrder === "desc" ? -1 : 1;
+		let sortObj = {};
+		if (sortBy === "categorySortOrder") {
+			sortObj["subcategory.parentCategory.sortOrder"] =
+				sortOrder === "desc" ? -1 : 1;
+		} else {
+			sortObj[sortBy] = sortOrder === "desc" ? -1 : 1;
+		}
 
 		// Execute queries
 		let productsQuery;
 		let countQuery;
+		let useAggregation =
+			filter.subcategoryName || sortBy === "categorySortOrder";
 
-		if (filter.subcategoryName) {
-			// Use aggregation pipeline for subcategory name filtering
-			const pipeline = [
+		if (useAggregation) {
+			// Build aggregation pipeline
+			let pipeline = [
 				{
 					$lookup: {
 						from: "subcategories",
@@ -254,73 +261,90 @@ exports.getProducts = async (req, res) => {
 					},
 				},
 				{ $unwind: "$subcategoryInfo" },
-				{
-					$match: {
-						...filter,
-						"subcategoryInfo.name": {
-							$regex: filter.subcategoryName.source,
-							$options: "i",
-						},
-					},
-				},
-				// Lookup category
-				{
-					$lookup: {
-						from: "categories",
-						localField: "category",
-						foreignField: "_id",
-						as: "category",
-						pipeline: [{ $project: { name: 1, color: 1, icon: 1 } }],
-					},
-				},
-				{ $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
-				// Lookup subcategory with parentCategory
-				{
-					$lookup: {
-						from: "subcategories",
-						localField: "subcategory",
-						foreignField: "_id",
-						as: "subcategory",
-						pipeline: [
-							{ $project: { name: 1, parentCategory: 1 } },
-							{
-								$lookup: {
-									from: "categories",
-									localField: "parentCategory",
-									foreignField: "_id",
-									as: "parentCategory",
-									pipeline: [{ $project: { name: 1, color: 1, icon: 1 } }],
-								},
-							},
-							{
-								$unwind: {
-									path: "$parentCategory",
-									preserveNullAndEmptyArrays: true,
-								},
-							},
-						],
-					},
-				},
-				{ $unwind: { path: "$subcategory", preserveNullAndEmptyArrays: true } },
-				// Lookup createdBy
-				{
-					$lookup: {
-						from: "users",
-						localField: "createdBy",
-						foreignField: "_id",
-						as: "createdBy",
-						pipeline: [{ $project: { name: 1, email: 1 } }],
-					},
-				},
-				{ $unwind: { path: "$createdBy", preserveNullAndEmptyArrays: true } },
-				{ $sort: sort },
-				{ $skip: skip },
-				{ $limit: limitNumber },
 			];
-			delete pipeline[2].$match.subcategoryName; // Remove the helper field
+
+			let matchFilter = { ...filter };
+			if (filter.subcategoryName) {
+				matchFilter["subcategoryInfo.name"] = {
+					$regex: filter.subcategoryName.source,
+					$options: "i",
+				};
+				delete matchFilter.subcategoryName;
+			}
+
+			pipeline.push({ $match: matchFilter });
+
+			// Lookup category
+			pipeline.push({
+				$lookup: {
+					from: "categories",
+					localField: "category",
+					foreignField: "_id",
+					as: "category",
+					pipeline: [{ $project: { name: 1, color: 1, icon: 1 } }],
+				},
+			});
+			pipeline.push({
+				$unwind: { path: "$category", preserveNullAndEmptyArrays: true },
+			});
+
+			// Lookup subcategory with parentCategory
+			pipeline.push({
+				$lookup: {
+					from: "subcategories",
+					localField: "subcategory",
+					foreignField: "_id",
+					as: "subcategory",
+					pipeline: [
+						{ $project: { name: 1, parentCategory: 1 } },
+						{
+							$lookup: {
+								from: "categories",
+								localField: "parentCategory",
+								foreignField: "_id",
+								as: "parentCategory",
+								pipeline: [
+									{ $project: { name: 1, color: 1, icon: 1, sortOrder: 1 } },
+								],
+							},
+						},
+						{
+							$unwind: {
+								path: "$parentCategory",
+								preserveNullAndEmptyArrays: true,
+							},
+						},
+					],
+				},
+			});
+			pipeline.push({
+				$unwind: { path: "$subcategory", preserveNullAndEmptyArrays: true },
+			});
+
+			// Lookup createdBy
+			pipeline.push({
+				$lookup: {
+					from: "users",
+					localField: "createdBy",
+					foreignField: "_id",
+					as: "createdBy",
+					pipeline: [{ $project: { name: 1, email: 1 } }],
+				},
+			});
+			pipeline.push({
+				$unwind: { path: "$createdBy", preserveNullAndEmptyArrays: true },
+			});
+
+			// Sort
+			pipeline.push({ $sort: sortObj });
+
+			pipeline.push({ $skip: skip });
+			pipeline.push({ $limit: limitNumber });
 
 			productsQuery = Product.aggregate(pipeline);
-			const countPipeline = [
+
+			// Count
+			let countPipeline = [
 				{
 					$lookup: {
 						from: "subcategories",
@@ -330,18 +354,9 @@ exports.getProducts = async (req, res) => {
 					},
 				},
 				{ $unwind: "$subcategoryInfo" },
-				{
-					$match: {
-						...filter,
-						"subcategoryInfo.name": {
-							$regex: filter.subcategoryName.source,
-							$options: "i",
-						},
-					},
-				},
+				{ $match: matchFilter },
 				{ $count: "total" },
 			];
-			delete countPipeline[2].$match.subcategoryName; // Remove the helper field from count pipeline
 			countQuery = Product.aggregate(countPipeline);
 		} else {
 			// Regular query
@@ -357,7 +372,7 @@ exports.getProducts = async (req, res) => {
 					},
 				})
 				.populate("createdBy", "name email")
-				.sort(sort)
+				.sort(sortObj)
 				.skip(skip)
 				.limit(limitNumber)
 				.lean();
