@@ -1644,6 +1644,200 @@ body {
 	border-top: 1px solid #f0f0f0;
 }
 
+/* Customer Details Modal Styles */
+.customer-profile-header {
+	display: flex;
+	align-items: center;
+	margin-bottom: 30px;
+	padding: 20px;
+	background: #f9f9f9;
+	border-radius: 8px;
+}
+
+.customer-avatar {
+	width: 60px;
+	height: 60px;
+	border-radius: 50%;
+	background: #ffc300;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 24px;
+	font-weight: bold;
+	color: #000000;
+	margin-right: 20px;
+	flex-shrink: 0;
+}
+
+.customer-basic-info h3 {
+	margin: 0 0 5px 0;
+	color: #333;
+	font-size: 1.2em;
+}
+
+.customer-basic-info p {
+	margin: 0 0 10px 0;
+	color: #666;
+}
+
+.customer-details-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 30px;
+	margin-bottom: 30px;
+}
+
+.detail-section {
+	background: #f9f9f9;
+	padding: 20px;
+	border-radius: 8px;
+}
+
+.detail-section h4 {
+	margin: 0 0 15px 0;
+	color: #333;
+	border-bottom: 2px solid #ffc300;
+	padding-bottom: 5px;
+	font-size: 1.1em;
+}
+
+.detail-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 10px;
+	padding: 8px 0;
+	border-bottom: 1px solid #eee;
+	flex-wrap: wrap;
+	gap: 5px;
+}
+
+.detail-item:last-child {
+	border-bottom: none;
+	margin-bottom: 0;
+}
+
+.detail-item label {
+	font-weight: 600;
+	color: #555;
+	min-width: 120px;
+	font-size: 0.9em;
+}
+
+.detail-item span {
+	color: #333;
+	text-align: right;
+	flex: 1;
+	min-width: 0;
+	word-break: break-word;
+	font-size: 0.9em;
+}
+
+.customer-actions {
+	display: flex;
+	gap: 10px;
+	justify-content: center;
+	margin-bottom: 20px;
+	flex-wrap: wrap;
+}
+
+.customer-actions .btn {
+	padding: 10px 20px;
+	font-size: 14px;
+	min-width: 120px;
+}
+
+/* Responsive styles for customer details modal */
+@media (max-width: 768px) {
+	.customer-profile-header {
+		flex-direction: column;
+		text-align: center;
+		padding: 15px;
+	}
+
+	.customer-avatar {
+		margin-right: 0;
+		margin-bottom: 15px;
+		width: 50px;
+		height: 50px;
+		font-size: 20px;
+	}
+
+	.customer-details-grid {
+		grid-template-columns: 1fr;
+		gap: 20px;
+	}
+
+	.detail-item {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 5px;
+	}
+
+	.detail-item label {
+		min-width: auto;
+		font-size: 0.85em;
+	}
+
+	.detail-item span {
+		text-align: left;
+		font-size: 0.85em;
+		word-wrap: break-word;
+		overflow-wrap: break-word;
+	}
+
+	.customer-actions .btn {
+		flex: 1;
+		min-width: 100px;
+		font-size: 13px;
+		padding: 8px 15px;
+	}
+
+	.detail-section {
+		padding: 15px;
+	}
+
+	.detail-section h4 {
+		font-size: 1em;
+		margin-bottom: 12px;
+	}
+}
+
+@media (max-width: 480px) {
+	.customer-actions {
+		flex-direction: column;
+	}
+
+	.customer-actions .btn {
+		width: 100%;
+		margin-bottom: 8px;
+	}
+
+	.customer-actions .btn:last-child {
+		margin-bottom: 0;
+	}
+}
+
+/* Override modal styles for customer details */
+#customer-details-modal .modal-content {
+	max-width: 900px;
+	width: 95%;
+	padding: 20px;
+}
+
+@media (max-width: 768px) {
+	#customer-details-modal .modal-content {
+		width: 98%;
+		margin: 2% auto;
+		padding: 15px;
+		max-height: 95vh;
+	}
+
+	#customer-details-modal .modal-header h2 {
+		font-size: 1.2em;
+	}
+}
+
 .form-grid {
 	display: grid;
 	grid-template-columns: 1fr 1fr;

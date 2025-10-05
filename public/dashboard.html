@@ -2557,7 +2557,6 @@
 				}
 			}
 
-			// Delete user
 			async function deleteUser(userId, userName) {
 				if (
 					!confirm(
@@ -2580,7 +2579,8 @@
 
 					if (response.ok) {
 						showMessage(`User "${userName}" deleted successfully`, "success");
-						loadAllUsers(); // Refresh the list
+						loadAllUsers(); // Refresh the users list
+						loadCustomers(); // Also refresh customers list in case a customer was deleted
 					} else {
 						showMessage(result.message || "Failed to delete user", "error");
 					}
@@ -6645,8 +6645,248 @@
 			}
 
 			function viewCustomer(customerId) {
-				showMessage("Customer details modal would be displayed here", "info");
-				// TODO: Implement customer details modal
+				// Find customer from loaded data
+				const customer = customersData.find((c) => c._id === customerId);
+				if (!customer) {
+					showMessage("Customer not found", "error");
+					return;
+				}
+
+				// Populate customer details
+				document.getElementById("customer-avatar-letter").textContent =
+					customer.name.charAt(0).toUpperCase();
+				document.getElementById("customer-name").textContent = customer.name;
+				document.getElementById("customer-email").textContent = customer.email;
+				document.getElementById("customer-status").className = `status-badge ${
+					customer.isActive ? "active" : "inactive"
+				}`;
+				document.getElementById("customer-status").textContent =
+					customer.isActive ? "Active" : "Inactive";
+
+				// Personal Information
+				document.getElementById("customer-full-name").textContent =
+					customer.name;
+				document.getElementById("customer-detail-email").textContent =
+					customer.email;
+				document.getElementById("customer-phone").textContent =
+					customer.phoneNumber || "Not provided";
+				document.getElementById("customer-role").textContent =
+					customer.role.charAt(0).toUpperCase() + customer.role.slice(1);
+				document.getElementById("customer-detail-status").textContent =
+					customer.isActive ? "Active" : "Inactive";
+
+				// Address Information
+				const address = customer.address || {};
+				document.getElementById("customer-street").textContent =
+					address.street || "Not provided";
+				document.getElementById("customer-city").textContent =
+					address.city || "Not provided";
+				document.getElementById("customer-state").textContent =
+					address.state || "Not provided";
+				document.getElementById("customer-zipcode").textContent =
+					address.zipCode || "Not provided";
+				document.getElementById("customer-country").textContent =
+					address.country || "Not provided";
+
+				// Account Information
+				document.getElementById("customer-id").textContent = customer._id;
+				document.getElementById("customer-joined").textContent = new Date(
+					customer.createdAt
+				).toLocaleDateString();
+				document.getElementById("customer-last-login").textContent =
+					customer.lastLogin
+						? new Date(customer.lastLogin).toLocaleDateString()
+						: "Never";
+
+				// Calculate account age
+				const joinDate = new Date(customer.createdAt);
+				const now = new Date();
+				const accountAge = Math.floor((now - joinDate) / (1000 * 60 * 60 * 24));
+				document.getElementById(
+					"customer-account-age"
+				).textContent = `${accountAge} days`;
+
+				// Load order statistics
+				loadCustomerOrderStats(customerId);
+
+				// Show modal
+				document.getElementById("customer-details-modal").style.display =
+					"block";
+			}
+
+			function closeCustomerDetailsModal() {
+				document.getElementById("customer-details-modal").style.display =
+					"none";
+			}
+
+			async function loadCustomerOrderStats(customerId) {
+				try {
+					// Find customer from loaded data
+					const customer = customersData.find((c) => c._id === customerId);
+					if (!customer) {
+						document.getElementById("customer-total-orders").textContent =
+							"N/A";
+						document.getElementById("customer-completed-orders").textContent =
+							"N/A";
+						document.getElementById("customer-pending-orders").textContent =
+							"N/A";
+						document.getElementById("customer-total-spent").textContent = "N/A";
+						return;
+					}
+
+					// Get orders for this customer by searching with customer email
+					const response = await authenticatedFetch(
+						`${API_BASE_URL}/orders?search=${encodeURIComponent(
+							customer.email
+						)}&limit=1000`
+					);
+
+					if (response.ok) {
+						const data = await response.json();
+						const orders = data.data || [];
+
+						const totalOrders = orders.length;
+						const completedOrders = orders.filter(
+							(order) =>
+								order.status === "delivered" || order.status === "completed"
+						).length;
+						const pendingOrders = orders.filter((order) =>
+							[
+								"pending",
+								"confirmed",
+								"processing",
+								"ready for pickup",
+								"OnTheWay",
+							].includes(order.status)
+						).length;
+						const totalSpent = orders
+							.filter(
+								(order) =>
+									order.status === "delivered" || order.status === "completed"
+							)
+							.reduce((sum, order) => sum + (order.total || 0), 0);
+
+						document.getElementById("customer-total-orders").textContent =
+							totalOrders;
+						document.getElementById("customer-completed-orders").textContent =
+							completedOrders;
+						document.getElementById("customer-pending-orders").textContent =
+							pendingOrders;
+						document.getElementById(
+							"customer-total-spent"
+						).textContent = `€${totalSpent.toFixed(2)}`;
+					} else {
+						// If search fails, show N/A
+						document.getElementById("customer-total-orders").textContent =
+							"N/A";
+						document.getElementById("customer-completed-orders").textContent =
+							"N/A";
+						document.getElementById("customer-pending-orders").textContent =
+							"N/A";
+						document.getElementById("customer-total-spent").textContent = "N/A";
+					}
+				} catch (error) {
+					console.error("Error loading customer order stats:", error);
+					document.getElementById("customer-total-orders").textContent =
+						"Error";
+					document.getElementById("customer-completed-orders").textContent =
+						"Error";
+					document.getElementById("customer-pending-orders").textContent =
+						"Error";
+					document.getElementById("customer-total-spent").textContent = "Error";
+				}
+			}
+
+			function viewCustomerOrders() {
+				// Get current customer from modal
+				const customerEmail = document.getElementById(
+					"customer-detail-email"
+				).textContent;
+				if (!customerEmail || customerEmail === "N/A") {
+					showMessage("Customer email not available", "error");
+					return;
+				}
+
+				// Close customer details modal
+				closeCustomerDetailsModal();
+
+				// Switch to orders section
+				showSection("orders");
+
+				// Set search filter to customer email
+				document.getElementById("order-search").value = customerEmail;
+
+				// Trigger search
+				setTimeout(() => {
+					searchOrders();
+				}, 100);
+			}
+
+			function editCustomer() {
+				// Get current customer ID from modal
+				const customerId = document.getElementById("customer-id").textContent;
+				if (!customerId) {
+					showMessage("Customer ID not available", "error");
+					return;
+				}
+
+				// Close customer details modal
+				closeCustomerDetailsModal();
+
+				// Find customer data
+				const customer = customersData.find((c) => c._id === customerId);
+				if (!customer) {
+					showMessage("Customer not found", "error");
+					return;
+				}
+
+				// Populate user edit modal with customer data
+				document.getElementById("user-edit-id").value = customer._id;
+				document.getElementById("user-edit-name").value = customer.name;
+				document.getElementById("user-edit-email").value = customer.email;
+				document.getElementById("user-edit-phone").value =
+					customer.phoneNumber || "";
+				document.getElementById("user-edit-role").value = customer.role;
+				document.getElementById("user-edit-status").value = customer.isActive
+					? "true"
+					: "false";
+
+				// Address fields
+				const address = customer.address || {};
+				document.getElementById("user-edit-street").value =
+					address.street || "";
+				document.getElementById("user-edit-city").value = address.city || "";
+				document.getElementById("user-edit-state").value = address.state || "";
+				document.getElementById("user-edit-zipcode").value =
+					address.zipCode || "";
+				document.getElementById("user-edit-country").value =
+					address.country || "";
+
+				// Hide password field for editing existing user
+				document.getElementById("user-edit-password-group").style.display =
+					"none";
+
+				// Update modal title
+				document.getElementById("user-edit-modal-title").textContent =
+					"Edit Customer";
+
+				// Show modal
+				document.getElementById("user-edit-modal").style.display = "block";
+			}
+
+			function deleteCustomer() {
+				// Get current customer from modal
+				const customerId = document.getElementById("customer-id").textContent;
+				const customerName =
+					document.getElementById("customer-full-name").textContent;
+
+				if (!customerId) {
+					showMessage("Customer ID not available", "error");
+					return;
+				}
+
+				deleteUser(customerId, customerName);
+				closeCustomerDetailsModal();
 			}
 
 			function viewCustomerOrders(customerId) {
@@ -7573,6 +7813,136 @@
 						<button type="submit" class="btn btn-primary">Save User</button>
 					</div>
 				</form>
+			</div>
+		</div>
+
+		<!-- Customer Details Modal -->
+		<div id="customer-details-modal" class="modal">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h2>Customer Details</h2>
+					<span class="close" onclick="closeCustomerDetailsModal()"
+						>&times;</span
+					>
+				</div>
+
+				<div id="customer-details-content">
+					<div class="customer-profile-header">
+						<div class="customer-avatar">
+							<span id="customer-avatar-letter"></span>
+						</div>
+						<div class="customer-basic-info">
+							<h3 id="customer-name"></h3>
+							<p id="customer-email"></p>
+							<span id="customer-status" class="status-badge"></span>
+						</div>
+					</div>
+
+					<div class="customer-details-grid">
+						<div class="detail-section">
+							<h4>Personal Information</h4>
+							<div class="detail-item">
+								<label>Full Name:</label>
+								<span id="customer-full-name"></span>
+							</div>
+							<div class="detail-item">
+								<label>Email:</label>
+								<span id="customer-detail-email"></span>
+							</div>
+							<div class="detail-item">
+								<label>Phone:</label>
+								<span id="customer-phone"></span>
+							</div>
+							<div class="detail-item">
+								<label>Role:</label>
+								<span id="customer-role"></span>
+							</div>
+							<div class="detail-item">
+								<label>Status:</label>
+								<span id="customer-detail-status"></span>
+							</div>
+						</div>
+
+						<div class="detail-section">
+							<h4>Address Information</h4>
+							<div class="detail-item">
+								<label>Street:</label>
+								<span id="customer-street"></span>
+							</div>
+							<div class="detail-item">
+								<label>City:</label>
+								<span id="customer-city"></span>
+							</div>
+							<div class="detail-item">
+								<label>State:</label>
+								<span id="customer-state"></span>
+							</div>
+							<div class="detail-item">
+								<label>ZIP Code:</label>
+								<span id="customer-zipcode"></span>
+							</div>
+							<div class="detail-item">
+								<label>Country:</label>
+								<span id="customer-country"></span>
+							</div>
+						</div>
+
+						<div class="detail-section">
+							<h4>Account Information</h4>
+							<div class="detail-item">
+								<label>Customer ID:</label>
+								<span id="customer-id"></span>
+							</div>
+							<div class="detail-item">
+								<label>Joined:</label>
+								<span id="customer-joined"></span>
+							</div>
+							<div class="detail-item">
+								<label>Last Login:</label>
+								<span id="customer-last-login"></span>
+							</div>
+							<div class="detail-item">
+								<label>Account Age:</label>
+								<span id="customer-account-age"></span>
+							</div>
+						</div>
+
+						<div class="detail-section">
+							<h4>Order Statistics</h4>
+							<div class="detail-item">
+								<label>Total Orders:</label>
+								<span id="customer-total-orders">Loading...</span>
+							</div>
+							<div class="detail-item">
+								<label>Completed Orders:</label>
+								<span id="customer-completed-orders">Loading...</span>
+							</div>
+							<div class="detail-item">
+								<label>Pending Orders:</label>
+								<span id="customer-pending-orders">Loading...</span>
+							</div>
+							<div class="detail-item">
+								<label>Total Spent:</label>
+								<span id="customer-total-spent">Loading...</span>
+							</div>
+						</div>
+					</div>
+
+					<div class="customer-actions">
+						<button class="btn btn-danger" onclick="deleteCustomer()">
+							🗑️ Delete Customer
+						</button>
+					</div>
+				</div>
+
+				<div class="modal-footer">
+					<button
+						class="btn btn-secondary"
+						onclick="closeCustomerDetailsModal()"
+					>
+						Close
+					</button>
+				</div>
 			</div>
 		</div>
 
