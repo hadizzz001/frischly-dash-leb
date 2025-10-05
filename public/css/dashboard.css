@@ -1756,13 +1756,13 @@ body {
 }
 
 .zone-checkbox-item.selected {
-	background-color: #000000;
-	color: white;
-	border-color: #000000;
+	background-color: #ffc300;
+	color: #000000;
+	border-color: #ffc300;
 }
 
 .zone-checkbox-item.selected input[type="checkbox"] {
-	accent-color: white;
+	accent-color: #000000;
 }
 
 .form-help {
