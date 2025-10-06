@@ -7104,6 +7104,17 @@
 				showMessage("Rider map feature coming soon!", "success");
 			}
 
+			function viewRiderLocation(latitude, longitude) {
+				if (!latitude || !longitude) {
+					showMessage("Location data not available for this rider", "error");
+					return;
+				}
+
+				// Open Google Maps in a new tab with the rider's location
+				const mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+				window.open(mapsUrl, "_blank");
+			}
+
 			async function viewRiderDetails(riderId) {
 				try {
 					const token = currentToken;
@@ -9848,6 +9859,19 @@
 								<button class="btn-icon" onclick="editRider('${rider._id}')" title="Edit Rider">
 									✏️
 								</button>
+								${
+									rider.currentLocation
+										? `<button class="btn-icon" onclick="viewRiderLocation(${
+												rider.currentLocation.latitude || 0
+										  }, ${
+												rider.currentLocation.longitude || 0
+										  })" title="View Location">
+										📍
+									</button>`
+										: `<button class="btn-icon" disabled title="No Location Data">
+										📍
+									</button>`
+								}
 								<button class="btn-icon ${
 									rider.status === "available" ? "btn-danger" : ""
 								}" onclick="toggleRiderStatus('${rider._id}', '${
