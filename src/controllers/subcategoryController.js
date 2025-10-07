@@ -4,7 +4,7 @@ const Category = require("../models/Category");
 // Create subcategory
 exports.createSubcategory = async (req, res) => {
 	try {
-		const { name, parentCategory, shelfNumber } = req.body;
+		const { name, parentCategory, sortnumber } = req.body;
 
 		if (!name || !parentCategory) {
 			return res.status(400).json({
@@ -23,7 +23,7 @@ exports.createSubcategory = async (req, res) => {
 		const sub = await Subcategory.create({
 			name,
 			parentCategory,
-			shelfNumber,
+			sortnumber,
 			createdBy: req.user ? req.user.id : undefined,
 		});
 
@@ -40,10 +40,9 @@ exports.getAllSubcategories = async (req, res) => {
 		const query = {};
 		if (parent) query.parentCategory = parent;
 
-		const subcategories = await Subcategory.find(query).populate(
-			"parentCategory",
-			"name image"
-		);
+		const subcategories = await Subcategory.find(query)
+			.populate("parentCategory", "name image")
+			.sort({ sortnumber: 1 });
 		res.status(200).json({
 			success: true,
 			count: subcategories.length,
@@ -74,11 +73,11 @@ exports.getSubcategoryById = async (req, res) => {
 // Update subcategory
 exports.updateSubcategory = async (req, res) => {
 	try {
-		const { name, isActive, shelfNumber } = req.body;
+		const { name, isActive, sortnumber } = req.body;
 		const update = {};
 		if (name !== undefined) update.name = name;
 		if (isActive !== undefined) update.isActive = isActive;
-		if (shelfNumber !== undefined) update.shelfNumber = shelfNumber;
+		if (sortnumber !== undefined) update.sortnumber = sortnumber;
 
 		const sub = await Subcategory.findByIdAndUpdate(req.params.id, update, {
 			new: true,

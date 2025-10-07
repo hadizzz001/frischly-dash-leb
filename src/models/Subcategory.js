@@ -18,14 +18,13 @@ const subcategorySchema = new mongoose.Schema(
 			ref: "Category",
 			required: [true, "Please provide a parent category"],
 		},
-		shelfNumber: {
-			type: String,
-			trim: true,
-			maxlength: [20, "Shelf number cannot be more than 20 characters"],
-		},
 		isActive: {
 			type: Boolean,
 			default: true,
+		},
+		sortnumber: {
+			type: Number,
+			default: 0,
 		},
 		createdBy: {
 			type: mongoose.Schema.Types.ObjectId,
@@ -39,8 +38,8 @@ const subcategorySchema = new mongoose.Schema(
 
 subcategorySchema.index({ slug: 1 }, { unique: true });
 subcategorySchema.index({ parentCategory: 1 });
-subcategorySchema.index({ shelfNumber: 1 });
 subcategorySchema.index({ isActive: 1 });
+subcategorySchema.index({ sortnumber: 1 });
 
 subcategorySchema.pre("save", function (next) {
 	if (this.name && !this.slug) {
