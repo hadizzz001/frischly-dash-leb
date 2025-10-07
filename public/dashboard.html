@@ -499,7 +499,7 @@
 											<th>#</th>
 											<th>Subcategory Name</th>
 											<th>Parent Category</th>
-											<th>Slug</th>
+											<th>Sort Order</th>
 											<th>Status</th>
 											<th>Created</th>
 											<th>Actions</th>
@@ -591,12 +591,12 @@
 							<option value="price-desc">Price (€) High-Low</option>
 							<option value="stock-asc">Stock Low-High</option>
 							<option value="stock-desc">Stock High-Low</option>
-							<option value="createdAt-desc" selected>Newest First</option>
+							<option value="createdAt-desc">Newest First</option>
 							<option value="createdAt-asc">Oldest First</option>
 							<option value="categorySortOrder-asc">
 								Category Sort Order Low-High
 							</option>
-							<option value="categorySortOrder-desc">
+							<option value="categorySortOrder-desc" selected>
 								Category Sort Order High-Low
 							</option>
 						</select>
@@ -2807,7 +2807,7 @@
 								status: "all",
 								priceRange: "all",
 								stockLevel: "all",
-								sortOption: "createdAt-desc",
+								sortOption: "categorySortOrder-desc",
 							};
 							loadProducts(1, productsPageSize, defaultFilters);
 						}
@@ -3868,9 +3868,7 @@
 										}</span>
 									</div>
 								</td>
-								<td>
-									<code class="slug-code">${subcategory.slug}</code>
-								</td>
+								<td>${subcategory.sortorder}</td>
 								<td>${statusBadge}</td>
 								<td>${createdDate}</td>
 								<td>
@@ -3922,9 +3920,9 @@
 					document.getElementById("subcategory-filter")?.value || "all";
 
 				filteredSubcategoriesData = subcategoriesData.filter((subcategory) => {
-					const matchesSearch =
-						subcategory.name.toLowerCase().includes(searchTerm) ||
-						subcategory.slug.toLowerCase().includes(searchTerm);
+					const matchesSearch = subcategory.name
+						.toLowerCase()
+						.includes(searchTerm);
 					const matchesParent =
 						parentFilter === "all" ||
 						subcategory.parentCategory?._id === parentFilter;
@@ -3994,6 +3992,7 @@
 				document.getElementById("subcategory-name").value = "";
 				document.getElementById("subcategory-parent").value = "";
 				document.getElementById("subcategory-is-active").value = "true";
+				document.getElementById("subcategory-sortorder").value = "";
 
 				// Load categories for parent dropdown
 				loadCategoriesForSubcategoryParentSelect();
@@ -4027,6 +4026,9 @@
 					document.getElementById("subcategory-parent").value;
 				const isActive =
 					document.getElementById("subcategory-is-active").value === "true";
+				const sortorder = parseInt(
+					document.getElementById("subcategory-sortorder").value || "0"
+				);
 
 				if (!name.trim()) {
 					showMessage("Please enter a subcategory name", "error");
@@ -4054,6 +4056,7 @@
 							name: name.trim(),
 							parentCategory,
 							isActive,
+							sortorder,
 						}),
 					});
 
@@ -4089,13 +4092,17 @@
 					"Update Subcategory";
 				document.getElementById("subcategory-id").value = subcategory._id;
 				document.getElementById("subcategory-name").value = subcategory.name;
-				document.getElementById("subcategory-parent").value =
-					subcategory.parentCategory?._id || "";
 				document.getElementById("subcategory-is-active").value =
 					subcategory.isActive.toString();
+				document.getElementById("subcategory-sortorder").value =
+					subcategory.sortorder || "";
 
 				// Load categories for parent dropdown
 				loadCategoriesForSubcategoryParentSelect();
+
+				// Set parent after loading categories
+				document.getElementById("subcategory-parent").value =
+					subcategory.parentCategory?._id || "";
 
 				document.getElementById("subcategory-modal").style.display = "block";
 			}
@@ -7683,6 +7690,17 @@
 								<option value="true">Active</option>
 								<option value="false">Inactive</option>
 							</select>
+						</div>
+
+						<div class="form-group">
+							<label for="subcategory-sortorder">Sort Order</label>
+							<input
+								type="number"
+								id="subcategory-sortorder"
+								name="sortorder"
+								min="0"
+								placeholder="e.g., 1"
+							/>
 						</div>
 					</div>
 

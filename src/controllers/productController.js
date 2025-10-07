@@ -239,6 +239,7 @@ exports.getProducts = async (req, res) => {
 		if (sortBy === "categorySortOrder") {
 			sortObj["subcategory.parentCategory.sortOrder"] =
 				sortOrder === "desc" ? -1 : 1;
+			sortObj["subcategory.sortorder"] = sortOrder === "desc" ? -1 : 1;
 		} else {
 			sortObj[sortBy] = sortOrder === "desc" ? -1 : 1;
 		}
@@ -296,7 +297,7 @@ exports.getProducts = async (req, res) => {
 					foreignField: "_id",
 					as: "subcategory",
 					pipeline: [
-						{ $project: { name: 1, parentCategory: 1 } },
+						{ $project: { name: 1, parentCategory: 1, sortorder: 1 } },
 						{
 							$lookup: {
 								from: "categories",
