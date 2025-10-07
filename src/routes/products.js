@@ -30,8 +30,18 @@ router.get("/count", getProductsCount);
 router.get("/category", getProductsByCategory);
 router.get("/subcategory", getProductsBySubcategory);
 router.get("/discount", getProductsWithDiscount);
-router.get("/shelves", getShelfNumbers);
-router.get("/barcode/:barcode", getProductByBarcode);
+// router.get(
+// 	"/shelves",
+// 	protect,
+// 	authorize("admin", "manager", "staff"),
+// 	getShelfNumbers
+// );
+router.get(
+	"/barcode/:barcode",
+	protect,
+	authorize("admin", "manager", "staff"),
+	getProductByBarcode
+);
 //router.get("/shelf/:shelfNumber", getProductsByShelfNumber);
 router.get("/:id", getProduct);
 

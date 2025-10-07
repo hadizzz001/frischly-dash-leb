@@ -115,9 +115,10 @@ const orderSchema = new mongoose.Schema(
 			default: "card",
 		},
 		shelfNumber: {
-			type: Number,
-			default: 0,
-			min: [0, "Shelf number cannot be negative"],
+			type: String,
+			default: "",
+			trim: true,
+			maxlength: [20, "Shelf number cannot be more than 20 characters"],
 		},
 		assignedRider: {
 			type: mongoose.Schema.Types.ObjectId,

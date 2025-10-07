@@ -498,10 +498,6 @@ Get products with active discounts.
 **Access:** Public  
 **Query Parameters:** All from GET /products
 
-### GET /products/shelves
-
-Get all unique shelf numbers.
-
 **Access:** Public
 
 **Success Response (200):**
@@ -1957,10 +1953,6 @@ Get products by subcategory.
 ### GET /products/discount
 
 Get products with discounts.
-
-### GET /products/shelves
-
-Get all shelf numbers.
 
 ### GET /products/barcode/:barcode
 

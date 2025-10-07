@@ -4,7 +4,7 @@ const Category = require("../models/Category");
 // Create subcategory
 exports.createSubcategory = async (req, res) => {
 	try {
-		const { name, parentCategory } = req.body;
+		const { name, parentCategory, shelfNumber } = req.body;
 
 		if (!name || !parentCategory) {
 			return res.status(400).json({
@@ -23,6 +23,7 @@ exports.createSubcategory = async (req, res) => {
 		const sub = await Subcategory.create({
 			name,
 			parentCategory,
+			shelfNumber,
 			createdBy: req.user ? req.user.id : undefined,
 		});
 
@@ -73,10 +74,11 @@ exports.getSubcategoryById = async (req, res) => {
 // Update subcategory
 exports.updateSubcategory = async (req, res) => {
 	try {
-		const { name, isActive } = req.body;
+		const { name, isActive, shelfNumber } = req.body;
 		const update = {};
 		if (name !== undefined) update.name = name;
 		if (isActive !== undefined) update.isActive = isActive;
+		if (shelfNumber !== undefined) update.shelfNumber = shelfNumber;
 
 		const sub = await Subcategory.findByIdAndUpdate(req.params.id, update, {
 			new: true,

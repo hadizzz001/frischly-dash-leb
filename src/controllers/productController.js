@@ -906,28 +906,28 @@ exports.permanentDeleteProduct = async (req, res) => {
 	}
 };
 
-// @desc    Get shelf numbers
-// @route   GET /api/products/shelves
-// @access  Public
-exports.getShelfNumbers = async (req, res) => {
-	try {
-		const shelfNumbers = await Product.distinct("shelfNumber", {
-			isActive: true,
-		});
+// // @desc    Get shelf numbers
+// // @route   GET /api/products/shelves
+// // @access  Public
+// exports.getShelfNumbers = async (req, res) => {
+// 	try {
+// 		const shelfNumbers = await Product.distinct("shelfNumber", {
+// 			isActive: true,
+// 		});
 
-		res.json({
-			success: true,
-			data: shelfNumbers.sort(),
-		});
-	} catch (error) {
-		console.error("Error getting shelf numbers:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error retrieving shelf numbers",
-			error: error.message,
-		});
-	}
-};
+// 		res.json({
+// 			success: true,
+// 			data: shelfNumbers.sort(),
+// 		});
+// 	} catch (error) {
+// 		console.error("Error getting shelf numbers:", error);
+// 		res.status(500).json({
+// 			success: false,
+// 			message: "Error retrieving shelf numbers",
+// 			error: error.message,
+// 		});
+// 	}
+// };
 
 // @desc    Upload product image
 // @route   POST /api/products/upload-image
