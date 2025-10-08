@@ -33,7 +33,7 @@
 
 			body {
 				font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-				background: #000000;
+				background: #ffffff;
 				min-height: 100vh;
 				display: flex;
 				align-items: center;
@@ -46,7 +46,7 @@
 				box-shadow: 0 15px 35px rgba(255, 195, 0, 0.3);
 				text-align: center;
 				padding: 60px 40px;
-				width: 500px;
+				width: 700px;
 				max-width: 90vw;
 				border: 3px solid #ffc300;
 			}
@@ -55,6 +55,14 @@
 				color: #ffc300;
 				font-size: 36px;
 				margin-bottom: 10px;
+			}
+
+			.logo {
+				width: 128px;
+				height: 128px;
+				margin-bottom: 20px;
+				border-radius: 20px;
+				box-shadow: 0 4px 8px rgba(255, 195, 0, 0.3);
 			}
 
 			.header p {
@@ -155,34 +163,19 @@
 	<body>
 		<div class="container">
 			<div class="header">
-				<h1>🚀 FRISCHLY Server</h1>
-				<p>Your Complete Authentication Solution</p>
+				<img
+					src="icons/app_icon_128x128.png"
+					alt="FRISCHLY Logo"
+					class="logo"
+				/>
+				<h1>FRISCHLY Server & Dashboard</h1>
 			</div>
-
-			<div class="features">
-				<div class="feature">
-					<h3>🔐 Secure Authentication</h3>
-					<p>JWT-based authentication with bcrypt password hashing</p>
-				</div>
-
-				<div class="feature">
-					<h3>📱 User Management</h3>
-					<p>Complete user profiles with address information</p>
-				</div>
-
-				<div class="feature">
-					<h3>🛡️ Enterprise Security</h3>
-					<p>Rate limiting, CORS, and comprehensive validation</p>
-				</div>
-			</div>
-
 			<div class="actions">
 				<a href="signin.html" class="btn btn-primary">Sign In</a>
-				<a href="signup.html" class="btn btn-secondary">Create Account</a>
 			</div>
 
 			<div class="footer">
-				<p>Built with Node.js, Express, and MongoDB</p>
+				&copy; 2025 FRISCHLY. All rights reserved.
 				<div class="api-status">
 					<span id="api-status">Checking API...</span>
 				</div>
