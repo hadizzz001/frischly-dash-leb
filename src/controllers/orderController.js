@@ -713,10 +713,10 @@ exports.cancelOrder = async (req, res) => {
 			});
 		}
 
-		if (order.status === "delivered") {
+		if (order.status === "delivered" || order.status === "OnTheWay") {
 			return res.status(400).json({
 				success: false,
-				message: "Cannot cancel delivered order",
+				message: "Cannot cancel delivered or on-the-way order",
 			});
 		}
 

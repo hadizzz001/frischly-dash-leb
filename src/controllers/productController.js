@@ -157,12 +157,24 @@ exports.getProducts = async (req, res) => {
 		}
 
 		if (subcategory) {
-			// Direct subcategory filtering
+			// Direct subcategory filtering by ID
 			if (mongoose.Types.ObjectId.isValid(subcategory)) {
 				filter.subcategory = subcategory;
 			} else {
-				// Will need to lookup subcategory by name in aggregation pipeline
-				filter.subcategoryName = new RegExp(subcategory, "i");
+				// Lookup subcategory by name and get ID
+				const Subcategory = require("../models/Subcategory");
+				const subcat = await Subcategory.findOne({
+					name: new RegExp(subcategory, "i"),
+					isActive: true,
+				});
+				if (subcat) {
+					filter.subcategory = subcat._id;
+				} else {
+					return res.status(404).json({
+						success: false,
+						message: `Subcategory "${subcategory}" not found`,
+					});
+				}
 			}
 		}
 		if (shelfNumber) {
@@ -247,31 +259,13 @@ exports.getProducts = async (req, res) => {
 		// Execute queries
 		let productsQuery;
 		let countQuery;
-		let useAggregation =
-			filter.subcategoryName || sortBy === "categorySortOrder";
+		let useAggregation = sortBy === "categorySortOrder";
 
 		if (useAggregation) {
 			// Build aggregation pipeline
-			let pipeline = [
-				{
-					$lookup: {
-						from: "subcategories",
-						localField: "subcategory",
-						foreignField: "_id",
-						as: "subcategoryInfo",
-					},
-				},
-				{ $unwind: "$subcategoryInfo" },
-			];
+			let pipeline = [];
 
 			let matchFilter = { ...filter };
-			if (filter.subcategoryName) {
-				matchFilter["subcategoryInfo.name"] = {
-					$regex: filter.subcategoryName.source,
-					$options: "i",
-				};
-				delete matchFilter.subcategoryName;
-			}
 
 			pipeline.push({ $match: matchFilter });
 
@@ -345,23 +339,10 @@ exports.getProducts = async (req, res) => {
 			productsQuery = Product.aggregate(pipeline);
 
 			// Count
-			let countPipeline = [
-				{
-					$lookup: {
-						from: "subcategories",
-						localField: "subcategory",
-						foreignField: "_id",
-						as: "subcategoryInfo",
-					},
-				},
-				{ $unwind: "$subcategoryInfo" },
-				{ $match: matchFilter },
-				{ $count: "total" },
-			];
+			let countPipeline = [{ $match: matchFilter }, { $count: "total" }];
 			countQuery = Product.aggregate(countPipeline);
 		} else {
 			// Regular query
-			delete filter.subcategoryName;
 			productsQuery = Product.find(filter)
 				.populate("category", "name color icon")
 				.populate({

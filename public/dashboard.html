@@ -554,6 +554,7 @@
 							id="product-category-filter"
 							class="filter-select"
 							style="min-width: 150px"
+							onchange="onCategoryFilterChange()"
 						>
 							<option value="all">All Subcategories</option>
 							<!-- Subcategories will be loaded dynamically -->
@@ -591,12 +592,12 @@
 							<option value="price-desc">Price (€) High-Low</option>
 							<option value="stock-asc">Stock Low-High</option>
 							<option value="stock-desc">Stock High-Low</option>
-							<option value="createdAt-desc">Newest First</option>
+							<option value="createdAt-desc" selected>Newest First</option>
 							<option value="createdAt-asc">Oldest First</option>
 							<option value="categorySortOrder-asc">
 								Category Sort Order Low-High
 							</option>
-							<option value="categorySortOrder-desc" selected>
+							<option value="categorySortOrder-desc">
 								Category Sort Order High-Low
 							</option>
 						</select>
@@ -645,6 +646,7 @@
 										<th>Stock</th>
 										<th>Status</th>
 										<th>In Ads</th>
+										<th>+18</th>
 										<th>Actions</th>
 									</tr>
 								</thead>
@@ -2807,7 +2809,7 @@
 								status: "all",
 								priceRange: "all",
 								stockLevel: "all",
-								sortOption: "categorySortOrder-desc",
+								sortOption: "createdAt-desc",
 							};
 							loadProducts(1, productsPageSize, defaultFilters);
 						}
@@ -4273,7 +4275,7 @@
 				if (!products || products.length === 0) {
 					tbody.innerHTML = `
 						<tr>
-							<td colspan="10" style="text-align: center; padding: 40px; color: #666;">
+							<td colspan="11" style="text-align: center; padding: 40px; color: #666;">
 								No products found. Click "Add Product" to create one.
 							</td>
 						</tr>
@@ -4426,6 +4428,9 @@
 							}">${status}</span></td>
 							<td><span class="status-badge ${product.inAds ? "active" : "inactive"}">${
 							product.inAds ? "Yes" : "No"
+						}</span></td>
+							<td><span class="status-badge ${product.is18Plus ? "active" : "inactive"}">${
+							product.is18Plus ? "Yes" : "No"
 						}</span></td>
 							<td>
 								<div class="action-buttons">
@@ -4882,6 +4887,7 @@
 						productStock: document.getElementById("product-stock"),
 						productStatus: document.getElementById("product-status"),
 						productInAds: document.getElementById("product-in-ads"),
+						productIs18Plus: document.getElementById("product-is18plus"),
 						productModal: document.getElementById("product-modal"),
 					};
 
@@ -4929,6 +4935,7 @@
 					elements.productStock.value = product.stock || 0;
 					elements.productStatus.value = product.isActive ? "true" : "false";
 					elements.productInAds.checked = product.inAds || false;
+					elements.productIs18Plus.checked = product.is18Plus || false;
 
 					// Update price calculation display for editing
 					setTimeout(() => {
@@ -5174,6 +5181,7 @@
 						stock: parseInt(formData.get("stock")) || 0,
 						isActive: formData.get("status") === "true",
 						inAds: formData.get("inAds") === "on",
+						is18Plus: formData.get("is18Plus") === "on",
 						productId: productId || undefined,
 					};
 					// Only include picture field if a new image was uploaded
@@ -5722,6 +5730,16 @@
 						}
 					});
 				}
+			}
+
+			function onCategoryFilterChange() {
+				// When category filter changes, automatically set sort to A-Z
+				const sortFilter = document.getElementById("product-sort-filter");
+				if (sortFilter) {
+					sortFilter.value = "name-asc";
+				}
+				// Trigger search with new filters
+				searchProducts();
 			}
 
 			// Orders Management Functions
@@ -8181,6 +8199,11 @@
 						<div class="form-group">
 							<label for="product-in-ads">In Ads</label>
 							<input type="checkbox" id="product-in-ads" name="inAds" />
+						</div>
+
+						<div class="form-group">
+							<label for="product-is18plus">+18 (Age Restricted)</label>
+							<input type="checkbox" id="product-is18plus" name="is18Plus" />
 						</div>
 
 						<!-- Price Calculation Display -->
