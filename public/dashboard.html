@@ -131,6 +131,12 @@
 					</a>
 				</li>
 				<li class="menu-item">
+					<a href="#" onclick="showSection('settings')" id="menu-settings">
+						<span class="menu-icon">⚙️</span>
+						<span class="menu-text">Settings</span>
+					</a>
+				</li>
+				<li class="menu-item">
 					<a href="#" onclick="showSection('profile')" id="menu-profile">
 						<span class="menu-icon">👤</span>
 						<span class="menu-text">Profile</span>
@@ -1177,6 +1183,119 @@
 					</div>
 				</div>
 
+				<!-- Settings Section -->
+				<div id="settings-section" class="content-section">
+					<div class="section-header">
+						<h2>System Settings</h2>
+						<p>Configure system-wide settings and preferences</p>
+					</div>
+
+					<div class="settings-content">
+						<div class="settings-grid">
+							<div class="settings-card">
+								<h3>🛍️ Product Management</h3>
+								<div class="setting-item">
+									<label>Product Status Control</label>
+									<div class="setting-actions">
+										<button
+											class="btn btn-success"
+											onclick="setAllProductsStatus('active')"
+										>
+											Activate All Products
+										</button>
+										<button
+											class="btn btn-warning"
+											onclick="setAllProductsStatus('inactive')"
+										>
+											Deactivate All Products
+										</button>
+									</div>
+									<p class="setting-description">
+										Bulk update the active status of all products in the system.
+									</p>
+								</div>
+							</div>
+
+							<div class="settings-card">
+								<h3>🗃️ Database Management</h3>
+								<div class="setting-item">
+									<label>Database Operations</label>
+									<div class="setting-actions">
+										<button class="btn btn-info" onclick="backupDatabase()">
+											Create Database Backup
+										</button>
+										<button
+											class="btn btn-danger"
+											onclick="showDatabaseResetModal()"
+										>
+											Reset Database
+										</button>
+									</div>
+									<p class="setting-description">
+										Manage database backups and system resets.
+									</p>
+								</div>
+							</div>
+
+							<div class="settings-card">
+								<h3>📊 System Information</h3>
+								<div class="setting-item">
+									<label>System Stats</label>
+									<div class="setting-actions">
+										<button
+											class="btn btn-secondary"
+											onclick="showSystemInfo()"
+										>
+											View System Information
+										</button>
+									</div>
+									<p class="setting-description">
+										View detailed system statistics and information.
+									</p>
+								</div>
+							</div>
+
+							<div class="settings-card">
+								<h3>🔧 Maintenance</h3>
+								<div class="setting-item">
+									<label>System Maintenance</label>
+									<div class="setting-actions">
+										<button
+											class="btn btn-primary"
+											onclick="runSystemMaintenance()"
+										>
+											Run Maintenance Tasks
+										</button>
+									</div>
+									<p class="setting-description">
+										Perform routine system maintenance and cleanup.
+									</p>
+								</div>
+							</div>
+
+							<div class="settings-card">
+								<h3>🌐 Language Settings</h3>
+								<div class="setting-item">
+									<label>Application Language</label>
+									<div class="setting-actions">
+										<select
+											id="language-select"
+											class="form-control"
+											onchange="changeLanguage(this.value)"
+										>
+											<option value="en">English</option>
+											<option value="de">Deutsch (German)</option>
+										</select>
+									</div>
+									<p class="setting-description">
+										Change the language of the application interface.
+									</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
 				<!-- Profile Section -->
 				<div id="profile-section" class="content-section">
 					<div class="section-header">
@@ -1488,9 +1607,59 @@
 			// Language switching functionality
 			let currentLanguage = localStorage.getItem("selectedLanguage") || "en";
 
-			// Translation dictionaries
 			const translations = {
 				en: {
+					// Navigation
+					Dashboard: "Dashboard",
+					"Staff Management": "Staff Management",
+					Categories: "Categories",
+					Products: "Products",
+					Orders: "Orders",
+					"Riders Management": "Riders Management",
+					"Waste Management": "Waste Management",
+					Settings: "Settings",
+					Profile: "Profile",
+					"Sign Out": "Sign Out",
+
+					// Dashboard
+					"Dashboard Overview": "Dashboard Overview",
+					"Welcome back": "Welcome back",
+					"Total Customers": "Total Customers",
+					"Active Products": "Active Products",
+					Orders: "Orders",
+					"Active Riders": "Active Riders",
+
+					// Settings
+					"System Settings": "System Settings",
+					"Configure system-wide settings and preferences":
+						"Configure system-wide settings and preferences",
+					"Product Management": "Product Management",
+					"Product Status Control": "Product Status Control",
+					"Activate All Products": "Activate All Products",
+					"Deactivate All Products": "Deactivate All Products",
+					"Bulk update the active status of all products in the system.":
+						"Bulk update the active status of all products in the system.",
+					"Database Management": "Database Management",
+					"Database Operations": "Database Operations",
+					"Create Database Backup": "Create Database Backup",
+					"Reset Database": "Reset Database",
+					"Manage database backups and system resets.":
+						"Manage database backups and system resets.",
+					"System Information": "System Information",
+					"System Stats": "System Stats",
+					"View System Information": "View System Information",
+					"View detailed system statistics and information.":
+						"View detailed system statistics and information.",
+					Maintenance: "Maintenance",
+					"System Maintenance": "System Maintenance",
+					"Run Maintenance Tasks": "Run Maintenance Tasks",
+					"Perform routine system maintenance and cleanup.":
+						"Perform routine system maintenance and cleanup.",
+					"Language Settings": "Language Settings",
+					"Application Language": "Application Language",
+					"Change the language of the application interface.":
+						"Change the language of the application interface.",
+
 					// Profile section
 					"profile-settings": "Profile Settings",
 					"manage-personal-info":
@@ -1530,8 +1699,66 @@
 					// Common UI elements
 					cancel: "Cancel",
 					error: "Error",
+
+					// Common
+					"Loading...": "Loading...",
+					Error: "Error",
+					Success: "Success",
+					Warning: "Warning",
+					Info: "Info",
 				},
 				de: {
+					// Navigation
+					Dashboard: "Dashboard",
+					"Staff Management": "Mitarbeiterverwaltung",
+					Categories: "Kategorien",
+					Products: "Produkte",
+					Orders: "Bestellungen",
+					"Riders Management": "Fahrer-Verwaltung",
+					"Waste Management": "Abfall-Verwaltung",
+					Settings: "Einstellungen",
+					Profile: "Profil",
+					"Sign Out": "Abmelden",
+
+					// Dashboard
+					"Dashboard Overview": "Dashboard Übersicht",
+					"Welcome back": "Willkommen zurück",
+					"Total Customers": "Gesamt Kunden",
+					"Active Products": "Aktive Produkte",
+					Orders: "Bestellungen",
+					"Active Riders": "Aktive Fahrer",
+
+					// Settings
+					"System Settings": "Systemeinstellungen",
+					"Configure system-wide settings and preferences":
+						"Konfigurieren Sie systemweite Einstellungen und Präferenzen",
+					"Product Management": "Produktverwaltung",
+					"Product Status Control": "Produktstatus-Steuerung",
+					"Activate All Products": "Alle Produkte aktivieren",
+					"Deactivate All Products": "Alle Produkte deaktivieren",
+					"Bulk update the active status of all products in the system.":
+						"Massenaktualisierung des aktiven Status aller Produkte im System.",
+					"Database Management": "Datenbankverwaltung",
+					"Database Operations": "Datenbankoperationen",
+					"Create Database Backup": "Datenbanksicherung erstellen",
+					"Reset Database": "Datenbank zurücksetzen",
+					"Manage database backups and system resets.":
+						"Verwalten Sie Datenbanksicherungen und Systemzurücksetzungen.",
+					"System Information": "Systeminformationen",
+					"System Stats": "Systemstatistiken",
+					"View System Information": "Systeminformationen anzeigen",
+					"View detailed system statistics and information.":
+						"Detaillierte Systemstatistiken und Informationen anzeigen.",
+					Maintenance: "Wartung",
+					"System Maintenance": "Systemwartung",
+					"Run Maintenance Tasks": "Wartungsaufgaben ausführen",
+					"Perform routine system maintenance and cleanup.":
+						"Führen Sie routinemäßige Systemwartung und Bereinigung durch.",
+					"Language Settings": "Spracheinstellungen",
+					"Application Language": "Anwendungssprache",
+					"Change the language of the application interface.":
+						"Ändern Sie die Sprache der Anwendungsoberfläche.",
+
 					// Profile section
 					"profile-settings": "Profileinstellungen",
 					"manage-personal-info":
@@ -1571,6 +1798,13 @@
 					// Common UI elements
 					cancel: "Abbrechen",
 					error: "Fehler",
+
+					// Common
+					"Loading...": "Lädt...",
+					Error: "Fehler",
+					Success: "Erfolg",
+					Warning: "Warnung",
+					Info: "Info",
 				},
 			};
 
@@ -2831,6 +3065,10 @@
 						break;
 					case "profile":
 						loadProfileSection();
+						break;
+					case "settings":
+						// Load saved language preference
+						loadSavedLanguage();
 						break;
 				}
 			}
@@ -11749,6 +11987,523 @@
 				return colors;
 			}
 
+			// Settings Functions
+			async function setAllProductsStatus(status) {
+				const statusText = status === "active" ? "activate" : "deactivate";
+				const confirmMessage = `Are you sure you want to ${statusText} ALL products? This will affect product visibility in the app.`;
+
+				if (!confirm(confirmMessage)) {
+					return;
+				}
+
+				try {
+					showMessage(`Setting all products to ${status}...`, "info");
+
+					const response = await fetch(
+						`${API_BASE_URL}/admin/products/bulk-status`,
+						{
+							method: "PUT",
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({ status: status === "active" }),
+						}
+					);
+
+					if (response.ok) {
+						const result = await response.json();
+						showMessage(
+							`Successfully ${statusText}d ${result.modifiedCount} products!`,
+							"success"
+						);
+
+						// Refresh dashboard stats and products section if it's currently visible
+						loadDashboardStats();
+						if (
+							document
+								.getElementById("products-section")
+								.classList.contains("active")
+						) {
+							searchProducts();
+						}
+					} else {
+						const error = await response.json();
+						showMessage(
+							`Error: ${error.message || "Failed to update products"}`,
+							"error"
+						);
+					}
+				} catch (error) {
+					console.error("Error updating products status:", error);
+					showMessage(
+						"Error updating products status. Please try again.",
+						"error"
+					);
+				}
+			}
+
+			async function backupDatabase() {
+				try {
+					showMessage("Creating database backup...", "info");
+
+					const response = await fetch(`${API_BASE_URL}/admin/backup`, {
+						method: "POST",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					if (response.ok) {
+						const result = await response.json();
+						showMessage(
+							`Database backup created successfully: ${result.backupPath}`,
+							"success"
+						);
+					} else {
+						const error = await response.json();
+						showMessage(
+							`Error: ${error.message || "Failed to create backup"}`,
+							"error"
+						);
+					}
+				} catch (error) {
+					console.error("Error creating backup:", error);
+					showMessage(
+						"Error creating database backup. Please try again.",
+						"error"
+					);
+				}
+			}
+
+			function showDatabaseResetModal() {
+				if (
+					confirm(
+						"⚠️ WARNING: This will permanently delete ALL data and reset the database to its initial state. This action CANNOT be undone!\n\nAre you absolutely sure you want to continue?"
+					)
+				) {
+					if (
+						confirm(
+							"FINAL WARNING: All users, products, orders, and settings will be lost forever.\n\nType 'RESET' to confirm:"
+						)
+					) {
+						const confirmation = prompt(
+							"Type 'RESET' to confirm database reset:"
+						);
+						if (confirmation === "RESET") {
+							resetDatabase();
+						} else {
+							showMessage("Database reset cancelled.", "info");
+						}
+					}
+				}
+			}
+
+			async function resetDatabase() {
+				try {
+					showMessage(
+						"Resetting database... This may take a few minutes.",
+						"warning"
+					);
+
+					const response = await fetch(`${API_BASE_URL}/admin/reset-database`, {
+						method: "POST",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					if (response.ok) {
+						showMessage(
+							"Database reset completed successfully. The application will now reload.",
+							"success"
+						);
+						setTimeout(() => {
+							window.location.reload();
+						}, 3000);
+					} else {
+						const error = await response.json();
+						showMessage(
+							`Error: ${error.message || "Failed to reset database"}`,
+							"error"
+						);
+					}
+				} catch (error) {
+					console.error("Error resetting database:", error);
+					showMessage("Error resetting database. Please try again.", "error");
+				}
+			}
+
+			async function showSystemInfo() {
+				try {
+					showMessage("Loading system information...", "info");
+
+					const response = await fetch(`${API_BASE_URL}/admin/system-info`, {
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					if (response.ok) {
+						const systemInfo = await response.json();
+
+						// Create a modal to display system info
+						const modal = document.createElement("div");
+						modal.className = "modal";
+						modal.style.display = "block";
+						modal.innerHTML = `
+							<div class="modal-content" style="max-width: 600px;">
+								<div class="modal-header">
+									<h3>System Information</h3>
+									<span class="close" onclick="this.closest('.modal').remove()">&times;</span>
+								</div>
+								<div class="modal-body">
+									<pre style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-size: 12px; overflow-x: auto;">${JSON.stringify(
+										systemInfo,
+										null,
+										2
+									)}</pre>
+								</div>
+								<div class="modal-footer">
+									<button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Close</button>
+								</div>
+							</div>
+						`;
+
+						document.body.appendChild(modal);
+					} else {
+						const error = await response.json();
+						showMessage(
+							`Error: ${error.message || "Failed to load system info"}`,
+							"error"
+						);
+					}
+				} catch (error) {
+					console.error("Error loading system info:", error);
+					showMessage(
+						"Error loading system information. Please try again.",
+						"error"
+					);
+				}
+			}
+
+			async function runSystemMaintenance() {
+				try {
+					showMessage("Running system maintenance...", "info");
+
+					const response = await fetch(`${API_BASE_URL}/admin/maintenance`, {
+						method: "POST",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					if (response.ok) {
+						const result = await response.json();
+						showMessage(
+							`Maintenance completed successfully. ${result.message || ""}`,
+							"success"
+						);
+
+						// Refresh dashboard stats
+						loadDashboardStats();
+					} else {
+						const error = await response.json();
+						showMessage(
+							`Error: ${error.message || "Maintenance failed"}`,
+							"error"
+						);
+					}
+				} catch (error) {
+					console.error("Error running maintenance:", error);
+					showMessage(
+						"Error running system maintenance. Please try again.",
+						"error"
+					);
+				}
+			}
+
+			// Language change function
+			async function changeLanguage(languageCode) {
+				try {
+					showMessage(
+						`Changing language to ${getLanguageName(languageCode)}...`,
+						"info"
+					);
+
+					// Save language preference to localStorage
+					localStorage.setItem("app-language", languageCode);
+
+					// Update user preference on server if logged in
+					if (currentToken && currentUser) {
+						const response = await fetch(
+							`${API_BASE_URL}/users/${currentUser._id}/preferences`,
+							{
+								method: "PUT",
+								headers: {
+									Authorization: `Bearer ${currentToken}`,
+									"Content-Type": "application/json",
+								},
+								body: JSON.stringify({ language: languageCode }),
+							}
+						);
+
+						if (!response.ok) {
+							console.warn("Failed to save language preference to server");
+						}
+					}
+
+					// Apply language change
+					await applyLanguage(languageCode);
+
+					showMessage(
+						`Language changed to ${getLanguageName(
+							languageCode
+						)} successfully!`,
+						"success"
+					);
+				} catch (error) {
+					console.error("Error changing language:", error);
+					showMessage("Error changing language. Please try again.", "error");
+				}
+			}
+
+			// Helper function to get language display name
+			function getLanguageName(code) {
+				const languages = {
+					en: "English",
+					de: "Deutsch",
+					fr: "Français",
+					es: "Español",
+					it: "Italiano",
+				};
+				return languages[code] || code;
+			}
+
+			// Apply language to the interface
+			async function applyLanguage(languageCode) {
+				// Update document language attribute
+				document.documentElement.lang = languageCode;
+
+				// Store current language globally
+				window.currentLanguage = languageCode;
+
+				// Get translations for the selected language
+				const langTranslations = translations[languageCode] || translations.en;
+
+				// Update navigation menu items
+				updateNavigationTranslations(langTranslations);
+
+				// Update dashboard content
+				updateDashboardTranslations(langTranslations);
+
+				// Update settings content
+				updateSettingsTranslations(langTranslations);
+
+				console.log(`Language applied: ${languageCode}`);
+			}
+
+			// Update navigation menu translations
+			function updateNavigationTranslations(translations) {
+				// Update menu item text
+				const menuItems = {
+					"menu-dashboard": "Dashboard",
+					"menu-users": "Staff Management",
+					"menu-categories": "Categories",
+					"menu-products": "Products",
+					"menu-orders": "Orders",
+					"menu-riders": "Riders Management",
+					"menu-waste": "Waste Management",
+					"menu-settings": "Settings",
+					"menu-profile": "Profile",
+				};
+
+				Object.entries(menuItems).forEach(([menuId, key]) => {
+					const menuItem = document.getElementById(menuId);
+					if (menuItem) {
+						const textSpan = menuItem.querySelector(".menu-text");
+						if (textSpan && translations[key]) {
+							textSpan.textContent = translations[key];
+						}
+					}
+				});
+
+				// Update sign out link
+				const signOutLink = document.querySelector(
+					'.sidebar-menu a[onclick="logout()"]'
+				);
+				if (signOutLink && signOutLink.querySelector(".menu-text")) {
+					signOutLink.querySelector(".menu-text").textContent =
+						translations["Sign Out"] || "Sign Out";
+				}
+			}
+
+			// Update dashboard translations
+			function updateDashboardTranslations(translations) {
+				// Update section header
+				const dashboardHeader = document.querySelector(
+					"#dashboard-section .section-header h2"
+				);
+				if (dashboardHeader) {
+					dashboardHeader.textContent =
+						translations["Dashboard Overview"] || "Dashboard Overview";
+				}
+
+				const dashboardDesc = document.querySelector(
+					"#dashboard-section .section-header p"
+				);
+				if (dashboardDesc) {
+					const userName =
+						document.getElementById("welcome-user-name")?.textContent ||
+						"Admin";
+					dashboardDesc.innerHTML = `${
+						translations["Welcome back"] || "Welcome back"
+					}, <span id="welcome-user-name">${userName}</span>! Here's your management dashboard`;
+				}
+
+				// Update stat labels
+				const statLabels = document.querySelectorAll(
+					"#dashboard-section .stat-box p"
+				);
+				const statTranslations = [
+					"Total Customers",
+					"Active Products",
+					"Orders",
+					"Active Riders",
+				];
+
+				statLabels.forEach((label, index) => {
+					if (
+						statTranslations[index] &&
+						translations[statTranslations[index]]
+					) {
+						label.textContent = translations[statTranslations[index]];
+					}
+				});
+			}
+
+			// Update settings translations
+			function updateSettingsTranslations(translations) {
+				// Update section header
+				const settingsHeader = document.querySelector(
+					"#settings-section .section-header h2"
+				);
+				if (settingsHeader) {
+					settingsHeader.textContent =
+						translations["System Settings"] || "System Settings";
+				}
+
+				const settingsDesc = document.querySelector(
+					"#settings-section .section-header p"
+				);
+				if (settingsDesc) {
+					settingsDesc.textContent =
+						translations["Configure system-wide settings and preferences"] ||
+						"Configure system-wide settings and preferences";
+				}
+
+				// Update card titles
+				const cardTitles = document.querySelectorAll(
+					"#settings-section .settings-card h3"
+				);
+				const titleTranslations = [
+					"Product Management",
+					"Database Management",
+					"System Information",
+					"Maintenance",
+					"Language Settings",
+				];
+
+				let titleIndex = 0;
+				cardTitles.forEach((title) => {
+					const emoji = title.textContent.split(" ")[0]; // Keep emoji
+					const textKey = titleTranslations[titleIndex];
+					if (textKey && translations[textKey]) {
+						title.textContent = `${emoji} ${translations[textKey]}`;
+					}
+					titleIndex++;
+				});
+
+				// Update labels and descriptions
+				const labels = document.querySelectorAll(
+					"#settings-section .setting-item label"
+				);
+				const labelTranslations = [
+					"Product Status Control",
+					"Database Operations",
+					"System Stats",
+					"System Maintenance",
+					"Application Language",
+				];
+
+				let labelIndex = 0;
+				labels.forEach((label) => {
+					const textKey = labelTranslations[labelIndex];
+					if (textKey && translations[textKey]) {
+						label.textContent = translations[textKey];
+					}
+					labelIndex++;
+				});
+
+				// Update button texts
+				const buttons = document.querySelectorAll(
+					"#settings-section .setting-actions .btn"
+				);
+				const buttonTranslations = [
+					"Activate All Products",
+					"Deactivate All Products",
+					"Create Database Backup",
+					"Reset Database",
+					"View System Information",
+					"Run Maintenance Tasks",
+				];
+
+				let buttonIndex = 0;
+				buttons.forEach((button) => {
+					const textKey = buttonTranslations[buttonIndex];
+					if (textKey && translations[textKey]) {
+						button.textContent = translations[textKey];
+					}
+					buttonIndex++;
+				});
+
+				// Update descriptions
+				const descriptions = document.querySelectorAll(
+					"#settings-section .setting-description"
+				);
+				const descTranslations = [
+					"Bulk update the active status of all products in the system.",
+					"Manage database backups and system resets.",
+					"View detailed system statistics and information.",
+					"Perform routine system maintenance and cleanup.",
+					"Change the language of the application interface.",
+				];
+
+				let descIndex = 0;
+				descriptions.forEach((desc) => {
+					const textKey = descTranslations[descIndex];
+					if (textKey && translations[textKey]) {
+						desc.textContent = translations[textKey];
+					}
+					descIndex++;
+				});
+			}
+
+			// Load saved language preference on page load
+			function loadSavedLanguage() {
+				const savedLanguage = localStorage.getItem("app-language") || "en";
+				const languageSelect = document.getElementById("language-select");
+				if (languageSelect) {
+					languageSelect.value = savedLanguage;
+				}
+				applyLanguage(savedLanguage);
+			}
+
 			// Initialize waste management when showing section
 			document.addEventListener("DOMContentLoaded", function () {
 				// Set default date filters to past month
@@ -11765,6 +12520,11 @@
 					.addEventListener("click", function () {
 						loadWasteRecords(1);
 					});
+			});
+
+			// Initialize language on page load
+			document.addEventListener("DOMContentLoaded", function () {
+				loadSavedLanguage();
 			});
 		</script>
 	</body>
