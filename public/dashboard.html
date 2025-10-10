@@ -1224,15 +1224,9 @@
 										<button class="btn btn-info" onclick="backupDatabase()">
 											Create Database Backup
 										</button>
-										<button
-											class="btn btn-danger"
-											onclick="showDatabaseResetModal()"
-										>
-											Reset Database
-										</button>
 									</div>
 									<p class="setting-description">
-										Manage database backups and system resets.
+										Manage database backups.
 									</p>
 								</div>
 							</div>
@@ -1642,9 +1636,8 @@
 					"Database Management": "Database Management",
 					"Database Operations": "Database Operations",
 					"Create Database Backup": "Create Database Backup",
-					"Reset Database": "Reset Database",
 					"Manage database backups and system resets.":
-						"Manage database backups and system resets.",
+						"Manage database backups.",
 					"System Information": "System Information",
 					"System Stats": "System Stats",
 					"View System Information": "View System Information",
@@ -1706,6 +1699,43 @@
 					Success: "Success",
 					Warning: "Warning",
 					Info: "Info",
+
+					// Product status update messages
+					"confirm-activate-all-products":
+						"Are you sure you want to activate ALL products? This will affect product visibility in the app.",
+					"confirm-deactivate-all-products":
+						"Are you sure you want to deactivate ALL products? This will affect product visibility in the app.",
+					"setting-products-status": "Setting all products to {status}...",
+					"products-status-success": "Successfully {action}d {count} products!",
+					"products-status-error": "Error: {error}",
+					"products-status-failed": "Failed to update products",
+					"products-status-update-error":
+						"Error updating products status. Please try again.",
+
+					// Database backup messages
+					"backup-creating": "Creating database backup...",
+					"backup-success": "Database backup created successfully: {path}",
+					"backup-error": "Error: {error}",
+					"backup-failed": "Failed to create backup",
+					"backup-create-error":
+						"Error creating database backup. Please try again.",
+
+					// System maintenance messages
+					"maintenance-running": "Running system maintenance...",
+					"maintenance-success":
+						"Maintenance completed successfully. {message}",
+					"maintenance-error": "Error: {error}",
+					"maintenance-failed": "Maintenance failed",
+					"maintenance-run-error":
+						"Error running system maintenance. Please try again.",
+
+					// Language change messages
+					"language-changing": "Changing language to {language}...",
+
+					// Language change success/error messages
+					"language-changed-success":
+						"Language changed to {language} successfully!",
+					"language-change-error": "Error changing language. Please try again.",
 				},
 				de: {
 					// Navigation
@@ -1741,9 +1771,8 @@
 					"Database Management": "Datenbankverwaltung",
 					"Database Operations": "Datenbankoperationen",
 					"Create Database Backup": "Datenbanksicherung erstellen",
-					"Reset Database": "Datenbank zurücksetzen",
-					"Manage database backups and system resets.":
-						"Verwalten Sie Datenbanksicherungen und Systemzurücksetzungen.",
+					"Manage database backups.":
+						"Verwalten Sie Datenbanksicherungen.",
 					"System Information": "Systeminformationen",
 					"System Stats": "Systemstatistiken",
 					"View System Information": "Systeminformationen anzeigen",
@@ -1805,6 +1834,44 @@
 					Success: "Erfolg",
 					Warning: "Warnung",
 					Info: "Info",
+
+					// Product status update messages
+					"confirm-activate-all-products":
+						"Sind Sie sicher, dass Sie ALLE Produkte aktivieren möchten? Dies wirkt sich auf die Produktsichtbarkeit in der App aus.",
+					"confirm-deactivate-all-products":
+						"Sind Sie sicher, dass Sie ALLE Produkte deaktivieren möchten? Dies wirkt sich auf die Produktsichtbarkeit in der App aus.",
+					"setting-products-status":
+						"Alle Produkte werden auf {status} gesetzt...",
+					"products-status-success": "Erfolgreich {count} Produkte {action}t!",
+					"products-status-error": "Fehler: {error}",
+					"products-status-failed": "Fehler beim Aktualisieren der Produkte",
+					"products-status-update-error":
+						"Fehler beim Aktualisieren des Produktstatus. Bitte versuchen Sie es erneut.",
+
+					// Database backup messages
+					"backup-creating": "Datenbanksicherung wird erstellt...",
+					"backup-success": "Datenbanksicherung erfolgreich erstellt: {path}",
+					"backup-error": "Fehler: {error}",
+					"backup-failed": "Fehler beim Erstellen der Sicherung",
+					"backup-create-error":
+						"Fehler beim Erstellen der Datenbanksicherung. Bitte versuchen Sie es erneut.",
+
+					// System maintenance messages
+					"maintenance-running": "Systemwartung wird ausgeführt...",
+					"maintenance-success": "Wartung erfolgreich abgeschlossen. {message}",
+					"maintenance-error": "Fehler: {error}",
+					"maintenance-failed": "Wartung fehlgeschlagen",
+					"maintenance-run-error":
+						"Fehler beim Ausführen der Systemwartung. Bitte versuchen Sie es erneut.",
+
+					// Language change messages
+					"language-changing": "Sprache wird auf {language} geändert...",
+
+					// Language change success/error messages
+					"language-changed-success":
+						"Sprache erfolgreich auf {language} geändert!",
+					"language-change-error":
+						"Fehler beim Ändern der Sprache. Bitte versuchen Sie es erneut.",
 				},
 			};
 
@@ -11989,15 +12056,25 @@
 
 			// Settings Functions
 			async function setAllProductsStatus(status) {
+				const currentLang = localStorage.getItem("app-language") || "en";
+				const langTranslations = translations[currentLang] || translations.en;
+
 				const statusText = status === "active" ? "activate" : "deactivate";
-				const confirmMessage = `Are you sure you want to ${statusText} ALL products? This will affect product visibility in the app.`;
+				const confirmKey =
+					status === "active"
+						? "confirm-activate-all-products"
+						: "confirm-deactivate-all-products";
+				const confirmMessage = langTranslations[confirmKey];
 
 				if (!confirm(confirmMessage)) {
 					return;
 				}
 
 				try {
-					showMessage(`Setting all products to ${status}...`, "info");
+					const settingMessage = langTranslations[
+						"setting-products-status"
+					].replace("{status}", status);
+					showMessage(settingMessage, "info");
 
 					const response = await fetch(
 						`${API_BASE_URL}/admin/products/bulk-status`,
@@ -12007,16 +12084,16 @@
 								Authorization: `Bearer ${currentToken}`,
 								"Content-Type": "application/json",
 							},
-							body: JSON.stringify({ status: status === "active" }),
+							body: JSON.stringify({ status: status }),
 						}
 					);
 
 					if (response.ok) {
 						const result = await response.json();
-						showMessage(
-							`Successfully ${statusText}d ${result.modifiedCount} products!`,
-							"success"
-						);
+						const successMessage = langTranslations["products-status-success"]
+							.replace("{action}", statusText)
+							.replace("{count}", result.modifiedCount);
+						showMessage(successMessage, "success");
 
 						// Refresh dashboard stats and products section if it's currently visible
 						loadDashboardStats();
@@ -12029,23 +12106,29 @@
 						}
 					} else {
 						const error = await response.json();
-						showMessage(
-							`Error: ${error.message || "Failed to update products"}`,
-							"error"
+						const errorMessage = langTranslations[
+							"products-status-error"
+						].replace(
+							"{error}",
+							error.message || langTranslations["products-status-failed"]
 						);
+						showMessage(errorMessage, "error");
 					}
 				} catch (error) {
 					console.error("Error updating products status:", error);
 					showMessage(
-						"Error updating products status. Please try again.",
+						langTranslations["products-status-update-error"],
 						"error"
 					);
 				}
 			}
 
 			async function backupDatabase() {
+				const currentLang = localStorage.getItem("app-language") || "en";
+				const langTranslations = translations[currentLang] || translations.en;
+
 				try {
-					showMessage("Creating database backup...", "info");
+					showMessage(langTranslations["backup-creating"], "info");
 
 					const response = await fetch(`${API_BASE_URL}/admin/backup`, {
 						method: "POST",
@@ -12057,82 +12140,22 @@
 
 					if (response.ok) {
 						const result = await response.json();
-						showMessage(
-							`Database backup created successfully: ${result.backupPath}`,
-							"success"
+						const successMessage = langTranslations["backup-success"].replace(
+							"{path}",
+							result.backupPath
 						);
+						showMessage(successMessage, "success");
 					} else {
 						const error = await response.json();
-						showMessage(
-							`Error: ${error.message || "Failed to create backup"}`,
-							"error"
+						const errorMessage = langTranslations["backup-error"].replace(
+							"{error}",
+							error.message || langTranslations["backup-failed"]
 						);
+						showMessage(errorMessage, "error");
 					}
 				} catch (error) {
 					console.error("Error creating backup:", error);
-					showMessage(
-						"Error creating database backup. Please try again.",
-						"error"
-					);
-				}
-			}
-
-			function showDatabaseResetModal() {
-				if (
-					confirm(
-						"⚠️ WARNING: This will permanently delete ALL data and reset the database to its initial state. This action CANNOT be undone!\n\nAre you absolutely sure you want to continue?"
-					)
-				) {
-					if (
-						confirm(
-							"FINAL WARNING: All users, products, orders, and settings will be lost forever.\n\nType 'RESET' to confirm:"
-						)
-					) {
-						const confirmation = prompt(
-							"Type 'RESET' to confirm database reset:"
-						);
-						if (confirmation === "RESET") {
-							resetDatabase();
-						} else {
-							showMessage("Database reset cancelled.", "info");
-						}
-					}
-				}
-			}
-
-			async function resetDatabase() {
-				try {
-					showMessage(
-						"Resetting database... This may take a few minutes.",
-						"warning"
-					);
-
-					const response = await fetch(`${API_BASE_URL}/admin/reset-database`, {
-						method: "POST",
-						headers: {
-							Authorization: `Bearer ${currentToken}`,
-							"Content-Type": "application/json",
-						},
-					});
-
-					if (response.ok) {
-						showMessage(
-							"Database reset completed successfully. The application will now reload.",
-							"success"
-						);
-						setTimeout(() => {
-							window.location.reload();
-						}, 3000);
-					} else {
-						const error = await response.json();
-						showMessage(
-							`Error: ${error.message || "Failed to reset database"}`,
-							"error"
-						);
-					}
-				} catch (error) {
-					console.error("Error resetting database:", error);
-					showMessage("Error resetting database. Please try again.", "error");
+					showMessage(langTranslations["backup-create-error"], "error");
 				}
 			}
 
@@ -12192,8 +12215,11 @@
 			}
 
 			async function runSystemMaintenance() {
+				const currentLang = localStorage.getItem("app-language") || "en";
+				const langTranslations = translations[currentLang] || translations.en;
+
 				try {
-					showMessage("Running system maintenance...", "info");
+					showMessage(langTranslations["maintenance-running"], "info");
 
 					const response = await fetch(`${API_BASE_URL}/admin/maintenance`, {
 						method: "POST",
@@ -12205,36 +12231,38 @@
 
 					if (response.ok) {
 						const result = await response.json();
-						showMessage(
-							`Maintenance completed successfully. ${result.message || ""}`,
-							"success"
-						);
+						const successMessage = langTranslations[
+							"maintenance-success"
+						].replace("{message}", result.message || "");
+						showMessage(successMessage, "success");
 
 						// Refresh dashboard stats
 						loadDashboardStats();
 					} else {
 						const error = await response.json();
-						showMessage(
-							`Error: ${error.message || "Maintenance failed"}`,
-							"error"
+						const errorMessage = langTranslations["maintenance-error"].replace(
+							"{error}",
+							error.message || langTranslations["maintenance-failed"]
 						);
+						showMessage(errorMessage, "error");
 					}
 				} catch (error) {
 					console.error("Error running maintenance:", error);
-					showMessage(
-						"Error running system maintenance. Please try again.",
-						"error"
-					);
+					showMessage(langTranslations["maintenance-run-error"], "error");
 				}
 			}
 
 			// Language change function
 			async function changeLanguage(languageCode) {
+				const currentLang = localStorage.getItem("app-language") || "en";
+				const langTranslations = translations[currentLang] || translations.en;
+
 				try {
-					showMessage(
-						`Changing language to ${getLanguageName(languageCode)}...`,
-						"info"
+					const changingMessage = langTranslations["language-changing"].replace(
+						"{language}",
+						getLanguageName(languageCode)
 					);
+					showMessage(changingMessage, "info");
 
 					// Save language preference to localStorage
 					localStorage.setItem("app-language", languageCode);
@@ -12261,15 +12289,13 @@
 					// Apply language change
 					await applyLanguage(languageCode);
 
-					showMessage(
-						`Language changed to ${getLanguageName(
-							languageCode
-						)} successfully!`,
-						"success"
-					);
+					const successMessage = langTranslations[
+						"language-changed-success"
+					].replace("{language}", getLanguageName(languageCode));
+					showMessage(successMessage, "success");
 				} catch (error) {
 					console.error("Error changing language:", error);
-					showMessage("Error changing language. Please try again.", "error");
+					showMessage(langTranslations["language-change-error"], "error");
 				}
 			}
 
@@ -12458,7 +12484,6 @@
 					"Activate All Products",
 					"Deactivate All Products",
 					"Create Database Backup",
-					"Reset Database",
 					"View System Information",
 					"Run Maintenance Tasks",
 				];

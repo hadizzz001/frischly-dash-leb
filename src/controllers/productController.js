@@ -1424,5 +1424,44 @@ exports.getProductsCount = async (req, res) => {
 	}
 };
 
+// @route   PUT /api/products/bulk-status
+// @access  Private (Admin only)
+exports.bulkUpdateProductStatus = async (req, res) => {
+	try {
+		const { status } = req.body;
+
+		// Validate status
+		if (!status || !["active", "inactive"].includes(status)) {
+			return res.status(400).json({
+				success: false,
+				message: "Invalid status. Must be 'active' or 'inactive'",
+			});
+		}
+
+		// Update all products
+		const result = await Product.updateMany(
+			{}, // Update all products
+			{
+				isActive: status === "active",
+				updatedAt: new Date(),
+			}
+		);
+
+		res.json({
+			success: true,
+			message: `Successfully updated ${result.modifiedCount} products to ${status} status`,
+			modifiedCount: result.modifiedCount,
+			matchedCount: result.matchedCount,
+		});
+	} catch (error) {
+		console.error("Error updating product status:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error updating product status",
+			error: error.message,
+		});
+	}
+};
+
 // Export multer upload middleware
 exports.uploadMiddleware = upload.single("image");

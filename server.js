@@ -15,6 +15,7 @@ const riderRoutes = require("./src/routes/riders");
 const zoneRoutes = require("./src/routes/zones");
 const wasteRoutes = require("./src/routes/waste");
 const subcategoryRoutes = require("./src/routes/subcategories");
+const adminRoutes = require("./src/routes/admin");
 
 // Connect to database
 connectDB();
@@ -100,6 +101,7 @@ app.use("/api/riders", riderRoutes);
 app.use("/api/zones", zoneRoutes);
 app.use("/api/waste", wasteRoutes);
 app.use("/api/subcategories", subcategoryRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Route for customer shop page
 app.get("/shop", (req, res) => {
