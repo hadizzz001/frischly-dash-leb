@@ -2781,6 +2781,7 @@
 				switch (sectionName) {
 					case "dashboard":
 						loadDashboardStats();
+						loadSubcategoriesForProductFilter();
 						break;
 					case "users":
 						if (currentUser && currentUser.role === "admin") {
@@ -2812,9 +2813,12 @@
 								sortOption: "createdAt-desc",
 							};
 							loadProducts(1, productsPageSize, defaultFilters);
+							loadSubcategoriesForProductFilter();
+						} else {
+							// If not from menu (e.g., switching tabs), just refresh the display
 						}
 						// Load categories for the filter dropdown
-						loadSubcategoriesForProductFilter();
+						//loadSubcategoriesForProductFilter();
 						// Attach search event listeners
 						setTimeout(attachProductSearchListeners, 100);
 						break;
