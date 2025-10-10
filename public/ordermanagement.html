@@ -138,6 +138,21 @@
 				background: #c82333;
 			}
 
+			.back-btn {
+				background: #6c757d;
+				color: white;
+				border: none;
+				padding: 8px 16px;
+				border-radius: 6px;
+				cursor: pointer;
+				font-size: 14px;
+				transition: background 0.3s ease;
+			}
+
+			.back-btn:hover {
+				background: #5a6268;
+			}
+
 			/* Main Content */
 			.main-content {
 				padding: 30px;
@@ -722,6 +737,7 @@
 		<!-- Header -->
 		<header class="header">
 			<div class="header-left">
+				<button class="back-btn" onclick="window.history.back()">← Back</button>
 				<h1>🍎 FRISCHLY</h1>
 			</div>
 			<div class="user-info">
