@@ -153,6 +153,44 @@
 				background: #5a6268;
 			}
 
+			/* Message Container */
+			.message-container {
+				position: fixed;
+				top: 80px;
+				right: 20px;
+				padding: 10px 20px;
+				border-radius: 5px;
+				z-index: 1000;
+				max-width: 400px;
+				text-align: center;
+				font-weight: bold;
+				box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+			}
+
+			.message-success {
+				background: #28a745;
+				color: white;
+			}
+
+			.message-error {
+				background: #dc3545;
+				color: white;
+			}
+
+			/* Loading Container */
+			.loading-container {
+				position: fixed;
+				top: 20px;
+				right: 20px;
+				background: rgba(0, 0, 0, 0.8);
+				color: white;
+				padding: 10px 20px;
+				border-radius: 5px;
+				z-index: 1001;
+				font-size: 14px;
+				font-weight: bold;
+			}
+
 			/* Main Content */
 			.main-content {
 				padding: 30px;
@@ -747,6 +785,18 @@
 			</div>
 		</header>
 
+		<!-- Message Container -->
+		<div
+			id="message-container"
+			class="message-container"
+			style="display: none"
+		></div>
+
+		<!-- Loading Container -->
+		<div id="loading-container" class="loading-container" style="display: none">
+			Loading...
+		</div>
+
 		<!-- Main Content -->
 		<main class="main-content">
 			<!-- Stats Cards -->
@@ -996,6 +1046,7 @@
 			// Load user profile
 			async function loadUserProfile() {
 				try {
+					showLoading();
 					const response = await fetch(`${API_BASE_URL}/auth/me`, {
 						method: "GET",
 						headers: {
@@ -1017,6 +1068,8 @@
 				} catch (error) {
 					console.error("Error loading user profile:", error);
 					handleAuthError();
+				} finally {
+					hideLoading();
 				}
 			}
 
@@ -1055,6 +1108,7 @@
 			// Load orders
 			async function loadOrders() {
 				showTableLoading(true);
+				showLoading();
 
 				try {
 					const response = await fetch(`${API_BASE_URL}/orders`, {
@@ -1080,6 +1134,7 @@
 					showMessage("Error loading orders", "error");
 				} finally {
 					showTableLoading(false);
+					hideLoading();
 				}
 			}
 
@@ -1167,6 +1222,7 @@
 			// Update order status
 			async function updateOrderStatus(orderId, newStatus) {
 				try {
+					showLoading();
 					const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
 						method: "PUT",
 						headers: {
@@ -1199,12 +1255,15 @@
 				} catch (error) {
 					console.error("Error updating order status:", error);
 					showMessage("Error updating order status", "error");
+				} finally {
+					hideLoading();
 				}
 			}
 
 			// View order details
 			async function viewOrderDetails(orderId) {
 				try {
+					showLoading();
 					const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
 						method: "GET",
 						headers: {
@@ -1223,127 +1282,131 @@
 				} catch (error) {
 					console.error("Error loading order details:", error);
 					showMessage("Error loading order details", "error");
+				} finally {
+					hideLoading();
 				}
 			}
 
 			// Show order details modal
 			async function showOrderDetailsModal(order) {
-				const modal = document.getElementById("order-details-modal");
-				const content = document.getElementById("order-details-content");
+				showLoading();
+				try {
+					const modal = document.getElementById("order-details-modal");
+					const content = document.getElementById("order-details-content");
 
-				const customerName = order.customer?.name || "N/A";
-				const customerEmail = order.customer?.email || "N/A";
-				const customerPhone = order.customer?.phoneNumber || "N/A";
-				const customerAddress = order.customer?.address;
-				const orderDate = new Date(order.createdAt).toLocaleString();
-				const status = order.status || "pending";
+					const customerName = order.customer?.name || "N/A";
+					const customerEmail = order.customer?.email || "N/A";
+					const customerPhone = order.customer?.phoneNumber || "N/A";
+					const customerAddress = order.customer?.address;
+					const orderDate = new Date(order.createdAt).toLocaleString();
+					const status = order.status || "pending";
 
-				// Format full address
-				let fullAddress = "N/A";
-				let zipCode = "";
-				if (customerAddress) {
-					if (typeof customerAddress === "object") {
-						const street = customerAddress.street || "";
-						const city = customerAddress.city || "";
-						const state = customerAddress.state || "";
-						zipCode = customerAddress.zipCode || "";
-						const country = customerAddress.country || "";
-						fullAddress = [street, city, state, zipCode, country]
-							.filter(Boolean)
-							.join(", ");
-					} else {
-						fullAddress = customerAddress;
+					// Format full address
+					let fullAddress = "N/A";
+					let zipCode = "";
+					if (customerAddress) {
+						if (typeof customerAddress === "object") {
+							const street = customerAddress.street || "";
+							const city = customerAddress.city || "";
+							const state = customerAddress.state || "";
+							zipCode = customerAddress.zipCode || "";
+							const country = customerAddress.country || "";
+							fullAddress = [street, city, state, zipCode, country]
+								.filter(Boolean)
+								.join(", ");
+						} else {
+							fullAddress = customerAddress;
+						}
 					}
-				}
 
-				// Fetch zone information
-				let zoneInfo = null;
-				let ridersInfo = [];
-				if (zipCode) {
-					try {
-						const zoneResponse = await fetch(
-							`${API_BASE_URL}/zones/zipcode/${zipCode}`,
-							{
-								method: "GET",
-								headers: {
-									Authorization: `Bearer ${currentToken}`,
-									"Content-Type": "application/json",
-								},
-							}
-						);
+					// Fetch zone information
+					let zoneInfo = null;
+					let ridersInfo = [];
+					if (zipCode) {
+						try {
+							const zoneResponse = await fetch(
+								`${API_BASE_URL}/zones/zipcode/${zipCode}`,
+								{
+									method: "GET",
+									headers: {
+										Authorization: `Bearer ${currentToken}`,
+										"Content-Type": "application/json",
+									},
+								}
+							);
 
-						if (zoneResponse.ok) {
-							const zoneResult = await zoneResponse.json();
-							zoneInfo = zoneResult.data;
+							if (zoneResponse.ok) {
+								const zoneResult = await zoneResponse.json();
+								zoneInfo = zoneResult.data;
 
-							// Fetch available riders for this zone
-							if (zoneInfo && zoneInfo.zoneName) {
-								try {
-									const ridersResponse = await fetch(
-										`${API_BASE_URL}/riders/available/${encodeURIComponent(
-											zoneInfo.zoneName
-										)}`,
-										{
-											method: "GET",
-											headers: {
-												Authorization: `Bearer ${currentToken}`,
-												"Content-Type": "application/json",
-											},
+								// Fetch available riders for this zone
+								if (zoneInfo && zoneInfo.zoneName) {
+									try {
+										const ridersResponse = await fetch(
+											`${API_BASE_URL}/riders/available/${encodeURIComponent(
+												zoneInfo.zoneName
+											)}`,
+											{
+												method: "GET",
+												headers: {
+													Authorization: `Bearer ${currentToken}`,
+													"Content-Type": "application/json",
+												},
+											}
+										);
+
+										if (ridersResponse.ok) {
+											const ridersResult = await ridersResponse.json();
+											ridersInfo = ridersResult.data || [];
 										}
-									);
-
-									if (ridersResponse.ok) {
-										const ridersResult = await ridersResponse.json();
-										ridersInfo = ridersResult.data || [];
+									} catch (ridersError) {
+										console.error(
+											"Error fetching riders information:",
+											ridersError
+										);
 									}
-								} catch (ridersError) {
-									console.error(
-										"Error fetching riders information:",
-										ridersError
-									);
 								}
 							}
+						} catch (error) {
+							console.error("Error fetching zone information:", error);
 						}
-					} catch (error) {
-						console.error("Error fetching zone information:", error);
 					}
-				}
 
-				// Format zone information
-				let zoneHtml = "";
-				if (zoneInfo) {
-					const zoneName = zoneInfo.zoneName || "N/A";
-					const zoneDistance = zoneInfo.distance
-						? `${zoneInfo.distance} ${zoneInfo.distanceUnit || "km"}`
-						: "N/A";
-					const deliveryFee = zoneInfo.deliveryFee
-						? `€${zoneInfo.deliveryFee.toFixed(2)}`
-						: "€0.00";
-					const estimatedTime = zoneInfo.estimatedDeliveryTime
-						? `${zoneInfo.estimatedDeliveryTime} min`
-						: "N/A";
-					const zoneStatus = zoneInfo.isActive ? "Active" : "Inactive";
+					// Format zone information
+					let zoneHtml = "";
+					if (zoneInfo) {
+						const zoneName = zoneInfo.zoneName || "N/A";
+						const zoneDistance = zoneInfo.distance
+							? `${zoneInfo.distance} ${zoneInfo.distanceUnit || "km"}`
+							: "N/A";
+						const deliveryFee = zoneInfo.deliveryFee
+							? `€${zoneInfo.deliveryFee.toFixed(2)}`
+							: "€0.00";
+						const estimatedTime = zoneInfo.estimatedDeliveryTime
+							? `${zoneInfo.estimatedDeliveryTime} min`
+							: "N/A";
+						const zoneStatus = zoneInfo.isActive ? "Active" : "Inactive";
 
-					// Format riders information
-					let ridersHtml = "";
-					if (ridersInfo.length > 0) {
-						ridersHtml = ridersInfo
-							.map((rider) => {
-								const riderName = rider.user?.name || "Unknown Rider";
-								const riderStatus = rider.status || "offline";
-								const vehicleType = rider.vehicleType || "N/A";
+						// Format riders information
+						let ridersHtml = "";
+						if (ridersInfo.length > 0) {
+							ridersHtml = ridersInfo
+								.map((rider) => {
+									const riderName = rider.user?.name || "Unknown Rider";
+									const riderStatus = rider.status || "offline";
+									const vehicleType = rider.vehicleType || "N/A";
 
-								return `<div class="rider-item">
+									return `<div class="rider-item">
 									<strong>${riderName}</strong>
 									<small>Status: <span class="status-badge status-${riderStatus}">${riderStatus}</span> | Vehicle: ${vehicleType}</small>
 								</div>`;
-							})
-							.join("");
-					} else {
-						ridersHtml = `<p style="color: #999; font-style: italic; text-align: center; padding: 20px;">No available riders in this zone</p>`;
-					}
+								})
+								.join("");
+						} else {
+							ridersHtml = `<p style="color: #999; font-style: italic; text-align: center; padding: 20px;">No available riders in this zone</p>`;
+						}
 
-					zoneHtml = `
+						zoneHtml = `
 						<div class="order-details-card">
 							<h4>🚚 Zone Information</h4>
 							<p><strong>Zone:</strong> ${zoneName}</p>
@@ -1360,20 +1423,20 @@
 							</div>
 						</div>
 					`;
-				} else {
-					zoneHtml = `
+					} else {
+						zoneHtml = `
 						<div class="order-details-card">
 							<h4>🚚 Zone Information</h4>
 							<p style="color: #999; font-style: italic; text-align: center; padding: 20px;">No zone found for this address</p>
 						</div>
 					`;
-				}
+					}
 
-				let itemsHtml = "";
-				if (order.items && order.items.length > 0) {
-					itemsHtml = order.items
-						.map(
-							(item) => `
+					let itemsHtml = "";
+					if (order.items && order.items.length > 0) {
+						itemsHtml = order.items
+							.map(
+								(item) => `
 						<tr>
 							<td>${item.product?.name || "N/A"}</td>
 							<td>${item.product?.shelfNumber || "N/A"}</td>
@@ -1385,11 +1448,11 @@
 							<td>€${(item.totalPrice || 0).toFixed(2)}</td>
 						</tr>
 					`
-						)
-						.join("");
-				}
+							)
+							.join("");
+					}
 
-				content.innerHTML = `
+					content.innerHTML = `
 					<div class="order-details-header">
 						<h3>📋 Order #${order.orderNumber}</h3>
 					</div>
@@ -1442,7 +1505,10 @@
 					</div>
 				`;
 
-				modal.style.display = "block";
+					modal.style.display = "block";
+				} finally {
+					hideLoading();
+				}
 			}
 
 			// Close order details modal
@@ -1525,8 +1591,22 @@
 
 			// Show message (you can implement this based on your existing message system)
 			function showMessage(message, type) {
-				// Simple alert for now - you can enhance this with a proper notification system
-				alert(`${type.toUpperCase()}: ${message}`);
+				const container = document.getElementById("message-container");
+				container.textContent = `${type.toUpperCase()}: ${message}`;
+				container.className = `message-container message-${type}`;
+				container.style.display = "block";
+				setTimeout(() => {
+					container.style.display = "none";
+				}, 3000);
+			}
+
+			// Loading functions
+			function showLoading() {
+				document.getElementById("loading-container").style.display = "block";
+			}
+
+			function hideLoading() {
+				document.getElementById("loading-container").style.display = "none";
 			}
 
 			// Process Order Functions
@@ -1536,6 +1616,7 @@
 			// Process order function
 			async function processOrder(orderId) {
 				try {
+					showLoading();
 					const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
 						method: "GET",
 						headers: {
@@ -1556,6 +1637,8 @@
 				} catch (error) {
 					console.error("Error loading order for processing:", error);
 					showMessage("Error loading order details", "error");
+				} finally {
+					hideLoading();
 				}
 			}
 
@@ -1817,6 +1900,7 @@
 				}
 
 				try {
+					showLoading();
 					// First, update the order with the shelf number
 					const updateResponse = await fetch(
 						`${API_BASE_URL}/orders/${currentProcessingOrder._id}`,
@@ -1852,6 +1936,8 @@
 				} catch (error) {
 					console.error("Error completing order processing:", error);
 					showMessage("Error completing order processing", "error");
+				} finally {
+					hideLoading();
 				}
 			}
 
