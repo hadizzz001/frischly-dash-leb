@@ -1198,12 +1198,14 @@
 									<label>Product Status Control</label>
 									<div class="setting-actions">
 										<button
+											disabled
 											class="btn btn-success"
 											onclick="setAllProductsStatus('active')"
 										>
 											Activate All Products
 										</button>
 										<button
+											disabled
 											class="btn btn-warning"
 											onclick="setAllProductsStatus('inactive')"
 										>
@@ -1221,13 +1223,15 @@
 								<div class="setting-item">
 									<label>Database Operations</label>
 									<div class="setting-actions">
-										<button class="btn btn-info" onclick="backupDatabase()">
+										<button
+											disabled
+											class="btn btn-warning"
+											onclick="backupDatabase()"
+										>
 											Create Database Backup
 										</button>
 									</div>
-									<p class="setting-description">
-										Manage database backups.
-									</p>
+									<p class="setting-description">Manage database backups.</p>
 								</div>
 							</div>
 
@@ -1771,8 +1775,7 @@
 					"Database Management": "Datenbankverwaltung",
 					"Database Operations": "Datenbankoperationen",
 					"Create Database Backup": "Datenbanksicherung erstellen",
-					"Manage database backups.":
-						"Verwalten Sie Datenbanksicherungen.",
+					"Manage database backups.": "Verwalten Sie Datenbanksicherungen.",
 					"System Information": "Systeminformationen",
 					"System Stats": "Systemstatistiken",
 					"View System Information": "Systeminformationen anzeigen",
