@@ -9,11 +9,13 @@ async function fixNullSlugs() {
 
 		// Find all subcategories with null slugs
 		const subcategoriesWithNullSlug = await mongoose.connection.db
-			.collection('subcategories')
+			.collection("subcategories")
 			.find({ slug: null })
 			.toArray();
 
-		console.log(`Found ${subcategoriesWithNullSlug.length} subcategories with null slugs`);
+		console.log(
+			`Found ${subcategoriesWithNullSlug.length} subcategories with null slugs`
+		);
 
 		for (const sub of subcategoriesWithNullSlug) {
 			console.log(`Fixing subcategory: ${sub.name} (${sub._id})`);
@@ -32,7 +34,7 @@ async function fixNullSlugs() {
 		console.log("All null slugs fixed!");
 		await mongoose.connection.close();
 	} catch (error) {
-		console.error('Error:', error);
+		console.error("Error:", error);
 		process.exit(1);
 	}
 }
