@@ -1295,7 +1295,9 @@ exports.getProductsWithDiscount = async (req, res) => {
 		let baseFilter = {
 			$or: [{ discount: { $gt: parseFloat(minDiscount) } }, { inAds: true }],
 		};
-
+		if (inAds !== undefined && inAds !== "all") {
+			baseFilter.inAds = inAds === "true" || inAds === true;
+		}
 		if (isActive !== "all") {
 			const activeValue = isActive === "true" || isActive === true;
 			baseFilter.$or[0].isActive = activeValue;
