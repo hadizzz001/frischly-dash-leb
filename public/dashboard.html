@@ -8628,7 +8628,11 @@
 						type="button"
 						class="btn btn-outline-secondary"
 						onclick="generateRandomBarcode()"
-						style="background: #f8f9fa; border: 1px solid #dee2e6; color: #6c757d;"
+						style="
+							background: #f8f9fa;
+							border: 1px solid #dee2e6;
+							color: #6c757d;
+						"
 					>
 						🎲 Generate Random
 					</button>
@@ -12729,7 +12733,7 @@
 			function generateRandomBarcode() {
 				// Generate a random 8-12 digit number for barcode
 				const length = Math.floor(Math.random() * 5) + 8; // Random length between 8-12
-				let randomBarcode = '';
+				let randomBarcode = "";
 
 				// First digit should not be 0 for better barcode compatibility
 				randomBarcode += Math.floor(Math.random() * 9) + 1;
