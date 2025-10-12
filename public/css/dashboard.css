@@ -2548,3 +2548,15 @@ body {
 	border-color: #ffc300;
 	box-shadow: 0 0 0 2px rgba(255, 195, 0, 0.2);
 }
+
+/* Barcode hover effects */
+.barcode-svg {
+	transition: all 0.3s ease;
+	filter: brightness(1);
+}
+
+.barcode-svg:hover {
+	filter: brightness(0.7) sepia(1) hue-rotate(180deg) saturate(2);
+	cursor: pointer;
+	transform: scale(1.05);
+}

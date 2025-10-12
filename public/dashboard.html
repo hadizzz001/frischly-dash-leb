@@ -1545,6 +1545,7 @@
 
 		<!-- Global Config -->
 		<script src="js/config.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 
 		<script>
 			let currentToken = localStorage.getItem("authToken");
@@ -4675,6 +4676,9 @@
 										<strong>${productName}</strong>
 										<br>
 										<small style="color: #666;">Barcode: ${barcode}</small>
+										<div class="product-barcode-display" style="margin-top: 5px;">
+											<svg class="barcode-svg" data-barcode="${barcode}" data-product-name="${productName}" style="max-width: 120px; height: 30px; cursor: pointer;" onclick="showBarcodeModal('${barcode}', '${productName}')"></svg>
+										</div>
 										<br>
 										<small style="color: #666;">Shelf: ${shelfNumber}</small>
 									</div>
@@ -4771,6 +4775,7 @@
 							</td>
 						`;
 						tbody.appendChild(row);
+						generateProductBarcodes();
 					} catch (error) {
 						console.error("Error displaying product:", product, error);
 					}
@@ -8355,13 +8360,24 @@
 
 						<div class="form-group">
 							<label for="product-barcode">Barcode *</label>
-							<input
-								type="text"
-								id="product-barcode"
-								name="barcode"
-								required
-								placeholder="e.g., APP123456"
-							/>
+							<div style="display: flex; gap: 10px; align-items: center">
+								<input
+									type="text"
+									id="product-barcode"
+									name="barcode"
+									required
+									placeholder="e.g., APP123456"
+									style="flex: 1"
+								/>
+								<button
+									type="button"
+									class="btn btn-secondary"
+									onclick="showBarcodeGeneratorModal()"
+									style="white-space: nowrap"
+								>
+									🔄 Generate
+								</button>
+							</div>
 						</div>
 
 						<div class="form-group">
@@ -8578,6 +8594,105 @@
 						<button type="submit" class="btn btn-primary">Save Product</button>
 					</div>
 				</form>
+			</div>
+		</div>
+
+		<!-- Barcode Generator Modal -->
+		<div id="barcode-generator-modal" class="modal">
+			<div class="modal-content" style="max-width: 500px">
+				<div class="modal-header">
+					<h2>Generate Barcode</h2>
+					<span class="close" onclick="closeBarcodeGeneratorModal()"
+						>&times;</span
+					>
+				</div>
+
+				<div class="form-group">
+					<label for="barcode-input">Barcode Text *</label>
+					<input
+						type="text"
+						id="barcode-input"
+						placeholder="Enter barcode text"
+						required
+					/>
+				</div>
+
+				<div class="form-group">
+					<label>Generated Barcode</label>
+					<div id="barcode-preview" style="text-align: center; margin: 20px 0">
+						<svg id="barcode-svg"></svg>
+					</div>
+				</div>
+
+				<div
+					style="
+						display: flex;
+						gap: 10px;
+						justify-content: flex-end;
+						margin-top: 30px;
+					"
+				>
+					<button
+						type="button"
+						class="btn btn-secondary"
+						onclick="generateBarcode()"
+					>
+						Create Barcode
+					</button>
+					<button
+						type="button"
+						class="btn btn-primary"
+						onclick="submitBarcode()"
+					>
+						Use This Barcode
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Barcode Viewer Modal -->
+		<div id="barcode-viewer-modal" class="modal">
+			<div class="modal-content" style="max-width: 600px">
+				<div class="modal-header">
+					<h2 id="barcode-viewer-title">Product Barcode</h2>
+					<span class="close" onclick="closeBarcodeViewerModal()">&times;</span>
+				</div>
+
+				<div style="text-align: center; padding: 20px">
+					<div id="barcode-viewer-content">
+						<svg
+							id="barcode-viewer-svg"
+							style="max-width: 100%; height: 100px; margin-bottom: 20px"
+						></svg>
+						<div style="margin-bottom: 20px">
+							<strong id="barcode-viewer-text"></strong>
+						</div>
+					</div>
+
+					<div
+						style="
+							display: flex;
+							gap: 10px;
+							justify-content: center;
+							margin-top: 20px;
+						"
+					>
+						<button
+							type="button"
+							class="btn btn-primary"
+							onclick="printBarcode()"
+						>
+							🖨️ Print Barcode
+						</button>
+						<button
+							type="button"
+							class="btn btn-secondary"
+							onclick="closeBarcodeViewerModal()"
+						>
+							Close
+						</button>
+					</div>
+				</div>
 			</div>
 		</div>
 
@@ -12554,6 +12669,154 @@
 			document.addEventListener("DOMContentLoaded", function () {
 				loadSavedLanguage();
 			});
+
+			// Barcode Generator Functions
+			function showBarcodeGeneratorModal() {
+				const modal = document.getElementById("barcode-generator-modal");
+				const input = document.getElementById("barcode-input");
+				const preview = document.getElementById("barcode-preview");
+
+				input.value = "";
+				preview.innerHTML = '<svg id="barcode-svg"></svg>';
+				modal.style.display = "block";
+			}
+
+			function closeBarcodeGeneratorModal() {
+				const modal = document.getElementById("barcode-generator-modal");
+				modal.style.display = "none";
+			}
+
+			function generateBarcode() {
+				const input = document.getElementById("barcode-input");
+				const text = input.value.trim();
+
+				if (!text) {
+					showMessage("Please enter barcode text", "error");
+					return;
+				}
+
+				try {
+					JsBarcode("#barcode-svg", text, {
+						format: "CODE128",
+						width: 2,
+						height: 100,
+						displayValue: true,
+						fontSize: 14,
+						margin: 10,
+					});
+					showMessage("Barcode generated successfully", "success");
+				} catch (error) {
+					showMessage("Error generating barcode: " + error.message, "error");
+				}
+			}
+
+			function submitBarcode() {
+				const input = document.getElementById("barcode-input");
+				const text = input.value.trim();
+
+				if (!text) {
+					showMessage("Please generate a barcode first", "error");
+					return;
+				}
+
+				// Set the barcode value in the product form
+				document.getElementById("product-barcode").value = text;
+				closeBarcodeGeneratorModal();
+				showMessage("Barcode applied to product", "success");
+			}
+
+			// Generate barcodes for all products in the table
+			function generateProductBarcodes() {
+				const barcodeElements = document.querySelectorAll(".barcode-svg");
+				barcodeElements.forEach((svg) => {
+					const barcode = svg.getAttribute("data-barcode");
+					if (barcode && barcode !== "N/A") {
+						try {
+							JsBarcode(svg, barcode, {
+								format: "CODE128",
+								width: 1,
+								height: 30,
+								displayValue: false,
+								margin: 0,
+								fontSize: 10,
+							});
+						} catch (error) {
+							console.error("Error generating barcode for:", barcode, error);
+							svg.style.display = "none";
+						}
+					} else {
+						svg.style.display = "none";
+					}
+				});
+			}
+
+			// Barcode Viewer Modal Functions
+			function showBarcodeModal(barcode, productName) {
+				if (!barcode || barcode === "N/A") {
+					showMessage("No barcode available for this product", "error");
+					return;
+				}
+
+				const modal = document.getElementById("barcode-viewer-modal");
+				const title = document.getElementById("barcode-viewer-title");
+				const svg = document.getElementById("barcode-viewer-svg");
+				const text = document.getElementById("barcode-viewer-text");
+
+				title.textContent = `Barcode - ${productName}`;
+				text.textContent = barcode;
+
+				try {
+					JsBarcode(svg, barcode, {
+						format: "CODE128",
+						width: 2,
+						height: 100,
+						displayValue: true,
+						fontSize: 16,
+						margin: 20,
+						background: "#ffffff",
+						lineColor: "#000000",
+					});
+					modal.style.display = "block";
+				} catch (error) {
+					showMessage("Error displaying barcode: " + error.message, "error");
+				}
+			}
+
+			function closeBarcodeViewerModal() {
+				const modal = document.getElementById("barcode-viewer-modal");
+				modal.style.display = "none";
+			}
+
+			function printBarcode() {
+				const printContent = document.getElementById(
+					"barcode-viewer-content"
+				).innerHTML;
+				const originalContent = document.body.innerHTML;
+
+				document.body.innerHTML = `
+					<div style="text-align: center; padding: 20px; font-family: Arial, sans-serif;">
+						<h2 style="margin-bottom: 20px;">${
+							document.getElementById("barcode-viewer-title").textContent
+						}</h2>
+						${printContent}
+						<div style="margin-top: 20px; font-size: 12px; color: #666;">
+							Printed on ${new Date().toLocaleString()}
+						</div>
+					</div>
+				`;
+
+				window.print();
+				document.body.innerHTML = originalContent;
+
+				// Reinitialize any event listeners if needed
+				setTimeout(() => {
+					loadProducts(
+						currentProductsPage,
+						productsPageSize,
+						getCurrentProductFilters()
+					);
+				}, 100);
+			}
 		</script>
 	</body>
 </html>
