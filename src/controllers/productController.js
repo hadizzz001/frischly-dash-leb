@@ -1287,6 +1287,7 @@ exports.getProductsWithDiscount = async (req, res) => {
 			sortOrder = "desc",
 			priceRange,
 			stockLevel,
+			inAds,
 			minDiscount = 0,
 		} = req.query;
 
@@ -1294,7 +1295,9 @@ exports.getProductsWithDiscount = async (req, res) => {
 		const baseFilter = {
 			discount: { $gt: parseFloat(minDiscount) },
 		};
-
+		if (inAds !== undefined && inAds !== "all") {
+			baseFilter.inAds = inAds === "true" || inAds === true;
+		}
 		if (isActive !== "all") {
 			baseFilter.isActive = isActive === "true" || isActive === true;
 		}
