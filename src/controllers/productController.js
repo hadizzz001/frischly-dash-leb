@@ -1287,62 +1287,77 @@ exports.getProductsWithDiscount = async (req, res) => {
 			sortOrder = "desc",
 			priceRange,
 			stockLevel,
+			inAds,
 			minDiscount = 0,
 		} = req.query;
 
-		// Build base filter - products with discount > minDiscount
-		const baseFilter = {
-			discount: { $gt: parseFloat(minDiscount) },
+		// Build base filter - products with discount > minDiscount or inAds true
+		let baseFilter = {
+			$or: [{ discount: { $gt: parseFloat(minDiscount) } }, { inAds: true }],
 		};
 
 		if (isActive !== "all") {
-			baseFilter.isActive = isActive === "true" || isActive === true;
+			const activeValue = isActive === "true" || isActive === true;
+			baseFilter.$or[0].isActive = activeValue;
+			baseFilter.$or[1].isActive = activeValue;
 		}
 
 		// Add search filter if provided
 		if (search) {
-			baseFilter.$or = [
+			const searchOr = [
 				{ name: new RegExp(search, "i") },
 				{ barcode: new RegExp(search, "i") },
 				{ description: new RegExp(search, "i") },
 			];
+			baseFilter.$or[0].$or = searchOr;
+			baseFilter.$or[1].$or = searchOr;
 		}
 
 		// Price range filtering
 		if (priceRange && priceRange !== "all") {
+			let priceFilter;
 			if (priceRange.includes("-")) {
 				const [minPrice, maxPrice] = priceRange
 					.split("-")
 					.map((p) => parseFloat(p));
 				if (maxPrice) {
-					baseFilter.price = { $gte: minPrice, $lte: maxPrice };
+					priceFilter = { $gte: minPrice, $lte: maxPrice };
 				} else {
-					baseFilter.price = { $gte: minPrice };
+					priceFilter = { $gte: minPrice };
 				}
 			} else if (priceRange.endsWith("+")) {
 				const minPrice = parseFloat(priceRange.replace("+", ""));
-				baseFilter.price = { $gte: minPrice };
+				priceFilter = { $gte: minPrice };
+			}
+			if (priceFilter) {
+				baseFilter.$or[0].price = priceFilter;
+				baseFilter.$or[1].price = priceFilter;
 			}
 		}
 
 		// Stock level filtering
 		if (stockLevel && stockLevel !== "all") {
+			let stockFilter;
 			switch (stockLevel) {
 				case "out":
-					baseFilter.stock = 0;
+					stockFilter = 0;
 					break;
 				case "low":
-					baseFilter.stock = { $gte: 1, $lte: 10 };
+					stockFilter = { $gte: 1, $lte: 10 };
 					break;
 				case "medium":
-					baseFilter.stock = { $gte: 11, $lte: 50 };
+					stockFilter = { $gte: 11, $lte: 50 };
 					break;
 				case "high":
-					baseFilter.stock = { $gte: 51 };
+					stockFilter = { $gte: 51 };
 					break;
 				case "Available":
-					baseFilter.stock = { $gte: 1 };
+					stockFilter = { $gte: 1 };
 					break;
+			}
+			if (stockFilter !== undefined) {
+				baseFilter.$or[0].stock = stockFilter;
+				baseFilter.$or[1].stock = stockFilter;
 			}
 		}
 
