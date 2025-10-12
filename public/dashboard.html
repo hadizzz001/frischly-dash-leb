@@ -8626,6 +8626,14 @@
 				>
 					<button
 						type="button"
+						class="btn btn-outline-secondary"
+						onclick="generateRandomBarcode()"
+						style="background: #f8f9fa; border: 1px solid #dee2e6; color: #6c757d;"
+					>
+						🎲 Generate Random
+					</button>
+					<button
+						type="button"
 						class="btn btn-secondary"
 						onclick="generateBarcode()"
 					>
@@ -12715,6 +12723,27 @@
 				document.getElementById("product-barcode").value = text;
 				closeBarcodeGeneratorModal();
 				showMessage("Barcode applied to product", "success");
+			}
+
+			// Generate a random barcode
+			function generateRandomBarcode() {
+				// Generate a random 8-12 digit number for barcode
+				const length = Math.floor(Math.random() * 5) + 8; // Random length between 8-12
+				let randomBarcode = '';
+
+				// First digit should not be 0 for better barcode compatibility
+				randomBarcode += Math.floor(Math.random() * 9) + 1;
+
+				// Generate remaining digits
+				for (let i = 1; i < length; i++) {
+					randomBarcode += Math.floor(Math.random() * 10);
+				}
+
+				// Set the random barcode in the input field
+				document.getElementById("barcode-input").value = randomBarcode;
+
+				// Automatically generate the barcode preview
+				generateBarcode();
 			}
 
 			// Generate barcodes for all products in the table
