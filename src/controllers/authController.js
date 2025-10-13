@@ -700,6 +700,47 @@ const getCustomerCount = async (req, res) => {
 	}
 };
 
+// @desc    Delete own account
+// @route   DELETE /api/auth/delete-account
+// @access  Private
+const deleteAccount = async (req, res) => {
+	try {
+		const { password } = req.body;
+
+		// Get user with password
+		const user = await User.findById(req.user._id).select("+password");
+		if (!user) {
+			return res.status(404).json({
+				success: false,
+				message: "User not found",
+			});
+		}
+
+		// Check password
+		const isMatch = await user.comparePassword(password);
+		if (!isMatch) {
+			return res.status(401).json({
+				success: false,
+				message: "Invalid password",
+			});
+		}
+
+		// Delete the user
+		await User.findByIdAndDelete(req.user._id);
+
+		res.json({
+			success: true,
+			message: "Account deleted successfully",
+		});
+	} catch (error) {
+		console.error("Delete account error:", error);
+		res.status(500).json({
+			success: false,
+			message: "Server error during account deletion",
+		});
+	}
+};
+
 module.exports = {
 	register,
 	login,
@@ -713,5 +754,6 @@ module.exports = {
 	createUser,
 	updateUser,
 	deleteUser,
+	deleteAccount,
 	getCustomerCount,
 };

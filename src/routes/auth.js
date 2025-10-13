@@ -13,6 +13,7 @@ const {
 	createUser,
 	updateUser,
 	deleteUser,
+	deleteAccount,
 	getCustomerCount,
 } = require("../controllers/authController");
 const { protect, authorize } = require("../middleware/auth");
@@ -179,6 +180,12 @@ const refreshTokenValidation = [
 	body("refreshToken").notEmpty().withMessage("Refresh token is required"),
 ];
 
+const deleteAccountValidation = [
+	body("password")
+		.notEmpty()
+		.withMessage("Password is required for account deletion"),
+];
+
 // Public routes
 router.post("/register", registerValidation, register);
 router.post("/login", loginValidation, login);
@@ -193,6 +200,12 @@ router.put(
 	protect,
 	changePasswordValidation,
 	changePassword
+);
+router.delete(
+	"/delete-account",
+	protect,
+	deleteAccountValidation,
+	deleteAccount
 );
 
 // Admin-only routes for user management

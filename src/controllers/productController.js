@@ -220,6 +220,8 @@ exports.getProducts = async (req, res) => {
 				case "Available":
 					filter.stock = { $gte: 1 };
 			}
+		} else {
+			filter.stock = { $gte: 1 };
 		}
 
 		// Discount filtering
