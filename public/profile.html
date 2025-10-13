@@ -286,7 +286,9 @@
 							Change Password
 						</button>
 						<button onclick="signOut()" class="btn logout">Sign Out</button>
-						<button onclick="deleteAccount()" class="btn delete">Delete Account</button>
+						<button onclick="deleteAccount()" class="btn delete">
+							Delete Account
+						</button>
 					</div>
 				</div>
 			</div>
@@ -351,12 +353,18 @@
 
 			// Delete account function
 			async function deleteAccount() {
-				const password = prompt("Please enter your password to confirm account deletion:");
+				const password = prompt(
+					"Please enter your password to confirm account deletion:"
+				);
 				if (!password) {
 					return; // User cancelled
 				}
 
-				if (!confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+				if (
+					!confirm(
+						"Are you sure you want to delete your account? This action cannot be undone."
+					)
+				) {
 					return;
 				}
 
@@ -375,7 +383,10 @@
 					const data = await response.json();
 
 					if (response.ok) {
-						showMessage("Account deleted successfully! Redirecting...", "success");
+						showMessage(
+							"Account deleted successfully! Redirecting...",
+							"success"
+						);
 						localStorage.removeItem("authToken");
 						setTimeout(() => {
 							window.location.href = "index.html";
