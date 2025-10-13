@@ -182,6 +182,7 @@ const refreshTokenValidation = [
 
 const deleteAccountValidation = [
 	body("password")
+		.isString()
 		.notEmpty()
 		.withMessage("Password is required for account deletion"),
 ];

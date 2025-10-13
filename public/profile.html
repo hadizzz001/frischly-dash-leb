@@ -151,6 +151,14 @@
 				background: #c82333;
 			}
 
+			.btn.delete {
+				background: #dc3545;
+			}
+
+			.btn.delete:hover {
+				background: #c82333;
+			}
+
 			.actions {
 				text-align: center;
 				margin-top: 30px;
@@ -278,6 +286,7 @@
 							Change Password
 						</button>
 						<button onclick="signOut()" class="btn logout">Sign Out</button>
+						<button onclick="deleteAccount()" class="btn delete">Delete Account</button>
 					</div>
 				</div>
 			</div>
@@ -338,6 +347,48 @@
 				setTimeout(() => {
 					window.location.href = "index.html";
 				}, 1500);
+			}
+
+			// Delete account function
+			async function deleteAccount() {
+				const password = prompt("Please enter your password to confirm account deletion:");
+				if (!password) {
+					return; // User cancelled
+				}
+
+				if (!confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+					return;
+				}
+
+				showLoading(true);
+
+				try {
+					const response = await fetch(`${API_BASE_URL}/auth/delete-account`, {
+						method: "DELETE",
+						headers: {
+							"Content-Type": "application/json",
+							Authorization: `Bearer ${currentToken}`,
+						},
+						body: JSON.stringify({ password }),
+					});
+
+					const data = await response.json();
+
+					if (response.ok) {
+						showMessage("Account deleted successfully! Redirecting...", "success");
+						localStorage.removeItem("authToken");
+						setTimeout(() => {
+							window.location.href = "index.html";
+						}, 2000);
+					} else {
+						showMessage(data.message || "Failed to delete account", "error");
+					}
+				} catch (error) {
+					console.error("Delete account error:", error);
+					showMessage("An error occurred while deleting your account", "error");
+				} finally {
+					showLoading(false);
+				}
 			}
 
 			// Edit profile function
