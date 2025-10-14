@@ -45,7 +45,7 @@ const register = async (req, res) => {
 			address,
 			emailToken,
 			emailTokenExpires,
-			emailConfirmed: true,
+			emailConfirmed: true, // change this to be default false on production
 		});
 
 		const baseUrl =
@@ -65,22 +65,22 @@ const register = async (req, res) => {
 		const emailHtml = `<!doctype html><html><body><p>Hi ${
 			name || "there"
 		},</p><p>Please confirm your email by clicking the button below.</p><p><a href="${confirmUrl}">Confirm Email</a></p><p>If you did not create an account, you can ignore this email.</p></body></html>`;
-
-		try {
-			await sendEmail({
-				to: email,
-				subject: emailSubject,
-				text: emailText,
-				html: emailHtml,
-			});
-		} catch (emailError) {
-			console.error("Email confirmation send error:", emailError);
-			await User.findByIdAndDelete(user._id);
-			return res.status(500).json({
-				success: false,
-				message: "Unable to send confirmation email. Please try again.",
-			});
-		}
+		// 		// Send confirmation email	 uncomment on production
+		// try {
+		// 	await sendEmail({
+		// 		to: email,
+		// 		subject: emailSubject,
+		// 		text: emailText,
+		// 		html: emailHtml,
+		// 	});
+		// } catch (emailError) {
+		// 	console.error("Email confirmation send error:", emailError);
+		// 	await User.findByIdAndDelete(user._id);
+		// 	return res.status(500).json({
+		// 		success: false,
+		// 		message: "Unable to send confirmation email. Please try again.",
+		// 	});
+		// }
 
 		res.status(201).json({
 			success: true,

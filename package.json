@@ -8,6 +8,8 @@
 		"start": "node server.js",
 		"dev": "nodemon server.js",
 		"create-admin": "node scripts/createAdminUsers.js",
+		"create-confirmed-admin": "node scripts/createConfirmedAdmin.js",
+		"confirm-all-users": "node scripts/confirmAllUsers.js",
 		"manage-users": "node scripts/manageUsers.js",
 		"add-products": "node scripts/add3000Products.js",
 		"add-customers": "node scripts/add20Customers.js",
