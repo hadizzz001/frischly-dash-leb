@@ -71,7 +71,7 @@ router.patch(
 router.patch(
 	"/:id/cancel",
 	protect,
-	authorize("admin", "manager"),
+	authorize("admin", "manager", "staff", "customer"),
 	cancelOrder
 );
 router.delete("/:id", protect, authorize("admin"), deleteOrder);
