@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const { validationResult } = require("express-validator");
 const User = require("../models/User");
 const {
@@ -5,6 +6,7 @@ const {
 	generateRefreshToken,
 	verifyRefreshToken,
 } = require("../utils/jwt");
+const sendEmail = require("../utils/sendEmail");
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -32,26 +34,60 @@ const register = async (req, res) => {
 			});
 		}
 
-		// Create user
+		const emailToken = crypto.randomBytes(32).toString("hex");
+		const emailTokenExpires = Date.now() + 24 * 60 * 60 * 1000;
+
 		user = await User.create({
 			name,
 			phoneNumber,
 			email,
 			password,
 			address,
+			emailToken,
+			emailTokenExpires,
+			emailConfirmed: true,
 		});
 
-		// Generate tokens
-		const token = generateToken({ id: user._id });
-		const refreshToken = generateRefreshToken({ id: user._id });
+		const baseUrl =
+			process.env.SERVER_PUBLIC_URL ||
+			process.env.API_BASE_URL ||
+			(process.env.FRONTEND_URL
+				? process.env.FRONTEND_URL.split(",")[0]
+				: undefined) ||
+			`http://localhost:${process.env.PORT || 3001}`;
+		const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
+		const confirmUrl = `${normalizedBaseUrl}/api/auth/confirm/${emailToken}`;
+
+		const emailSubject = "Confirm your Frischly email";
+		const emailText = `Hi ${
+			name || "there"
+		},\n\nPlease confirm your email by visiting the link below:\n${confirmUrl}\n\nIf you did not create an account, you can ignore this email.`;
+		const emailHtml = `<!doctype html><html><body><p>Hi ${
+			name || "there"
+		},</p><p>Please confirm your email by clicking the button below.</p><p><a href="${confirmUrl}">Confirm Email</a></p><p>If you did not create an account, you can ignore this email.</p></body></html>`;
+
+		try {
+			await sendEmail({
+				to: email,
+				subject: emailSubject,
+				text: emailText,
+				html: emailHtml,
+			});
+		} catch (emailError) {
+			console.error("Email confirmation send error:", emailError);
+			await User.findByIdAndDelete(user._id);
+			return res.status(500).json({
+				success: false,
+				message: "Unable to send confirmation email. Please try again.",
+			});
+		}
 
 		res.status(201).json({
 			success: true,
-			message: "User registered successfully",
+			message:
+				"Signup successful. Please check your email to confirm your account.",
 			data: {
-				user: user.toSafeObject(),
-				token,
-				refreshToken,
+				userId: user._id,
 			},
 		});
 	} catch (error) {
@@ -60,6 +96,43 @@ const register = async (req, res) => {
 			success: false,
 			message: "Server error during registration",
 		});
+	}
+};
+
+const confirmEmail = async (req, res) => {
+	try {
+		const { token } = req.params;
+
+		if (!token) {
+			return res.status(400).send("Invalid confirmation link");
+		}
+
+		const user = await User.findOne({
+			emailToken: token,
+			emailTokenExpires: { $gt: Date.now() },
+		});
+
+		if (!user) {
+			return res.status(400).send("Invalid or expired confirmation link");
+		}
+
+		user.emailConfirmed = true;
+		user.emailConfirmedAt = new Date();
+		user.emailToken = undefined;
+		user.emailTokenExpires = undefined;
+
+		await user.save();
+
+		if (process.env.EMAIL_CONFIRM_REDIRECT_SUCCESS) {
+			const normalizedRedirect =
+				process.env.EMAIL_CONFIRM_REDIRECT_SUCCESS.replace(/\/$/, "");
+			return res.redirect(`${normalizedRedirect}?status=confirmed`);
+		}
+
+		return res.send("Email confirmed. You can now log in.");
+	} catch (error) {
+		console.error("Email confirmation error:", error);
+		return res.status(500).send("Server error");
 	}
 };
 
@@ -103,6 +176,14 @@ const login = async (req, res) => {
 			return res.status(401).json({
 				success: false,
 				message: "Invalid credentials",
+			});
+		}
+
+		if (user.emailConfirmed === false) {
+			return res.status(403).json({
+				success: false,
+				message: "Please confirm your email before logging in.",
+				needsConfirmation: true,
 			});
 		}
 
@@ -311,6 +392,14 @@ const loginProfile = async (req, res) => {
 			});
 		}
 
+		if (user.emailConfirmed === false) {
+			return res.status(403).json({
+				success: false,
+				message: "Please confirm your email before logging in.",
+				needsConfirmation: true,
+			});
+		}
+
 		// Update last login
 		user.lastLogin = new Date();
 		await user.save();
@@ -374,6 +463,14 @@ const refreshToken = async (req, res) => {
 				return res.status(401).json({
 					success: false,
 					message: "User account is deactivated",
+				});
+			}
+
+			if (user.emailConfirmed === false) {
+				return res.status(403).json({
+					success: false,
+					message: "Please confirm your email before continuing.",
+					needsConfirmation: true,
 				});
 			}
 
@@ -504,6 +601,8 @@ const createUser = async (req, res) => {
 			password,
 			address,
 			role: role || "user",
+			emailConfirmed: true,
+			emailConfirmedAt: new Date(),
 		});
 
 		res.status(201).json({
@@ -743,6 +842,7 @@ const deleteAccount = async (req, res) => {
 
 module.exports = {
 	register,
+	confirmEmail,
 	login,
 	loginProfile,
 	refreshToken,

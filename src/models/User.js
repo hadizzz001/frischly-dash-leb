@@ -31,6 +31,19 @@ const userSchema = new mongoose.Schema(
 			minlength: [6, "Password must be at least 6 characters"],
 			select: false, // Don't include password in queries by default
 		},
+		emailConfirmed: {
+			type: Boolean,
+			default: false,
+		},
+		emailConfirmedAt: {
+			type: Date,
+		},
+		emailToken: {
+			type: String,
+		},
+		emailTokenExpires: {
+			type: Date,
+		},
 		address: {
 			street: {
 				type: String,
@@ -134,6 +147,8 @@ userSchema.methods.toSafeObject = function () {
 	const userObject = this.toObject();
 	delete userObject.password;
 	delete userObject.creditCard; // Don't expose credit card info
+	delete userObject.emailToken;
+	delete userObject.emailTokenExpires;
 	return userObject;
 };
 
@@ -152,6 +167,9 @@ userSchema.methods.toMaskedObject = function () {
 			cardNumber: maskedNumber,
 		};
 	}
+
+	delete userObject.emailToken;
+	delete userObject.emailTokenExpires;
 
 	return userObject;
 };

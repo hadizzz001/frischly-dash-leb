@@ -2,6 +2,7 @@ const express = require("express");
 const { body } = require("express-validator");
 const {
 	register,
+	confirmEmail,
 	login,
 	loginProfile,
 	refreshToken,
@@ -189,6 +190,7 @@ const deleteAccountValidation = [
 
 // Public routes
 router.post("/register", registerValidation, register);
+router.get("/confirm/:token", confirmEmail);
 router.post("/login", loginValidation, login);
 router.post("/login-profile", loginValidation, loginProfile);
 router.post("/refresh", refreshTokenValidation, refreshToken);
