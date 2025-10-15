@@ -71,6 +71,9 @@
 
 		<!-- Stylesheet -->
 		<link rel="stylesheet" href="css/dashboard.css" />
+
+		<!-- XLSX Library for Excel export -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 	</head>
 	<body>
 		<!-- Mobile Menu Toggle -->
@@ -222,9 +225,9 @@
 							<button class="btn btn-secondary" onclick="refreshUsersList()">
 								🔄 Refresh List
 							</button>
-							<button class="btn btn-secondary" onclick="exportUsers()">
+							<!-- <button class="btn btn-secondary" onclick="exportUsers()">
 								📊 Export Users
-							</button>
+							</button> -->
 						</div>
 
 						<!-- Staff Management Section (Admin Only) -->
@@ -268,9 +271,6 @@
 							</button>
 							<button class="btn btn-secondary" onclick="exportCustomers()">
 								📊 Export Customers
-							</button>
-							<button class="btn btn-secondary" onclick="showCustomerStats()">
-								📈 Statistics
 							</button>
 						</div>
 
@@ -541,9 +541,6 @@
 						</button>
 						<button class="btn btn-secondary" onclick="refreshProducts()">
 							🔄 Refresh
-						</button>
-						<button class="btn btn-secondary" onclick="importProducts()">
-							📤 Import Products
 						</button>
 					</div>
 
@@ -929,9 +926,6 @@
 							<button class="btn btn-secondary" onclick="refreshRiders()">
 								🔄 Refresh
 							</button>
-							<button class="btn btn-secondary" onclick="showRiderMap()">
-								🗺️ View Map
-							</button>
 						</div>
 
 						<div class="data-table">
@@ -1234,7 +1228,7 @@
 								</div>
 							</div>
 
-							<div class="settings-card">
+							<div class="settings-card" style="display: none">
 								<h3>📊 System Information</h3>
 								<div class="setting-item">
 									<label>System Stats</label>
@@ -1252,7 +1246,7 @@
 								</div>
 							</div>
 
-							<div class="settings-card">
+							<div class="settings-card" style="display: none">
 								<h3>🔧 Maintenance</h3>
 								<div class="setting-item">
 									<label>System Maintenance</label>
@@ -6848,12 +6842,9 @@
 						<td>
 							<div style="font-size: 12px; color: #666; max-width: 150px;">
 								${
-									customer.address
-										? `${customer.address.street || ""} ${
-												customer.address.city || ""
-										  } ${customer.address.zipCode || ""}`.trim() ||
-										  "No address"
-										: "No address"
+									customer.address && customer.address.zipCode
+										? customer.address.zipCode
+										: "No zip"
 								}
 							</div>
 						</td>
@@ -6967,11 +6958,35 @@
 			}
 
 			function exportCustomers() {
-				showMessage(
-					"Export customers functionality would be implemented here",
-					"info"
-				);
-				// TODO: Implement customer export
+				if (!customersData || customersData.length === 0) {
+					showMessage("No customers to export", "error");
+					return;
+				}
+
+				// Prepare data for export
+				const exportData = customersData.map((customer) => ({
+					Name: customer.name,
+					Email: customer.email,
+					Phone: customer.phoneNumber || "N/A",
+					"Zip Code":
+						customer.address && customer.address.zipCode
+							? customer.address.zipCode
+							: "No zip",
+					Status: customer.isActive ? "Active" : "Inactive",
+					"Joined Date": new Date(customer.createdAt).toLocaleDateString(),
+					"Last Login": customer.lastLogin
+						? new Date(customer.lastLogin).toLocaleDateString()
+						: "Never",
+				}));
+
+				// Create worksheet
+				const ws = XLSX.utils.json_to_sheet(exportData);
+				const wb = XLSX.utils.book_new();
+				XLSX.utils.book_append_sheet(wb, ws, "Customers");
+
+				// Download file
+				XLSX.writeFile(wb, "customers.xlsx");
+				showMessage("Customers exported to Excel successfully", "success");
 			}
 
 			function showCustomerStats() {
