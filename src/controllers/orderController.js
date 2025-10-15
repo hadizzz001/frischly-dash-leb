@@ -4,6 +4,7 @@ const Rider = require("../models/Rider");
 const mongoose = require("mongoose");
 const Zone = require("../models/Zone");
 const User = require("../models/User");
+const sendEmail = require("../utils/sendEmail");
 
 // @desc    Get all orders with enhanced filtering options
 // @route   GET /api/orders
@@ -487,6 +488,74 @@ exports.createOrder = async (req, res) => {
 				"items.product",
 				"name barcode shelfNumber price discount tax bottlerefund"
 			);
+
+		// Send confirmation email to customer
+		try {
+			const emailSubject = `Order Confirmation - Order #${populatedOrder._id}`;
+			const emailHtml = `
+				<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+					<h2 style="color: #333; text-align: center;">Order Confirmation</h2>
+					<p>Dear ${populatedOrder.customer.name},</p>
+					<p>Thank you for your order! We have received your order and it is being processed. Here are the details:</p>
+					
+					<h3>Order Details</h3>
+					<p><strong>Order ID:</strong> ${populatedOrder._id}</p>
+					<p><strong>Order Date:</strong> ${new Date(populatedOrder.createdAt).toLocaleDateString()}</p>
+					<p><strong>Status:</strong> ${populatedOrder.status}</p>
+					<p><strong>Payment Method:</strong> ${populatedOrder.paymentMethod}</p>
+					
+					<h3>Items Ordered</h3>
+					<table style="width: 100%; border-collapse: collapse;">
+						<thead>
+							<tr style="background-color: #f2f2f2;">
+								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Product</th>
+								<th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Quantity</th>
+								<th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Price</th>
+								<th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Total</th>
+							</tr>
+						</thead>
+						<tbody>
+							${populatedOrder.items.map(item => `
+								<tr>
+									<td style="border: 1px solid #ddd; padding: 8px;">${item.product.name}</td>
+									<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.quantity}</td>
+									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">€${(item.totalPrice / item.quantity).toFixed(2)}</td>
+									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">€${item.totalPrice.toFixed(2)}</td>
+								</tr>
+							`).join('')}
+						</tbody>
+					</table>
+					
+					<h3>Order Summary</h3>
+					<p><strong>Subtotal:</strong> €${populatedOrder.subtotal.toFixed(2)}</p>
+					<p><strong>Delivery Fee:</strong> €${populatedOrder.delivery.toFixed(2)}</p>
+					<p><strong>Total:</strong> €${populatedOrder.total.toFixed(2)}</p>
+					
+					${populatedOrder.notes ? `<p><strong>Notes:</strong> ${populatedOrder.notes}</p>` : ''}
+					
+					<p>If you have any questions about your order, please contact us at support@frischly.com or call us at +49 123 456 789.</p>
+					
+					<p>Thank you for choosing Frischly!</p>
+					
+					<p>Best regards,<br>The Frischly Team</p>
+					
+					<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+					<p style="font-size: 12px; color: #666; text-align: center;">
+						This is an automated email. Please do not reply to this message.
+					</p>
+				</div>
+			`;
+
+			await sendEmail({
+				to: populatedOrder.customer.email,
+				subject: emailSubject,
+				html: emailHtml,
+			});
+		} catch (emailError) {
+			console.error("Error sending order confirmation email:", emailError);
+			// Don't fail the order creation if email fails
+		}
+
 		res.status(201).json({
 			success: true,
 			message: "Order created successfully",

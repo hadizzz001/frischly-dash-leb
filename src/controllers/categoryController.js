@@ -110,9 +110,9 @@ exports.getCategories = async (req, res) => {
 		// Build sort object
 		const sort = {};
 		sort[sortBy] = sortOrder === "desc" ? -1 : 1;
-		// Add secondary sort by name for consistent ordering
-		if (sortBy !== "name") {
-			sort.name = 1;
+		// Add secondary sort by sortOrder for consistent ordering
+		if (sortBy !== "sortOrder") {
+			sort.sortOrder = 1;
 		}
 
 		// Execute query
