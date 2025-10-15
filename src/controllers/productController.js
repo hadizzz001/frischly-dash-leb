@@ -221,7 +221,7 @@ exports.getProducts = async (req, res) => {
 					filter.stock = { $gte: 1 };
 			}
 		} else {
-			filter.stock = { $gte: 1 };
+			//filter.stock = { $gte: 1 };
 		}
 
 		// Discount filtering
