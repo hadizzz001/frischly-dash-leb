@@ -39,6 +39,9 @@ async function updateOrderPaymentStatus(paymentLinkId, paymentStatus) {
 
 		// Additional actions based on payment status
 		if (paymentStatus === "paid") {
+			order.status = "confirmed";
+			await order.save();
+
 			// Could send payment confirmation email, update order status, etc.
 			console.log(`💰 Payment completed for order ${order._id}`);
 		} else if (paymentStatus === "failed") {
