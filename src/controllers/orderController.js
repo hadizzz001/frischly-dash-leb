@@ -499,6 +499,86 @@ exports.createOrder = async (req, res) => {
 				"name barcode shelfNumber price discount tax bottlerefund"
 			);
 
+		// Create payment link for the order
+		try {
+			console.log("Creating payment link for order:", populatedOrder._id);
+
+			// Create shopping cart from order items
+			const shoppingCart = populatedOrder.items.map((item, index) => ({
+				type: "goods",
+				number: item.product.barcode.toString(),
+				name: item.product.name,
+				price: Math.round(item.totalPrice * 100), // Convert to cents
+				quantity: item.quantity,
+			}));
+
+			// Add delivery fee as separate item
+			if (populatedOrder.delivery > 0) {
+				shoppingCart.push({
+					type: "shipment",
+					number: "DELIVERY",
+					name: "Delivery Fee",
+					price: Math.round(populatedOrder.delivery * 100), // Convert to cents
+					quantity: 1,
+				});
+			}
+
+			const paymentData = {
+				reference: `ORD_${Date.now().toString().slice(-8)}`, // Generate a short reference like "ORD_12345678"
+				shoppingCart: shoppingCart,
+				currency: "EUR",
+				description: `Order ${populatedOrder._id}`,
+				mode: process.env.NODE_ENV === "production" ? "live" : "test",
+				billing: {
+					lastName: populatedOrder.customer.lastName || "Customer",
+					country: populatedOrder.customer.country || "DE",
+				},
+				paymentMethods: ["visa", "mastercard", "paypal"],
+				successUrl: `${
+					process.env.FRONTEND_URL || "http://localhost:3000"
+				}/payment/success.html?order=${populatedOrder._id}`,
+				errorUrl: `${
+					process.env.FRONTEND_URL || "http://localhost:3000"
+				}/payment/error.html?order=${populatedOrder._id}`,
+				backUrl: `${
+					process.env.FRONTEND_URL || "http://localhost:3000"
+				}/payment/cancel.html?order=${populatedOrder._id}`,
+				notifyUrl: `${
+					process.env.BACKEND_URL || "http://localhost:3001"
+				}/api/payments/linkExecutionNotification`,
+			};
+
+			const paymentResult = await payoneService.createPaymentLink(paymentData);
+
+			if (paymentResult.success) {
+				console.log(
+					"Payment link created successfully:",
+					paymentResult.data.id
+				);
+				console.log("Payment URL:", paymentResult.data.link);
+
+				paymentUrl = paymentResult.data.link;
+
+				// Update order with payment link ID
+				await Order.findByIdAndUpdate(populatedOrder._id, {
+					paymentLinkId: paymentResult.data.id,
+				});
+				console.log("Updated order with payment link ID:", paymentResult.data.id);
+			} else {
+				console.error("Failed to create payment link:", paymentResult.error);
+			}
+		} catch (paymentError) {
+			console.error("Error creating payment link:", paymentError);
+			// Don't fail the order creation if payment link creation fails
+		}
+
+		res.status(201).json({
+			success: true,
+			message: "Order created successfully",
+			data: populatedOrder,
+			paymentUrl: paymentUrl,
+		});
+
 		// Send confirmation email to customer
 		try {
 			const emailSubject = `Order Confirmation - Order #${populatedOrder._id}`;
@@ -515,6 +595,11 @@ exports.createOrder = async (req, res) => {
 					).toLocaleDateString()}</p>
 					<p><strong>Status:</strong> ${populatedOrder.status}</p>
 					<p><strong>Payment Method:</strong> ${populatedOrder.paymentMethod}</p>
+					${
+						paymentUrl
+							? `<p><strong>Payment URL:</strong> <a href="${paymentUrl}" style="color: #007bff;">${paymentUrl}</a></p>`
+							: ""
+					}
 					
 					<h3>Items Ordered</h3>
 					<table style="width: 100%; border-collapse: collapse;">
@@ -559,7 +644,7 @@ exports.createOrder = async (req, res) => {
 							: ""
 					}
 					
-					<p>If you have any questions about your order, please contact us at support@frischly.com or call us at +49 123 456 789.</p>
+					<p>If you have any questions about your order, please contact us at info@frischlyshop.com .</p>
 					
 					<p>Thank you for choosing Frischly!</p>
 					
@@ -581,65 +666,6 @@ exports.createOrder = async (req, res) => {
 			console.error("Error sending order confirmation email:", emailError);
 			// Don't fail the order creation if email fails
 		}
-
-		// Create payment link for the order
-		try {
-			console.log("Creating payment link for order:", populatedOrder._id);
-
-			// Create shopping cart from order items
-			const shoppingCart = populatedOrder.items.map((item, index) => ({
-				type: "goods",
-				number: item.product.barcode.toString(),
-				name: item.product.name,
-				price: Math.round(item.totalPrice * 100), // Convert to cents
-				quantity: item.quantity,
-			}));
-
-			// Add delivery fee as separate item
-			if (populatedOrder.delivery > 0) {
-				shoppingCart.push({
-					type: "shipment",
-					number: "DELIVERY",
-					name: "Delivery Fee",
-					price: Math.round(populatedOrder.delivery * 100), // Convert to cents
-					quantity: 1,
-				});
-			}
-
-			const paymentData = {
-				reference: `ORD_${Date.now().toString().slice(-8)}`, // Generate a short reference like "ORD_12345678"
-				shoppingCart: shoppingCart,
-				currency: "EUR",
-				description: `Order ${populatedOrder._id}`,
-				mode: process.env.NODE_ENV === "production" ? "live" : "test",
-				billing: {
-					lastName: populatedOrder.customer.lastName || "Customer",
-					country: populatedOrder.customer.country || "DE",
-				},
-				paymentMethods: ["visa", "mastercard", "paypal"],
-			};
-
-			const paymentResult = await payoneService.createPaymentLink(paymentData);
-
-			if (paymentResult.success) {
-				console.log(
-					"Payment link created successfully:",
-					paymentResult.data.id
-				);
-				console.log("Payment URL:", paymentResult.data.paymentUrl);
-			} else {
-				console.error("Failed to create payment link:", paymentResult.error);
-			}
-		} catch (paymentError) {
-			console.error("Error creating payment link:", paymentError);
-			// Don't fail the order creation if payment link creation fails
-		}
-
-		res.status(201).json({
-			success: true,
-			message: "Order created successfully",
-			data: populatedOrder,
-		});
 	} catch (error) {
 		console.error("Error creating order:", error);
 		res.status(500).json({

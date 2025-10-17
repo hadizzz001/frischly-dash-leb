@@ -37,4 +37,11 @@ router.get("/payment-links/:linkId", paymentController.getPaymentLink);
  */
 router.put("/payment-links/:linkId", paymentController.updatePaymentLink);
 
+/**
+ * @route POST /api/payments/linkExecutionNotification
+ * @description Handle PAYONE Link Execution Notifications (OpenAPI spec compliant)
+ * @access Public
+ */
+router.post("/linkExecutionNotification", paymentController.handlePaymentNotification);
+
 module.exports = router;

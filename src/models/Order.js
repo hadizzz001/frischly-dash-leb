@@ -109,6 +109,10 @@ const orderSchema = new mongoose.Schema(
 			default: "pending",
 			index: true,
 		},
+		paymentLinkId: {
+			type: String,
+			index: true,
+		},
 		paymentMethod: {
 			type: String,
 			enum: ["cash", "card", "online", "wallet"],
