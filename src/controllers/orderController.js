@@ -557,7 +557,7 @@ exports.createOrder = async (req, res) => {
 				);
 				console.log("Payment URL:", paymentResult.data.link);
 
-				paymentUrl = paymentResult.data.link;
+				var paymentUrl = paymentResult.data.link;
 
 				// Update order with payment link ID
 				await Order.findByIdAndUpdate(populatedOrder._id, {
