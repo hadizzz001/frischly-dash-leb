@@ -254,6 +254,9 @@ exports.getProducts = async (req, res) => {
 			sortObj["subcategory.parentCategory.sortOrder"] =
 				sortOrder === "desc" ? -1 : 1;
 			sortObj["subcategory.sortorder"] = sortOrder === "desc" ? -1 : 1;
+			sortObj["sortOrder"] = sortOrder === "desc" ? -1 : 1;
+		} else if (sortBy === "sortOrder") {
+			sortObj["sortOrder"] = sortOrder === "desc" ? -1 : 1;
 		} else {
 			sortObj[sortBy] = sortOrder === "desc" ? -1 : 1;
 		}

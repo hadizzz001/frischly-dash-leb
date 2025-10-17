@@ -116,7 +116,7 @@ const orderSchema = new mongoose.Schema(
 		paymentMethod: {
 			type: String,
 			enum: ["cash", "card", "online", "wallet"],
-			default: "card",
+			default: "online",
 		},
 		shelfNumber: {
 			type: String,

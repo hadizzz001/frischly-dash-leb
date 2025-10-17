@@ -566,10 +566,11 @@ exports.createOrder = async (req, res) => {
 				);
 			} else {
 				console.error("Failed to create payment link:", paymentResult.error);
+				throw new Error(`Payment link creation failed: ${paymentResult.error}`);
 			}
 		} catch (paymentError) {
 			console.error("Error creating payment link:", paymentError);
-			// Don't fail the order creation if payment link creation fails
+			throw new Error(`Payment link creation failed: ${paymentError.message}`);
 		}
 
 		res.status(201).json({

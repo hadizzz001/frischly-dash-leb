@@ -132,6 +132,11 @@ const productSchema = new mongoose.Schema(
 			type: Boolean,
 			default: false,
 		},
+		sortOrder: {
+			type: Number,
+			default: 0,
+			min: [0, "Sort order cannot be negative"],
+		},
 		tags: [
 			{
 				type: String,
@@ -195,6 +200,7 @@ productSchema.index({ subcategory: 1 });
 productSchema.index({ isActive: 1 });
 productSchema.index({ inAds: 1 });
 productSchema.index({ is18Plus: 1 });
+productSchema.index({ sortOrder: 1 });
 productSchema.index({ createdAt: -1 });
 productSchema.index({ tax: 1 });
 productSchema.index({ discount: 1 });

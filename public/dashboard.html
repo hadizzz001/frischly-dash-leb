@@ -597,6 +597,8 @@
 							<option value="stock-desc">Stock High-Low</option>
 							<option value="createdAt-desc" selected>Newest First</option>
 							<option value="createdAt-asc">Oldest First</option>
+							<option value="sortOrder-asc">Sort Order Low-High</option>
+							<option value="sortOrder-desc">Sort Order High-Low</option>
 							<option value="categorySortOrder-asc">
 								Category Sort Order Low-High
 							</option>
@@ -646,6 +648,7 @@
 										<th>Subcategory</th>
 										<th>Price (€)</th>
 										<th>Stock</th>
+										<th>Sort Order</th>
 										<th>Status</th>
 										<th>In Ads</th>
 										<th>+18</th>
@@ -655,7 +658,7 @@
 								<tbody id="products-table-body">
 									<tr>
 										<td
-											colspan="9"
+											colspan="11"
 											style="text-align: center; padding: 40px; color: #666"
 										>
 											No products found. Click "Add Product" to create one.
@@ -4462,9 +4465,12 @@
 				const subcategoryFilter = document.getElementById(
 					"product-category-filter"
 				);
+				const productSortFilter = document.getElementById(
+					"product-sort-filter"
+				);
 				if (subcategoryFilter) {
 					subcategoryFilter.value = subcategoryId;
-
+					productSortFilter.value = "sortOrder-asc";
 					// Trigger the search function to apply the filter
 					searchProducts();
 
@@ -4725,6 +4731,7 @@
 									${stock}
 								</span>
 							</td>
+							<td>${product.sortOrder || 0}</td>
 							<td><span class="status-badge ${
 								product.isActive ? "active" : "inactive"
 							}">${status}</span></td>
@@ -5191,6 +5198,7 @@
 						productStatus: document.getElementById("product-status"),
 						productInAds: document.getElementById("product-in-ads"),
 						productIs18Plus: document.getElementById("product-is18plus"),
+						productSortOrder: document.getElementById("product-sort-order"),
 						productModal: document.getElementById("product-modal"),
 					};
 
@@ -5239,6 +5247,7 @@
 					elements.productStatus.value = product.isActive ? "true" : "false";
 					elements.productInAds.checked = product.inAds || false;
 					elements.productIs18Plus.checked = product.is18Plus || false;
+					elements.productSortOrder.value = product.sortOrder || 0;
 
 					// Update price calculation display for editing
 					setTimeout(() => {
@@ -5482,6 +5491,7 @@
 							? parseFloat(formData.get("discount"))
 							: 0,
 						stock: parseInt(formData.get("stock")) || 0,
+						sortOrder: parseInt(formData.get("sortOrder")) || 0,
 						isActive: formData.get("status") === "true",
 						inAds: formData.get("inAds") === "on",
 						is18Plus: formData.get("is18Plus") === "on",
@@ -8459,6 +8469,18 @@
 								name="stock"
 								min="0"
 								value="0"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="product-sort-order">Sort Order</label>
+							<input
+								type="number"
+								id="product-sort-order"
+								name="sortOrder"
+								min="0"
+								value="0"
+								placeholder="0"
 							/>
 						</div>
 
