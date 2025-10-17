@@ -17,7 +17,9 @@ const payoneService = new PayoneService(
  */
 async function updateOrderPaymentStatus(paymentLinkId, paymentStatus) {
 	try {
-		console.log(`🔄 Updating order payment status for link ${paymentLinkId} to ${paymentStatus}`);
+		console.log(
+			`🔄 Updating order payment status for link ${paymentLinkId} to ${paymentStatus}`
+		);
 
 		// Find order by payment link ID
 		const order = await Order.findOne({ paymentLinkId });
@@ -31,17 +33,18 @@ async function updateOrderPaymentStatus(paymentLinkId, paymentStatus) {
 		order.paymentStatus = paymentStatus;
 		await order.save();
 
-		console.log(`✅ Updated order ${order._id} payment status to ${paymentStatus}`);
+		console.log(
+			`✅ Updated order ${order._id} payment status to ${paymentStatus}`
+		);
 
 		// Additional actions based on payment status
-		if (paymentStatus === 'paid') {
+		if (paymentStatus === "paid") {
 			// Could send payment confirmation email, update order status, etc.
 			console.log(`💰 Payment completed for order ${order._id}`);
-		} else if (paymentStatus === 'failed') {
+		} else if (paymentStatus === "failed") {
 			// Could notify user of payment failure
 			console.log(`❌ Payment failed for order ${order._id}`);
 		}
-
 	} catch (error) {
 		console.error(`❌ Error updating order payment status:`, error);
 	}
@@ -355,12 +358,17 @@ exports.handlePaymentNotification = async (req, res) => {
 		const { header, linkExecutionData } = req.body;
 
 		if (!header || !linkExecutionData) {
-			console.error("❌ Invalid notification format: missing header or linkExecutionData");
+			console.error(
+				"❌ Invalid notification format: missing header or linkExecutionData"
+			);
 			return res.status(400).send("INVALID_FORMAT");
 		}
 
 		// Validate header
-		if (!header.notificationType || header.notificationType.type !== 'PAYONE_LINK_EXECUTION') {
+		if (
+			!header.notificationType ||
+			header.notificationType.type !== "PAYONE_LINK_EXECUTION"
+		) {
 			console.error("❌ Invalid notification type");
 			return res.status(400).send("INVALID_TYPE");
 		}
@@ -371,7 +379,7 @@ exports.handlePaymentNotification = async (req, res) => {
 			paymentProcess,
 			executionStatus,
 			paymentMethod,
-			executionTime
+			executionTime,
 		} = linkExecutionData;
 
 		const { merchantId, portalId, mode } = header;
@@ -386,27 +394,29 @@ exports.handlePaymentNotification = async (req, res) => {
 
 		// Handle different execution statuses
 		switch (executionStatus) {
-			case 'APPROVED':
+			case "APPROVED":
 				console.log("✅ Payment APPROVED - Processing successful payment");
 				// Update order status to paid
-				await updateOrderPaymentStatus(linkId, 'paid');
+				await updateOrderPaymentStatus(linkId, "paid");
 				break;
 
-			case 'REDIRECTED':
-				console.log("🔄 Payment REDIRECTED - User was redirected to payment provider");
+			case "REDIRECTED":
+				console.log(
+					"🔄 Payment REDIRECTED - User was redirected to payment provider"
+				);
 				// TODO: Handle redirect status if needed
 				break;
 
-			case 'PENDING':
+			case "PENDING":
 				console.log("⏳ Payment PENDING - Payment is being processed");
 				// Update order status to pending if needed
-				await updateOrderPaymentStatus(linkId, 'pending');
+				await updateOrderPaymentStatus(linkId, "pending");
 				break;
 
-			case 'ERROR':
+			case "ERROR":
 				console.log("❌ Payment ERROR - Payment failed");
 				// Update order status to failed
-				await updateOrderPaymentStatus(linkId, 'failed');
+				await updateOrderPaymentStatus(linkId, "failed");
 				break;
 
 			default:
@@ -414,7 +424,7 @@ exports.handlePaymentNotification = async (req, res) => {
 		}
 
 		// Validate X-Auth-Code header if provided (for additional security)
-		const authCode = req.headers['x-auth-code'];
+		const authCode = req.headers["x-auth-code"];
 		if (authCode) {
 			console.log("🔐 Auth code received - validating...");
 			// TODO: Implement auth code validation if needed
@@ -423,7 +433,6 @@ exports.handlePaymentNotification = async (req, res) => {
 		// Always respond with "OK" for successful notification processing
 		console.log("✅ Notification processed successfully");
 		res.status(200).send("OK");
-
 	} catch (error) {
 		console.error("❌ Error processing payment notification:", error);
 		// Still respond with OK to acknowledge receipt even if processing failed

@@ -1,83 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Cancelled - Frischly</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-        .container {
-            background-color: white;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            text-align: center;
-            max-width: 500px;
-            width: 100%;
-        }
-        .cancel-icon {
-            color: #ffc107;
-            font-size: 48px;
-            margin-bottom: 20px;
-        }
-        h1 {
-            color: #ffc107;
-            margin-bottom: 20px;
-        }
-        p {
-            color: #666;
-            margin-bottom: 30px;
-            line-height: 1.6;
-        }
-        .btn {
-            display: inline-block;
-            padding: 12px 24px;
-            background-color: #007bff;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            transition: background-color 0.3s;
-            margin: 0 10px 10px 0;
-        }
-        .btn:hover {
-            background-color: #0056b3;
-        }
-        .btn-secondary {
-            background-color: #28a745;
-        }
-        .btn-secondary:hover {
-            background-color: #1e7e34;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="cancel-icon">←</div>
-        <h1>Payment Cancelled</h1>
-        <p>You have cancelled the payment process. Your order has not been charged.</p>
-        <p>You can return to your cart to complete your purchase at any time.</p>
-        <a href="/" class="btn">Continue Shopping</a>
-        <a href="/cart" class="btn btn-secondary">Return to Cart</a>
-    </div>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Payment Cancelled - Frischly</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				background-color: #f4f4f4;
+				margin: 0;
+				padding: 0;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				min-height: 100vh;
+			}
+			.container {
+				background-color: white;
+				padding: 40px;
+				border-radius: 8px;
+				box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+				text-align: center;
+				max-width: 500px;
+				width: 100%;
+			}
+			.cancel-icon {
+				color: #ffc107;
+				font-size: 48px;
+				margin-bottom: 20px;
+			}
+			h1 {
+				color: #ffc107;
+				margin-bottom: 20px;
+			}
+			p {
+				color: #666;
+				margin-bottom: 30px;
+				line-height: 1.6;
+			}
+			.btn {
+				display: inline-block;
+				padding: 12px 24px;
+				background-color: #007bff;
+				color: white;
+				text-decoration: none;
+				border-radius: 4px;
+				transition: background-color 0.3s;
+				margin: 0 10px 10px 0;
+			}
+			.btn:hover {
+				background-color: #0056b3;
+			}
+			.btn-secondary {
+				background-color: #28a745;
+			}
+			.btn-secondary:hover {
+				background-color: #1e7e34;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<div class="cancel-icon">←</div>
+			<h1>Payment Cancelled</h1>
+			<p>
+				You have cancelled the payment process. Your order has not been charged.
+			</p>
+			<p>You can return to your cart to complete your purchase at any time.</p>
+			<a href="/" class="btn">Continue Shopping</a>
+			<a href="/cart" class="btn btn-secondary">Return to Cart</a>
+		</div>
 
-    <script>
-        // Get order ID from URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const orderId = urlParams.get('order');
+		<script>
+			// Get order ID from URL parameters
+			const urlParams = new URLSearchParams(window.location.search);
+			const orderId = urlParams.get("order");
 
-        if (orderId) {
-            console.log('Payment cancelled for order:', orderId);
-            // You can add additional logic here, like tracking or API calls
-        }
-    </script>
-</body>
+			if (orderId) {
+				console.log("Payment cancelled for order:", orderId);
+				// You can add additional logic here, like tracking or API calls
+			}
+		</script>
+	</body>
 </html>

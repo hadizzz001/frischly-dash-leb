@@ -563,7 +563,10 @@ exports.createOrder = async (req, res) => {
 				await Order.findByIdAndUpdate(populatedOrder._id, {
 					paymentLinkId: paymentResult.data.id,
 				});
-				console.log("Updated order with payment link ID:", paymentResult.data.id);
+				console.log(
+					"Updated order with payment link ID:",
+					paymentResult.data.id
+				);
 			} else {
 				console.error("Failed to create payment link:", paymentResult.error);
 			}
