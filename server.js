@@ -16,6 +16,7 @@ const zoneRoutes = require("./src/routes/zones");
 const wasteRoutes = require("./src/routes/waste");
 const subcategoryRoutes = require("./src/routes/subcategories");
 const adminRoutes = require("./src/routes/admin");
+const paymentRoutes = require("./src/routes/payments");
 
 // Connect to database
 connectDB();
@@ -102,6 +103,7 @@ app.use("/api/zones", zoneRoutes);
 app.use("/api/waste", wasteRoutes);
 app.use("/api/subcategories", subcategoryRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/payments", paymentRoutes);
 
 // Route for customer shop page
 app.get("/shop", (req, res) => {

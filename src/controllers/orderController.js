@@ -5,6 +5,16 @@ const mongoose = require("mongoose");
 const Zone = require("../models/Zone");
 const User = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
+const PayoneService = require("../services/payoneService");
+
+// Initialize PAYONE Service
+const payoneService = new PayoneService(
+	process.env.MERCHANT_ID,
+	process.env.ACCOUNT_ID,
+	process.env.PORTAL_ID,
+	process.env.PORTAL_KEY,
+	process.env.PAYONE_API_BASE_URL || "https://onelink.pay1.de/api"
+);
 
 // @desc    Get all orders with enhanced filtering options
 // @route   GET /api/orders
@@ -500,7 +510,9 @@ exports.createOrder = async (req, res) => {
 					
 					<h3>Order Details</h3>
 					<p><strong>Order ID:</strong> ${populatedOrder._id}</p>
-					<p><strong>Order Date:</strong> ${new Date(populatedOrder.createdAt).toLocaleDateString()}</p>
+					<p><strong>Order Date:</strong> ${new Date(
+						populatedOrder.createdAt
+					).toLocaleDateString()}</p>
 					<p><strong>Status:</strong> ${populatedOrder.status}</p>
 					<p><strong>Payment Method:</strong> ${populatedOrder.paymentMethod}</p>
 					
@@ -515,14 +527,24 @@ exports.createOrder = async (req, res) => {
 							</tr>
 						</thead>
 						<tbody>
-							${populatedOrder.items.map(item => `
+							${populatedOrder.items
+								.map(
+									(item) => `
 								<tr>
 									<td style="border: 1px solid #ddd; padding: 8px;">${item.product.name}</td>
-									<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.quantity}</td>
-									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">€${(item.totalPrice / item.quantity).toFixed(2)}</td>
-									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">€${item.totalPrice.toFixed(2)}</td>
+									<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${
+										item.quantity
+									}</td>
+									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">€${(
+										item.totalPrice / item.quantity
+									).toFixed(2)}</td>
+									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">€${item.totalPrice.toFixed(
+										2
+									)}</td>
 								</tr>
-							`).join('')}
+							`
+								)
+								.join("")}
 						</tbody>
 					</table>
 					
@@ -531,7 +553,11 @@ exports.createOrder = async (req, res) => {
 					<p><strong>Delivery Fee:</strong> €${populatedOrder.delivery.toFixed(2)}</p>
 					<p><strong>Total:</strong> €${populatedOrder.total.toFixed(2)}</p>
 					
-					${populatedOrder.notes ? `<p><strong>Notes:</strong> ${populatedOrder.notes}</p>` : ''}
+					${
+						populatedOrder.notes
+							? `<p><strong>Notes:</strong> ${populatedOrder.notes}</p>`
+							: ""
+					}
 					
 					<p>If you have any questions about your order, please contact us at support@frischly.com or call us at +49 123 456 789.</p>
 					
@@ -554,6 +580,59 @@ exports.createOrder = async (req, res) => {
 		} catch (emailError) {
 			console.error("Error sending order confirmation email:", emailError);
 			// Don't fail the order creation if email fails
+		}
+
+		// Create payment link for the order
+		try {
+			console.log("Creating payment link for order:", populatedOrder._id);
+
+			// Create shopping cart from order items
+			const shoppingCart = populatedOrder.items.map((item, index) => ({
+				type: "goods",
+				number: item.product.barcode.toString(),
+				name: item.product.name,
+				price: Math.round(item.totalPrice * 100), // Convert to cents
+				quantity: item.quantity,
+			}));
+
+			// Add delivery fee as separate item
+			if (populatedOrder.delivery > 0) {
+				shoppingCart.push({
+					type: "shipment",
+					number: "DELIVERY",
+					name: "Delivery Fee",
+					price: Math.round(populatedOrder.delivery * 100), // Convert to cents
+					quantity: 1,
+				});
+			}
+
+			const paymentData = {
+				reference: `ORD_${Date.now().toString().slice(-8)}`, // Generate a short reference like "ORD_12345678"
+				shoppingCart: shoppingCart,
+				currency: "EUR",
+				description: `Order ${populatedOrder._id}`,
+				mode: process.env.NODE_ENV === "production" ? "live" : "test",
+				billing: {
+					lastName: populatedOrder.customer.lastName || "Customer",
+					country: populatedOrder.customer.country || "DE",
+				},
+				paymentMethods: ["visa", "mastercard", "paypal"],
+			};
+
+			const paymentResult = await payoneService.createPaymentLink(paymentData);
+
+			if (paymentResult.success) {
+				console.log(
+					"Payment link created successfully:",
+					paymentResult.data.id
+				);
+				console.log("Payment URL:", paymentResult.data.paymentUrl);
+			} else {
+				console.error("Failed to create payment link:", paymentResult.error);
+			}
+		} catch (paymentError) {
+			console.error("Error creating payment link:", paymentError);
+			// Don't fail the order creation if payment link creation fails
 		}
 
 		res.status(201).json({
