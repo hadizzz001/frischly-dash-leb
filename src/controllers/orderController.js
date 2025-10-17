@@ -551,10 +551,7 @@ exports.createOrder = async (req, res) => {
 			const paymentResult = await payoneService.createPaymentLink(paymentData);
 
 			if (paymentResult.success) {
-				console.log(
-					"Payment link created successfully:",
-					paymentResult.data.id
-				);
+				console.log("Payment link created successfully:", paymentResult.data);
 				console.log("Payment URL:", paymentResult.data.link);
 
 				var paymentUrl = paymentResult.data.link;
