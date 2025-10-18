@@ -506,7 +506,7 @@ exports.createOrder = async (req, res) => {
 			// Create shopping cart from order items
 			const shoppingCart = populatedOrder.items.map((item, index) => ({
 				type: "goods",
-				number: item.product.barcode.toString(),
+				number: item.product.name.toString(),
 				name: item.product.name,
 				price: Math.round(item.totalPrice * 100), // Convert to cents
 				quantity: item.quantity,

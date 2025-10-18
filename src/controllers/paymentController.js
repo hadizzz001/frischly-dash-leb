@@ -220,6 +220,7 @@ exports.createSimplePaymentLink = async (req, res) => {
 			shoppingCart: shoppingCart,
 			language: "en_US",
 			active: true,
+			expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
 		};
 		console.log("Link data prepared:", JSON.stringify(linkData, null, 2));
 		console.log("→ Calling payoneService.createPaymentLink()...");

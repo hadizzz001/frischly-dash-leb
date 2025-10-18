@@ -1602,7 +1602,7 @@
 					await updateCartDisplay();
 
 					// Show success message
-					showOrderSuccess(orderResult.data);
+					showOrderSuccess(orderResult.data, orderResult.paymentUrl);
 				} catch (error) {
 					console.error("Checkout error:", error);
 					alert(`Order failed: ${error.message}`);
@@ -1614,7 +1614,7 @@
 			}
 
 			// Show order success message
-			function showOrderSuccess(order) {
+			function showOrderSuccess(order, url) {
 				const mainContent = document.querySelector(".main-content");
 				const orderTotal = order.total.toFixed(2);
 
@@ -1640,7 +1640,12 @@
 						</div>
 						<div style="background: #d4edda; color: #155724; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
 							<strong>✅ Your order has been placed successfully!</strong><br>
-							You will receive a confirmation email shortly.
+							You will receive a confirmation email shortly.<br>
+							${
+								url
+									? `<a href="${url}" target="_blank" style="color: #155724; text-decoration: underline;">Complete Payment Here</a>`
+									: ""
+							}
 						</div>
 						<div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
 							<a href="shop.html" class="btn btn-primary" style="padding: 12px 24px;">Continue Shopping</a>

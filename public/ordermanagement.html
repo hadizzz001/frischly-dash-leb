@@ -1191,10 +1191,6 @@
 				const status = order.status || "pending";
 
 				switch (status) {
-					case "pending":
-						return `<button class="action-btn edit" onclick="updateOrderStatus('${order._id}', 'confirmed')">
-							Confirm Order
-						</button>`;
 					case "confirmed":
 						return `<button class="action-btn edit" onclick="updateOrderStatus('${order._id}', 'processing')">
 							Start Processing

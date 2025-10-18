@@ -762,7 +762,7 @@
 							class="btn btn-success"
 							onclick="window.location.href='/ordermanagement'"
 						>
-							📋 Manage All Orders
+							📋 Staff Manage Orders
 						</button>
 					</div>
 
@@ -789,7 +789,7 @@
 								<tbody id="orders-table-body">
 									<tr>
 										<td
-											colspan="7"
+											colspan="9"
 											style="text-align: center; padding: 40px; color: #666"
 										>
 											No orders found.
@@ -798,104 +798,71 @@
 								</tbody>
 							</table>
 						</div>
-					</div>
-				</div>
-
-				<!-- Orders Management Section -->
-				<div id="orders-section" class="content-section">
-					<div class="section-header">
-						<h2>Orders Management</h2>
-						<p>Manage customer orders and track their status</p>
-					</div>
-
-					<div class="section-actions">
-						<button class="btn btn-primary" onclick="showAddOrderModal()">
-							➕ Create Order
-						</button>
-						<button class="btn btn-secondary" onclick="loadOrderStats()">
-							📊 View Statistics
-						</button>
-					</div>
-
-					<div class="filters-container">
-						<select id="order-status-filter" class="filter-select">
-							<option value="all">All Status</option>
-							<option value="pending">Pending</option>
-							<option value="confirmed">Confirmed</option>
-							<option value="processing">Processing</option>
-							<option value="OnTheWay">OnTheWay</option>
-							<option value="delivered">Delivered</option>
-							<option value="cancelled">Cancelled</option>
-						</select>
-						<select id="order-payment-filter" class="filter-select">
-							<option value="all">All Payment Status</option>
-							<option value="pending">Payment Pending</option>
-							<option value="paid">Paid</option>
-							<option value="failed">Payment Failed</option>
-							<option value="refunded">Refunded</option>
-						</select>
-						<input
-							type="text"
-							id="order-search"
-							placeholder="Search orders..."
-							class="search-input"
-						/>
-						<button
-							class="btn btn-primary"
-							onclick="searchOrders()"
-							style="white-space: nowrap"
+						<!-- Orders Pagination Controls -->
+						<div
+							class="pagination-container"
+							id="orders-pagination"
+							style="display: none; margin-top: 12px"
 						>
-							🔍 Search
-						</button>
-					</div>
-
-					<div class="table-container">
-						<div class="loading-overlay" id="orders-loading">
-							<div class="spinner"></div>
-							<p>Loading orders...</p>
-						</div>
-						<table class="data-table">
-							<thead>
-								<tr>
-									<th>Index</th>
-									<th>Order Number</th>
-									<th>Customer</th>
-									<th>Items</th>
-									<th>Total</th>
-									<th>Status</th>
-									<th>Payment</th>
-									<th>Date</th>
-									<th>Actions</th>
-								</tr>
-							</thead>
-							<tbody id="orders-table-body">
-								<!-- Orders will be loaded here -->
-							</tbody>
-						</table>
-					</div>
-
-					<div class="pagination-container">
-						<div class="pagination-info">
-							<span id="orders-pagination-info">Showing 0 of 0 orders</span>
-						</div>
-						<div class="pagination-controls">
-							<button
-								class="btn btn-secondary"
-								onclick="loadOrders(currentOrdersPage - 1)"
-								id="orders-prev-btn"
-								disabled
-							>
-								← Previous
-							</button>
-							<span id="orders-page-info">Page 1 of 1</span>
-							<button
-								class="btn btn-secondary"
-								onclick="loadOrders(currentOrdersPage + 1)"
-								id="orders-next-btn"
-								disabled
-							>
-								Next →
-							</button>
+							<div class="pagination-info">
+								<span id="orders-pagination-info"
+									>Showing 1-10 of 0 orders</span
+								>
+							</div>
+							<div class="pagination-controls">
+								<button
+									class="btn btn-pagination"
+									id="orders-first-btn"
+									onclick="goToOrdersPage(1)"
+									title="First page"
+								>
+									&laquo;
+								</button>
+								<button
+									class="btn btn-pagination"
+									id="orders-prev-btn"
+									onclick="goToOrdersPage(currentOrdersPage - 1)"
+									title="Previous page"
+								>
+									&lsaquo;
+								</button>
+								<div
+									class="pagination-numbers"
+									id="orders-pagination-numbers"
+								></div>
+								<button
+									class="btn btn-pagination"
+									id="orders-next-btn"
+									onclick="goToOrdersPage(currentOrdersPage + 1)"
+									title="Next page"
+								>
+									&rsaquo;
+								</button>
+								<button
+									class="btn btn-pagination"
+									id="orders-last-btn"
+									onclick="goToOrdersPage(totalOrdersPages)"
+									title="Last page"
+								>
+									&raquo;
+								</button>
+								<div
+									class="page-size-selector"
+									style="display: inline-block; margin-left: 10px"
+								>
+									<label for="orders-page-size">Show:</label>
+									<select
+										id="orders-page-size"
+										onchange="changeOrdersPageSize(this.value)"
+									>
+										<option value="5">5</option>
+										<option value="10" selected>10</option>
+										<option value="25">25</option>
+										<option value="50">50</option>
+									</select>
+									<span>per page</span>
+								</div>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -3248,17 +3215,25 @@
 						const data = await response.json();
 						const ordersCount = data.count || 0;
 
-						document.getElementById("total-orders-stat").textContent =
-							ordersCount;
-						document.getElementById(
+						const totalOrdersStatEl =
+							document.getElementById("total-orders-stat");
+						if (totalOrdersStatEl) totalOrdersStatEl.textContent = ordersCount;
+						const ordersCountDisplayEl = document.getElementById(
 							"orders-count-display"
-						).textContent = `${ordersCount} orders`;
+						);
+						if (ordersCountDisplayEl)
+							ordersCountDisplayEl.textContent = `${ordersCount} orders`;
 					}
 				} catch (error) {
 					console.error("Error loading orders count:", error);
-					document.getElementById("total-orders-stat").textContent = "0";
-					document.getElementById("orders-count-display").textContent =
-						"0 orders";
+					const totalOrdersStatElErr =
+						document.getElementById("total-orders-stat");
+					if (totalOrdersStatElErr) totalOrdersStatElErr.textContent = "0";
+					const ordersCountDisplayElErr = document.getElementById(
+						"orders-count-display"
+					);
+					if (ordersCountDisplayElErr)
+						ordersCountDisplayElErr.textContent = "0 orders";
 				}
 
 				// Load rider stats for dashboard
@@ -6053,12 +6028,7 @@
 				searchProducts();
 			}
 
-			// Orders Management Functions
-			function loadOrders() {
-				// Placeholder for orders loading
-				document.getElementById("orders-count-display").textContent =
-					"0 orders";
-			}
+			// Orders functions implemented further down (full implementation exists later)
 
 			function refreshOrders() {
 				loadOrders();
@@ -9525,13 +9495,14 @@
 			// ============================================
 
 			let currentOrdersPage = 1;
-			const ordersPageSize = 20;
+			let totalOrdersPages = 1;
+			let ordersPageSize = 10;
 			let currentOrderId = null;
 
 			// Live updates variables
 			let ordersPollingInterval = null;
 			let lastOrderCount = 0;
-			const ORDERS_POLLING_INTERVAL = 30000; // 30 seconds
+			const ORDERS_POLLING_INTERVAL = 60000; // 60 seconds
 
 			// Load orders with pagination
 			async function loadOrders(
@@ -9555,13 +9526,20 @@
 					const result = await response.json();
 
 					if (response.ok) {
+						// Update the effective page size globally so numbering and pagination behave consistently
+						ordersPageSize = parseInt(pageSize) || ordersPageSize;
+						// Update current page before rendering so numbering (#) is correct
+						currentOrdersPage = result.pagination?.currentPage || page;
 						displayOrders(result.data || []);
 						updateOrdersPagination(result.pagination);
-						currentOrdersPage = page;
-						// Update last update timestamp
-						document.getElementById(
-							"orders-last-update"
-						).textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+						// store total orders count for polling comparison
+						lastOrderCount = result.pagination?.totalOrders ?? lastOrderCount;
+						// Update last update timestamp (guard in case element not present)
+						const ordersLastUpdateEl =
+							document.getElementById("orders-last-update");
+						if (ordersLastUpdateEl) {
+							ordersLastUpdateEl.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+						}
 					} else {
 						showMessage(result.message || "Failed to load orders", "error");
 					}
@@ -9586,8 +9564,11 @@
 					checkForNewOrders,
 					ORDERS_POLLING_INTERVAL
 				);
-				document.getElementById("orders-live-indicator").style.display =
-					"inline";
+				const ordersLiveIndicatorEl = document.getElementById(
+					"orders-live-indicator"
+				);
+				if (ordersLiveIndicatorEl)
+					ordersLiveIndicatorEl.style.display = "inline";
 				console.log("Started live updates for orders section");
 			}
 
@@ -9596,8 +9577,11 @@
 				if (ordersPollingInterval) {
 					clearInterval(ordersPollingInterval);
 					ordersPollingInterval = null;
-					document.getElementById("orders-live-indicator").style.display =
-						"none";
+					const ordersLiveIndicatorEl2 = document.getElementById(
+						"orders-live-indicator"
+					);
+					if (ordersLiveIndicatorEl2)
+						ordersLiveIndicatorEl2.style.display = "none";
 					console.log("Stopped live updates for orders section");
 				}
 			}
@@ -9618,22 +9602,12 @@
 						const result = await response.json();
 						const currentOrderCount = result.count || 0;
 
-						// Check if there are new orders
-						if (currentOrderCount > lastOrderCount && lastOrderCount > 0) {
-							const newOrdersCount = currentOrderCount - lastOrderCount;
-							showMessage(
-								`🆕 ${newOrdersCount} new order${
-									newOrdersCount > 1 ? "s" : ""
-								} received!`,
-								"success",
-								5000
-							);
-
-							// Reload orders to show the new ones
-							loadOrders(1, ordersPageSize); // Go back to first page to show latest orders
+						// Only reload if the total order count changed
+						if (currentOrderCount !== lastOrderCount) {
+							lastOrderCount = currentOrderCount;
+							// Reload the currently viewed page to avoid jumping the user to page 1
+							loadOrders(currentOrdersPage, ordersPageSize);
 						}
-
-						lastOrderCount = currentOrderCount;
 					}
 				} catch (error) {
 					console.error("Error checking for new orders:", error);
@@ -9644,6 +9618,7 @@
 			// Display orders in table
 			function displayOrders(orders) {
 				const tbody = document.getElementById("orders-table-body");
+				if (!tbody) return; // nothing to render into
 				tbody.innerHTML = "";
 
 				if (orders.length === 0) {
@@ -9738,6 +9713,14 @@
 			function updateOrdersPagination(pagination) {
 				if (!pagination) return;
 
+				// Keep total pages for other helpers
+				if (typeof pagination.totalPages === "number") {
+					totalOrdersPages = pagination.totalPages;
+				}
+
+				const paginationContainer = document.querySelector(
+					"#orders-section .pagination-container"
+				);
 				const prevBtn = document.getElementById("orders-prev-btn");
 				const nextBtn = document.getElementById("orders-next-btn");
 				const pageInfo = document.getElementById("orders-page-info");
@@ -9745,23 +9728,52 @@
 					"orders-pagination-info"
 				);
 
-				prevBtn.disabled = !pagination.hasPrevPage;
-				nextBtn.disabled = !pagination.hasNextPage;
+				// Hide pagination if there's only one page
+				if (pagination.totalPages <= 1) {
+					if (paginationContainer) paginationContainer.style.display = "none";
+					return;
+				}
 
-				pageInfo.textContent = `Page ${pagination.currentPage} of ${pagination.totalPages}`;
-				paginationInfo.textContent = `Showing ${
-					(pagination.currentPage - 1) * ordersPageSize + 1
-				}-${Math.min(
-					pagination.currentPage * ordersPageSize,
-					pagination.totalOrders
-				)} of ${pagination.totalOrders} orders`;
+				// Show pagination for multiple pages
+				if (paginationContainer) paginationContainer.style.display = "flex";
+
+				if (prevBtn) prevBtn.disabled = !pagination.hasPrevPage;
+				if (nextBtn) nextBtn.disabled = !pagination.hasNextPage;
+
+				if (pageInfo)
+					pageInfo.textContent = `Page ${pagination.currentPage} of ${pagination.totalPages}`;
+				if (paginationInfo)
+					paginationInfo.textContent = `Showing ${
+						(pagination.currentPage - 1) * ordersPageSize + 1
+					}-${Math.min(
+						pagination.currentPage * ordersPageSize,
+						pagination.totalOrders
+					)} of ${pagination.totalOrders} orders`;
 
 				// Update the orders count display and dashboard stat
-				document.getElementById(
-					"orders-count-display"
-				).textContent = `${pagination.totalOrders} orders`;
-				document.getElementById("total-orders-stat").textContent =
-					pagination.totalOrders;
+				const ordersCountEl = document.getElementById("orders-count-display");
+				if (ordersCountEl)
+					ordersCountEl.textContent = `${pagination.totalOrders} orders`;
+				const totalOrdersStatEl = document.getElementById("total-orders-stat");
+				if (totalOrdersStatEl)
+					totalOrdersStatEl.textContent = pagination.totalOrders;
+			}
+
+			// Change orders page size from selector
+			function changeOrdersPageSize(size) {
+				const newSize = parseInt(size) || 20;
+				// reload starting at first page
+				loadOrders(1, newSize);
+			}
+
+			// Navigate to page from pagination buttons
+			function goToOrdersPage(page) {
+				const maxPage =
+					typeof totalOrdersPages === "number" && totalOrdersPages > 0
+						? totalOrdersPages
+						: 999999;
+				const validPage = Math.max(1, Math.min(page || 1, maxPage));
+				loadOrders(validPage, ordersPageSize);
 			}
 
 			// Show add order modal
@@ -10078,9 +10090,10 @@
 					const result = await response.json();
 
 					if (response.ok) {
+						// Ensure page state is correct before rendering
+						currentOrdersPage = 1;
 						displayOrders(result.data || []);
 						updateOrdersPagination(result.pagination);
-						currentOrdersPage = 1;
 					} else {
 						showMessage(result.message || "Failed to search orders", "error");
 					}

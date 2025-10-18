@@ -102,6 +102,14 @@ class PayoneService {
 
 			// Prepare the request body with required fields
 			console.log("=== STEP 4: Preparing Request Body ===");
+
+			// Set default expiration to one day if not provided
+			if (!linkData.expiration) {
+				linkData.expiration = new Date(
+					Date.now() + 24 * 60 * 60 * 1000
+				).toISOString();
+			}
+
 			const requestBody = {
 				merchantId: this.merchantId,
 				accountId: this.accountId,
