@@ -307,6 +307,10 @@ class PayoneService {
 	async updatePaymentLink(linkId, linkData) {
 		try {
 			// Calculate total amount from shopping cart
+			console.log(
+				"Calculating total amount for update...",
+				linkData.shoppingCart
+			);
 			const totalAmount = this.calculateTotalAmount(linkData.shoppingCart);
 
 			// Prepare the request body
@@ -363,6 +367,86 @@ class PayoneService {
 			};
 		}
 	}
-}
 
+	/**
+	 * Processes a refund for a Payone payment link via the Server API.
+	 * The transaction ID (`txid`) should be retrieved from a server-to-server notification
+	 * or a previous API call for the payment link.
+	 * @param {Object} refundData - Refund data
+	 * @param {string} refundData.reference - Payone Transaction ID of the original payment
+	 * @param {number} refundData.amount - Amount to refund in smallest currency unit (e.g., cents)
+	 * @param {string} refundData.mode - The mode, "test" or "live"
+	 * @returns {Promise<Object>} Refund response
+	 */
+	async processRefund(refundData) {
+		try {
+			console.log("=== Processing PAYONE Refund ===");
+
+			const payoneAPIEndpoint =
+				this.baseUrl || "https://api.pay1.de/post-gateway/";
+
+			// Prepare refund request body as required by Payone Server API
+			const requestBody = {
+				request: "refund",
+				mid: this.merchantId,
+				aid: this.accountId, // Assumes this.accountId is available and contains the sub-account ID
+				portalId: this.portalId,
+				key: this.auth.portalKey, // Your API Key for authentication
+				mode: refundData.mode || "test",
+				txid: refundData.reference,
+				amount: refundData.amount, // Payone requires amount in smallest currency unit
+			};
+
+			console.log("Refund request body:", JSON.stringify(requestBody, null, 2));
+
+			// Send the request to the Payone Server API
+			const response = await fetch(payoneAPIEndpoint, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/x-www-form-urlencoded",
+				},
+				body: new URLSearchParams(requestBody).toString(),
+			});
+
+			if (!response.ok) {
+				const errorData = await response.text();
+				throw new Error(
+					`PAYONE Refund API Error: ${response.status} - ${errorData}`
+				);
+			}
+
+			const result = await response.text();
+			console.log("Refund response:", result);
+
+			// Parse the form-encoded response
+			const params = new URLSearchParams(result);
+			const status = params.get("status");
+
+			if (status === "APPROVED") {
+				return {
+					success: true,
+					data: {
+						transactionId: params.get("txid"),
+						workorderId: params.get("workorderid"),
+						status: status,
+					},
+				};
+			} else {
+				return {
+					success: false,
+					error: `Refund failed with status: ${status}. Error message: ${params.get(
+						"errormessage"
+					)}`,
+					customerMessage: params.get("customermessage"),
+				};
+			}
+		} catch (error) {
+			console.error("Error processing refund:", error);
+			return {
+				success: false,
+				error: error.message,
+			};
+		}
+	}
+}
 module.exports = PayoneService;

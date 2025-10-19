@@ -432,12 +432,11 @@ exports.createOrder = async (req, res) => {
 			}
 
 			const totalPrice =
-				item.quantity *
-				(product.price *
+				product.price *
 					(1 + (product.tax || 0) / 100) *
 					(1 - (product.discount || 0) / 100) +
-					(product.bottlerefund || 0));
-			subtotal += totalPrice;
+				(product.bottlerefund || 0);
+			subtotal += item.quantity * totalPrice;
 
 			processedItems.push({
 				product: product,
@@ -595,7 +594,7 @@ exports.createOrder = async (req, res) => {
 						populatedOrder.createdAt
 					).toLocaleDateString()}</p>
 					<p><strong>Status:</strong> ${populatedOrder.status}</p>
-					<p><strong>Payment Method:</strong> ${populatedOrder.paymentMethod}</p>
+					<p><strong>Payment Method:</strong> Online</p>
 					${
 						paymentUrl
 							? `<p><strong>Payment URL:</strong> <a href="${paymentUrl}" style="color: #007bff;">${paymentUrl}</a></p>`
@@ -621,12 +620,12 @@ exports.createOrder = async (req, res) => {
 									<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${
 										item.quantity
 									}</td>
-									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">€${(
-										item.totalPrice / item.quantity
-									).toFixed(2)}</td>
 									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">€${item.totalPrice.toFixed(
 										2
 									)}</td>
+									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">€${
+										item.totalPrice.toFixed(2) * item.quantity
+									}</td>
 								</tr>
 							`
 								)
@@ -895,20 +894,115 @@ exports.cancelOrder = async (req, res) => {
 			});
 		}
 
-		// Restore product stock
-		for (const item of order.items) {
-			await Product.findByIdAndUpdate(item.product, {
-				$inc: { stock: item.quantity },
-			});
+		// Update payment link to inactive if it exists and order is not paid
+		if (order.paymentLinkId && order.paymentStatus !== "paid") {
+			try {
+				console.log(
+					`Deactivating payment link for cancelled order: ${order.paymentLinkId}`
+				);
+
+				// First get the current payment link data
+				const getResult = await payoneService.getPaymentLink(
+					order.paymentLinkId
+				);
+
+				if (!getResult.success) {
+					console.error(`Failed to get payment link: ${getResult.error}`);
+				} else {
+					// Update the payment link with active: false
+					const currentLinkData = getResult.data;
+					currentLinkData.active = false;
+
+					const updateResult = await payoneService.updatePaymentLink(
+						order.paymentLinkId,
+						currentLinkData
+					);
+
+					if (updateResult.success) {
+						console.log(
+							`Payment link ${order.paymentLinkId} deactivated successfully`
+						);
+						// Restore product stock
+						for (const item of order.items) {
+							await Product.findByIdAndUpdate(item.product, {
+								$inc: { stock: item.quantity },
+							});
+						}
+
+						order.paymentStatus = "cancelled";
+					} else {
+						console.error(
+							`Failed to deactivate payment link: ${updateResult.error}`
+						);
+					}
+				}
+			} catch (paymentError) {
+				console.error(
+					`Error updating payment link for cancelled order: ${paymentError.message}`
+				);
+				// Don't fail the cancellation if payment link update fails
+			}
+		} else if (order.paymentStatus === "paid") {
+			// Process refund for paid orders
+			try {
+				console.log(`Processing refund for cancelled paid order: ${order._id}`);
+
+				// Get payment link data to get transaction details
+				const getResult = await payoneService.getPaymentLink(
+					order.paymentLinkId
+				);
+
+				if (getResult.success) {
+					const paymentLinkData = getResult.data;
+					console.log(paymentLinkData);
+					// Process refund using PAYONE Server API
+					const refundResult = await payoneService.processRefund({
+						reference: paymentLinkData.paymentProcess || `ORD_${order._id}`,
+						amount: Math.round(order.total * 100), // Convert to cents
+						currency: "EUR",
+						transactionId: paymentLinkData.transactionId || paymentLinkData.id,
+						mode: process.env.NODE_ENV === "production" ? "live" : "test",
+					});
+
+					if (refundResult.success) {
+						console.log(`Refund processed successfully for order ${order._id}`);
+						// Update order to reflect refund
+						order.paymentStatus = "refunded";
+						await order.save();
+					} else {
+						console.error(
+							`Refund failed for order ${order._id}: ${refundResult.error}`
+						);
+						// Note: Order remains cancelled but payment status stays as "paid"
+						// In production, you might want to handle failed refunds differently
+					}
+					// Restore product stock
+					for (const item of order.items) {
+						await Product.findByIdAndUpdate(item.product, {
+							$inc: { stock: item.quantity },
+						});
+					}
+
+					order.status = "cancelled";
+
+					order.notes = reason
+						? `${order.notes || ""}\nCancellation reason: ${reason}`.trim()
+						: order.notes;
+					order.updatedBy = req.user.id;
+
+					await order.save();
+				} else {
+					console.error(
+						`Failed to get payment link data for refund: ${getResult.error}`
+					);
+				}
+			} catch (refundError) {
+				console.error(
+					`Error processing refund for order ${order._id}: ${refundError.message}`
+				);
+				// Don't fail the cancellation if refund fails
+			}
 		}
-
-		order.status = "cancelled";
-		order.notes = reason
-			? `${order.notes || ""}\nCancellation reason: ${reason}`.trim()
-			: order.notes;
-		order.updatedBy = req.user.id;
-
-		await order.save();
 
 		const updatedOrder = await Order.findById(id)
 			.populate("createdBy", "name email")
