@@ -9,21 +9,17 @@ const CONFIG = {
 	isDevelopment:
 		window.location.hostname === "localhost" ||
 		window.location.hostname === "127.0.0.1",
-	isProductionAlt: window.location.hostname === "frischly-server.onrender.com",
 
 	// API URLs
 	API_URLS: {
 		development: "http://localhost:3001/api",
 		production: "https://frischlyshop-server.onrender.com/api",
-		production_alt: "https://frischly-server.onrender.com/api", // Alternate production URL
 	},
 
 	// Get current API base URL based on environment
 	getApiBaseUrl() {
 		if (this.isDevelopment) {
 			return this.API_URLS.development;
-		} else if (this.isProductionAlt) {
-			return this.API_URLS.production_alt;
 		} else {
 			return this.API_URLS.production;
 		}
@@ -49,8 +45,8 @@ console.log(
 	`🌍 Environment: ${
 		CONFIG.isDevelopment
 			? "Development"
-			: CONFIG.isProductionAlt
-			? "Production Alt"
+			: CONFIG.isProduction
+			? "Production"
 			: "Production"
 	}`
 );

@@ -38,7 +38,7 @@ app.use(
 					"https://unpkg.com",
 					// Add onrender.com domains
 					"https://*.onrender.com",
-					"https://frischly-server.onrender.com",
+					//"https://frischly-server.onrender.com",
 					"https://frischlyshop-server.onrender.com",
 				],
 				scriptSrcAttr: ["'unsafe-inline'"], // Allow inline event handlers
@@ -49,7 +49,7 @@ app.use(
 					"http://localhost:*",
 					"https://localhost:*",
 					// Add production API URLs
-					"https://frischly-server.onrender.com",
+					//"https://frischly-server.onrender.com",
 					"https://frischlyshop-server.onrender.com",
 				], // Allow API calls
 				fontSrc: [
@@ -76,8 +76,8 @@ app.use(
 // Rate limiting - Disabled in development
 if (process.env.NODE_ENV === "production") {
 	const limiter = rateLimit({
-		windowMs: 10 * 60 * 1000, // 15 minutes
-		max: 2000, // limit each IP to 100 requests per windowMs
+		windowMs: 20 * 60 * 1000, // 20 minutes
+		max: 3000, // limit each IP to 3000 requests per windowMs
 		message: {
 			success: false,
 			message: "Too many requests from this IP, please try again later.",
