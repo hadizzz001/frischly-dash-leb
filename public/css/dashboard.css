@@ -1607,6 +1607,11 @@ body {
 	box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
 }
 
+.large-modal {
+	max-width: 1200px !important;
+	width: 95% !important;
+}
+
 .modal-header {
 	display: flex;
 	justify-content: space-between;

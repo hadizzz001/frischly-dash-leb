@@ -881,6 +881,7 @@
 								<th>Total</th>
 								<th>Status</th>
 								<th>Shelf #</th>
+								<th>TXID</th>
 								<th>Order Date</th>
 								<th>Actions</th>
 							</tr>
@@ -1146,7 +1147,7 @@
 				if (orders.length === 0) {
 					tbody.innerHTML = `
 						<tr>
-							<td colspan="8" class="empty-state">
+							<td colspan="9" class="empty-state">
 								<div class="icon">📦</div>
 								<h3>No orders found</h3>
 								<p>No orders match your current filters.</p>
@@ -1162,6 +1163,7 @@
 					const totalAmount = order.total || 0;
 					const status = order.status || "pending";
 					const shelfNumber = order.shelfNumber || "N/A";
+					const txid = order.txid || "N/A";
 					const orderDate = new Date(order.createdAt).toLocaleDateString();
 
 					const row = document.createElement("tr");
@@ -1172,6 +1174,7 @@
 						<td>€${totalAmount.toFixed(2)}</td>
 						<td><span class="status-badge status-${status}">${status}</span></td>
 						<td>${shelfNumber}</td>
+						<td>${txid}</td>
 						<td>${orderDate}</td>
 						<td>
 							<div class="table-actions">
@@ -1179,6 +1182,11 @@
 									View
 								</button>
 								${getStatusActionButton(order)}
+								${
+									order.paymentStatus === "paid"
+										? `<button class="action-btn delete" onclick="refundOrder('${order._id}')">Refund</button>`
+										: ""
+								}
 							</div>
 						</td>
 					`;
@@ -1576,7 +1584,7 @@
 				if (show) {
 					tbody.innerHTML = `
 						<tr>
-							<td colspan="8" class="loading">
+							<td colspan="9" class="loading">
 								<div class="spinner"></div>
 								<p>Loading orders...</p>
 							</td>
@@ -1937,22 +1945,40 @@
 				}
 			}
 
-			// Close modal when clicking outside
-			window.onclick = function (event) {
-				const orderDetailsModal = document.getElementById(
-					"order-details-modal"
-				);
-				const processOrderModal = document.getElementById(
-					"process-order-modal"
-				);
+			// Refund order function
+			async function refundOrder(orderId) {
+				if (!confirm("Are you sure you want to refund this order?")) {
+					return;
+				}
 
-				if (event.target === orderDetailsModal) {
-					orderDetailsModal.style.display = "none";
+				try {
+					showLoading();
+					const response = await fetch(
+						`${API_BASE_URL}/payments/refund/${orderId}`,
+						{
+							method: "POST",
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+						}
+					);
+
+					const result = await response.json();
+
+					if (response.ok) {
+						showMessage("Refund processed successfully", "success");
+						loadOrders(); // Refresh the orders list
+					} else {
+						showMessage(result.message || "Failed to process refund", "error");
+					}
+				} catch (error) {
+					console.error("Error processing refund:", error);
+					showMessage("Error processing refund", "error");
+				} finally {
+					hideLoading();
 				}
-				if (event.target === processOrderModal) {
-					closeProcessOrderModal();
-				}
-			};
+			}
 		</script>
 	</body>
 </html>

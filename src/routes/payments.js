@@ -47,4 +47,11 @@ router.post(
 	paymentController.handlePaymentNotification
 );
 
+/**
+ * @route POST /api/payments/refund/:orderId
+ * @description Process refund for an order
+ * @access Private (assuming authentication required)
+ */
+router.post("/refund/:orderId", paymentController.refundOrder);
+
 module.exports = router;

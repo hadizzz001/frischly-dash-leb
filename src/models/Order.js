@@ -113,6 +113,11 @@ const orderSchema = new mongoose.Schema(
 			type: String,
 			index: true,
 		},
+		txid: {
+			type: String,
+			trim: true,
+			index: true,
+		},
 		paymentMethod: {
 			type: String,
 			enum: ["cash", "card", "online", "wallet"],

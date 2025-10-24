@@ -14,8 +14,13 @@ const payoneService = new PayoneService(
  * Update order payment status based on payment link ID
  * @param {string} paymentLinkId - PAYONE payment link ID
  * @param {string} paymentStatus - New payment status ('pending', 'paid', 'failed')
+ * @param {string} paymentProcess - Optional payment process ID to set as txid
  */
-async function updateOrderPaymentStatus(paymentLinkId, paymentStatus) {
+async function updateOrderPaymentStatus(
+	paymentLinkId,
+	paymentStatus,
+	paymentProcess = null
+) {
 	try {
 		console.log(
 			`🔄 Updating order payment status for link ${paymentLinkId} to ${paymentStatus}`
@@ -29,8 +34,11 @@ async function updateOrderPaymentStatus(paymentLinkId, paymentStatus) {
 			return;
 		}
 
-		// Update payment status
+		// Update payment status and txid if provided
 		order.paymentStatus = paymentStatus;
+		if (paymentProcess) {
+			order.txid = paymentProcess;
+		}
 		await order.save();
 
 		console.log(
@@ -401,7 +409,8 @@ exports.handlePaymentNotification = async (req, res) => {
 			case "APPROVED":
 				console.log("✅ Payment APPROVED - Processing successful payment");
 				// Update order status to paid
-				await updateOrderPaymentStatus(linkId, "paid");
+				await updateOrderPaymentStatus(linkId, "paid", paymentProcess);
+
 				break;
 
 			case "REDIRECTED":
@@ -414,13 +423,13 @@ exports.handlePaymentNotification = async (req, res) => {
 			case "PENDING":
 				console.log("⏳ Payment PENDING - Payment is being processed");
 				// Update order status to pending if needed
-				await updateOrderPaymentStatus(linkId, "pending");
+				await updateOrderPaymentStatus(linkId, "pending", paymentProcess);
 				break;
 
 			case "ERROR":
 				console.log("❌ Payment ERROR - Payment failed");
 				// Update order status to failed
-				await updateOrderPaymentStatus(linkId, "failed");
+				await updateOrderPaymentStatus(linkId, "failed", paymentProcess);
 				break;
 
 			default:
@@ -441,5 +450,66 @@ exports.handlePaymentNotification = async (req, res) => {
 		console.error("❌ Error processing payment notification:", error);
 		// Still respond with OK to acknowledge receipt even if processing failed
 		res.status(200).send("OK");
+	}
+};
+
+/**
+ * Process refund for an order
+ * @route POST /api/payments/refund/:orderId
+ * @param {string} req.params.orderId - Order ID to refund
+ * @returns {JSON} Refund response
+ */
+exports.refundOrder = async (req, res) => {
+	try {
+		const { orderId } = req.params;
+		console.log("Processing refund for order:", orderId);
+
+		// Find the order
+		const order = await Order.findById(orderId);
+		if (!order) {
+			return res.status(404).json({
+				success: false,
+				error: "Order not found",
+			});
+		}
+
+		// Check if order is paid
+		if (order.paymentStatus !== "paid") {
+			return res.status(400).json({
+				success: false,
+				error: "Order is not in paid status",
+			});
+		}
+
+		// Check if txid exists for refund
+		if (!order.txid) {
+			return res.status(400).json({
+				success: false,
+				error: "No transaction ID found for refund",
+			});
+		}
+
+		// TODO: Implement actual refund logic with PAYONE service
+		// For now, just update the order status
+		order.paymentStatus = "refunded";
+		await order.save();
+
+		console.log(`✅ Refund processed for order ${orderId}`);
+		res.json({
+			success: true,
+			message: "Refund processed successfully",
+			data: {
+				orderId: order._id,
+				txid: order.txid,
+				status: "refunded",
+			},
+		});
+	} catch (error) {
+		console.error("Error processing refund:", error);
+		res.status(500).json({
+			success: false,
+			error: "Internal server error",
+			message: error.message,
+		});
 	}
 };

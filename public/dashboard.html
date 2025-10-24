@@ -760,9 +760,11 @@
 						>
 							📋 Staff Manage Orders
 						</button>
+						<button class="btn btn-primary" onclick="showSalesStatistics()">
+							📊 Sales Statistics
+						</button>
 					</div>
-
-					<div class="data-table">
+>
 						<div class="table-header">
 							<h3>Recent Orders</h3>
 							<span id="orders-count-display">0 orders</span>
@@ -9166,6 +9168,75 @@
 			</div>
 		</div>
 
+		<!-- Sales Statistics Modal -->
+		<div id="sales-stats-modal" class="modal">
+			<div class="modal-content large-modal">
+				<div class="modal-header">
+					<h2><span class="icon">📊</span> Sales Statistics</h2>
+					<span class="close" onclick="closeSalesStatsModal()">&times;</span>
+				</div>
+
+				<div class="modal-body">
+					<!-- Statistics Summary Cards -->
+					<div class="stats-summary-grid">
+						<div class="stat-card">
+							<div class="stat-icon">📦</div>
+							<div class="stat-info">
+								<div class="stat-value" id="stats-total-products">0</div>
+								<div class="stat-label">Products Sold</div>
+							</div>
+						</div>
+
+						<div class="stat-card">
+							<div class="stat-icon">🛒</div>
+							<div class="stat-info">
+								<div class="stat-value" id="stats-total-items">0</div>
+								<div class="stat-label">Total Items</div>
+							</div>
+						</div>
+
+						<div class="stat-card">
+							<div class="stat-icon">💰</div>
+							<div class="stat-info">
+								<div class="stat-value" id="stats-total-revenue">€0.00</div>
+								<div class="stat-label">Total Revenue</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Products Table -->
+					<div class="table-section">
+						<h3>Product Sales Ranking</h3>
+						<div class="table-container">
+							<table class="data-table">
+								<thead>
+									<tr>
+										<th>Rank</th>
+										<th>Product Name</th>
+										<th>Quantity Sold</th>
+										<th>Revenue</th>
+									</tr>
+								</thead>
+								<tbody id="sales-stats-table-body">
+									<tr>
+										<td colspan="4" style="text-align: center; padding: 40px; color: #666;">
+											Loading sales statistics...
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" onclick="closeSalesStatsModal()">
+						Close
+					</button>
+				</div>
+			</div>
+		</div>
+
 		<!-- Rider Management Modal -->
 		<div id="rider-modal" class="modal">
 			<div class="modal-content">
@@ -11066,6 +11137,104 @@
 				} catch (error) {
 					showMessage("Error loading statistics: " + error.message, "error");
 				}
+			}
+
+			// Show sales statistics modal
+			async function showSalesStatistics() {
+				try {
+					showMessage("Loading sales statistics...", "info");
+
+					// Fetch all delivered orders
+					const response = await fetch(`${API_BASE_URL}/orders?status=delivered&limit=10000`, {
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+						},
+					});
+
+					if (!response.ok) {
+						throw new Error("Failed to fetch delivered orders");
+					}
+
+					const result = await response.json();
+					const orders = result.data || [];
+
+					// Process orders to count product sales
+					const productSales = {};
+
+					orders.forEach(order => {
+						if (order.items && Array.isArray(order.items)) {
+							order.items.forEach(item => {
+								const productId = item.product?._id || item.product;
+								const productName = item.product?.name || "Unknown Product";
+								const quantity = item.quantity || 0;
+
+								if (productId) {
+									if (!productSales[productId]) {
+										productSales[productId] = {
+											name: productName,
+											totalQuantity: 0,
+											totalRevenue: 0,
+											price: item.product?.price || 0
+										};
+									}
+									productSales[productId].totalQuantity += quantity;
+									productSales[productId].totalRevenue += (quantity * (item.product?.price || 0));
+								}
+							});
+						}
+					});
+
+					// Convert to array and sort by total quantity (most sold first)
+					const sortedProducts = Object.values(productSales)
+						.sort((a, b) => b.totalQuantity - a.totalQuantity);
+
+					// Calculate total statistics
+					const totalProducts = sortedProducts.length;
+					const totalItemsSold = sortedProducts.reduce((sum, product) => sum + product.totalQuantity, 0);
+					const totalRevenue = sortedProducts.reduce((sum, product) => sum + product.totalRevenue, 0);
+
+					// Populate modal with statistics
+					document.getElementById("stats-total-products").textContent = totalProducts;
+					document.getElementById("stats-total-items").textContent = totalItemsSold;
+					document.getElementById("stats-total-revenue").textContent = `€${totalRevenue.toFixed(2)}`;
+
+					// Populate products table
+					const tbody = document.getElementById("sales-stats-table-body");
+					tbody.innerHTML = "";
+
+					if (sortedProducts.length === 0) {
+						tbody.innerHTML = `
+							<tr>
+								<td colspan="4" style="text-align: center; padding: 40px; color: #666;">
+									No sales data found for delivered orders.
+								</td>
+							</tr>
+						`;
+					} else {
+						sortedProducts.forEach((product, index) => {
+							const row = document.createElement("tr");
+							row.innerHTML = `
+								<td>${index + 1}</td>
+								<td>${product.name}</td>
+								<td>${product.totalQuantity}</td>
+								<td>€${product.totalRevenue.toFixed(2)}</td>
+							`;
+							tbody.appendChild(row);
+						});
+					}
+
+					// Show the modal
+					document.getElementById("sales-stats-modal").style.display = "block";
+
+				} catch (error) {
+					console.error("Error loading sales statistics:", error);
+					showMessage("Error loading sales statistics: " + error.message, "error");
+				}
+			}
+
+			// Close sales statistics modal
+			function closeSalesStatsModal() {
+				document.getElementById("sales-stats-modal").style.display = "none";
 			}
 
 			// Initialize order item listeners when page loads
