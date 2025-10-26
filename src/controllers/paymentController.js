@@ -489,18 +489,36 @@ exports.refundOrder = async (req, res) => {
 			});
 		}
 
-		// TODO: Implement actual refund logic with PAYONE service
-		// For now, just update the order status
+		// Process refund with PAYONE
+		console.log("Calling PAYONE refund API with txid:", order.txid);
+		const refundResult = await payoneService.processRefund({
+			txid: order.txid,
+			amount: order.total * 100, // Convert to cents/smallest unit
+			currency: "EUR", // Assuming EUR, could be made configurable
+			mode: process.env.NODE_ENV === "production" ? "test" : "test",
+		});
+
+		if (!refundResult.success) {
+			console.error("PAYONE refund failed:", refundResult.error);
+			return res.status(400).json({
+				success: false,
+				error: "Refund failed with PAYONE",
+				details: refundResult.error,
+			});
+		}
+
+		// Update order status to refunded
 		order.paymentStatus = "refunded";
 		await order.save();
 
-		console.log(`✅ Refund processed for order ${orderId}`);
+		console.log(`✅ Refund processed successfully for order ${orderId}`);
 		res.json({
 			success: true,
 			message: "Refund processed successfully",
 			data: {
 				orderId: order._id,
 				txid: order.txid,
+				refundTxid: refundResult.data.txid,
 				status: "refunded",
 			},
 		});

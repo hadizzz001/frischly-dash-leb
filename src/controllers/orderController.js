@@ -947,35 +947,51 @@ exports.cancelOrder = async (req, res) => {
 			try {
 				console.log(`Processing refund for cancelled paid order: ${order._id}`);
 
-				// Get payment link data to get transaction details
-				const getResult = await payoneService.getPaymentLink(
-					order.paymentLinkId
-				);
+				// Check if order has a transaction ID for refund
+				if (!order.txid) {
+					console.error(
+						`No transaction ID found for order ${order._id}, cannot process refund`
+					);
 
-				if (getResult.success) {
-					const paymentLinkData = getResult.data;
-					console.log(paymentLinkData);
+					return res.status(400).json({
+						success: false,
+						message: `Failed to process refund: No transaction ID found for order ${order._id}`,
+					});
+				} else {
 					// Process refund using PAYONE Server API
 					const refundResult = await payoneService.processRefund({
-						reference: paymentLinkData.paymentProcess || `ORD_${order._id}`,
+						txid: order.txid,
 						amount: Math.round(order.total * 100), // Convert to cents
 						currency: "EUR",
-						transactionId: paymentLinkData.transactionId || paymentLinkData.id,
-						mode: process.env.NODE_ENV === "production" ? "test" : "test",
+						mode: "test",
 					});
 
 					if (refundResult.success) {
 						console.log(`Refund processed successfully for order ${order._id}`);
 						// Update order to reflect refund
 						order.paymentStatus = "refunded";
-						await order.save();
 					} else {
 						console.error(
 							`Refund failed for order ${order._id}: ${refundResult.error}`
 						);
+
 						// Note: Order remains cancelled but payment status stays as "paid"
 						// In production, you might want to handle failed refunds differently
+						order.notes = reason
+							? `${
+									order.notes || ""
+							  }\nCancellation reason: ${reason}\nNote: Refund processing failed - ${
+									refundResult.error
+							  }`.trim()
+							: `${order.notes || ""}\nNote: Refund processing failed - ${
+									refundResult.error
+							  }`.trim();
+						return res.status(400).json({
+							success: false,
+							message: `Failed to process refund: ${refundResult.error}`,
+						});
 					}
+
 					// Restore product stock
 					for (const item of order.items) {
 						await Product.findByIdAndUpdate(item.product, {
@@ -984,23 +1000,21 @@ exports.cancelOrder = async (req, res) => {
 					}
 
 					order.status = "cancelled";
-
 					order.notes = reason
 						? `${order.notes || ""}\nCancellation reason: ${reason}`.trim()
 						: order.notes;
 					order.updatedBy = req.user.id;
 
 					await order.save();
-				} else {
-					console.error(
-						`Failed to get payment link data for refund: ${getResult.error}`
-					);
 				}
 			} catch (refundError) {
 				console.error(
 					`Error processing refund for order ${order._id}: ${refundError.message}`
 				);
-				// Don't fail the cancellation if refund fails
+				return res.status(500).json({
+					success: false,
+					message: `Error processing refund: ${refundError.message}`,
+				});
 			}
 		}
 
@@ -1009,7 +1023,7 @@ exports.cancelOrder = async (req, res) => {
 			.populate("updatedBy", "name email")
 			.populate(
 				"items.product",
-				"name barcode shelfNumber price discount tax bottlerefund picture"
+				"name barcode  price discount tax bottlerefund picture"
 			);
 
 		res.json({

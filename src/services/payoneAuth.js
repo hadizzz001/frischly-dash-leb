@@ -3,6 +3,10 @@ const crypto = require("crypto");
 class PayoneAuth {
 	constructor(portalKey) {
 		this.portalKey = portalKey;
+		this.portalKeyMD5 = crypto
+			.createHash("md5")
+			.update(portalKey)
+			.digest("hex");
 	}
 
 	/**
