@@ -2925,9 +2925,10 @@
 						},
 					};
 
-					// Add password for new users
+					// Add password and email confirmation for new users
 					if (!userId) {
 						userData.password = formData.get("password");
+						userData.emailConfirmed = true;
 					}
 
 					const url = userId
