@@ -919,6 +919,7 @@ exports.cancelOrder = async (req, res) => {
 					);
 
 					if (updateResult.success) {
+						console.log(updateResult.data);
 						console.log(
 							`Payment link ${order.paymentLinkId} deactivated successfully`
 						);
@@ -930,6 +931,12 @@ exports.cancelOrder = async (req, res) => {
 						}
 
 						order.paymentStatus = "cancelled";
+						order.status = "cancelled";
+						order.notes = reason
+							? `${order.notes || ""}\nCancellation reason: ${reason}`.trim()
+							: order.notes;
+						order.updatedBy = req.user.id;
+						await order.save();
 					} else {
 						console.error(
 							`Failed to deactivate payment link: ${updateResult.error}`
