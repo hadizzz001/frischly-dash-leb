@@ -19,6 +19,7 @@
 		"update-category-images-advanced": "node scripts/updateCategoryImages.js",
 		"update-product-images": "node scripts/updateAllProductImages.js",
 		"update-product-images-advanced": "node scripts/updateProductImages.js",
+		"deactivate-default-icon-products": "node scripts/deactivate_default_icon_products.js",
 		"prepare-deploy": "powershell -ExecutionPolicy Bypass -File prepare-deploy.ps1",
 		"update-client-url": "powershell -ExecutionPolicy Bypass -File update-client-url.ps1",
 		"check-deploy": "node scripts/checkDeployment.js",

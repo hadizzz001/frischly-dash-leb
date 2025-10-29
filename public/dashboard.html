@@ -203,20 +203,21 @@
 						<p>Manage all system users, including staff and customers</p>
 					</div>
 
-					<!-- Tab Navigation -->
-					<div class="staff-tabs">
-						<button
-							class="staff-tab-btn active"
-							onclick="showStaffTab('staff')"
-						>
-							👥 Staff
-						</button>
-						<button class="staff-tab-btn" onclick="showStaffTab('customers')">
-							🛒 Customers
-						</button>
-					</div>
-
-					<!-- Staff Tab Content -->
+				<!-- Tab Navigation -->
+				<div class="staff-tabs">
+					<button
+						class="staff-tab-btn active"
+						onclick="showStaffTab('staff')"
+					>
+						👥 Staff
+					</button>
+					<button class="staff-tab-btn" onclick="showStaffTab('customers')">
+						🛒 Customers
+					</button>
+					<button class="staff-tab-btn" onclick="showStaffTab('shelfs')">
+						📦 Shelfs
+					</button>
+				</div>					<!-- Staff Tab Content -->
 					<div id="staff-tab-content" class="staff-tab-content active">
 						<div class="section-actions">
 							<button class="btn btn-primary" onclick="showAddUserModal()">
@@ -327,6 +328,83 @@
 												style="text-align: center; padding: 40px; color: #666"
 											>
 												No customers found.
+											</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+
+					<!-- Shelfs Tab Content -->
+					<div id="shelfs-tab-content" class="staff-tab-content">
+						<div class="section-actions">
+							<button class="btn btn-primary" onclick="showAddShelfModal()">
+								➕ Add Shelf
+							</button>
+							<button class="btn btn-secondary" onclick="refreshShelfs()">
+								🔄 Refresh
+							</button>
+						</div>
+
+						<div class="filters-section">
+							<div class="filter-group">
+								<label for="shelf-filter">Filter by Status:</label>
+								<select id="shelf-filter" onchange="filterShelfs()">
+									<option value="all">All Shelfs</option>
+									<option value="active">Active</option>
+									<option value="inactive">Inactive</option>
+								</select>
+							</div>
+							<div class="filter-group">
+								<label for="shelf-search">Search:</label>
+								<input
+									type="text"
+									id="shelf-search"
+									placeholder="Search by shelf number, description, location..."
+									onkeyup="filterShelfs()"
+								/>
+							</div>
+							<button
+								class="btn btn-secondary btn-sm"
+								onclick="clearShelfFilters()"
+							>
+								Clear Filters
+							</button>
+						</div>
+
+						<div class="data-table">
+							<div class="table-header">
+								<h3 id="shelfs-table-title">All Shelfs</h3>
+								<span id="shelfs-count-display">0 shelfs</span>
+							</div>
+							<div class="shelf-summary" id="shelf-summary"></div>
+							<div class="users-table-container">
+								<table class="users-table">
+									<thead>
+										<tr>
+											<th>#</th>
+											<th>Shelf Number</th>
+											<th>Barcode</th>
+											<th>Description</th>
+											<th>Location</th>
+											<th>Capacity</th>
+											<th>Current Load</th>
+											<th>Utilization</th>
+											<th>Products</th>
+											<th>Orders</th>
+											<th>Status</th>
+											<th>Created</th>
+											<th>Actions</th>
+										</tr>
+									</thead>
+									<tbody id="shelfs-table-body">
+										<tr>
+											<td
+												colspan="13"
+												style="text-align: center; padding: 40px; color: #666"
+											>
+												No shelfs found. Click "Add Shelf" to create one.
 											</td>
 										</tr>
 									</tbody>
@@ -1497,6 +1575,109 @@
 						data-translation="update-profile"
 					>
 						Update Profile
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Shelf Modal -->
+		<div id="shelf-modal" class="modal" onclick="closeShelfModal()">
+			<div class="modal-content" onclick="event.stopPropagation()">
+				<div class="modal-header">
+					<h3 id="shelf-modal-title">Add Shelf</h3>
+					<span class="close" onclick="closeShelfModal()">&times;</span>
+				</div>
+				<div class="modal-body">
+					<form id="shelf-form">
+						<input type="hidden" id="shelf-id" />
+						
+						<div class="form-group">
+							<label for="shelf-number">Shelf Number *</label>
+							<input
+								type="text"
+								id="shelf-number"
+								name="shelfNumber"
+								required
+								placeholder="e.g., A1, B2, C3"
+								maxlength="50"
+							/>
+						</div>
+
+				<div class="form-group">
+					<label for="shelf-barcode">Barcode</label>
+					<input
+						type="text"
+						id="shelf-barcode"
+						name="barcode"
+						placeholder="Optional barcode for scanning"
+						maxlength="100"
+						readonly
+					/>
+				</div>
+
+				<!-- Barcode Preview -->
+				<div class="form-group" id="shelf-barcode-preview-container" style="display: none;">
+					<label>Click on Barcode to Print</label>
+					<div id="shelf-barcode-printable" style="background: white; padding: 15px; border: 1px solid #ddd; border-radius: 6px; text-align: center; cursor: pointer;">
+						<svg id="shelf-barcode-preview"></svg>
+						<p id="shelf-barcode-error" style="color: #dc3545; display: none; margin-top: 10px;"></p>
+					</div>
+				</div>
+
+				<div class="form-group">
+					<label for="shelf-description">Description</label>
+					<textarea
+						id="shelf-description"
+						name="description"
+						rows="3"
+						placeholder="Optional description of the shelf"
+						maxlength="500"
+					></textarea>
+				</div>						<div class="form-group">
+							<label for="shelf-location">Location</label>
+							<input
+								type="text"
+								id="shelf-location"
+								name="location"
+								placeholder="e.g., Warehouse A, Floor 2"
+								maxlength="200"
+							/>
+						</div>
+
+						<div class="form-row">
+							<div class="form-group half">
+								<label for="shelf-capacity">Capacity</label>
+								<input
+									type="number"
+									id="shelf-capacity"
+									name="capacity"
+									min="0"
+									value="0"
+									placeholder="0 = Unlimited"
+								/>
+								<small>Set to 0 for unlimited capacity</small>
+							</div>
+
+							<div class="form-group half">
+								<label for="shelf-status">Status</label>
+								<select id="shelf-status" name="status" required>
+									<option value="true">Active</option>
+									<option value="false">Inactive</option>
+								</select>
+							</div>
+						</div>
+					</form>
+				</div>
+				<div class="modal-footer">
+					<button
+						type="button"
+						class="btn btn-secondary"
+						onclick="closeShelfModal()"
+					>
+						Cancel
+					</button>
+					<button type="button" class="btn btn-primary" onclick="saveShelf()">
+						Save Shelf
 					</button>
 				</div>
 			</div>
@@ -6691,31 +6872,31 @@
 				document.getElementById("zone-stats-modal").style.display = "none";
 			}
 
-			// Staff & Customer Tab switching functions
-			function showStaffTab(tabName) {
-				// Remove active class from all tabs and content
-				document
-					.querySelectorAll(".staff-tab-btn")
-					.forEach((btn) => btn.classList.remove("active"));
-				document
-					.querySelectorAll(".staff-tab-content")
-					.forEach((content) => content.classList.remove("active"));
+		// Staff & Customer Tab switching functions
+		function showStaffTab(tabName) {
+			// Remove active class from all tabs and content
+			document
+				.querySelectorAll(".staff-tab-btn")
+				.forEach((btn) => btn.classList.remove("active"));
+			document
+				.querySelectorAll(".staff-tab-content")
+				.forEach((content) => content.classList.remove("active"));
 
-				// Add active class to clicked tab and corresponding content
-				event.target.classList.add("active");
-				document
-					.getElementById(`${tabName}-tab-content`)
-					.classList.add("active");
+			// Add active class to clicked tab and corresponding content
+			event.target.classList.add("active");
+			document
+				.getElementById(`${tabName}-tab-content`)
+				.classList.add("active");
 
-				// Load data based on active tab
-				if (tabName === "staff") {
-					loadAllUsers();
-				} else if (tabName === "customers") {
-					loadCustomers();
-				}
+			// Load data based on active tab
+			if (tabName === "staff") {
+				loadAllUsers();
+			} else if (tabName === "customers") {
+				loadCustomers();
+			} else if (tabName === "shelfs") {
+				loadShelfs();
 			}
-
-			// Category Tabs Management
+		}			// Category Tabs Management
 			function showCategoryTab(tabName, filter) {
 				// Remove active class from all tabs and content
 				document
@@ -12888,6 +13069,19 @@
 				loadSavedLanguage();
 			});
 
+			// Initialize shelf barcode preview behaviour
+			document.addEventListener("DOMContentLoaded", function () {
+				const shelfNumberInput = document.getElementById("shelf-number");
+				if (shelfNumberInput) {
+					shelfNumberInput.addEventListener("input", handleShelfNumberInput);
+				}
+
+				const barcodePrintable = document.getElementById("shelf-barcode-printable");
+				if (barcodePrintable) {
+					barcodePrintable.addEventListener("click", printShelfBarcode);
+				}
+			});
+
 			// Barcode Generator Functions
 			function showBarcodeGeneratorModal() {
 				const modal = document.getElementById("barcode-generator-modal");
@@ -13055,6 +13249,475 @@
 						getCurrentProductFilters()
 					);
 				}, 100);
+			}
+
+			// Shelf Management Functions
+			let allShelfs = [];
+			let filteredShelfs = [];
+
+			async function loadShelfs() {
+				try {
+					showMessage("Loading shelfs...", "info");
+					const response = await authenticatedFetch(`${API_BASE_URL}/shelves?isActive=all`);
+
+					if (!response.ok) {
+						throw new Error("Failed to fetch shelfs");
+					}
+
+					const result = await response.json();
+					allShelfs = result.data || [];
+					filteredShelfs = [...allShelfs];
+					displayShelfs(filteredShelfs);
+					updateShelfSummary();
+				} catch (error) {
+					console.error("Error loading shelfs:", error);
+					showMessage("Failed to load shelfs", "error");
+				}
+			}
+
+			function displayShelfs(shelfs) {
+				const tbody = document.getElementById("shelfs-table-body");
+				const countDisplay = document.getElementById("shelfs-count-display");
+
+				countDisplay.textContent = `${shelfs.length} shelf${shelfs.length !== 1 ? "s" : ""}`;
+
+				if (shelfs.length === 0) {
+					tbody.innerHTML = `
+						<tr>
+							<td colspan="13" style="text-align: center; padding: 40px; color: #666">
+								No shelfs found. ${
+									filteredShelfs.length !== allShelfs.length
+										? "Try adjusting your filters."
+										: "Click 'Add Shelf' to create one."
+								}
+							</td>
+						</tr>
+					`;
+					return;
+				}
+
+				tbody.innerHTML = shelfs
+					.map(
+						(shelf, index) => `
+					<tr style="${shelf.isActive ? "" : "opacity: 0.6; background-color: #f8f9fa;"}">
+						<td style="text-align: center; font-weight: 600; color: #666;">${index + 1}</td>
+						<td style="font-weight: 600; color: #333;">${shelf.shelfNumber || "N/A"}</td>
+						<td style="text-align: center;">
+							${shelf.barcode
+								? `<svg class="shelf-barcode-svg" data-barcode="${escapeHtml(shelf.barcode)}" aria-label="Shelf barcode for ${escapeHtml(shelf.shelfNumber || "Shelf")}"></svg>`
+								: '<span style="color: #6c757d;">No barcode</span>'}
+						</td>
+						<td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${shelf.description || "No description"}</td>
+						<td>${shelf.location || "Not specified"}</td>
+						<td style="text-align: center;">${shelf.capacity === 0 ? "Unlimited" : shelf.capacity}</td>
+						<td style="text-align: center;">${shelf.currentLoad || 0}</td>
+						<td style="text-align: center;">
+							<span style="padding: 4px 8px; border-radius: 4px; background-color: ${
+								shelf.utilizationPercentage >= 90 ? "#dc3545" :
+								shelf.utilizationPercentage >= 70 ? "#ffc107" : "#28a745"
+							}; color: white; font-weight: bold;">
+								${shelf.utilizationPercentage || 0}%
+							</span>
+						</td>
+						<td style="text-align: center;">${shelf.products?.length || 0}</td>
+						<td style="text-align: center;">${shelf.orders?.length || 0}</td>
+						<td><span class="status-badge ${shelf.isActive ? "active" : "inactive"}">${shelf.isActive ? "Active" : "Inactive"}</span></td>
+						<td>${shelf.createdAt ? formatDate(shelf.createdAt) : "N/A"}</td>
+						<td>
+							<div class="action-buttons">
+								<button class="action-btn edit" onclick="editShelf('${shelf._id}')">Edit</button>
+								<button class="action-btn delete" onclick="deleteShelf('${shelf._id}', '${(shelf.shelfNumber || "").replace(/'/g, "\\'")}')">Delete</button>
+							</div>
+						</td>
+					</tr>
+				`
+					)
+					.join("");
+
+				renderShelfBarcodes();
+			}
+
+			function renderShelfBarcodes() {
+				const svgElements = document.querySelectorAll(".shelf-barcode-svg");
+				if (!svgElements || svgElements.length === 0) {
+					return;
+				}
+
+				svgElements.forEach((svg) => {
+					if (svg.getAttribute("data-rendered") === "true") {
+						return;
+					}
+
+					const barcodeValue = svg.getAttribute("data-barcode");
+					if (!barcodeValue) {
+						svg.style.display = "none";
+						return;
+					}
+
+					try {
+						JsBarcode(svg, barcodeValue, {
+							format: "CODE128",
+							width: 1.5,
+							height: 40,
+							displayValue: false,
+							margin: 0,
+						});
+						svg.setAttribute("data-rendered", "true");
+					} catch (error) {
+						console.error("Error generating shelf barcode:", error);
+						const fallback = document.createElement("span");
+						fallback.style.color = "#dc3545";
+						fallback.textContent = "Invalid barcode";
+						svg.replaceWith(fallback);
+					}
+				});
+			}
+
+			function updateShelfSummary() {
+				const summaryElement = document.getElementById("shelf-summary");
+				if (!summaryElement || !allShelfs) return;
+
+				const activeCount = allShelfs.filter((shelf) => shelf.isActive).length;
+				const inactiveCount = allShelfs.filter((shelf) => !shelf.isActive).length;
+				const totalCount = allShelfs.length;
+				const totalProducts = allShelfs.reduce((sum, shelf) => sum + (shelf.products?.length || 0), 0);
+				const totalOrders = allShelfs.reduce((sum, shelf) => sum + (shelf.orders?.length || 0), 0);
+
+				summaryElement.innerHTML = `
+					<strong>Total:</strong> ${totalCount} shelfs |
+					<span style="color: #28a745;"><strong>Active:</strong> ${activeCount}</span> |
+					<span style="color: #6c757d;"><strong>Inactive:</strong> ${inactiveCount}</span> |
+					<span style="color: #007bff;"><strong>Products:</strong> ${totalProducts}</span> |
+					<span style="color: #17a2b8;"><strong>Orders:</strong> ${totalOrders}</span>
+				`;
+			}
+
+			function filterShelfs() {
+				const filterSelect = document.getElementById("shelf-filter");
+				const searchInput = document.getElementById("shelf-search");
+				const filterValue = filterSelect ? filterSelect.value : "all";
+				const searchValue = searchInput ? searchInput.value.toLowerCase().trim() : "";
+				const tableTitle = document.getElementById("shelfs-table-title");
+
+				let filtered = [...allShelfs];
+
+				// Apply status filter
+				if (filterValue === "active") {
+					filtered = filtered.filter((shelf) => shelf.isActive);
+				} else if (filterValue === "inactive") {
+					filtered = filtered.filter((shelf) => !shelf.isActive);
+				}
+
+				// Apply search filter
+				if (searchValue) {
+					filtered = filtered.filter((shelf) => {
+						const shelfNumber = (shelf.shelfNumber || "").toLowerCase();
+						const description = (shelf.description || "").toLowerCase();
+						const location = (shelf.location || "").toLowerCase();
+						return (
+							shelfNumber.includes(searchValue) ||
+							description.includes(searchValue) ||
+							location.includes(searchValue)
+						);
+					});
+				}
+
+				filteredShelfs = filtered;
+
+				// Update title
+				let titleText = filterValue === "all" ? "All Shelfs" :
+					filterValue === "active" ? "Active Shelfs" : "Inactive Shelfs";
+				if (searchValue) {
+					titleText += ` (Searching: "${searchInput.value}")`;
+				}
+				if (tableTitle) tableTitle.textContent = titleText;
+
+				displayShelfs(filteredShelfs);
+			}
+
+			function clearShelfFilters() {
+				const searchInput = document.getElementById("shelf-search");
+				const filterSelect = document.getElementById("shelf-filter");
+
+				if (searchInput) searchInput.value = "";
+				if (filterSelect) filterSelect.value = "all";
+
+				filteredShelfs = [...allShelfs];
+				displayShelfs(filteredShelfs);
+				const tableTitle = document.getElementById("shelfs-table-title");
+				if (tableTitle) tableTitle.textContent = "All Shelfs";
+				showMessage("Shelf filters cleared", "info");
+			}
+
+			function showAddShelfModal() {
+				const modalTitle = document.getElementById("shelf-modal-title");
+				const shelfForm = document.getElementById("shelf-form");
+				const shelfId = document.getElementById("shelf-id");
+				const shelfModal = document.getElementById("shelf-modal");
+
+				if (!modalTitle || !shelfForm || !shelfId || !shelfModal) {
+					console.error("Shelf modal elements not found");
+					showMessage("Modal not available. Please refresh the page.", "error");
+					return;
+				}
+
+				modalTitle.textContent = "Add New Shelf";
+				shelfForm.reset();
+				shelfId.value = "";
+				
+				// Hide barcode preview for new shelf
+				const barcodePreviewContainer = document.getElementById("shelf-barcode-preview-container");
+				if (barcodePreviewContainer) {
+					barcodePreviewContainer.style.display = "none";
+				}
+				
+				shelfModal.style.display = "block";
+			}
+
+			// Function to display barcode preview
+			function displayShelfBarcodePreview(barcodeValue) {
+				const previewContainer = document.getElementById("shelf-barcode-preview-container");
+				const previewSvg = document.getElementById("shelf-barcode-preview");
+				const errorElement = document.getElementById("shelf-barcode-error");
+				
+				if (!previewContainer || !previewSvg || !errorElement) {
+					console.error("Barcode preview elements not found");
+					return;
+				}
+				
+				// Clear previous content
+				previewSvg.innerHTML = "";
+				errorElement.style.display = "none";
+				errorElement.textContent = "";
+				
+				if (!barcodeValue || barcodeValue.trim() === "") {
+					previewContainer.style.display = "none";
+					return;
+				}
+				
+				try {
+					// Generate barcode using JsBarcode
+					JsBarcode(previewSvg, barcodeValue, {
+						format: "CODE128",
+						width: 2,
+						height: 80,
+						displayValue: true,
+						fontSize: 14,
+						margin: 10
+					});
+					previewContainer.style.display = "block";
+				} catch (error) {
+					console.error("Error generating barcode:", error);
+					errorElement.textContent = "Invalid barcode format";
+					errorElement.style.display = "block";
+					previewContainer.style.display = "block";
+				}
+			}
+
+			function handleShelfNumberInput(event) {
+				const rawValue = event.target.value || "";
+				const generatedValue = rawValue.trim();
+				const barcodeInput = document.getElementById("shelf-barcode");
+				if (barcodeInput) {
+					barcodeInput.value = generatedValue;
+				}
+				displayShelfBarcodePreview(generatedValue);
+			}
+
+			function printShelfBarcode() {
+				const barcodeInput = document.getElementById("shelf-barcode");
+				const previewSvg = document.getElementById("shelf-barcode-preview");
+				if (!barcodeInput || !previewSvg) {
+					showMessage("Barcode preview not available", "error");
+					return;
+				}
+
+				const barcodeValue = (barcodeInput.value || "").trim();
+				if (!barcodeValue) {
+					showMessage("No barcode available to print", "error");
+					return;
+				}
+
+				const svgContent = previewSvg.outerHTML;
+				if (!svgContent || svgContent.trim() === "") {
+					showMessage("Generate the barcode before printing", "error");
+					return;
+				}
+
+				const printWindow = window.open("", "_blank", "width=420,height=600");
+				if (!printWindow) {
+					showMessage("Please allow pop-ups to print the barcode", "error");
+					return;
+				}
+
+				const safeBarcode = typeof escapeHtml === "function" ? escapeHtml(barcodeValue) : barcodeValue;
+
+				printWindow.document.write(`<!DOCTYPE html>
+		<html>
+		<head>
+		<meta charset="utf-8" />
+		<title>Shelf Barcode</title>
+		<style>
+			body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 30px; background: #ffffff; }
+			.barcode-wrapper { display: inline-block; }
+			.barcode-wrapper svg { width: 100%; max-width: 320px; height: auto; }
+			.barcode-text { margin-top: 16px; font-size: 14px; letter-spacing: 4px; }
+		</style>
+		</head>
+		<body>
+			<div class="barcode-wrapper">${svgContent}</div>
+			<div class="barcode-text">${safeBarcode}</div>
+		</body>
+		</html>`);
+				printWindow.document.close();
+				printWindow.focus();
+				printWindow.print();
+				setTimeout(() => {
+					printWindow.close();
+				}, 250);
+			}
+
+			async function editShelf(shelfId) {
+				try {
+					showMessage("Loading shelf data...", "info");
+
+					const response = await authenticatedFetch(`${API_BASE_URL}/shelves/${shelfId}`);
+					if (!response.ok) {
+						throw new Error("Failed to load shelf data");
+					}
+
+					const result = await response.json();
+					const shelf = result.data;
+
+				const elements = {
+					modalTitle: document.getElementById("shelf-modal-title"),
+					shelfId: document.getElementById("shelf-id"),
+					shelfNumber: document.getElementById("shelf-number"),
+					shelfBarcode: document.getElementById("shelf-barcode"),
+					shelfDescription: document.getElementById("shelf-description"),
+					shelfLocation: document.getElementById("shelf-location"),
+					shelfCapacity: document.getElementById("shelf-capacity"),
+					shelfStatus: document.getElementById("shelf-status"),
+					shelfModal: document.getElementById("shelf-modal"),
+				};
+
+				for (const [key, element] of Object.entries(elements)) {
+					if (!element) {
+						console.error(`Element ${key} not found`);
+						showMessage("Modal form not available. Please refresh the page.", "error");
+						return;
+					}
+				}
+
+				elements.modalTitle.textContent = "Edit Shelf";
+				elements.shelfId.value = shelf._id;
+				elements.shelfNumber.value = shelf.shelfNumber || "";
+				elements.shelfBarcode.value = shelf.barcode || "";
+				elements.shelfDescription.value = shelf.description || "";
+				elements.shelfLocation.value = shelf.location || "";
+				elements.shelfCapacity.value = shelf.capacity || 0;
+				elements.shelfStatus.value = shelf.isActive ? "true" : "false";
+				
+				// Display barcode preview if barcode exists
+				displayShelfBarcodePreview(shelf.barcode);
+				
+				elements.shelfModal.style.display = "block";
+				} catch (error) {
+					console.error("Error editing shelf:", error);
+					showMessage("Error opening shelf edit form. Please try again.", "error");
+				}
+			}
+
+			async function deleteShelf(shelfId, shelfNumber) {
+				if (!confirm(`Are you sure you want to delete shelf "${shelfNumber}"? This action cannot be undone.`)) {
+					return;
+				}
+
+				try {
+					const response = await authenticatedFetch(`${API_BASE_URL}/shelves/${shelfId}`, {
+						method: "DELETE",
+					});
+
+					const result = await response.json();
+
+					if (response.ok) {
+						showMessage(`Shelf "${shelfNumber}" deleted successfully`, "success");
+						loadShelfs();
+					} else {
+						showMessage(result.message || "Failed to delete shelf", "error");
+					}
+				} catch (error) {
+					console.error("Error deleting shelf:", error);
+					showMessage("Failed to delete shelf: " + error.message, "error");
+				}
+			}
+
+			async function saveShelf() {
+				try {
+					const form = document.getElementById("shelf-form");
+					const shelfIdElement = document.getElementById("shelf-id");
+
+					if (!form || !shelfIdElement) {
+						showMessage("Form not available. Please refresh the page.", "error");
+						return;
+					}
+
+					const formData = new FormData(form);
+					const shelfId = shelfIdElement.value;
+
+					if (!formData.get("shelfNumber")) {
+						showMessage("Please provide a shelf number.", "error");
+						return;
+					}
+
+				const shelfData = {
+					shelfNumber: formData.get("shelfNumber"),
+					barcode: formData.get("barcode") || "",
+					description: formData.get("description") || "",
+					location: formData.get("location") || "",
+					capacity: parseInt(formData.get("capacity")) || 0,
+					isActive: formData.get("status") === "true",
+				};					const url = shelfId
+						? `${API_BASE_URL}/shelves/${shelfId}`
+						: `${API_BASE_URL}/shelves`;
+					const method = shelfId ? "PUT" : "POST";
+
+					const response = await authenticatedFetch(url, {
+						method: method,
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify(shelfData),
+					});
+
+					if (!response.ok) {
+						const errorData = await response.json().catch(() => ({}));
+						throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+					}
+
+					const result = await response.json();
+					showMessage(
+						result.message || `Shelf ${shelfId ? "updated" : "created"} successfully`,
+						"success"
+					);
+					closeShelfModal();
+					await loadShelfs();
+				} catch (error) {
+					console.error("Error saving shelf:", error);
+					showMessage("Error saving shelf: " + error.message, "error");
+				}
+			}
+
+			function closeShelfModal() {
+				const modal = document.getElementById("shelf-modal");
+				if (modal) {
+					modal.style.display = "none";
+				}
+			}
+
+			function refreshShelfs() {
+				loadShelfs();
+				showMessage("Shelfs refreshed", "success");
 			}
 		</script>
 	</body>

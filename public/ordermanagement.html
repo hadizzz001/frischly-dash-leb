@@ -1182,11 +1182,6 @@
 									View
 								</button>
 								${getStatusActionButton(order)}
-								${
-									order.paymentStatus === "paid"
-										? `<button class="action-btn delete" onclick="refundOrder('${order._id}')">Refund</button>`
-										: ""
-								}
 							</div>
 						</td>
 					`;
