@@ -6,11 +6,24 @@ const fs = require("fs");
 const cloudinary = require("cloudinary").v2;
 
 // Configure Cloudinary
+// SECURITY: All credentials must be provided via environment variables
+if (
+	!process.env.CLOUDINARY_CLOUD_NAME ||
+	!process.env.CLOUDINARY_API_KEY ||
+	!process.env.CLOUDINARY_API_SECRET
+) {
+	console.error(
+		"❌ CRITICAL: Cloudinary credentials are not configured properly in environment variables"
+	);
+	console.error(
+		"Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in .env file"
+	);
+}
+
 cloudinary.config({
-	cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "dbgnsnrto",
-	api_key: process.env.CLOUDINARY_API_KEY || "431121896297761",
-	api_secret:
-		process.env.CLOUDINARY_API_SECRET || "omVgd2HdystgoGQ5yXngAZ40yTg",
+	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+	api_key: process.env.CLOUDINARY_API_KEY,
+	api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 // Configure multer for memory storage (for Cloudinary)
