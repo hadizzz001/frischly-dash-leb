@@ -67,33 +67,37 @@ app.use(
 // CORS Configuration with Security
 // Parse allowed origins from environment variable
 const getAllowedOrigins = () => {
-	const originsEnv = process.env.CLIENT_URL || process.env.ALLOWED_ORIGINS || '';
-	
+	const originsEnv =
+		process.env.CLIENT_URL || process.env.ALLOWED_ORIGINS || "";
+
 	// Split by comma and trim whitespace
-	const origins = originsEnv.split(',').map(origin => origin.trim()).filter(Boolean);
-	
+	const origins = originsEnv
+		.split(",")
+		.map((origin) => origin.trim())
+		.filter(Boolean);
+
 	// Always allow localhost in development
-	if (process.env.NODE_ENV === 'development') {
+	if (process.env.NODE_ENV === "development") {
 		const devOrigins = [
-			'http://localhost:3000',
-			'http://localhost:3001',
-			'http://localhost:5173', // Vite default
-			'http://127.0.0.1:3000',
-			'http://127.0.0.1:3001',
+			"http://localhost:3000",
+			"http://localhost:3001",
+			"http://localhost:5173", // Vite default
+			"http://127.0.0.1:3000",
+			"http://127.0.0.1:3001",
 		];
 		// Add dev origins if not already present
-		devOrigins.forEach(devOrigin => {
+		devOrigins.forEach((devOrigin) => {
 			if (!origins.includes(devOrigin)) {
 				origins.push(devOrigin);
 			}
 		});
 	}
-	
+
 	// Log allowed origins for debugging (only in development)
-	if (process.env.NODE_ENV === 'development') {
-		console.log('🔒 CORS Allowed Origins:', origins);
+	if (process.env.NODE_ENV === "development") {
+		console.log("🔒 CORS Allowed Origins:", origins);
 	}
-	
+
 	return origins;
 };
 
@@ -107,26 +111,30 @@ app.use(
 			if (!origin) {
 				return callback(null, true);
 			}
-			
+
 			// Check if origin is in allowed list
 			if (allowedOrigins.length === 0) {
 				// If no origins configured, warn and reject in production
-				if (process.env.NODE_ENV === 'production') {
-					console.error('❌ SECURITY WARNING: No CORS origins configured in production!');
-					return callback(new Error('CORS origin not allowed'), false);
+				if (process.env.NODE_ENV === "production") {
+					console.error(
+						"❌ SECURITY WARNING: No CORS origins configured in production!"
+					);
+					return callback(new Error("CORS origin not allowed"), false);
 				}
 				// Allow in development but log warning
-				console.warn('⚠️  WARNING: No CORS origins configured');
+				console.warn("⚠️  WARNING: No CORS origins configured");
 				return callback(null, true);
 			}
-			
+
 			if (allowedOrigins.indexOf(origin) !== -1) {
 				// Origin is allowed
 				callback(null, true);
 			} else {
 				// Origin is not allowed
-				console.warn(`⚠️  CORS blocked request from unauthorized origin: ${origin}`);
-				callback(new Error('CORS policy: Origin not allowed'), false);
+				console.warn(
+					`⚠️  CORS blocked request from unauthorized origin: ${origin}`
+				);
+				callback(new Error("CORS policy: Origin not allowed"), false);
 			}
 		},
 		credentials: true, // Allow credentials (cookies, authorization headers)

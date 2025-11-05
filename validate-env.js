@@ -125,41 +125,52 @@ if (
 }
 
 // Check CORS configuration
-const corsOrigins = process.env.CLIENT_URL || process.env.ALLOWED_ORIGINS || '';
+const corsOrigins = process.env.CLIENT_URL || process.env.ALLOWED_ORIGINS || "";
 if (corsOrigins === "*") {
 	console.log(
 		'   ❌ CLIENT_URL is set to "*" (wildcard) - CRITICAL SECURITY RISK!'
 	);
-	if (process.env.NODE_ENV === 'production') {
-		console.log('   🚨 This MUST be fixed before production deployment!');
+	if (process.env.NODE_ENV === "production") {
+		console.log("   🚨 This MUST be fixed before production deployment!");
 		hasErrors = true;
 	} else {
 		hasWarnings = true;
 	}
 } else if (!corsOrigins) {
-	console.log('   ⚠️  CLIENT_URL not set - CORS origins not configured');
-	if (process.env.NODE_ENV === 'production') {
-		console.log('   🚨 Configure allowed origins for production!');
+	console.log("   ⚠️  CLIENT_URL not set - CORS origins not configured");
+	if (process.env.NODE_ENV === "production") {
+		console.log("   🚨 Configure allowed origins for production!");
 		hasErrors = true;
 	} else {
-		console.log('   ℹ️  Development will allow localhost by default');
+		console.log("   ℹ️  Development will allow localhost by default");
 	}
 } else if (corsOrigins) {
-	const origins = corsOrigins.split(',').map(o => o.trim()).filter(Boolean);
-	console.log(`   ✅ CLIENT_URL configured with ${origins.length} allowed origin(s)`);
-	
+	const origins = corsOrigins
+		.split(",")
+		.map((o) => o.trim())
+		.filter(Boolean);
+	console.log(
+		`   ✅ CLIENT_URL configured with ${origins.length} allowed origin(s)`
+	);
+
 	// Check for potential issues
-	const hasWildcard = origins.some(o => o.includes('*'));
+	const hasWildcard = origins.some((o) => o.includes("*"));
 	if (hasWildcard) {
-		console.log('   ⚠️  WARNING: Wildcard (*) detected in origins - be cautious!');
+		console.log(
+			"   ⚠️  WARNING: Wildcard (*) detected in origins - be cautious!"
+		);
 		hasWarnings = true;
 	}
-	
+
 	// Warn about http in production
-	if (process.env.NODE_ENV === 'production') {
-		const hasHttp = origins.some(o => o.startsWith('http://') && !o.includes('localhost'));
+	if (process.env.NODE_ENV === "production") {
+		const hasHttp = origins.some(
+			(o) => o.startsWith("http://") && !o.includes("localhost")
+		);
 		if (hasHttp) {
-			console.log('   ⚠️  WARNING: Non-localhost HTTP origins in production - use HTTPS!');
+			console.log(
+				"   ⚠️  WARNING: Non-localhost HTTP origins in production - use HTTPS!"
+			);
 			hasWarnings = true;
 		}
 	}
