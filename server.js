@@ -35,7 +35,8 @@ app.use(
 				defaultSrc: ["'self'"],
 				scriptSrc: [
 					"'self'",
-					...(isDevelopment ? ["'unsafe-inline'", "'unsafe-eval'"] : []),
+					"'unsafe-inline'", // Allow inline scripts in both dev and production
+					...(isDevelopment ? ["'unsafe-eval'"] : []),
 					"https://cdn.jsdelivr.net",
 					"https://cdnjs.cloudflare.com",
 					"https://unpkg.com",
@@ -44,7 +45,7 @@ app.use(
 					//"https://frischly-server.onrender.com",
 					"https://frischlyshop-server.onrender.com",
 				],
-				...(isDevelopment && { scriptSrcAttr: ["'unsafe-inline'"] }), // Allow inline event handlers in development
+				scriptSrcAttr: ["'unsafe-inline'"], // Allow inline event handlers in both dev and production
 				styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
 				imgSrc: ["'self'", "data:", "https:"],
 				connectSrc: [
