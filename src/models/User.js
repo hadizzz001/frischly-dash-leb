@@ -116,6 +116,14 @@ const userSchema = new mongoose.Schema(
 		lastLogin: {
 			type: Date,
 		},
+		// Account lockout fields
+		loginAttempts: {
+			type: Number,
+			default: 0,
+		},
+		lockUntil: {
+			type: Date,
+		},
 	},
 	{
 		timestamps: true,
@@ -142,6 +150,53 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 	return await bcrypt.compare(candidatePassword, this.password);
 };
 
+// Virtual property to check if account is locked
+userSchema.virtual("isLocked").get(function () {
+	// Check if lockUntil is in the future
+	return !!(this.lockUntil && this.lockUntil > Date.now());
+});
+
+// Constants for account lockout
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCK_TIME = 15 * 60 * 1000; // 15 minutes in milliseconds
+
+// Instance method to increment login attempts
+userSchema.methods.incLoginAttempts = async function () {
+	// If we have a previous lock that has expired, restart at 1
+	if (this.lockUntil && this.lockUntil < Date.now()) {
+		return await this.updateOne({
+			$set: { loginAttempts: 1 },
+			$unset: { lockUntil: 1 },
+		});
+	}
+
+	// Otherwise increment attempts
+	const updates = { $inc: { loginAttempts: 1 } };
+
+	// Lock the account if we've reached max attempts and it's not locked already
+	const attemptsLeft = MAX_LOGIN_ATTEMPTS - this.loginAttempts;
+	if (attemptsLeft <= 1 && !this.isLocked) {
+		updates.$set = { lockUntil: Date.now() + LOCK_TIME };
+	}
+
+	return await this.updateOne(updates);
+};
+
+// Instance method to reset login attempts
+userSchema.methods.resetLoginAttempts = async function () {
+	return await this.updateOne({
+		$set: { loginAttempts: 0 },
+		$unset: { lockUntil: 1 },
+	});
+};
+
+// Static method to get time remaining for locked account (in minutes)
+userSchema.methods.getLockTimeRemaining = function () {
+	if (!this.isLocked) return 0;
+	const remainingMs = this.lockUntil - Date.now();
+	return Math.ceil(remainingMs / (60 * 1000)); // Convert to minutes
+};
+
 // Instance method to get user without password
 userSchema.methods.toSafeObject = function () {
 	const userObject = this.toObject();
@@ -149,6 +204,8 @@ userSchema.methods.toSafeObject = function () {
 	delete userObject.creditCard; // Don't expose credit card info
 	delete userObject.emailToken;
 	delete userObject.emailTokenExpires;
+	delete userObject.loginAttempts; // Don't expose security info
+	delete userObject.lockUntil; // Don't expose security info
 	return userObject;
 };
 
@@ -170,6 +227,8 @@ userSchema.methods.toMaskedObject = function () {
 
 	delete userObject.emailToken;
 	delete userObject.emailTokenExpires;
+	delete userObject.loginAttempts; // Don't expose security info
+	delete userObject.lockUntil; // Don't expose security info
 
 	return userObject;
 };

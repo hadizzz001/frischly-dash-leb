@@ -10,6 +10,7 @@
 		"validate-env": "node validate-env.js",
 		"test-cors": "node test-cors.js",
 		"test-nosql-injection": "node test-nosql-injection.js",
+		"test-account-lockout": "node test-account-lockout.js",
 		"test-security": "npm run test-cors && npm run test-nosql-injection",
 		"prestart": "node validate-env.js",
 		"create-admin": "node scripts/createAdminUsers.js",

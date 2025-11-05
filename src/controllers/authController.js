@@ -163,14 +163,27 @@ const login = async (req, res) => {
 			});
 		}
 
-		// Check for user and include password
+		// Check for user and include password, loginAttempts, and lockUntil
 		const user = await User.findOne({ email: sanitizedEmail }).select(
-			"+password"
+			"+password +loginAttempts +lockUntil"
 		);
 		if (!user) {
 			return res.status(401).json({
 				success: false,
 				message: "Invalid credentials",
+			});
+		}
+
+		// Check if account is locked
+		if (user.isLocked) {
+			const minutesRemaining = user.getLockTimeRemaining();
+			console.warn(
+				`🔒 Login attempt on locked account: ${sanitizedEmail}. Locked for ${minutesRemaining} more minutes.`
+			);
+			return res.status(423).json({
+				success: false,
+				message: `Account is temporarily locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minute(s).`,
+				lockTimeRemaining: minutesRemaining,
 			});
 		}
 
@@ -185,10 +198,36 @@ const login = async (req, res) => {
 		// Check password
 		const isMatch = await user.comparePassword(password);
 		if (!isMatch) {
-			return res.status(401).json({
-				success: false,
-				message: "Invalid credentials",
-			});
+			// Increment login attempts
+			await user.incLoginAttempts();
+
+			// Calculate remaining attempts
+			const attemptsLeft = 5 - (user.loginAttempts + 1);
+
+			console.warn(
+				`⚠️  Failed login attempt for ${sanitizedEmail}. Attempts: ${
+					user.loginAttempts + 1
+				}/5`
+			);
+
+			if (attemptsLeft <= 0) {
+				return res.status(401).json({
+					success: false,
+					message:
+						"Invalid credentials. Your account has been temporarily locked for 15 minutes due to multiple failed login attempts.",
+				});
+			} else if (attemptsLeft <= 2) {
+				return res.status(401).json({
+					success: false,
+					message: `Invalid credentials. ${attemptsLeft} attempt(s) remaining before account lockout.`,
+					attemptsRemaining: attemptsLeft,
+				});
+			} else {
+				return res.status(401).json({
+					success: false,
+					message: "Invalid credentials",
+				});
+			}
 		}
 
 		if (user.emailConfirmed === false) {
@@ -207,6 +246,14 @@ const login = async (req, res) => {
 				message:
 					"Access denied.  Access is restricted to managers, administrators, customers, and riders only.",
 			});
+		}
+
+		// Reset login attempts on successful login
+		if (user.loginAttempts > 0 || user.lockUntil) {
+			await user.resetLoginAttempts();
+			console.log(
+				`✅ Login attempts reset for ${sanitizedEmail} after successful login`
+			);
 		}
 
 		// Update last login
@@ -378,12 +425,36 @@ const loginProfile = async (req, res) => {
 
 		const { email, password } = req.body;
 
-		// Check for user and include password
-		const user = await User.findOne({ email }).select("+password");
+		// Sanitize email input to prevent NoSQL injection
+		const sanitizedEmail = sanitizeEmail(email);
+		if (!sanitizedEmail) {
+			return res.status(400).json({
+				success: false,
+				message: "Invalid email format",
+			});
+		}
+
+		// Check for user and include password, loginAttempts, and lockUntil
+		const user = await User.findOne({ email: sanitizedEmail }).select(
+			"+password +loginAttempts +lockUntil"
+		);
 		if (!user) {
 			return res.status(401).json({
 				success: false,
 				message: "Invalid credentials",
+			});
+		}
+
+		// Check if account is locked
+		if (user.isLocked) {
+			const minutesRemaining = user.getLockTimeRemaining();
+			console.warn(
+				`🔒 Login attempt on locked account: ${sanitizedEmail}. Locked for ${minutesRemaining} more minutes.`
+			);
+			return res.status(423).json({
+				success: false,
+				message: `Account is temporarily locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minute(s).`,
+				lockTimeRemaining: minutesRemaining,
 			});
 		}
 
@@ -398,10 +469,36 @@ const loginProfile = async (req, res) => {
 		// Check password
 		const isMatch = await user.comparePassword(password);
 		if (!isMatch) {
-			return res.status(401).json({
-				success: false,
-				message: "Invalid credentials",
-			});
+			// Increment login attempts
+			await user.incLoginAttempts();
+
+			// Calculate remaining attempts
+			const attemptsLeft = 5 - (user.loginAttempts + 1);
+
+			console.warn(
+				`⚠️  Failed login attempt for ${sanitizedEmail}. Attempts: ${
+					user.loginAttempts + 1
+				}/5`
+			);
+
+			if (attemptsLeft <= 0) {
+				return res.status(401).json({
+					success: false,
+					message:
+						"Invalid credentials. Your account has been temporarily locked for 15 minutes due to multiple failed login attempts.",
+				});
+			} else if (attemptsLeft <= 2) {
+				return res.status(401).json({
+					success: false,
+					message: `Invalid credentials. ${attemptsLeft} attempt(s) remaining before account lockout.`,
+					attemptsRemaining: attemptsLeft,
+				});
+			} else {
+				return res.status(401).json({
+					success: false,
+					message: "Invalid credentials",
+				});
+			}
 		}
 
 		if (user.emailConfirmed === false) {
@@ -410,6 +507,14 @@ const loginProfile = async (req, res) => {
 				message: "Please confirm your email before logging in.",
 				needsConfirmation: true,
 			});
+		}
+
+		// Reset login attempts on successful login
+		if (user.loginAttempts > 0 || user.lockUntil) {
+			await user.resetLoginAttempts();
+			console.log(
+				`✅ Login attempts reset for ${sanitizedEmail} after successful login`
+			);
 		}
 
 		// Update last login
