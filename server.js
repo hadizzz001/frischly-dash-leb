@@ -50,7 +50,7 @@ app.use(
 					"'self'",
 					"'unsafe-inline'",
 					"'sha256-W+PQdrSyzoxGZ+bh2Zr3zLOjHsZbA5C+qI8MYjzhOO0='",
-					"https://cdnjs.cloudflare.com"
+					"https://cdnjs.cloudflare.com",
 				],
 				imgSrc: ["'self'", "data:", "https:"],
 				connectSrc: [
