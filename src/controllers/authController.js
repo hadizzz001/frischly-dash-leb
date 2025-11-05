@@ -164,7 +164,9 @@ const login = async (req, res) => {
 		}
 
 		// Check for user and include password
-		const user = await User.findOne({ email: sanitizedEmail }).select("+password");
+		const user = await User.findOne({ email: sanitizedEmail }).select(
+			"+password"
+		);
 		if (!user) {
 			return res.status(401).json({
 				success: false,

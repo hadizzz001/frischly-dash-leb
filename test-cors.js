@@ -2,11 +2,11 @@
 // This script tests the CORS configuration to ensure it's working correctly
 // Usage: node test-cors.js
 
-const http = require('http');
-const https = require('https');
-require('dotenv').config(); // Load environment variables
+const http = require("http");
+const https = require("https");
+require("dotenv").config(); // Load environment variables
 
-console.log('🧪 Testing CORS Configuration...\n');
+console.log("🧪 Testing CORS Configuration...\n");
 
 // Always test against local server
 const serverUrl = "http://localhost:3001";
@@ -15,24 +15,30 @@ const testEndpoint = `${serverUrl}/api/health`;
 console.log(`Testing against: ${testEndpoint}\n`);
 
 // Get allowed origins from environment
-const allowedOrigins = (process.env.CLIENT_URL || process.env.ALLOWED_ORIGINS || '')
-	.split(',')
-	.map(o => o.trim())
+const allowedOrigins = (
+	process.env.CLIENT_URL ||
+	process.env.ALLOWED_ORIGINS ||
+	""
+)
+	.split(",")
+	.map((o) => o.trim())
 	.filter(Boolean);
 
-console.log(`Configured allowed origins: ${allowedOrigins.join(', ') || '(none)'}\n`);
+console.log(
+	`Configured allowed origins: ${allowedOrigins.join(", ") || "(none)"}\n`
+);
 
 // Test cases with different origins
 const testCases = [
 	{
-		name: 'Allowed Origin (localhost:3000)',
-		origin: 'http://localhost:3000',
-		shouldPass: allowedOrigins.includes('http://localhost:3000'), // Dynamic based on config
+		name: "Allowed Origin (localhost:3000)",
+		origin: "http://localhost:3000",
+		shouldPass: allowedOrigins.includes("http://localhost:3000"), // Dynamic based on config
 	},
 	{
-		name: 'Allowed Origin (localhost:3001)',
-		origin: 'http://localhost:3001',
-		shouldPass: allowedOrigins.includes('http://localhost:3001'), // Dynamic based on config
+		name: "Allowed Origin (localhost:3001)",
+		origin: "http://localhost:3001",
+		shouldPass: allowedOrigins.includes("http://localhost:3001"), // Dynamic based on config
 	},
 	{
 		name: "Unauthorized Origin (evil.com)",

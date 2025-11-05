@@ -140,6 +140,7 @@ If you suspect credentials have been compromised:
 ### Input Validation & Sanitization ✅ NEW
 
 **NoSQL Injection Protection:**
+
 - Automatic sanitization of all request data (body, query, params)
 - Removes MongoDB operators (`$gt`, `$ne`, `$where`, etc.)
 - Blocks dot notation attacks (`user.password`)
@@ -147,20 +148,22 @@ If you suspect credentials have been compromised:
 - Logs all injection attempts for monitoring
 
 **Available Sanitization Utilities:**
+
 ```javascript
 const {
-  sanitizeEmail,      // Email validation & normalization
-  sanitizeString,     // String sanitization with length limits
-  sanitizeObject,     // Deep object sanitization
-  sanitizeQuery,      // Query parameter sanitization
-  sanitizePagination, // Safe pagination params
-  sanitizeSort,       // Safe sort parameters
-  createSafeRegex,    // ReDoS-safe regex creation
-  isValidObjectId,    // MongoDB ObjectId validation
-} = require('./src/utils/sanitize');
+	sanitizeEmail, // Email validation & normalization
+	sanitizeString, // String sanitization with length limits
+	sanitizeObject, // Deep object sanitization
+	sanitizeQuery, // Query parameter sanitization
+	sanitizePagination, // Safe pagination params
+	sanitizeSort, // Safe sort parameters
+	createSafeRegex, // ReDoS-safe regex creation
+	isValidObjectId, // MongoDB ObjectId validation
+} = require("./src/utils/sanitize");
 ```
 
 **Testing:**
+
 ```bash
 npm run test-nosql-injection  # Run NoSQL injection tests
 ```

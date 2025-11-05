@@ -10,40 +10,40 @@
  */
 const sanitizeObject = (obj, maxDepth = 3, currentDepth = 0) => {
 	if (currentDepth > maxDepth) {
-		console.warn('⚠️  Object nesting too deep, truncating');
+		console.warn("⚠️  Object nesting too deep, truncating");
 		return null;
 	}
 
-	if (typeof obj !== 'object' || obj === null) {
+	if (typeof obj !== "object" || obj === null) {
 		return obj;
 	}
 
 	if (Array.isArray(obj)) {
-		return obj.map(item => sanitizeObject(item, maxDepth, currentDepth + 1));
+		return obj.map((item) => sanitizeObject(item, maxDepth, currentDepth + 1));
 	}
 
 	const sanitized = {};
 	for (const [key, value] of Object.entries(obj)) {
 		// Skip keys that start with $ (MongoDB operators)
-		if (key.startsWith('$')) {
+		if (key.startsWith("$")) {
 			console.warn(`⚠️  Blocked MongoDB operator in key: ${key}`);
 			continue;
 		}
 
 		// Skip keys with dots (can be used for prototype pollution)
-		if (key.includes('.')) {
+		if (key.includes(".")) {
 			console.warn(`⚠️  Blocked key with dot notation: ${key}`);
 			continue;
 		}
 
 		// Skip __proto__, constructor, prototype
-		if (['__proto__', 'constructor', 'prototype'].includes(key)) {
+		if (["__proto__", "constructor", "prototype"].includes(key)) {
 			console.warn(`⚠️  Blocked dangerous property: ${key}`);
 			continue;
 		}
 
 		// Recursively sanitize nested objects
-		if (typeof value === 'object' && value !== null) {
+		if (typeof value === "object" && value !== null) {
 			sanitized[key] = sanitizeObject(value, maxDepth, currentDepth + 1);
 		} else {
 			sanitized[key] = value;
@@ -59,7 +59,7 @@ const sanitizeObject = (obj, maxDepth = 3, currentDepth = 0) => {
  * @returns {Boolean} Whether ID is valid
  */
 const isValidObjectId = (id) => {
-	if (!id || typeof id !== 'string') return false;
+	if (!id || typeof id !== "string") return false;
 	// MongoDB ObjectId is 24 character hex string
 	return /^[0-9a-fA-F]{24}$/.test(id);
 };
@@ -71,13 +71,9 @@ const isValidObjectId = (id) => {
  * @returns {String} Sanitized string
  */
 const sanitizeString = (str, options = {}) => {
-	if (typeof str !== 'string') return str;
+	if (typeof str !== "string") return str;
 
-	const {
-		maxLength = 1000,
-		allowHtml = false,
-		trim = true,
-	} = options;
+	const { maxLength = 1000, allowHtml = false, trim = true } = options;
 
 	let sanitized = str;
 
@@ -88,17 +84,19 @@ const sanitizeString = (str, options = {}) => {
 
 	// Limit length
 	if (sanitized.length > maxLength) {
-		console.warn(`⚠️  String truncated from ${sanitized.length} to ${maxLength} characters`);
+		console.warn(
+			`⚠️  String truncated from ${sanitized.length} to ${maxLength} characters`
+		);
 		sanitized = sanitized.substring(0, maxLength);
 	}
 
 	// Remove HTML tags if not allowed
 	if (!allowHtml) {
-		sanitized = sanitized.replace(/<[^>]*>/g, '');
+		sanitized = sanitized.replace(/<[^>]*>/g, "");
 	}
 
 	// Remove null bytes
-	sanitized = sanitized.replace(/\0/g, '');
+	sanitized = sanitized.replace(/\0/g, "");
 
 	return sanitized;
 };
@@ -109,7 +107,7 @@ const sanitizeString = (str, options = {}) => {
  * @returns {String|null} Sanitized email or null if invalid
  */
 const sanitizeEmail = (email) => {
-	if (typeof email !== 'string') return null;
+	if (typeof email !== "string") return null;
 
 	// Convert to lowercase and trim
 	const sanitized = email.toLowerCase().trim();
@@ -121,7 +119,8 @@ const sanitizeEmail = (email) => {
 	}
 
 	// Check length
-	if (sanitized.length > 254) { // RFC 5321
+	if (sanitized.length > 254) {
+		// RFC 5321
 		return null;
 	}
 
@@ -138,15 +137,15 @@ const sanitizeQuery = (query) => {
 
 	for (const [key, value] of Object.entries(query)) {
 		// Skip dangerous keys
-		if (key.startsWith('$') || key.includes('.')) {
+		if (key.startsWith("$") || key.includes(".")) {
 			console.warn(`⚠️  Blocked dangerous query parameter: ${key}`);
 			continue;
 		}
 
 		// Sanitize string values
-		if (typeof value === 'string') {
+		if (typeof value === "string") {
 			sanitized[key] = sanitizeString(value, { maxLength: 500 });
-		} else if (typeof value === 'object') {
+		} else if (typeof value === "object") {
 			// Sanitize nested objects
 			sanitized[key] = sanitizeObject(value, 2);
 		} else {
@@ -181,14 +180,14 @@ const sanitizePagination = (params = {}) => {
  */
 const sanitizeSort = (sortBy, sortOrder, allowedFields = []) => {
 	// Default sort
-	let field = 'createdAt';
-	let order = 'desc';
+	let field = "createdAt";
+	let order = "desc";
 
 	// Validate sortBy
-	if (sortBy && typeof sortBy === 'string') {
+	if (sortBy && typeof sortBy === "string") {
 		// Remove any MongoDB operators or dots
-		const cleanField = sortBy.replace(/[\$\.]/g, '');
-		
+		const cleanField = sortBy.replace(/[\$\.]/g, "");
+
 		if (allowedFields.length === 0 || allowedFields.includes(cleanField)) {
 			field = cleanField;
 		} else {
@@ -197,8 +196,12 @@ const sanitizeSort = (sortBy, sortOrder, allowedFields = []) => {
 	}
 
 	// Validate sortOrder
-	if (sortOrder && ['asc', 'desc', '1', '-1'].includes(sortOrder.toLowerCase())) {
-		order = sortOrder.toLowerCase() === 'asc' || sortOrder === '1' ? 'asc' : 'desc';
+	if (
+		sortOrder &&
+		["asc", "desc", "1", "-1"].includes(sortOrder.toLowerCase())
+	) {
+		order =
+			sortOrder.toLowerCase() === "asc" || sortOrder === "1" ? "asc" : "desc";
 	}
 
 	return { field, order };
@@ -211,7 +214,7 @@ const sanitizeSort = (sortBy, sortOrder, allowedFields = []) => {
  * @returns {RegExp} Safe regex pattern
  */
 const createSafeRegex = (text) => {
-	if (typeof text !== 'string') return null;
+	if (typeof text !== "string") return null;
 
 	// Limit length to prevent ReDoS
 	if (text.length > 100) {
@@ -219,9 +222,9 @@ const createSafeRegex = (text) => {
 	}
 
 	// Escape special regex characters
-	const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-	return new RegExp(escaped, 'i');
+	return new RegExp(escaped, "i");
 };
 
 /**
@@ -230,17 +233,17 @@ const createSafeRegex = (text) => {
  */
 const sanitizeRequest = (req, res, next) => {
 	// Sanitize body
-	if (req.body && typeof req.body === 'object') {
+	if (req.body && typeof req.body === "object") {
 		req.body = sanitizeObject(req.body);
 	}
 
 	// Sanitize query
-	if (req.query && typeof req.query === 'object') {
+	if (req.query && typeof req.query === "object") {
 		req.query = sanitizeQuery(req.query);
 	}
 
 	// Sanitize params
-	if (req.params && typeof req.params === 'object') {
+	if (req.params && typeof req.params === "object") {
 		req.params = sanitizeObject(req.params, 1);
 	}
 
