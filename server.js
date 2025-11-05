@@ -25,7 +25,9 @@ connectDB();
 
 const app = express();
 
-// Security middleware - Configure CSP to allow inline scripts and eval for development and production
+// Security middleware - Configure CSP with conditional unsafe directives for development
+const isDevelopment = process.env.NODE_ENV === "development";
+
 app.use(
 	helmet({
 		contentSecurityPolicy: {
@@ -33,8 +35,7 @@ app.use(
 				defaultSrc: ["'self'"],
 				scriptSrc: [
 					"'self'",
-					"'unsafe-inline'",
-					"'unsafe-eval'",
+					...(isDevelopment ? ["'unsafe-inline'", "'unsafe-eval'"] : []),
 					"https://cdn.jsdelivr.net",
 					"https://cdnjs.cloudflare.com",
 					"https://unpkg.com",
@@ -43,7 +44,7 @@ app.use(
 					//"https://frischly-server.onrender.com",
 					"https://frischlyshop-server.onrender.com",
 				],
-				scriptSrcAttr: ["'unsafe-inline'"], // Allow inline event handlers
+				...(isDevelopment && { scriptSrcAttr: ["'unsafe-inline'"] }), // Allow inline event handlers in development
 				styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
 				imgSrc: ["'self'", "data:", "https:"],
 				connectSrc: [
@@ -146,22 +147,23 @@ app.use(
 	})
 );
 
-// Rate limiting - Disabled in development
-if (process.env.NODE_ENV === "production") {
-	const limiter = rateLimit({
-		windowMs: 20 * 60 * 1000, // 20 minutes
-		max: 3000, // limit each IP to 3000 requests per windowMs
-		message: {
-			success: false,
-			message: "Too many requests from this IP, please try again later.",
-		},
-	});
-	app.use(limiter);
-}
+// Rate limiting - Enabled in both development and production with different limits
+const limiter = rateLimit({
+	windowMs: isDevelopment ? 15 * 60 * 1000 : 20 * 60 * 1000, // 15 minutes in dev, 20 in prod
+	max: isDevelopment ? 1000 : 3000, // limit each IP to 1000 requests per windowMs in dev, 3000 in prod
+	message: {
+		success: false,
+		message: "Too many requests from this IP, please try again later.",
+	},
+	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
 
-// Body parser
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true }));
+app.use(limiter);
+
+// Body parser - Reduced limits for security
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 // Data sanitization against NoSQL injection attacks
 // This middleware removes any keys that start with $ or contain . from user input
