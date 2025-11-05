@@ -4,6 +4,7 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const cloudinary = require("cloudinary").v2;
+const { sanitizeQuery, sanitizePagination, sanitizeSort, createSafeRegex } = require("../utils/sanitize");
 
 // Configure Cloudinary
 // SECURITY: All credentials must be provided via environment variables
@@ -95,6 +96,9 @@ const deleteFromCloudinary = (publicId) => {
 // @access  Public
 exports.getProducts = async (req, res) => {
 	try {
+		// Sanitize query parameters to prevent NoSQL injection
+		const sanitizedQuery = sanitizeQuery(req.query);
+		
 		const {
 			page = 1,
 			limit = 10,
@@ -110,7 +114,7 @@ exports.getProducts = async (req, res) => {
 			stockLevel,
 			discount,
 			minDiscount,
-		} = req.query;
+		} = sanitizedQuery;
 
 		// Build filter object
 		let filter = {};

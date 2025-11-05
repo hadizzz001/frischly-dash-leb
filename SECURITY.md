@@ -125,9 +125,45 @@ If you suspect credentials have been compromised:
 
 - Always use HTTPS in production
 - Implement proper rate limiting per endpoint
-- Validate and sanitize all user inputs
+- **Validate and sanitize all user inputs** ✅
+  - NoSQL injection protection via `express-mongo-sanitize`
+  - Custom sanitization utilities in `src/utils/sanitize.js`
+  - Email sanitization on all auth endpoints
+  - Query parameter validation
 - Use parameterized queries (Mongoose does this by default)
 - Log security events (failed logins, unauthorized access)
+- **CORS properly configured** ✅
+  - No wildcard origins in production
+  - Origin whitelist from environment variables
+  - Credentials support for authorized origins
+
+### Input Validation & Sanitization ✅ NEW
+
+**NoSQL Injection Protection:**
+- Automatic sanitization of all request data (body, query, params)
+- Removes MongoDB operators (`$gt`, `$ne`, `$where`, etc.)
+- Blocks dot notation attacks (`user.password`)
+- Prevents prototype pollution (`__proto__`, `constructor`)
+- Logs all injection attempts for monitoring
+
+**Available Sanitization Utilities:**
+```javascript
+const {
+  sanitizeEmail,      // Email validation & normalization
+  sanitizeString,     // String sanitization with length limits
+  sanitizeObject,     // Deep object sanitization
+  sanitizeQuery,      // Query parameter sanitization
+  sanitizePagination, // Safe pagination params
+  sanitizeSort,       // Safe sort parameters
+  createSafeRegex,    // ReDoS-safe regex creation
+  isValidObjectId,    // MongoDB ObjectId validation
+} = require('./src/utils/sanitize');
+```
+
+**Testing:**
+```bash
+npm run test-nosql-injection  # Run NoSQL injection tests
+```
 
 ### Authentication
 

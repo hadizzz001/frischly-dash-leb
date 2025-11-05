@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const mongoSanitize = require("express-mongo-sanitize");
 require("dotenv").config();
 
 const connectDB = require("./src/config/database");
@@ -161,6 +162,18 @@ if (process.env.NODE_ENV === "production") {
 // Body parser
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
+
+// Data sanitization against NoSQL injection attacks
+// This middleware removes any keys that start with $ or contain . from user input
+// Prevents attacks like: { "$gt": "" } or { "user.password": "secret" }
+app.use(
+	mongoSanitize({
+		replaceWith: "_", // Replace prohibited characters with underscore
+		onSanitize: ({ req, key }) => {
+			console.warn(`⚠️  NoSQL injection attempt detected and blocked: ${key}`);
+		},
+	})
+);
 
 // Serve static files
 app.use(express.static("public"));

@@ -7,6 +7,7 @@ const {
 	verifyRefreshToken,
 } = require("../utils/jwt");
 const sendEmail = require("../utils/sendEmail");
+const { sanitizeEmail } = require("../utils/sanitize");
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -153,8 +154,17 @@ const login = async (req, res) => {
 
 		const { email, password } = req.body;
 
+		// Sanitize email input to prevent NoSQL injection
+		const sanitizedEmail = sanitizeEmail(email);
+		if (!sanitizedEmail) {
+			return res.status(400).json({
+				success: false,
+				message: "Invalid email format",
+			});
+		}
+
 		// Check for user and include password
-		const user = await User.findOne({ email }).select("+password");
+		const user = await User.findOne({ email: sanitizedEmail }).select("+password");
 		if (!user) {
 			return res.status(401).json({
 				success: false,
