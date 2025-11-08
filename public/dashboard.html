@@ -57,6 +57,128 @@
 
 		<!-- XLSX Library for Excel export -->
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+		<!-- Sales Statistics Table Styling -->
+		<style>
+			.stylish-table tbody tr {
+				transition: all 0.3s ease;
+				border-bottom: 1px solid #e1e5e9;
+			}
+			
+			.stylish-table tbody tr:hover {
+				background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05)) !important;
+				transform: translateY(-1px);
+				box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+			}
+			
+			.stylish-table tbody tr:nth-child(even) {
+				background: rgba(255, 255, 255, 0.8);
+			}
+			
+			.stylish-table tbody tr:nth-child(odd) {
+				background: rgba(250, 251, 252, 0.8);
+			}
+			
+			.stylish-table tbody td {
+				padding: 16px 20px;
+				font-size: 0.9em;
+				color: #333;
+				border-bottom: 1px solid rgba(225, 229, 233, 0.5);
+			}
+			
+			.stylish-table tbody td:first-child {
+				font-weight: 700;
+				color: #667eea;
+				text-align: center;
+				position: relative;
+			}
+			
+			.stylish-table tbody td:first-child::before {
+				content: '';
+				position: absolute;
+				left: 0;
+				top: 0;
+				bottom: 0;
+				width: 4px;
+				background: linear-gradient(135deg, #667eea, #764ba2);
+				border-radius: 0 2px 2px 0;
+			}
+			
+			.stylish-table tbody td:nth-child(2) {
+				font-weight: 600;
+				color: #2d3748;
+			}
+			
+			.stylish-table tbody td:nth-child(3) {
+				text-align: center;
+				font-weight: 600;
+				color: #38a169;
+				background: rgba(56, 161, 105, 0.1);
+				border-radius: 20px;
+				margin: 8px 20px;
+				padding: 6px 12px;
+				display: inline-block;
+			}
+			
+			.stylish-table tbody td:nth-child(4) {
+				text-align: right;
+				font-weight: 700;
+				font-size: 1.1em;
+				color: #e53e3e;
+			}
+			
+			/* Rank badges for top 3 */
+			.stylish-table tbody tr:first-child td:first-child::after {
+				content: '🥇';
+				position: absolute;
+				right: -25px;
+				top: 50%;
+				transform: translateY(-50%);
+				font-size: 1.2em;
+			}
+			
+			.stylish-table tbody tr:nth-child(2) td:first-child::after {
+				content: '🥈';
+				position: absolute;
+				right: -25px;
+				top: 50%;
+				transform: translateY(-50%);
+				font-size: 1.2em;
+			}
+			
+			.stylish-table tbody tr:nth-child(3) td:first-child::after {
+				content: '🥉';
+				position: absolute;
+				right: -25px;
+				top: 50%;
+				transform: translateY(-50%);
+				font-size: 1.2em;
+			}
+			
+			/* Loading animation */
+			@keyframes loading {
+				0% { width: 0%; opacity: 1; }
+				50% { width: 100%; opacity: 0.7; }
+				100% { width: 40px; opacity: 1; }
+			}
+			
+			/* Responsive design */
+			@media (max-width: 768px) {
+				.stylish-table {
+					font-size: 0.8em;
+				}
+				
+				.stylish-table thead th,
+				.stylish-table tbody td {
+					padding: 12px 8px;
+				}
+				
+				.stylish-table tbody td:nth-child(3) {
+					margin: 4px 8px;
+					padding: 4px 8px;
+				}
+			}
+		</style>
 	</head>
 	<body>
 		<!-- Mobile Menu Toggle -->
@@ -9371,21 +9493,44 @@
 
 					<!-- Products Table -->
 					<div class="table-section">
-						<h3>Product Sales Ranking</h3>
-						<div class="table-container">
-							<table class="data-table">
-								<thead>
+						<h3 style="color: #333; margin-bottom: 20px; font-size: 1.4em; display: flex; align-items: center;">
+							<span style="margin-right: 10px;">📊</span> Product Sales Ranking
+						</h3>
+						<div class="table-container" style="background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; border: 1px solid #e1e5e9;">
+							<table class="data-table stylish-table" style="width: 100%; border-collapse: collapse;">
+								<thead style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
 									<tr>
-										<th>Rank</th>
-										<th>Product Name</th>
-										<th>Quantity Sold</th>
-										<th>Revenue</th>
+										<th style="padding: 16px 20px; text-align: left; font-weight: 600; font-size: 0.95em; border-bottom: none; position: relative;">
+											<span style="display: flex; align-items: center;">
+												🏆 Rank
+												<div style="width: 4px; height: 20px; background: rgba(255,255,255,0.3); border-radius: 2px; margin-left: 8px;"></div>
+											</span>
+										</th>
+										<th style="padding: 16px 20px; text-align: left; font-weight: 600; font-size: 0.95em; border-bottom: none;">
+											<span style="display: flex; align-items: center;">
+												📦 Product Name
+											</span>
+										</th>
+										<th style="padding: 16px 20px; text-align: center; font-weight: 600; font-size: 0.95em; border-bottom: none;">
+											<span style="display: flex; align-items: center; justify-content: center;">
+												🔢 Quantity Sold
+											</span>
+										</th>
+										<th style="padding: 16px 20px; text-align: right; font-weight: 600; font-size: 0.95em; border-bottom: none;">
+											<span style="display: flex; align-items: center; justify-content: flex-end;">
+												💰 Revenue
+											</span>
+										</th>
 									</tr>
 								</thead>
-								<tbody id="sales-stats-table-body">
+								<tbody id="sales-stats-table-body" style="background: #fafbfc;">
 									<tr>
-										<td colspan="4" style="text-align: center; padding: 40px; color: #666;">
-											Loading sales statistics...
+										<td colspan="4" style="text-align: center; padding: 60px 20px; color: #666; font-size: 1.1em; background: white;">
+											<div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+												<div style="font-size: 3em; opacity: 0.5;">📊</div>
+												<div style="font-weight: 500;">Loading sales statistics...</div>
+												<div style="width: 40px; height: 4px; background: linear-gradient(90deg, #667eea, #764ba2); border-radius: 2px; animation: loading 1.5s ease-in-out infinite;"></div>
+											</div>
 										</td>
 									</tr>
 								</tbody>
@@ -11377,15 +11522,67 @@
 						`;
 					} else {
 						sortedProducts.forEach((product, index) => {
+							// Add medal emojis for top 3 positions
+							let rankDisplay = (index + 1).toString();
+							let rankStyle = "";
+							let medalEmoji = "";
+
+							if (index === 0) {
+								medalEmoji = "🥇";
+								rankStyle = "background: linear-gradient(135deg, #FFD700, #FFA500); color: white; font-weight: bold; border-radius: 50%; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; margin-right: 8px;";
+							} else if (index === 1) {
+								medalEmoji = "🥈";
+								rankStyle = "background: linear-gradient(135deg, #C0C0C0, #A8A8A8); color: white; font-weight: bold; border-radius: 50%; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; margin-right: 8px;";
+							} else if (index === 2) {
+								medalEmoji = "🥉";
+								rankStyle = "background: linear-gradient(135deg, #CD7F32, #A0522D); color: white; font-weight: bold; border-radius: 50%; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; margin-right: 8px;";
+							}
+
 							const row = document.createElement("tr");
 							row.innerHTML = `
-								<td>${index + 1}</td>
-								<td>${product.name}</td>
-								<td>${product.totalQuantity}</td>
-								<td>€${product.totalRevenue.toFixed(2)}</td>
+								<td style="font-weight: 600; color: #333;">
+									${index < 3 ? `<span style="${rankStyle}">${rankDisplay}</span>${medalEmoji}` : rankDisplay}
+								</td>
+								<td style="font-weight: 500; color: #333; max-width: 250px; overflow: hidden; text-overflow: ellipsis;" title="${product.name}">
+									${product.name}
+								</td>
+								<td style="font-weight: 600; color: #28a745; text-align: center;">
+									<span style="background: rgba(40, 167, 69, 0.1); padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(40, 167, 69, 0.2);">
+										${product.totalQuantity}
+									</span>
+								</td>
+								<td style="font-weight: 600; color: #007bff; text-align: right;">
+									<span style="background: rgba(0, 123, 255, 0.1); padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(0, 123, 255, 0.2);">
+										€${product.totalRevenue.toFixed(2)}
+									</span>
+								</td>
 							`;
 							tbody.appendChild(row);
 						});
+
+						// Add total row
+						const totalRow = document.createElement("tr");
+						totalRow.style.borderTop = "2px solid #667eea";
+						totalRow.style.background = "linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1))";
+						totalRow.innerHTML = `
+							<td style="font-weight: 700; color: #667eea; font-size: 1.1em; text-align: center;">
+								TOTAL
+							</td>
+							<td style="font-weight: 600; color: #2d3748; font-style: italic;">
+								All Products Combined
+							</td>
+							<td style="font-weight: 700; color: #38a169; text-align: center; font-size: 1.1em;">
+								<span style="background: rgba(56, 161, 105, 0.2); padding: 6px 14px; border-radius: 20px; border: 2px solid rgba(56, 161, 105, 0.3);">
+									${totalItemsSold}
+								</span>
+							</td>
+							<td style="font-weight: 700; color: #e53e3e; text-align: right; font-size: 1.1em;">
+								<span style="background: rgba(229, 62, 62, 0.2); padding: 6px 14px; border-radius: 20px; border: 2px solid rgba(229, 62, 62, 0.3);">
+									€${totalRevenue.toFixed(2)}
+								</span>
+							</td>
+						`;
+						tbody.appendChild(totalRow);
 					}
 
 					// Show the modal
