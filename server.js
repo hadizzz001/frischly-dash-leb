@@ -46,11 +46,7 @@ app.use(
 					"https://frischlyshop-server.onrender.com",
 				],
 				scriptSrcAttr: ["'unsafe-inline'"], // Allow inline event handlers in both dev and production
-				styleSrc: [
-					"'self'",
-					"'unsafe-inline'",
-					"https://cdnjs.cloudflare.com",
-				],
+				styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
 				imgSrc: ["'self'", "data:", "https:"],
 				connectSrc: [
 					"'self'",
