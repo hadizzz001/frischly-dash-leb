@@ -348,6 +348,15 @@ exports.updateCategory = async (req, res) => {
 			runValidators: true,
 		}).populate("createdBy", "name email");
 
+		// If category is being deactivated, also deactivate all its subcategories
+		if (updateData.isActive === false && category.isActive !== false) {
+			const Subcategory = require("../models/Subcategory");
+			await Subcategory.updateMany(
+				{ parentCategory: id },
+				{ isActive: false, updatedAt: new Date() }
+			);
+		}
+
 		res.json({
 			success: true,
 			message: "Category updated successfully",
@@ -419,9 +428,15 @@ exports.deleteCategory = async (req, res) => {
 			});
 		}
 
+		// Deactivate all subcategories of this category
+		await Subcategory.updateMany(
+			{ parentCategory: id },
+			{ isActive: false, updatedAt: new Date() }
+		);
+
 		res.json({
 			success: true,
-			message: "Category deleted successfully",
+			message: "Category and its subcategories deleted successfully",
 			data: category,
 		});
 	} catch (error) {
