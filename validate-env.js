@@ -29,6 +29,7 @@ const requiredVars = {
 		"BACKEND_URL",
 		"EMAIL_USER",
 		"EMAIL_PASS",
+		"PAYONE_MODE",
 	],
 	optional: [
 		"IMAGEKIT_PUBLIC_KEY",
@@ -122,6 +123,19 @@ if (
 	hasWarnings = true;
 } else {
 	console.log(`   ✅ NODE_ENV is set to "${process.env.NODE_ENV}"`);
+}
+
+// Check PAYONE_MODE
+if (process.env.PAYONE_MODE) {
+	if (process.env.PAYONE_MODE !== "live" && process.env.PAYONE_MODE !== "test") {
+		console.log('   ⚠️  PAYONE_MODE should be either "live" or "test"');
+		hasWarnings = true;
+	} else {
+		console.log(`   ✅ PAYONE_MODE is set to "${process.env.PAYONE_MODE}"`);
+	}
+} else {
+	console.log("   ⚠️  PAYONE_MODE not set - will default to 'test'");
+	hasWarnings = true;
 }
 
 // Check CORS configuration

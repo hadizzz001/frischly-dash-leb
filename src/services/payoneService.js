@@ -114,7 +114,7 @@ class PayoneService {
 				merchantId: this.merchantId,
 				accountId: this.accountId,
 				portalId: this.portalId,
-				mode: linkData.mode || "test",
+				mode: linkData.mode || process.env.PAYONE_MODE || (process.env.NODE_ENV === "production" ? "live" : "test"),
 				currency: linkData.currency || "EUR",
 				reference: linkData.reference,
 				paymentMethods: linkData.paymentMethods,
@@ -216,7 +216,7 @@ class PayoneService {
 				merchantId: this.merchantId,
 				accountId: this.accountId,
 				portalId: this.portalId,
-				mode: params.mode || "test",
+				mode: params.mode || process.env.PAYONE_MODE || (process.env.NODE_ENV === "production" ? "live" : "test"),
 				page: params.page || 0,
 				limit: params.limit || 25,
 				...params,
@@ -227,7 +227,7 @@ class PayoneService {
 				this.merchantId,
 				this.accountId,
 				this.portalId,
-				params.mode || "test"
+				params.mode || process.env.PAYONE_MODE || (process.env.NODE_ENV === "production" ? "live" : "test")
 			);
 
 			const response = await fetch(
@@ -318,7 +318,7 @@ class PayoneService {
 				merchantId: this.merchantId,
 				accountId: this.accountId,
 				portalId: this.portalId,
-				mode: linkData.mode || "test",
+				mode: linkData.mode || process.env.PAYONE_MODE || (process.env.NODE_ENV === "production" ? "live" : "test"),
 				currency: linkData.currency || "EUR",
 				reference: linkData.reference,
 				shoppingCart: linkData.shoppingCart,
@@ -391,7 +391,7 @@ class PayoneService {
 				aid: this.accountId,
 				portalid: this.portalId,
 				key: this.auth.portalKeyMD5, // MD5 hash for Server API
-				mode: refundData.mode || "test",
+				mode: refundData.mode || process.env.PAYONE_MODE || (process.env.NODE_ENV === "production" ? "live" : "test"),
 				txid: refundData.txid,
 				sequencenumber: "1", // First sequence number
 				amount: (-Math.abs(parseInt(refundData.amount))).toString(), // Negative amount for refund

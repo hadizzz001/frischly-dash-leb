@@ -116,7 +116,7 @@ exports.createSimplePaymentLink = async (req, res) => {
 			shoppingCart,
 			currency = "EUR",
 			description = "Payment",
-			mode = "test",
+			mode = process.env.PAYONE_MODE || (process.env.NODE_ENV === "production" ? "live" : "test"),
 			lastName = "Doe",
 			country = "DE",
 			paymentMethods = ["visa", "mastercard", "paypal"],
@@ -495,7 +495,7 @@ exports.refundOrder = async (req, res) => {
 			txid: order.txid,
 			amount: order.total * 100, // Convert to cents/smallest unit
 			currency: "EUR", // Assuming EUR, could be made configurable
-			mode: process.env.NODE_ENV === "production" ? "test" : "test",
+			mode: process.env.PAYONE_MODE || (process.env.NODE_ENV === "production" ? "live" : "test"),
 		});
 
 		if (!refundResult.success) {
