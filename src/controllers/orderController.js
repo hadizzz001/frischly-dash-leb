@@ -527,7 +527,9 @@ exports.createOrder = async (req, res) => {
 				shoppingCart: shoppingCart,
 				currency: "EUR",
 				description: `Order ${populatedOrder._id}`,
-				mode: process.env.PAYONE_MODE || (process.env.NODE_ENV === "production" ? "live" : "test"),
+				mode:
+					process.env.PAYONE_MODE ||
+					(process.env.NODE_ENV === "production" ? "live" : "test"),
 				billing: {
 					lastName: populatedOrder.customer.lastName || "Customer",
 					country: populatedOrder.customer.country || "DE",
@@ -970,7 +972,9 @@ exports.cancelOrder = async (req, res) => {
 						txid: order.txid,
 						amount: Math.round(order.total * 100), // Convert to cents
 						currency: "EUR",
-						mode: process.env.PAYONE_MODE || (process.env.NODE_ENV === "production" ? "live" : "test"),
+						mode:
+							process.env.PAYONE_MODE ||
+							(process.env.NODE_ENV === "production" ? "live" : "test"),
 					});
 
 					if (refundResult.success) {

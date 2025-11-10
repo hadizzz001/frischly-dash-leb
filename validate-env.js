@@ -127,7 +127,10 @@ if (
 
 // Check PAYONE_MODE
 if (process.env.PAYONE_MODE) {
-	if (process.env.PAYONE_MODE !== "live" && process.env.PAYONE_MODE !== "test") {
+	if (
+		process.env.PAYONE_MODE !== "live" &&
+		process.env.PAYONE_MODE !== "test"
+	) {
 		console.log('   ⚠️  PAYONE_MODE should be either "live" or "test"');
 		hasWarnings = true;
 	} else {
