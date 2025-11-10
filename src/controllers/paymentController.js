@@ -182,6 +182,31 @@ exports.createSimplePaymentLink = async (req, res) => {
 					}: number is required and must be 1-32 characters`,
 				});
 			}
+
+			// Sanitize the number field to match PAYONE regex: [0-9A-Za-z(){} .+\\-_#/:\\[\\]]
+			const originalNumber = item.number;
+			item.number = item.number.replace(/[^0-9A-Za-z(){} .+\-_#/:[\]]/g, "");
+			if (item.number.length === 0) {
+				console.error(
+					`❌ Validation failed: Item ${
+						i + 1
+					} number becomes empty after sanitization`
+				);
+				return res.status(400).json({
+					success: false,
+					error: `Item ${
+						i + 1
+					}: number contains invalid characters and cannot be sanitized`,
+				});
+			}
+			if (item.number !== originalNumber) {
+				console.log(
+					`⚠️ Item ${i + 1} number sanitized: "${originalNumber}" → "${
+						item.number
+					}"`
+				);
+			}
+
 			if (
 				typeof item.price !== "number" ||
 				item.price < -1999999999 ||
@@ -195,18 +220,16 @@ exports.createSimplePaymentLink = async (req, res) => {
 					}: price must be between -1999999999 and 1999999999`,
 				});
 			}
-			if (
-				typeof item.quantity !== "number" ||
-				item.quantity < 1 ||
-				item.quantity > 999999
-			) {
-				console.error(
-					`❌ Validation failed: Invalid quantity for item ${i + 1}`
-				);
-				return res.status(400).json({
-					success: false,
-					error: `Item ${i + 1}: quantity must be between 1 and 999999`,
-				});
+			// Validate name field (optional but if present, should be reasonable length)
+			if (item.name && typeof item.name === "string") {
+				if (item.name.length > 127) {
+					console.log(
+						`⚠️ Item ${i + 1} name truncated from ${
+							item.name.length
+						} to 127 characters`
+					);
+					item.name = item.name.substring(0, 127);
+				}
 			}
 		}
 

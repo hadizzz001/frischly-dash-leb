@@ -503,13 +503,29 @@ exports.createOrder = async (req, res) => {
 			console.log("Creating payment link for order:", populatedOrder._id);
 
 			// Create shopping cart from order items
-			const shoppingCart = populatedOrder.items.map((item, index) => ({
-				type: "goods",
-				number: item.product.name.toString(),
-				name: item.product.name,
-				price: Math.round(item.totalPrice * 100), // Convert to cents
-				quantity: item.quantity,
-			}));
+			const shoppingCart = populatedOrder.items.map((item, index) => {
+				// Use barcode if available, otherwise use product ID (both should be safe for PAYONE)
+				let itemNumber = item.product.barcode || item.product._id.toString();
+
+				// Ensure the number is within 32 characters and matches PAYONE regex
+				// PAYONE allows: [0-9A-Za-z(){} .+\\-_#/:\\[\\]]
+				itemNumber = itemNumber
+					.substring(0, 32)
+					.replace(/[^0-9A-Za-z(){} .+\-_#/:[\]]/g, "");
+
+				// If after sanitization it's empty, use a fallback
+				if (!itemNumber || itemNumber.length === 0) {
+					itemNumber = `PROD_${index + 1}`;
+				}
+
+				return {
+					type: "goods",
+					number: itemNumber,
+					name: item.product.name.substring(0, 127), // PAYONE name limit
+					price: Math.round(item.totalPrice * 100), // Convert to cents
+					quantity: item.quantity,
+				};
+			});
 
 			// Add delivery fee as separate item
 			if (populatedOrder.delivery > 0) {
@@ -864,54 +880,84 @@ exports.getOrderStats = async (req, res) => {
 // @access  Private
 exports.cancelOrder = async (req, res) => {
 	try {
+		console.log("=== ORDER CANCELLATION STARTED ===");
 		const { id } = req.params;
 		const { reason } = req.body;
 
+		console.log(`Step 1: Received cancellation request for order ID: ${id}`);
+		console.log(`Step 1: Cancellation reason: ${reason || "Not provided"}`);
+		console.log(
+			`Step 1: Request made by user ID: ${req.user?.id || "Unknown"}`
+		);
+
+		// Step 2: Validate order ID
+		console.log("Step 2: Validating order ID format...");
 		if (!mongoose.Types.ObjectId.isValid(id)) {
+			console.log("❌ Step 2: Invalid order ID format");
 			return res.status(400).json({
 				success: false,
 				message: "Invalid order ID",
 			});
 		}
+		console.log("✅ Step 2: Order ID format is valid");
 
+		// Step 3: Find the order
+		console.log("Step 3: Looking up order in database...");
 		const order = await Order.findById(id);
 		if (!order) {
+			console.log("❌ Step 3: Order not found in database");
 			return res.status(404).json({
 				success: false,
 				message: "Order not found",
 			});
 		}
+		console.log(
+			`✅ Step 3: Order found - Status: ${order.status}, Payment: ${order.paymentStatus}, Total: €${order.total}`
+		);
 
+		// Step 4: Check if order is already cancelled
+		console.log("Step 4: Checking if order is already cancelled...");
 		if (order.status === "cancelled") {
+			console.log("❌ Step 4: Order is already cancelled");
 			return res.status(400).json({
 				success: false,
 				message: "Order is already cancelled",
 			});
 		}
+		console.log("✅ Step 4: Order is not already cancelled");
 
+		// Step 5: Check if order can be cancelled
+		console.log("Step 5: Checking if order can be cancelled...");
 		if (order.status === "delivered" || order.status === "OnTheWay") {
+			console.log(
+				`❌ Step 5: Cannot cancel order with status '${order.status}'`
+			);
 			return res.status(400).json({
 				success: false,
 				message: "Cannot cancel delivered or on-the-way order",
 			});
 		}
+		console.log("✅ Step 5: Order can be cancelled");
 
-		// Update payment link to inactive if it exists and order is not paid
+		// Step 6: Handle payment link deactivation for unpaid orders
 		if (order.paymentLinkId && order.paymentStatus !== "paid") {
+			console.log(
+				"Step 6: Order has unpaid payment link - deactivating payment link..."
+			);
 			try {
 				console.log(
-					`Deactivating payment link for cancelled order: ${order.paymentLinkId}`
+					`Step 6a: Getting current payment link data for ID: ${order.paymentLinkId}`
 				);
-
-				// First get the current payment link data
 				const getResult = await payoneService.getPaymentLink(
 					order.paymentLinkId
 				);
 
 				if (!getResult.success) {
-					console.error(`Failed to get payment link: ${getResult.error}`);
+					console.log(
+						`⚠️ Step 6a: Failed to get payment link: ${getResult.error}`
+					);
 				} else {
-					// Update the payment link with active: false
+					console.log("Step 6b: Updating payment link to inactive...");
 					const currentLinkData = getResult.data;
 					currentLinkData.active = false;
 
@@ -921,17 +967,23 @@ exports.cancelOrder = async (req, res) => {
 					);
 
 					if (updateResult.success) {
-						console.log(updateResult.data);
-						console.log(
-							`Payment link ${order.paymentLinkId} deactivated successfully`
-						);
-						// Restore product stock
+						console.log("✅ Step 6b: Payment link deactivated successfully");
+						console.log("Step 6c: Restoring product stock...");
+						let restoredCount = 0;
 						for (const item of order.items) {
 							await Product.findByIdAndUpdate(item.product, {
 								$inc: { stock: item.quantity },
 							});
+							restoredCount += item.quantity;
+							console.log(
+								`   - Restored ${item.quantity} units of product ${item.product}`
+							);
 						}
+						console.log(
+							`✅ Step 6c: Restored total of ${restoredCount} product units`
+						);
 
+						console.log("Step 6d: Updating order status to cancelled...");
 						order.paymentStatus = "cancelled";
 						order.status = "cancelled";
 						order.notes = reason
@@ -939,96 +991,129 @@ exports.cancelOrder = async (req, res) => {
 							: order.notes;
 						order.updatedBy = req.user.id;
 						await order.save();
+						console.log("✅ Step 6d: Order status updated to cancelled");
 					} else {
-						console.error(
-							`Failed to deactivate payment link: ${updateResult.error}`
+						console.log(
+							`❌ Step 6b: Failed to deactivate payment link: ${updateResult.error}`
 						);
 					}
 				}
 			} catch (paymentError) {
-				console.error(
-					`Error updating payment link for cancelled order: ${paymentError.message}`
+				console.log(
+					`❌ Step 6: Error updating payment link: ${paymentError.message}`
 				);
 				// Don't fail the cancellation if payment link update fails
 			}
 		} else if (order.paymentStatus === "paid") {
-			// Process refund for paid orders
+			console.log("Step 7: Order is paid - processing refund...");
 			try {
-				console.log(`Processing refund for cancelled paid order: ${order._id}`);
-
-				// Check if order has a transaction ID for refund
+				console.log("Step 7a: Checking for transaction ID...");
 				if (!order.txid) {
-					console.error(
-						`No transaction ID found for order ${order._id}, cannot process refund`
-					);
-
+					console.log("❌ Step 7a: No transaction ID found for refund");
 					return res.status(400).json({
 						success: false,
 						message: `Failed to process refund: No transaction ID found for order ${order._id}`,
 					});
-				} else {
-					// Process refund using PAYONE Server API
-					const refundResult = await payoneService.processRefund({
-						txid: order.txid,
-						amount: Math.round(order.total * 100), // Convert to cents
-						currency: "EUR",
-						mode:
-							process.env.PAYONE_MODE ||
-							(process.env.NODE_ENV === "production" ? "live" : "test"),
-					});
-
-					if (refundResult.success) {
-						console.log(`Refund processed successfully for order ${order._id}`);
-						// Update order to reflect refund
-						order.paymentStatus = "refunded";
-					} else {
-						console.error(
-							`Refund failed for order ${order._id}: ${refundResult.error}`
-						);
-
-						// Note: Order remains cancelled but payment status stays as "paid"
-						// In production, you might want to handle failed refunds differently
-						order.notes = reason
-							? `${
-									order.notes || ""
-							  }\nCancellation reason: ${reason}\nNote: Refund processing failed - ${
-									refundResult.error
-							  }`.trim()
-							: `${order.notes || ""}\nNote: Refund processing failed - ${
-									refundResult.error
-							  }`.trim();
-						return res.status(400).json({
-							success: false,
-							message: `Failed to process refund: ${refundResult.error}`,
-						});
-					}
-
-					// Restore product stock
-					for (const item of order.items) {
-						await Product.findByIdAndUpdate(item.product, {
-							$inc: { stock: item.quantity },
-						});
-					}
-
-					order.status = "cancelled";
-					order.notes = reason
-						? `${order.notes || ""}\nCancellation reason: ${reason}`.trim()
-						: order.notes;
-					order.updatedBy = req.user.id;
-
-					await order.save();
 				}
+				console.log(`✅ Step 7a: Transaction ID found: ${order.txid}`);
+
+				console.log("Step 7b: Processing refund via PAYONE...");
+				const refundAmount = Math.round(order.total * 100);
+				console.log(
+					`   - Refund amount: ${refundAmount} cents (€${order.total})`
+				);
+				const refundResult = await payoneService.processRefund({
+					txid: order.txid,
+					amount: refundAmount,
+					currency: "EUR",
+					mode:
+						process.env.PAYONE_MODE ||
+						(process.env.NODE_ENV === "production" ? "live" : "test"),
+				});
+
+				if (refundResult.success) {
+					console.log("✅ Step 7b: Refund processed successfully");
+					console.log(`   - Refund TXID: ${refundResult.data?.txid || "N/A"}`);
+					order.paymentStatus = "refunded";
+				} else {
+					console.log(`❌ Step 7b: Refund failed: ${refundResult.error}`);
+					order.notes = reason
+						? `${
+								order.notes || ""
+						  }\nCancellation reason: ${reason}\nNote: Refund processing failed - ${
+								refundResult.error
+						  }`.trim()
+						: `${order.notes || ""}\nNote: Refund processing failed - ${
+								refundResult.error
+						  }`.trim();
+					return res.status(400).json({
+						success: false,
+						message: `Failed to process refund: ${refundResult.error}`,
+					});
+				}
+
+				console.log("Step 7c: Restoring product stock...");
+				let restoredCount = 0;
+				for (const item of order.items) {
+					await Product.findByIdAndUpdate(item.product, {
+						$inc: { stock: item.quantity },
+					});
+					restoredCount += item.quantity;
+					console.log(
+						`   - Restored ${item.quantity} units of product ${item.product}`
+					);
+				}
+				console.log(
+					`✅ Step 7c: Restored total of ${restoredCount} product units`
+				);
+
+				console.log("Step 7d: Updating order status to cancelled...");
+				order.status = "cancelled";
+				order.notes = reason
+					? `${order.notes || ""}\nCancellation reason: ${reason}`.trim()
+					: order.notes;
+				order.updatedBy = req.user.id;
+				await order.save();
+				console.log("✅ Step 7d: Order status updated to cancelled");
 			} catch (refundError) {
-				console.error(
-					`Error processing refund for order ${order._id}: ${refundError.message}`
+				console.log(
+					`❌ Step 7: Error processing refund: ${refundError.message}`
 				);
 				return res.status(500).json({
 					success: false,
 					message: `Error processing refund: ${refundError.message}`,
 				});
 			}
+		} else {
+			console.log(
+				"Step 8: Order has no payment link or is unpaid - simple cancellation..."
+			);
+			console.log("Step 8a: Restoring product stock...");
+			let restoredCount = 0;
+			for (const item of order.items) {
+				await Product.findByIdAndUpdate(item.product, {
+					$inc: { stock: item.quantity },
+				});
+				restoredCount += item.quantity;
+				console.log(
+					`   - Restored ${item.quantity} units of product ${item.product}`
+				);
+			}
+			console.log(
+				`✅ Step 8a: Restored total of ${restoredCount} product units`
+			);
+
+			console.log("Step 8b: Updating order status to cancelled...");
+			order.status = "cancelled";
+			order.notes = reason
+				? `${order.notes || ""}\nCancellation reason: ${reason}`.trim()
+				: order.notes;
+			order.updatedBy = req.user.id;
+			await order.save();
+			console.log("✅ Step 8b: Order status updated to cancelled");
 		}
 
+		console.log("Step 9: Fetching updated order data for response...");
 		const updatedOrder = await Order.findById(id)
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
@@ -1037,12 +1122,17 @@ exports.cancelOrder = async (req, res) => {
 				"name barcode  price discount tax bottlerefund picture"
 			);
 
+		console.log("=== ORDER CANCELLATION COMPLETED SUCCESSFULLY ===");
+		console.log(`Final Status: ${updatedOrder.status}`);
+		console.log(`Final Payment Status: ${updatedOrder.paymentStatus}`);
+
 		res.json({
 			success: true,
 			message: "Order cancelled successfully",
 			data: updatedOrder,
 		});
 	} catch (error) {
+		console.log("=== ORDER CANCELLATION FAILED ===");
 		console.error("Error cancelling order:", error);
 		res.status(500).json({
 			success: false,
