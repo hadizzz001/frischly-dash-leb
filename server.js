@@ -3,6 +3,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const mongoSanitize = require("express-mongo-sanitize");
+const cron = require("node-cron");
 require("dotenv").config();
 
 const connectDB = require("./src/config/database");
@@ -20,8 +21,69 @@ const adminRoutes = require("./src/routes/admin");
 const paymentRoutes = require("./src/routes/payments");
 const shelfRoutes = require("./src/routes/shelves");
 
+// Models
+const Order = require("./src/models/Order");
+const Product = require("./src/models/Product");
+
 // Connect to database
 connectDB();
+
+// Cron job to count orders and cancel expired orders every hour
+cron.schedule("0 * * * *", async () => {
+	try {
+		const orderCount = await Order.countDocuments({ isActive: true });
+		console.log(
+			`📊 Order count: ${orderCount} (checked at ${new Date().toISOString()})`
+		);
+
+		// Check and cancel orders that are more than one day old
+		const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+		const oldOrders = await Order.find({
+			isActive: true,
+			createdAt: { $lt: oneDayAgo },
+			status: { $nin: ["cancelled", "delivered", "OnTheWay"] } // Don't cancel already cancelled, delivered, or on-the-way orders
+		});
+
+		if (oldOrders.length > 0) {
+			console.log(`🚫 Found ${oldOrders.length} orders older than 1 day - cancelling...`);
+
+			let cancelledCount = 0;
+			for (const order of oldOrders) {
+				try {
+					// Cancel the order using the same logic as cancelOrder route
+					console.log(`   - Cancelling order ${order.orderNumber}...`);
+
+					// Restore product stock
+					for (const item of order.items) {
+						await Product.findByIdAndUpdate(item.product, {
+							$inc: { stock: item.quantity },
+						});
+					}
+
+					// Update order status
+					await Order.findByIdAndUpdate(order._id, {
+						status: "cancelled",
+						paymentStatus: "cancelled",
+						notes: "expired",
+						updatedBy: null, // System update
+						updatedAt: new Date()
+					});
+
+					cancelledCount++;
+					console.log(`   ✅ Order ${order.orderNumber} cancelled successfully`);
+				} catch (orderError) {
+					console.error(`   ❌ Error cancelling order ${order.orderNumber}:`, orderError.message);
+				}
+			}
+
+			console.log(`🚫 Cancelled ${cancelledCount} orders older than 1 day (expired)`);
+		} else {
+			console.log(`✅ All orders are within the last 24 hours`);
+		}
+	} catch (error) {
+		console.error("❌ Error in order monitoring:", error.message);
+	}
+});
 
 const app = express();
 

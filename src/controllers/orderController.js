@@ -588,6 +588,27 @@ exports.createOrder = async (req, res) => {
 				throw new Error(`Payment link creation failed: ${paymentResult.error}`);
 			}
 		} catch (paymentError) {
+			if (order && order._id) {
+				try {
+					console.log(
+						`Deleting failed order ${order._id} due to creation error`
+					);
+
+					// Restore product stock
+					for (const item of processedItems) {
+						await Product.findByIdAndUpdate(item.product, {
+							$inc: { stock: item.quantity },
+						});
+					}
+
+					// Delete the failed order
+					await Order.findByIdAndDelete(order._id);
+
+					console.log(`Failed order ${order._id} deleted successfully`);
+				} catch (deleteError) {
+					console.error("Error deleting failed order:", deleteError);
+				}
+			}
 			console.error("Error creating payment link:", paymentError);
 			throw new Error(`Payment link creation failed: ${paymentError.message}`);
 		}
