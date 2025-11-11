@@ -490,7 +490,9 @@ exports.createOrder = async (req, res) => {
 		}
 
 		// Populate the created order
+
 		const populatedOrder = await Order.findById(order._id)
+			.populate("customer", "name address")
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
 			.populate(
@@ -547,8 +549,8 @@ exports.createOrder = async (req, res) => {
 					process.env.PAYONE_MODE ||
 					(process.env.NODE_ENV === "production" ? "live" : "test"),
 				billing: {
-					lastName: populatedOrder.customer.lastName || "Customer",
-					country: populatedOrder.customer.country || "DE",
+					lastName: populatedOrder.customer.name || "user",
+					country: populatedOrder.customer.address?.country || "DE",
 				},
 				paymentMethods: ["visa", "mastercard", "paypal"],
 				successUrl: `${
