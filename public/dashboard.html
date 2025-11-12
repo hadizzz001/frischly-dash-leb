@@ -7796,15 +7796,53 @@
 				showMessage("Rider map feature coming soon!", "success");
 			}
 
-			function viewRiderLocation(latitude, longitude) {
-				if (!latitude || !longitude) {
-					showMessage("Location data not available for this rider", "error");
-					return;
-				}
+			function viewRiderLocation(riderId) {
+				// Store the rider ID for auto-refresh
+				window.currentRiderMapId = riderId;
 
-				// Open Google Maps in a new tab with the rider's location
-				const mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
-				window.open(mapsUrl, "_blank");
+				// Fetch initial location data
+				updateRiderMapLocation();
+
+				// Show the modal
+				document.getElementById("rider-map-modal").style.display = "block";
+
+				// Start auto-refresh every 20 seconds
+				window.riderMapInterval = setInterval(updateRiderMapLocation, 20000);
+			}
+
+			async function updateRiderMapLocation() {
+				if (!window.currentRiderMapId) return;
+
+				try {
+					const response = await fetch(`${API_BASE_URL}/riders/${window.currentRiderMapId}`, {
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+						},
+					});
+
+					if (response.ok) {
+						const data = await response.json();
+						const rider = data.data && data.data.rider ? data.data.rider : data.data;
+
+						if (rider && rider.currentLocation && rider.currentLocation.latitude && rider.currentLocation.longitude) {
+							const latitude = rider.currentLocation.latitude;
+							const longitude = rider.currentLocation.longitude;
+
+							// Update Google Maps in the modal with the rider's location
+							const mapsIframe = document.getElementById("rider-map-iframe");
+							const mapsUrl = `https://maps.google.com/maps?width=600&height=400&hl=en&q=${latitude},${longitude}&t=&z=14&ie=UTF8&iwloc=B&output=embed`;
+							mapsIframe.src = mapsUrl;
+
+							console.log(`Updated rider location: ${latitude}, ${longitude}`);
+						} else {
+							showMessage("Location data not available for this rider", "error");
+						}
+					} else {
+						console.error("Failed to fetch rider location data");
+					}
+				} catch (error) {
+					console.error("Error updating rider location:", error);
+				}
 			}
 
 			async function viewRiderDetails(riderId) {
@@ -8165,6 +8203,7 @@
 				const categoryModal = document.getElementById("category-modal");
 				const productModal = document.getElementById("product-modal");
 				const riderModal = document.getElementById("rider-modal");
+				const riderMapModal = document.getElementById("rider-map-modal");
 				const orderDetailsModal = document.getElementById(
 					"order-details-modal"
 				);
@@ -8179,6 +8218,8 @@
 					closeProductModal();
 				} else if (event.target === riderModal) {
 					closeRiderModal();
+				} else if (event.target === riderMapModal) {
+					closeRiderMapModal();
 				} else if (event.target === orderDetailsModal) {
 					closeOrderDetails();
 				} else if (event.target === zoneModal) {
@@ -9544,8 +9585,7 @@
 					<h2 id="rider-modal-title">Add New Rider</h2>
 					<span class="close" onclick="closeRiderModal()">&times;</span>
 				</div>
-
-				<form id="rider-form" onsubmit="event.preventDefault(); saveRider();">
+<form id="rider-form" onsubmit="event.preventDefault(); saveRider();">
 					<input type="hidden" id="rider-id" name="id" />
 
 					<div class="form-grid">
@@ -9650,6 +9690,30 @@
 						<button type="submit" class="btn btn-primary">Save Rider</button>
 					</div>
 				</form>
+			</div>
+		</div>
+
+		<!-- Rider Map Modal -->
+		<div id="rider-map-modal" class="modal">
+			<div class="modal-content" style="max-width: 800px;">
+				<div class="modal-header">
+					<h2>Rider Location</h2>
+					<span class="close" onclick="closeRiderMapModal()">&times;</span>
+				</div>
+				<div class="modal-body">
+					<iframe
+						id="rider-map-iframe"
+						width="100%"
+						height="400"
+						style="border:0; border-radius: 8px;"
+						allowfullscreen=""
+						loading="lazy"
+						referrerpolicy="no-referrer-when-downgrade">
+					</iframe>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" onclick="closeRiderMapModal()">Close</button>
+				</div>
 			</div>
 		</div>
 
@@ -10748,11 +10812,7 @@
 								</button>
 								${
 									rider.currentLocation
-										? `<button class="btn-icon" onclick="viewRiderLocation(${
-												rider.currentLocation.latitude || 0
-										  }, ${
-												rider.currentLocation.longitude || 0
-										  })" title="View Location">
+										? `<button class="btn-icon" onclick="viewRiderLocation('${rider._id}')" title="View Location">
 										📍
 									</button>`
 										: `<button class="btn-icon" disabled title="No Location Data">
@@ -10901,6 +10961,19 @@
 				if (modal) {
 					modal.style.display = "none";
 				}
+			}
+
+			function closeRiderMapModal() {
+				document.getElementById("rider-map-modal").style.display = "none";
+
+				// Clear the auto-refresh interval
+				if (window.riderMapInterval) {
+					clearInterval(window.riderMapInterval);
+					window.riderMapInterval = null;
+				}
+
+				// Clear the current rider ID
+				window.currentRiderMapId = null;
 			}
 
 			function refreshRiders() {

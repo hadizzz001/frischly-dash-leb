@@ -121,3 +121,6 @@ dist
 # Backup directories
 backups/*
 
+# Scripts directory
+scripts/
+

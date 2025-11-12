@@ -161,18 +161,17 @@
 				margin: 0 auto;
 			}
 
-			/* Stats Cards */
 			.stats-grid {
 				display: grid;
-				grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-				gap: 20px;
+				grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+				gap: 15px;
 				margin-bottom: 30px;
 			}
 
 			.stat-card {
 				background: white;
 				border-radius: 12px;
-				padding: 25px;
+				padding: 15px;
 				box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 				border-left: 4px solid #ffc300;
 				transition: transform 0.3s ease;
@@ -184,22 +183,22 @@
 
 			.stat-card h3 {
 				color: #333;
-				font-size: 14px;
-				margin-bottom: 10px;
+				font-size: 12px;
+				margin-bottom: 8px;
 				text-transform: uppercase;
 				font-weight: 600;
 			}
 
 			.stat-card .value {
-				font-size: 32px;
+				font-size: 24px;
 				font-weight: bold;
 				color: #ffc300;
-				margin-bottom: 5px;
+				margin-bottom: 4px;
 			}
 
 			.stat-card .label {
 				color: #666;
-				font-size: 12px;
+				font-size: 11px;
 			}
 
 			/* Content Sections */
@@ -732,6 +731,62 @@
 			.rider-item small {
 				color: #666;
 			}
+
+			/* Pagination Styles */
+			.pagination-container {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				margin-top: 20px;
+				padding: 15px 0;
+				border-top: 1px solid #e9ecef;
+			}
+
+			.pagination-info {
+				color: #666;
+				font-size: 14px;
+			}
+
+			.pagination-controls {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+			}
+
+			.page-numbers {
+				display: flex;
+				gap: 5px;
+				margin: 0 15px;
+			}
+
+			.page-number {
+				padding: 6px 10px;
+				border: 1px solid #ddd;
+				background: white;
+				color: #333;
+				text-decoration: none;
+				border-radius: 4px;
+				font-size: 14px;
+				transition: all 0.2s ease;
+				cursor: pointer;
+			}
+
+			.page-number:hover {
+				background: #f8f9fa;
+			}
+
+			.page-number.active {
+				background: #ffc300;
+				color: #000;
+				border-color: #ffc300;
+				font-weight: bold;
+			}
+
+			.page-number.disabled {
+				color: #ccc;
+				cursor: not-allowed;
+				background: #f8f9fa;
+			}
 		</style>
 	</head>
 	<body>
@@ -794,6 +849,16 @@
 					<div class="value" id="OnTheWay-orders">0</div>
 					<div class="label">Out for delivery</div>
 				</div>
+				<div class="stat-card">
+					<h3>Delivered Orders</h3>
+					<div class="value" id="delivered-orders">0</div>
+					<div class="label">Successfully delivered</div>
+				</div>
+				<div class="stat-card">
+					<h3>Cancelled Orders</h3>
+					<div class="value" id="cancelled-orders">0</div>
+					<div class="label">Cancelled orders</div>
+				</div>
 			</div>
 
 			<!-- Orders Management Section -->
@@ -831,6 +896,14 @@
 							oninput="filterOrders()"
 						/>
 					</div>
+					<div class="filter-group">
+						<label for="date-from">Date From</label>
+						<input type="date" id="date-from" onchange="filterOrders()" />
+					</div>
+					<div class="filter-group">
+						<label for="date-to">Date To</label>
+						<input type="date" id="date-to" onchange="filterOrders()" />
+					</div>
 				</div>
 
 				<!-- Orders Table -->
@@ -858,6 +931,36 @@
 							</tr>
 						</tbody>
 					</table>
+				</div>
+
+				<!-- Pagination -->
+				<div
+					class="pagination-container"
+					id="pagination-container"
+					style="display: none"
+				>
+					<div class="pagination-info">
+						<span id="pagination-info">Showing 0 to 0 of 0 orders</span>
+					</div>
+					<div class="pagination-controls">
+						<button
+							class="btn btn-secondary"
+							id="prev-page-btn"
+							onclick="changePage('prev')"
+							disabled
+						>
+							← Previous
+						</button>
+						<span class="page-numbers" id="page-numbers"></span>
+						<button
+							class="btn btn-secondary"
+							id="next-page-btn"
+							onclick="changePage('next')"
+							disabled
+						>
+							Next →
+						</button>
+					</div>
 				</div>
 			</div>
 		</main>
@@ -991,12 +1094,20 @@
 			let currentUser = null;
 			let allOrders = [];
 			let filteredOrders = [];
+			let currentPage = 1;
+			let totalPages = 1;
+			let totalOrders = 0;
+			let pageSize = 20; // Orders per page
+			let currentStatusFilter = null;
+			let currentSearchFilter = null;
+			let currentDateFromFilter = null;
+			let currentDateToFilter = null;
 
 			// Initialize the page
 			document.addEventListener("DOMContentLoaded", function () {
 				checkAuthentication();
 				loadUserProfile();
-				loadOrders();
+				loadOrders(currentPage); // Load with no filters initially
 			});
 
 			// Check if user is authenticated
@@ -1070,12 +1181,51 @@
 			}
 
 			// Load orders
-			async function loadOrders() {
+			async function loadOrders(
+				page = 1,
+				statusFilter = null,
+				searchFilter = null,
+				dateFromFilter = null,
+				dateToFilter = null
+			) {
 				showTableLoading(true);
 				showLoading();
 
+				// Store current filters
+				currentStatusFilter = statusFilter;
+				currentSearchFilter = searchFilter;
+				currentDateFromFilter = dateFromFilter;
+				currentDateToFilter = dateToFilter;
+
 				try {
-					const response = await fetch(`${API_BASE_URL}/orders`, {
+					// Build query parameters
+					const params = new URLSearchParams({
+						page: page.toString(),
+						limit: pageSize.toString(),
+						sortBy: "createdAt",
+						sortOrder: "desc",
+					});
+
+					// Add status filter if provided
+					if (statusFilter && statusFilter !== "all") {
+						params.append("status", statusFilter);
+					}
+
+					// Add search filter if provided
+					if (searchFilter && searchFilter.trim()) {
+						params.append("search", searchFilter.trim());
+					}
+
+					// Add date filters if provided
+					if (dateFromFilter) {
+						params.append("dateFrom", dateFromFilter);
+					}
+
+					if (dateToFilter) {
+						params.append("dateTo", dateToFilter);
+					}
+
+					const response = await fetch(`${API_BASE_URL}/orders?${params}`, {
 						method: "GET",
 						headers: {
 							Authorization: `Bearer ${currentToken}`,
@@ -1088,7 +1238,15 @@
 					if (response.ok) {
 						allOrders = result.data || [];
 						filteredOrders = [...allOrders];
+
+						// Update pagination info
+						const pagination = result.pagination || {};
+						currentPage = pagination.currentPage || 1;
+						totalPages = pagination.totalPages || 1;
+						totalOrders = pagination.totalOrders || 0;
+
 						displayOrders(filteredOrders);
+						updatePaginationControls();
 						updateStats();
 					} else {
 						showMessage("Failed to load orders", "error");
@@ -1206,7 +1364,13 @@
 								processOrder(orderId);
 							}, 500); // Small delay to ensure status update is processed
 						} else {
-							loadOrders(); // Refresh the orders list for other status changes
+							loadOrders(
+								currentPage,
+								currentStatusFilter,
+								currentSearchFilter,
+								currentDateFromFilter,
+								currentDateToFilter
+							); // Refresh the current page with current filters
 						}
 					} else {
 						showMessage(
@@ -1480,59 +1644,129 @@
 
 			// Filter orders
 			function filterOrders() {
+				// Get current filter values
 				const statusFilter = document.getElementById("status-filter").value;
-				const searchTerm = document
-					.getElementById("search-input")
-					.value.toLowerCase()
-					.trim();
+				const searchFilter = document.getElementById("search-input").value;
+				const dateFromFilter = document.getElementById("date-from").value;
+				const dateToFilter = document.getElementById("date-to").value;
 
-				filteredOrders = allOrders.filter((order) => {
-					const matchesStatus =
-						statusFilter === "all" || order.status === statusFilter;
-					const matchesSearch =
-						!searchTerm ||
-						order.orderNumber.toLowerCase().includes(searchTerm) ||
-						order.customer?.name.toLowerCase().includes(searchTerm) ||
-						order.customer?.email.toLowerCase().includes(searchTerm);
+				// Reset to page 1 when filtering
+				currentPage = 1;
+				loadOrders(
+					currentPage,
+					statusFilter,
+					searchFilter,
+					dateFromFilter,
+					dateToFilter
+				);
+			}
 
-					return matchesStatus && matchesSearch;
-				});
+			// Update pagination controls
+			function updatePaginationControls() {
+				const container = document.getElementById("pagination-container");
+				const info = document.getElementById("pagination-info");
+				const pageNumbers = document.getElementById("page-numbers");
+				const prevBtn = document.getElementById("prev-page-btn");
+				const nextBtn = document.getElementById("next-page-btn");
 
-				displayOrders(filteredOrders);
+				if (totalPages <= 1) {
+					container.style.display = "none";
+					return;
+				}
+
+				container.style.display = "flex";
+
+				// Update info text
+				const startItem = (currentPage - 1) * pageSize + 1;
+				const endItem = Math.min(currentPage * pageSize, totalOrders);
+				info.textContent = `Showing ${startItem} to ${endItem} of ${totalOrders} orders`;
+
+				// Update navigation buttons
+				prevBtn.disabled = currentPage <= 1;
+				nextBtn.disabled = currentPage >= totalPages;
+
+				// Generate page numbers
+				pageNumbers.innerHTML = "";
+				const maxVisiblePages = 5;
+				let startPage = Math.max(
+					1,
+					currentPage - Math.floor(maxVisiblePages / 2)
+				);
+				let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+				// Adjust start page if we're near the end
+				if (endPage - startPage + 1 < maxVisiblePages) {
+					startPage = Math.max(1, endPage - maxVisiblePages + 1);
+				}
+
+				// Add page numbers
+				for (let i = startPage; i <= endPage; i++) {
+					const pageBtn = document.createElement("button");
+					pageBtn.className = `page-number ${
+						i === currentPage ? "active" : ""
+					}`;
+					pageBtn.textContent = i;
+					pageBtn.onclick = () => changePage(i);
+					pageNumbers.appendChild(pageBtn);
+				}
+			}
+
+			// Change page
+			function changePage(action) {
+				let newPage = currentPage;
+
+				if (action === "prev" && currentPage > 1) {
+					newPage = currentPage - 1;
+				} else if (action === "next" && currentPage < totalPages) {
+					newPage = currentPage + 1;
+				} else if (typeof action === "number") {
+					newPage = action;
+				}
+
+				if (newPage !== currentPage && newPage >= 1 && newPage <= totalPages) {
+					currentPage = newPage;
+					loadOrders(
+						currentPage,
+						currentStatusFilter,
+						currentSearchFilter,
+						currentDateFromFilter,
+						currentDateToFilter
+					);
+				}
 			}
 
 			// Update statistics
 			function updateStats() {
-				const totalOrders = allOrders.length;
-				const pendingOrders = allOrders.filter(
-					(order) => order.status === "pending"
-				).length;
-				const confirmedOrders = allOrders.filter(
-					(order) => order.status === "confirmed"
-				).length;
-				const processingOrders = allOrders.filter(
-					(order) => order.status === "processing"
-				).length;
-				const readyOrders = allOrders.filter(
+				// For now, we'll show basic stats from current page
+				// In a real implementation, you might want to fetch aggregate stats separately
+				document.getElementById("total-orders").textContent = totalOrders;
+				document.getElementById("pending-orders").textContent =
+					allOrders.filter((order) => order.status === "pending").length;
+				document.getElementById("confirmed-orders").textContent =
+					allOrders.filter((order) => order.status === "confirmed").length;
+				document.getElementById("processing-orders").textContent =
+					allOrders.filter((order) => order.status === "processing").length;
+				document.getElementById("ready-orders").textContent = allOrders.filter(
 					(order) => order.status === "ready for pickup"
 				).length;
-				const OnTheWayOrders = allOrders.filter(
-					(order) => order.status === "OnTheWay"
-				).length;
-
-				document.getElementById("total-orders").textContent = totalOrders;
-				document.getElementById("pending-orders").textContent = pendingOrders;
-				document.getElementById("confirmed-orders").textContent =
-					confirmedOrders;
-				document.getElementById("processing-orders").textContent =
-					processingOrders;
-				document.getElementById("ready-orders").textContent = readyOrders;
-				document.getElementById("OnTheWay-orders").textContent = OnTheWayOrders;
+				document.getElementById("OnTheWay-orders").textContent =
+					allOrders.filter((order) => order.status === "OnTheWay").length;
+				document.getElementById("delivered-orders").textContent =
+					allOrders.filter((order) => order.status === "delivered").length;
+				document.getElementById("cancelled-orders").textContent =
+					allOrders.filter((order) => order.status === "cancelled").length;
 			}
 
 			// Refresh orders
 			function refreshOrders() {
-				loadOrders();
+				currentPage = 1; // Reset to first page when refreshing
+				loadOrders(
+					currentPage,
+					currentStatusFilter,
+					currentSearchFilter,
+					currentDateFromFilter,
+					currentDateToFilter
+				);
 				showMessage("Orders refreshed", "success");
 			}
 
@@ -1894,7 +2128,13 @@
 
 					showMessage("Order processing completed successfully!", "success");
 					closeProcessOrderModal();
-					loadOrders(); // Refresh the orders list
+					loadOrders(
+						currentPage,
+						currentStatusFilter,
+						currentSearchFilter,
+						currentDateFromFilter,
+						currentDateToFilter
+					); // Refresh the current page with current filters
 				} catch (error) {
 					console.error("Error completing order processing:", error);
 					showMessage("Error completing order processing", "error");
@@ -1926,7 +2166,13 @@
 
 					if (response.ok) {
 						showMessage("Refund processed successfully", "success");
-						loadOrders(); // Refresh the orders list
+						loadOrders(
+							currentPage,
+							currentStatusFilter,
+							currentSearchFilter,
+							currentDateFromFilter,
+							currentDateToFilter
+						); // Refresh the current page with current filters
 					} else {
 						showMessage(result.message || "Failed to process refund", "error");
 					}

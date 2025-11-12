@@ -31,86 +31,78 @@ const Order = require("./src/models/Order");
 connectDB();
 
 // Cron job to count orders and cancel expired orders every end of day
-cron.schedule("59 23 * * *", async () => {
-	try {
-		const orderCount = await Order.countDocuments({ isActive: true });
-		console.log(
-			`📊 Order count: ${orderCount} (checked at ${new Date().toISOString()})`
-		);
-
-		// Check and cancel orders that are more than one hour old
-		const oneHourAgo = new Date(Date.now() - 1 * 60 * 60 * 1000);
-		const oldOrders = await Order.find({
-			isActive: true,
-			createdAt: { $lt: oneHourAgo },
-			status: { $nin: ["cancelled", "delivered", "OnTheWay"] }, // Don't cancel already cancelled, delivered, or on-the-way orders
-		});
-
-		if (oldOrders.length > 0) {
-			console.log(
-				`🚫 Found ${oldOrders.length} orders older than 1 day - cancelling...`
-			);
-
-			let cancelledCount = 0;
-			for (const order of oldOrders) {
-				try {
-					console.log(`   - Cancelling order ${order.orderNumber}...`);
-
-					// Create mock request and response objects for cancelOrder function
-					const mockReq = {
-						params: { id: order._id.toString() },
-						body: { reason: "expired" },
-						user: {
-							id: null, // System user
-							role: "admin", // System has admin privileges
-						},
-					};
-
-					let mockResStatus = 200;
-					let mockResData = null;
-					const mockRes = {
-						status: (code) => {
-							mockResStatus = code;
-							return mockRes;
-						},
-						json: (data) => {
-							mockResData = data;
-							return mockRes;
-						},
-					};
-
-					// Call the cancelOrder function
-					await cancelOrder(mockReq, mockRes);
-
-					if (mockResStatus === 200 && mockResData?.success) {
-						cancelledCount++;
-						console.log(
-							`   ✅ Order ${order.orderNumber} cancelled successfully`
-						);
-					} else {
-						console.error(
-							`   ❌ Failed to cancel order ${order.orderNumber}: ${
-								mockResData?.message || "Unknown error"
-							}`
-						);
-					}
-				} catch (orderError) {
-					console.error(
-						`   ❌ Error cancelling order ${order.orderNumber}:`,
-						orderError.message
-					);
-				}
-			}
-
-			console.log(
-				`🚫 Cancelled ${cancelledCount} orders older than 1 day (expired)`
-			);
-		} else {
-			console.log(`✅ All orders are within the last 24 hours`);
-		}
-	} catch (error) {
-		console.error("❌ Error in order monitoring:", error.message);
-	}
+cron.schedule("00 01 * * *", async () => {
+	// try {
+	// 	const orderCount = await Order.countDocuments({ isActive: true });
+	// 	console.log(
+	// 		`📊 Order count: ${orderCount} (checked at ${new Date().toISOString()})`
+	// 	);
+	// 	// Check and cancel orders that are more than one hour old
+	// 	const oneHourAgo = new Date(Date.now() - 1 * 60 * 60 * 1000);
+	// 	const oldOrders = await Order.find({
+	// 		isActive: true,
+	// 		createdAt: { $lt: oneHourAgo },
+	// 		status: { $nin: ["cancelled", "delivered", "OnTheWay"] }, // Don't cancel already cancelled, delivered, or on-the-way orders
+	// 	});
+	// 	if (oldOrders.length > 0) {
+	// 		console.log(
+	// 			`🚫 Found ${oldOrders.length} orders older than 1 day - cancelling...`
+	// 		);
+	// 		let cancelledCount = 0;
+	// 		for (const order of oldOrders) {
+	// 			try {
+	// 				console.log(`   - Cancelling order ${order.orderNumber}...`);
+	// 				// Create mock request and response objects for cancelOrder function
+	// 				const mockReq = {
+	// 					params: { id: order._id.toString() },
+	// 					body: { reason: "expired" },
+	// 					user: {
+	// 						id: null, // System user
+	// 						role: "admin", // System has admin privileges
+	// 					},
+	// 				};
+	// 				let mockResStatus = 200;
+	// 				let mockResData = null;
+	// 				const mockRes = {
+	// 					status: (code) => {
+	// 						mockResStatus = code;
+	// 						return mockRes;
+	// 					},
+	// 					json: (data) => {
+	// 						mockResData = data;
+	// 						return mockRes;
+	// 					},
+	// 				};
+	// 				// Call the cancelOrder function
+	// 				await cancelOrder(mockReq, mockRes);
+	// 				if (mockResStatus === 200 && mockResData?.success) {
+	// 					cancelledCount++;
+	// 					console.log(
+	// 						`   ✅ Order ${order.orderNumber} cancelled successfully`
+	// 					);
+	// 				} else {
+	// 					console.error(
+	// 						`   ❌ Failed to cancel order ${order.orderNumber}: ${
+	// 							mockResData?.message || "Unknown error"
+	// 						}`
+	// 					);
+	// 				}
+	// 			} catch (orderError) {
+	// 				console.error(
+	// 					`   ❌ Error cancelling order ${order.orderNumber}:`,
+	// 					orderError.message
+	// 				);
+	// 			}
+	// 		}
+	// 		console.log(
+	// 			`🚫 Cancelled ${cancelledCount} orders older than 1 day (expired)`
+	// 		);
+	// 	} else {
+	// 		console.log(`✅ All orders are within the last 24 hours`);
+	// 	}
+	// } catch (error) {
+	// 	console.error("❌ Error in order monitoring:", error.message);
+	// }
 });
 
 const app = express();
@@ -152,6 +144,11 @@ app.use(
 					"https://fonts.googleapis.com",
 					"https://cdnjs.cloudflare.com",
 				],
+				frameSrc: [
+					"'self'",
+					"https://maps.google.com",
+					"https://www.google.com",
+				], // Allow Google Maps and Google domains
 			},
 		},
 	})
