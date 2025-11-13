@@ -199,10 +199,7 @@ const requestPasswordResetValidation = [
 ];
 
 const resetPasswordValidation = [
-	body("token")
-		.isString()
-		.notEmpty()
-		.withMessage("Reset token is required"),
+	body("token").isString().notEmpty().withMessage("Reset token is required"),
 	body("newPassword")
 		.isLength({ min: 6 })
 		.withMessage("New password must be at least 6 characters long")
@@ -218,7 +215,11 @@ router.get("/confirm/:token", confirmEmail);
 router.post("/login", loginValidation, login);
 router.post("/login-profile", loginValidation, loginProfile);
 router.post("/refresh", refreshTokenValidation, refreshToken);
-router.post("/forgot-password", requestPasswordResetValidation, requestPasswordReset);
+router.post(
+	"/forgot-password",
+	requestPasswordResetValidation,
+	requestPasswordReset
+);
 router.post("/reset-password", resetPasswordValidation, resetPassword);
 
 // Protected routes

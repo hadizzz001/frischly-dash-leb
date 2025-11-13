@@ -59,7 +59,8 @@ const register = async (req, res) => {
 		const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
 		const confirmUrl = `${normalizedBaseUrl}/api/auth/confirm/${emailToken}`;
 
-		const emailSubject = "Confirm your Frischly email / Bestätigen Sie Ihre Frischly-E-Mail";
+		const emailSubject =
+			"Confirm your Frischly email / Bestätigen Sie Ihre Frischly-E-Mail";
 		const emailText = `Hi ${
 			name || "there"
 		},\n\nPlease confirm your email by visiting the link below:\n${confirmUrl}\n\nIf you did not create an account, you can ignore this email.\n\n---\n\nHallo ${
@@ -1154,7 +1155,8 @@ const requestPasswordReset = async (req, res) => {
 			// Don't reveal if email exists or not for security
 			return res.status(200).json({
 				success: true,
-				message: "If an account with that email exists, a password reset link has been sent.",
+				message:
+					"If an account with that email exists, a password reset link has been sent.",
 			});
 		}
 
@@ -1162,7 +1164,8 @@ const requestPasswordReset = async (req, res) => {
 		if (!user.isActive) {
 			return res.status(200).json({
 				success: true,
-				message: "If an account with that email exists, a password reset link has been sent.",
+				message:
+					"If an account with that email exists, a password reset link has been sent.",
 			});
 		}
 
@@ -1186,7 +1189,8 @@ const requestPasswordReset = async (req, res) => {
 		const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
 		const resetUrl = `${normalizedBaseUrl}/reset-password.html?token=${resetToken}`;
 
-		const emailSubject = "Reset your Frischly password / Setzen Sie Ihr Frischly-Passwort zurück";
+		const emailSubject =
+			"Reset your Frischly password / Setzen Sie Ihr Frischly-Passwort zurück";
 		const emailText = `Hi ${user.name},\n\nYou requested a password reset for your Frischly account. Click the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this password reset, please ignore this email.\n\n---\n\nHallo ${user.name},\n\nSie haben eine Passwortzurücksetzung für Ihr Frischly-Konto angefordert. Klicken Sie auf den folgenden Link, um Ihr Passwort zurückzusetzen:\n\n${resetUrl}\n\nDieser Link läuft in 1 Stunde ab.\n\nWenn Sie diese Passwortzurücksetzung nicht angefordert haben, ignorieren Sie bitte diese E-Mail.`;
 		const emailHtml = `<!doctype html><html><body><p>Hi ${user.name},</p><p>You requested a password reset for your Frischly account. Click the button below to reset your password.</p><p><a href="${resetUrl}">Reset Password</a></p><p>This link will expire in 1 hour.</p><p>If you didn't request this password reset, please ignore this email.</p><hr><p>Hallo ${user.name},</p><p>Sie haben eine Passwortzurücksetzung für Ihr Frischly-Konto angefordert. Klicken Sie auf die Schaltfläche unten, um Ihr Passwort zurückzusetzen.</p><p><a href="${resetUrl}">Passwort zurücksetzen</a></p><p>Dieser Link läuft in 1 Stunde ab.</p><p>Wenn Sie diese Passwortzurücksetzung nicht angefordert haben, ignorieren Sie bitte diese E-Mail.</p></body></html>`;
 
@@ -1211,7 +1215,8 @@ const requestPasswordReset = async (req, res) => {
 
 		res.status(200).json({
 			success: true,
-			message: "If an account with that email exists, a password reset link has been sent.",
+			message:
+				"If an account with that email exists, a password reset link has been sent.",
 		});
 	} catch (error) {
 		console.error("Request password reset error:", error);
