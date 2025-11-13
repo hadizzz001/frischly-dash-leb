@@ -44,6 +44,12 @@ const userSchema = new mongoose.Schema(
 		emailTokenExpires: {
 			type: Date,
 		},
+		passwordResetToken: {
+			type: String,
+		},
+		passwordResetExpires: {
+			type: Date,
+		},
 		address: {
 			street: {
 				type: String,

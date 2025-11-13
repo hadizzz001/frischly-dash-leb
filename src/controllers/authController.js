@@ -59,13 +59,17 @@ const register = async (req, res) => {
 		const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
 		const confirmUrl = `${normalizedBaseUrl}/api/auth/confirm/${emailToken}`;
 
-		const emailSubject = "Confirm your Frischly email";
+		const emailSubject = "Confirm your Frischly email / Bestätigen Sie Ihre Frischly-E-Mail";
 		const emailText = `Hi ${
 			name || "there"
-		},\n\nPlease confirm your email by visiting the link below:\n${confirmUrl}\n\nIf you did not create an account, you can ignore this email.`;
+		},\n\nPlease confirm your email by visiting the link below:\n${confirmUrl}\n\nIf you did not create an account, you can ignore this email.\n\n---\n\nHallo ${
+			name || "dort"
+		},\n\nBitte bestätigen Sie Ihre E-Mail-Adresse, indem Sie den folgenden Link besuchen:\n${confirmUrl}\n\nWenn Sie kein Konto erstellt haben, können Sie diese E-Mail ignorieren.`;
 		const emailHtml = `<!doctype html><html><body><p>Hi ${
 			name || "there"
-		},</p><p>Please confirm your email by clicking the button below.</p><p><a href="${confirmUrl}">Confirm Email</a></p><p>If you did not create an account, you can ignore this email.</p></body></html>`;
+		},</p><p>Please confirm your email by clicking the button below.</p><p><a href="${confirmUrl}">Confirm Email</a></p><p>If you did not create an account, you can ignore this email.</p><hr><p>Hallo ${
+			name || "dort"
+		},</p><p>Bitte bestätigen Sie Ihre E-Mail-Adresse, indem Sie auf die Schaltfläche unten klicken.</p><p><a href="${confirmUrl}">E-Mail bestätigen</a></p><p>Wenn Sie kein Konto erstellt haben, können Sie diese E-Mail ignorieren.</p></body></html>`;
 		// Send confirmation email	 uncomment on production
 		try {
 			await sendEmail({
@@ -1118,6 +1122,218 @@ const deleteAccount = async (req, res) => {
 	}
 };
 
+// @desc    Request password reset
+// @route   POST /api/auth/forgot-password
+// @access  Public
+const requestPasswordReset = async (req, res) => {
+	try {
+		// Check for validation errors
+		const errors = validationResult(req);
+		if (!errors.isEmpty()) {
+			return res.status(400).json({
+				success: false,
+				message: "Validation failed",
+				errors: errors.array(),
+			});
+		}
+
+		const { email } = req.body;
+
+		// Sanitize email input
+		const sanitizedEmail = sanitizeEmail(email);
+		if (!sanitizedEmail) {
+			return res.status(400).json({
+				success: false,
+				message: "Invalid email format",
+			});
+		}
+
+		// Check if user exists
+		const user = await User.findOne({ email: sanitizedEmail });
+		if (!user) {
+			// Don't reveal if email exists or not for security
+			return res.status(200).json({
+				success: true,
+				message: "If an account with that email exists, a password reset link has been sent.",
+			});
+		}
+
+		// Check if user is active
+		if (!user.isActive) {
+			return res.status(200).json({
+				success: true,
+				message: "If an account with that email exists, a password reset link has been sent.",
+			});
+		}
+
+		// Generate reset token
+		const resetToken = crypto.randomBytes(32).toString("hex");
+		const resetTokenExpires = Date.now() + 60 * 60 * 1000; // 1 hour
+
+		// Save reset token to user
+		user.passwordResetToken = resetToken;
+		user.passwordResetExpires = resetTokenExpires;
+		await user.save();
+
+		// Create reset URL
+		const baseUrl =
+			process.env.SERVER_PUBLIC_URL ||
+			process.env.API_BASE_URL ||
+			(process.env.FRONTEND_URL
+				? process.env.FRONTEND_URL.split(",")[0]
+				: undefined) ||
+			`http://localhost:${process.env.PORT || 3001}`;
+		const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
+		const resetUrl = `${normalizedBaseUrl}/reset-password.html?token=${resetToken}`;
+
+		const emailSubject = "Reset your Frischly password / Setzen Sie Ihr Frischly-Passwort zurück";
+		const emailText = `Hi ${user.name},\n\nYou requested a password reset for your Frischly account. Click the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this password reset, please ignore this email.\n\n---\n\nHallo ${user.name},\n\nSie haben eine Passwortzurücksetzung für Ihr Frischly-Konto angefordert. Klicken Sie auf den folgenden Link, um Ihr Passwort zurückzusetzen:\n\n${resetUrl}\n\nDieser Link läuft in 1 Stunde ab.\n\nWenn Sie diese Passwortzurücksetzung nicht angefordert haben, ignorieren Sie bitte diese E-Mail.`;
+		const emailHtml = `<!doctype html><html><body><p>Hi ${user.name},</p><p>You requested a password reset for your Frischly account. Click the button below to reset your password.</p><p><a href="${resetUrl}">Reset Password</a></p><p>This link will expire in 1 hour.</p><p>If you didn't request this password reset, please ignore this email.</p><hr><p>Hallo ${user.name},</p><p>Sie haben eine Passwortzurücksetzung für Ihr Frischly-Konto angefordert. Klicken Sie auf die Schaltfläche unten, um Ihr Passwort zurückzusetzen.</p><p><a href="${resetUrl}">Passwort zurücksetzen</a></p><p>Dieser Link läuft in 1 Stunde ab.</p><p>Wenn Sie diese Passwortzurücksetzung nicht angefordert haben, ignorieren Sie bitte diese E-Mail.</p></body></html>`;
+
+		try {
+			await sendEmail({
+				to: user.email,
+				subject: emailSubject,
+				text: emailText,
+				html: emailHtml,
+			});
+		} catch (emailError) {
+			console.error("Password reset email send error:", emailError);
+			// Clear the reset token if email fails
+			user.passwordResetToken = undefined;
+			user.passwordResetExpires = undefined;
+			await user.save();
+			return res.status(500).json({
+				success: false,
+				message: "Unable to send password reset email. Please try again.",
+			});
+		}
+
+		res.status(200).json({
+			success: true,
+			message: "If an account with that email exists, a password reset link has been sent.",
+		});
+	} catch (error) {
+		console.error("Request password reset error:", error);
+		res.status(500).json({
+			success: false,
+			message: "Server error during password reset request",
+		});
+	}
+};
+
+// @desc    Reset password with token
+// @route   POST /api/auth/reset-password
+// @access  Public
+const resetPassword = async (req, res) => {
+	try {
+		// Check for validation errors
+		const errors = validationResult(req);
+		if (!errors.isEmpty()) {
+			return res.status(400).json({
+				success: false,
+				message: "Validation failed",
+				errors: errors.array(),
+			});
+		}
+
+		const { token, newPassword } = req.body;
+
+		if (!token) {
+			return res.status(400).json({
+				success: false,
+				message: "Reset token is required",
+			});
+		}
+
+		// Find user with valid reset token
+		const user = await User.findOne({
+			passwordResetToken: token,
+			passwordResetExpires: { $gt: Date.now() },
+		});
+
+		if (!user) {
+			return res.status(400).json({
+				success: false,
+				message: "Invalid or expired reset token",
+			});
+		}
+
+		// Check if user is active
+		if (!user.isActive) {
+			return res.status(400).json({
+				success: false,
+				message: "Account is deactivated",
+			});
+		}
+
+		// Update password and clear reset token
+		user.password = newPassword;
+		user.passwordResetToken = undefined;
+		user.passwordResetExpires = undefined;
+		await user.save();
+
+		res.json({
+			success: true,
+			message: "Password reset successfully",
+		});
+	} catch (error) {
+		console.error("Reset password error:", error);
+		res.status(500).json({
+			success: false,
+			message: "Server error during password reset",
+		});
+	}
+};
+
+// @desc    Reset customer password (Admin only)
+// @route   POST /api/auth/reset-password/:id
+// @access  Private (Admin only)
+const resetCustomerPassword = async (req, res) => {
+	try {
+		// Check if user is admin
+		if (req.user.role !== "admin") {
+			return res.status(403).json({
+				success: false,
+				message: "Access denied. Admin privileges required.",
+			});
+		}
+
+		const userId = req.params.id;
+
+		// Check if user exists and is a customer
+		const user = await User.findById(userId);
+		if (!user) {
+			return res.status(404).json({
+				success: false,
+				message: "User not found",
+			});
+		}
+
+		if (user.role !== "customer") {
+			return res.status(400).json({
+				success: false,
+				message: "Password reset is only allowed for customers",
+			});
+		}
+
+		// Reset password to "123456789"
+		user.password = "123456789";
+		await user.save();
+
+		res.json({
+			success: true,
+			message: "Customer password reset successfully",
+		});
+	} catch (error) {
+		console.error("Reset customer password error:", error);
+		res.status(500).json({
+			success: false,
+			message: "Server error during password reset",
+		});
+	}
+};
+
 module.exports = {
 	register,
 	confirmEmail,
@@ -1133,5 +1349,8 @@ module.exports = {
 	updateUser,
 	deleteUser,
 	deleteAccount,
+	requestPasswordReset,
+	resetPassword,
+	resetCustomerPassword,
 	getCustomerCount,
 };

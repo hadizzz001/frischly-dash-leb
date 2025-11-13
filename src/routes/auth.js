@@ -15,6 +15,9 @@ const {
 	updateUser,
 	deleteUser,
 	deleteAccount,
+	requestPasswordReset,
+	resetPassword,
+	resetCustomerPassword,
 	getCustomerCount,
 } = require("../controllers/authController");
 const { protect, authorize } = require("../middleware/auth");
@@ -188,12 +191,35 @@ const deleteAccountValidation = [
 		.withMessage("Password is required for account deletion"),
 ];
 
+const requestPasswordResetValidation = [
+	body("email")
+		.isEmail()
+		.normalizeEmail()
+		.withMessage("Please provide a valid email"),
+];
+
+const resetPasswordValidation = [
+	body("token")
+		.isString()
+		.notEmpty()
+		.withMessage("Reset token is required"),
+	body("newPassword")
+		.isLength({ min: 6 })
+		.withMessage("New password must be at least 6 characters long")
+		.matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+		.withMessage(
+			"New password must contain at least one lowercase letter, one uppercase letter, and one number"
+		),
+];
+
 // Public routes
 router.post("/register", registerValidation, register);
 router.get("/confirm/:token", confirmEmail);
 router.post("/login", loginValidation, login);
 router.post("/login-profile", loginValidation, loginProfile);
 router.post("/refresh", refreshTokenValidation, refreshToken);
+router.post("/forgot-password", requestPasswordResetValidation, requestPasswordReset);
+router.post("/reset-password", resetPasswordValidation, resetPassword);
 
 // Protected routes
 router.get("/me", protect, getMe);
@@ -218,6 +244,7 @@ router.get("/users/:id", protect, getUserById);
 router.post("/users", protect, registerValidation, createUser);
 router.put("/users/:id", protect, updateUser);
 router.delete("/users/:id", protect, deleteUser);
+router.post("/reset-password/:id", protect, resetCustomerPassword);
 
 // Customer count endpoint (Admin/Manager only)
 router.get(
