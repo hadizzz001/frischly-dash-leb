@@ -136,7 +136,7 @@ const confirmEmail = async (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Confirmed - Frischly</title>
+    <title>Email Confirmed / E-Mail Bestätigt - Frischly</title>
     <style>
         * {
             margin: 0;
@@ -281,9 +281,13 @@ const confirmEmail = async (req, res) => {
         <div class="success-icon"></div>
         <h1>Email Confirmed!</h1>
         <p class="subtitle">Your email has been successfully verified. You can now log in to your Frischly account and start shopping for fresh groceries.</p>
-        <button onclick="window.close()" class="login-btn">Close</button>
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+        
+        <h1>E-Mail Bestätigt!</h1>
+        <p class="subtitle">Ihre E-Mail wurde erfolgreich verifiziert. Sie können sich jetzt in Ihr Frischly-Konto einloggen und mit dem Einkaufen frischer Lebensmittel beginnen.</p>
+        <button onclick="window.close()" class="login-btn">Schließen</button>
         <div class="footer">
-            <p>Welcome to Frischly!</p>
+            <p>Willkommen bei Frischly!</p>
         </div>
     </div>
 </body>

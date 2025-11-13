@@ -692,8 +692,76 @@ exports.createOrder = async (req, res) => {
 					<p>Best regards,<br>The Frischly Team</p>
 					
 					<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+					
+					<h2 style="color: #333; text-align: center;">Bestellbestätigung</h2>
+					<p>Liebe/r ${populatedOrder.customer.name},</p>
+					<p>Vielen Dank für Ihre Bestellung! Wir haben Ihre Bestellung erhalten und sie wird bearbeitet. Hier sind die Details:</p>
+					
+					<h3>Bestelldetails</h3>
+					<p><strong>Bestell-ID:</strong> ${populatedOrder._id}</p>
+					<p><strong>Bestelldatum:</strong> ${new Date(
+						populatedOrder.createdAt
+					).toLocaleDateString("de-DE")}</p>
+					<p><strong>Status:</strong> ${populatedOrder.status}</p>
+					<p><strong>Zahlungsmethode:</strong> Online</p>
+					${
+						paymentUrl
+							? `<p><strong>Zahlungs-URL:</strong> <a href="${paymentUrl}" style="color: #007bff;">${paymentUrl}</a></p>`
+							: ""
+					}
+					
+					<h3>Bestellte Artikel</h3>
+					<table style="width: 100%; border-collapse: collapse;">
+						<thead>
+							<tr style="background-color: #f2f2f2;">
+								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Produkt</th>
+								<th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Menge</th>
+								<th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Preis</th>
+								<th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Gesamt</th>
+							</tr>
+						</thead>
+						<tbody>
+							${populatedOrder.items
+								.map(
+									(item) => `
+								<tr>
+									<td style="border: 1px solid #ddd; padding: 8px;">${item.product.name}</td>
+									<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${
+										item.quantity
+									}</td>
+									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">€${item.totalPrice.toFixed(
+										2
+									)}</td>
+									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">€${
+										item.totalPrice.toFixed(2) * item.quantity
+									}</td>
+								</tr>
+							`
+								)
+								.join("")}
+						</tbody>
+					</table>
+					
+					<h3>Bestellübersicht</h3>
+					<p><strong>Zwischensumme:</strong> €${populatedOrder.subtotal.toFixed(2)}</p>
+					<p><strong>Liefergebühr:</strong> €${populatedOrder.delivery.toFixed(2)}</p>
+					<p><strong>Gesamt:</strong> €${populatedOrder.total.toFixed(2)}</p>
+					
+					${
+						populatedOrder.notes
+							? `<p><strong>Notizen:</strong> ${populatedOrder.notes}</p>`
+							: ""
+					}
+					
+					<p>Bei Fragen zu Ihrer Bestellung kontaktieren Sie uns bitte unter info@frischlyshop.com.</p>
+					
+					<p>Vielen Dank, dass Sie sich für Frischly entschieden haben!</p>
+					
+					<p>Mit freundlichen Grüßen,<br>Das Frischly Team</p>
+					
+					<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
 					<p style="font-size: 12px; color: #666; text-align: center;">
-						This is an automated email. Please do not reply to this message.
+						Dies ist eine automatische E-Mail. Bitte antworten Sie nicht auf diese Nachricht.
 					</p>
 				</div>
 			`;
