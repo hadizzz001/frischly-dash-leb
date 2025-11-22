@@ -99,6 +99,7 @@ const orderSchema = new mongoose.Schema(
 			default: "pending",
 			index: true,
 		},
+		// DEPRECATED: Payment integration removed - these fields are kept for historical data only
 		paymentStatus: {
 			type: String,
 			enum: {
@@ -108,20 +109,27 @@ const orderSchema = new mongoose.Schema(
 			},
 			default: "pending",
 			index: true,
+			required: false, // Optional for backward compatibility
 		},
+		// DEPRECATED: PAYONE payment link ID - no longer generated for new orders
 		paymentLinkId: {
 			type: String,
 			index: true,
+			required: false,
 		},
+		// DEPRECATED: PAYONE transaction ID - no longer used for new orders
 		txid: {
 			type: String,
 			trim: true,
 			index: true,
+			required: false,
 		},
+		// DEPRECATED: Payment method field - kept for historical records
 		paymentMethod: {
 			type: String,
 			enum: ["cash", "card", "online", "wallet"],
 			default: "online",
+			required: false,
 		},
 		shelfNumber: {
 			type: String,

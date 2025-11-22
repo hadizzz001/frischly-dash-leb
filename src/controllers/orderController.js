@@ -5,16 +5,6 @@ const mongoose = require("mongoose");
 const Zone = require("../models/Zone");
 const User = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
-const PayoneService = require("../services/payoneService");
-
-// Initialize PAYONE Service
-const payoneService = new PayoneService(
-	process.env.MERCHANT_ID,
-	process.env.ACCOUNT_ID,
-	process.env.PORTAL_ID,
-	process.env.PORTAL_KEY,
-	process.env.PAYONE_API_BASE_URL || "https://onelink.pay1.de/api"
-);
 
 // @desc    Get all orders with enhanced filtering options
 // @route   GET /api/orders
@@ -477,6 +467,7 @@ exports.createOrder = async (req, res) => {
 			paymentMethod,
 			shelfNumber,
 			notes,
+			status: "confirmed",
 			createdBy: req.user.id,
 		});
 
@@ -500,118 +491,8 @@ exports.createOrder = async (req, res) => {
 				"name barcode shelfNumber price discount tax bottlerefund"
 			);
 
-		// Create payment link for the order
-		try {
-			console.log("Creating payment link for order:", populatedOrder._id);
-
-			// Create shopping cart from order items
-			const shoppingCart = populatedOrder.items.map((item, index) => {
-				// Use barcode if available, otherwise use product ID (both should be safe for PAYONE)
-				let itemNumber = item.product.barcode || item.product._id.toString();
-
-				// Ensure the number is within 32 characters and matches PAYONE regex
-				// PAYONE allows: [0-9A-Za-z(){} .+\\-_#/:\\[\\]]
-				itemNumber = itemNumber
-					.substring(0, 32)
-					.replace(/[^0-9A-Za-z(){} .+\-_#/:[\]]/g, "");
-
-				// If after sanitization it's empty, use a fallback
-				if (!itemNumber || itemNumber.length === 0) {
-					itemNumber = `PROD_${index + 1}`;
-				}
-
-				return {
-					type: "goods",
-					number: itemNumber,
-					name: item.product.name.substring(0, 127), // PAYONE name limit
-					price: Math.round(item.totalPrice * 100), // Convert to cents
-					quantity: item.quantity,
-				};
-			});
-
-			// Add delivery fee as separate item
-			if (populatedOrder.delivery > 0) {
-				shoppingCart.push({
-					type: "shipment",
-					number: "DELIVERY",
-					name: "Delivery Fee",
-					price: Math.round(populatedOrder.delivery * 100), // Convert to cents
-					quantity: 1,
-				});
-			}
-
-			const paymentData = {
-				reference: `ORD_${Date.now().toString().slice(-8)}`, // Generate a short reference like "ORD_12345678"
-				shoppingCart: shoppingCart,
-				currency: "EUR",
-				description: `Order ${populatedOrder._id}`,
-				mode:
-					process.env.PAYONE_MODE ||
-					(process.env.NODE_ENV === "production" ? "live" : "test"),
-				billing: {
-					lastName: populatedOrder.customer.name || "user",
-					country: populatedOrder.customer.address?.country || "DE",
-				},
-				paymentMethods: ["visa", "mastercard", "paypal"],
-				successUrl: `${
-					process.env.FRONTEND_URL || "http://localhost:3000"
-				}/payment/success.html?order=${populatedOrder._id}`,
-				errorUrl: `${
-					process.env.FRONTEND_URL || "http://localhost:3000"
-				}/payment/error.html?order=${populatedOrder._id}`,
-				backUrl: `${
-					process.env.FRONTEND_URL || "http://localhost:3000"
-				}/payment/cancel.html?order=${populatedOrder._id}`,
-				notifyUrl: `${
-					process.env.BACKEND_URL || "http://localhost:3001"
-				}/api/payments/linkExecutionNotification`,
-			};
-
-			const paymentResult = await payoneService.createPaymentLink(paymentData);
-
-			if (paymentResult.success) {
-				console.log("Payment link created successfully:", paymentResult.data);
-				console.log("Payment URL:", paymentResult.data.link);
-
-				var paymentUrl = paymentResult.data.link;
-
-				// Update order with payment link ID
-				await Order.findByIdAndUpdate(populatedOrder._id, {
-					paymentLinkId: paymentResult.data.id,
-				});
-				console.log(
-					"Updated order with payment link ID:",
-					paymentResult.data.id
-				);
-			} else {
-				console.error("Failed to create payment link:", paymentResult.error);
-				throw new Error(`Payment link creation failed: ${paymentResult.error}`);
-			}
-		} catch (paymentError) {
-			if (order && order._id) {
-				try {
-					console.log(
-						`Deleting failed order ${order._id} due to creation error`
-					);
-
-					// Restore product stock
-					for (const item of processedItems) {
-						await Product.findByIdAndUpdate(item.product, {
-							$inc: { stock: item.quantity },
-						});
-					}
-
-					// Delete the failed order
-					await Order.findByIdAndDelete(order._id);
-
-					console.log(`Failed order ${order._id} deleted successfully`);
-				} catch (deleteError) {
-					console.error("Error deleting failed order:", deleteError);
-				}
-			}
-			console.error("Error creating payment link:", paymentError);
-			throw new Error(`Payment link creation failed: ${paymentError.message}`);
-		}
+		// Set default payment URL
+		const paymentUrl = `https://www.frischlyshop.com/payment/success-pod.html?order=${populatedOrder._id}`;
 
 		res.status(201).json({
 			success: true,
@@ -635,12 +516,8 @@ exports.createOrder = async (req, res) => {
 						populatedOrder.createdAt
 					).toLocaleDateString()}</p>
 					<p><strong>Status:</strong> ${populatedOrder.status}</p>
-					<p><strong>Payment Method:</strong> Online</p>
-					${
-						paymentUrl
-							? `<p><strong>Payment URL:</strong> <a href="${paymentUrl}" style="color: #007bff;">${paymentUrl}</a></p>`
-							: ""
-					}
+					<p><strong>Payment Method:</strong> ${populatedOrder.paymentMethod}</p>
+					<p><strong>Complete your order at:</strong> <a href="${paymentUrl}" style="color: #007bff;">${paymentUrl}</a></p>
 					
 					<h3>Items Ordered</h3>
 					<table style="width: 100%; border-collapse: collapse;">
@@ -703,12 +580,8 @@ exports.createOrder = async (req, res) => {
 						populatedOrder.createdAt
 					).toLocaleDateString("de-DE")}</p>
 					<p><strong>Status:</strong> ${populatedOrder.status}</p>
-					<p><strong>Zahlungsmethode:</strong> Online</p>
-					${
-						paymentUrl
-							? `<p><strong>Zahlungs-URL:</strong> <a href="${paymentUrl}" style="color: #007bff;">${paymentUrl}</a></p>`
-							: ""
-					}
+					<p><strong>Zahlungsmethode:</strong> ${populatedOrder.paymentMethod}</p>
+					<p><strong>Schließen Sie Ihre Bestellung ab unter:</strong> <a href="${paymentUrl}" style="color: #007bff;">${paymentUrl}</a></p>
 					
 					<h3>Bestellte Artikel</h3>
 					<table style="width: 100%; border-collapse: collapse;">
@@ -1030,181 +903,31 @@ exports.cancelOrder = async (req, res) => {
 		}
 		console.log("✅ Step 5: Order can be cancelled");
 
-		// Step 6: Handle payment link deactivation for unpaid orders
-		if (order.paymentLinkId && order.paymentStatus !== "paid") {
+		// Step 6: Restore product stock
+		console.log("Step 6: Restoring product stock...");
+		let restoredCount = 0;
+		for (const item of order.items) {
+			await Product.findByIdAndUpdate(item.product, {
+				$inc: { stock: item.quantity },
+			});
+			restoredCount += item.quantity;
 			console.log(
-				"Step 6: Order has unpaid payment link - deactivating payment link..."
+				`   - Restored ${item.quantity} units of product ${item.product}`
 			);
-			try {
-				console.log(
-					`Step 6a: Getting current payment link data for ID: ${order.paymentLinkId}`
-				);
-				const getResult = await payoneService.getPaymentLink(
-					order.paymentLinkId
-				);
-
-				if (!getResult.success) {
-					console.log(
-						`⚠️ Step 6a: Failed to get payment link: ${getResult.error}`
-					);
-				} else {
-					console.log("Step 6b: Updating payment link to inactive...");
-					const currentLinkData = getResult.data;
-					currentLinkData.active = false;
-
-					const updateResult = await payoneService.updatePaymentLink(
-						order.paymentLinkId,
-						currentLinkData
-					);
-
-					if (updateResult.success) {
-						console.log("✅ Step 6b: Payment link deactivated successfully");
-						console.log("Step 6c: Restoring product stock...");
-						let restoredCount = 0;
-						for (const item of order.items) {
-							await Product.findByIdAndUpdate(item.product, {
-								$inc: { stock: item.quantity },
-							});
-							restoredCount += item.quantity;
-							console.log(
-								`   - Restored ${item.quantity} units of product ${item.product}`
-							);
-						}
-						console.log(
-							`✅ Step 6c: Restored total of ${restoredCount} product units`
-						);
-
-						console.log("Step 6d: Updating order status to cancelled...");
-						order.paymentStatus = "cancelled";
-						order.status = "cancelled";
-						order.notes = reason
-							? `${order.notes || ""}\nCancellation reason: ${reason}`.trim()
-							: order.notes;
-						order.updatedBy = req.user.id;
-						await order.save();
-						console.log("✅ Step 6d: Order status updated to cancelled");
-					} else {
-						console.log(
-							`❌ Step 6b: Failed to deactivate payment link: ${updateResult.error}`
-						);
-					}
-				}
-			} catch (paymentError) {
-				console.log(
-					`❌ Step 6: Error updating payment link: ${paymentError.message}`
-				);
-				// Don't fail the cancellation if payment link update fails
-			}
-		} else if (order.paymentStatus === "paid") {
-			console.log("Step 7: Order is paid - processing refund...");
-			try {
-				console.log("Step 7a: Checking for transaction ID...");
-				if (!order.txid) {
-					console.log("❌ Step 7a: No transaction ID found for refund");
-					return res.status(400).json({
-						success: false,
-						message: `Failed to process refund: No transaction ID found for order ${order._id}`,
-					});
-				}
-				console.log(`✅ Step 7a: Transaction ID found: ${order.txid}`);
-
-				console.log("Step 7b: Processing refund via PAYONE...");
-				const refundAmount = Math.round(order.total * 100);
-				console.log(
-					`   - Refund amount: ${refundAmount} cents (€${order.total})`
-				);
-				const refundResult = await payoneService.processRefund({
-					txid: order.txid,
-					amount: refundAmount,
-					currency: "EUR",
-					mode:
-						process.env.PAYONE_MODE ||
-						(process.env.NODE_ENV === "production" ? "live" : "test"),
-				});
-
-				if (refundResult.success) {
-					console.log("✅ Step 7b: Refund processed successfully");
-					console.log(`   - Refund TXID: ${refundResult.data?.txid || "N/A"}`);
-					order.paymentStatus = "refunded";
-				} else {
-					console.log(`❌ Step 7b: Refund failed: ${refundResult.error}`);
-					order.notes = reason
-						? `${
-								order.notes || ""
-						  }\nCancellation reason: ${reason}\nNote: Refund processing failed - ${
-								refundResult.error
-						  }`.trim()
-						: `${order.notes || ""}\nNote: Refund processing failed - ${
-								refundResult.error
-						  }`.trim();
-					return res.status(400).json({
-						success: false,
-						message: `Failed to process refund: ${refundResult.error}`,
-					});
-				}
-
-				console.log("Step 7c: Restoring product stock...");
-				let restoredCount = 0;
-				for (const item of order.items) {
-					await Product.findByIdAndUpdate(item.product, {
-						$inc: { stock: item.quantity },
-					});
-					restoredCount += item.quantity;
-					console.log(
-						`   - Restored ${item.quantity} units of product ${item.product}`
-					);
-				}
-				console.log(
-					`✅ Step 7c: Restored total of ${restoredCount} product units`
-				);
-
-				console.log("Step 7d: Updating order status to cancelled...");
-				order.status = "cancelled";
-				order.notes = reason
-					? `${order.notes || ""}\nCancellation reason: ${reason}`.trim()
-					: order.notes;
-				order.updatedBy = req.user.id;
-				await order.save();
-				console.log("✅ Step 7d: Order status updated to cancelled");
-			} catch (refundError) {
-				console.log(
-					`❌ Step 7: Error processing refund: ${refundError.message}`
-				);
-				return res.status(500).json({
-					success: false,
-					message: `Error processing refund: ${refundError.message}`,
-				});
-			}
-		} else {
-			console.log(
-				"Step 8: Order has no payment link or is unpaid - simple cancellation..."
-			);
-			console.log("Step 8a: Restoring product stock...");
-			let restoredCount = 0;
-			for (const item of order.items) {
-				await Product.findByIdAndUpdate(item.product, {
-					$inc: { stock: item.quantity },
-				});
-				restoredCount += item.quantity;
-				console.log(
-					`   - Restored ${item.quantity} units of product ${item.product}`
-				);
-			}
-			console.log(
-				`✅ Step 8a: Restored total of ${restoredCount} product units`
-			);
-
-			console.log("Step 8b: Updating order status to cancelled...");
-			order.status = "cancelled";
-			order.notes = reason
-				? `${order.notes || ""}\nCancellation reason: ${reason}`.trim()
-				: order.notes;
-			order.updatedBy = req.user.id;
-			await order.save();
-			console.log("✅ Step 8b: Order status updated to cancelled");
 		}
+		console.log(`✅ Step 6: Restored total of ${restoredCount} product units`);
 
-		console.log("Step 9: Fetching updated order data for response...");
+		// Step 7: Update order status to cancelled
+		console.log("Step 7: Updating order status to cancelled...");
+		order.status = "cancelled";
+		order.notes = reason
+			? `${order.notes || ""}\nCancellation reason: ${reason}`.trim()
+			: order.notes;
+		order.updatedBy = req.user.id;
+		await order.save();
+		console.log("✅ Step 7: Order status updated to cancelled");
+
+		console.log("Step 8: Fetching updated order data for response...");
 		const updatedOrder = await Order.findById(id)
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
@@ -1215,7 +938,6 @@ exports.cancelOrder = async (req, res) => {
 
 		console.log("=== ORDER CANCELLATION COMPLETED SUCCESSFULLY ===");
 		console.log(`Final Status: ${updatedOrder.status}`);
-		console.log(`Final Payment Status: ${updatedOrder.paymentStatus}`);
 
 		res.json({
 			success: true,
@@ -1454,6 +1176,7 @@ exports.updateOrderStatus = async (req, res) => {
 		// Set delivery date if status is delivered
 		if (status === "delivered" && previousStatus !== "delivered") {
 			order.deliveredAt = new Date();
+			order.paymentStatus = "paid";
 		}
 
 		await order.save();
