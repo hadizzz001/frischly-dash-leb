@@ -294,6 +294,46 @@ app.get("/rider", (req, res) => {
 	res.sendFile(__dirname + "/public/rider.html");
 });
 
+// Route for dashboard page
+app.get("/dashboard", (req, res) => {
+	res.sendFile(__dirname + "/public/dashboard.html");
+});
+
+// Route for signin page
+app.get("/signin", (req, res) => {
+	res.sendFile(__dirname + "/public/signin.html");
+});
+
+// Route for signup page
+app.get("/signup", (req, res) => {
+	res.sendFile(__dirname + "/public/signup.html");
+});
+
+// Route for profile page
+app.get("/profile", (req, res) => {
+	res.sendFile(__dirname + "/public/profile.html");
+});
+
+// Route for forgot password page
+app.get("/forgot-password", (req, res) => {
+	res.sendFile(__dirname + "/public/forgot-password.html");
+});
+
+// Route for reset password page
+app.get("/reset-password", (req, res) => {
+	res.sendFile(__dirname + "/public/reset-password.html");
+});
+
+// Route for payment success page
+app.get("/payment/success", (req, res) => {
+	res.sendFile(__dirname + "/public/payment/success-pod.html");
+});
+
+// Route for shop1 page
+app.get("/shop1", (req, res) => {
+	res.sendFile(__dirname + "/public/shop1.html");
+});
+
 // Health check route
 app.get("/api/health", (req, res) => {
 	res.json({

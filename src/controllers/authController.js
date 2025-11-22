@@ -91,7 +91,7 @@ const register = async (req, res) => {
 		res.status(201).json({
 			success: true,
 			message:
-				"Signup successful. Please check your email to confirm your account.",
+				"Signup successful. Please check your email (may appear in junk/spam folder) to confirm your account. ",
 			data: {
 				userId: user._id,
 			},
@@ -399,7 +399,8 @@ const login = async (req, res) => {
 		if (user.emailConfirmed === false) {
 			return res.status(403).json({
 				success: false,
-				message: "Please confirm your email before logging in.",
+				message:
+					"Please confirm your email (may appear in junk/spam folder) before logging in.",
 				needsConfirmation: true,
 			});
 		}
