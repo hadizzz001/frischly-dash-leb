@@ -671,7 +671,8 @@ const loginProfile = async (req, res) => {
 		if (user.emailConfirmed === false) {
 			return res.status(403).json({
 				success: false,
-				message: "Please confirm your email before logging in.",
+				message:
+					"Please confirm your email before logging in(may find junk folder).",
 				needsConfirmation: true,
 			});
 		}
