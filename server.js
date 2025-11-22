@@ -165,6 +165,19 @@ const getAllowedOrigins = () => {
 		.map((origin) => origin.trim())
 		.filter(Boolean);
 
+	// Add specific allowed origins
+	const extraOrigins = [
+		"https://frischly.onrender.com",
+		"https://www.frischlyshop.com",
+		"https://frischlyshop.com",
+	];
+
+	extraOrigins.forEach((origin) => {
+		if (!origins.includes(origin)) {
+			origins.push(origin);
+		}
+	});
+
 	// Always allow localhost in development
 	if (process.env.NODE_ENV === "development") {
 		const devOrigins = [
