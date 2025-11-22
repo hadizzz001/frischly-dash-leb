@@ -492,7 +492,7 @@ exports.createOrder = async (req, res) => {
 			);
 
 		// Set default payment URL
-		const paymentUrl = `https://www.frischlyshop.com/payment/success-pod.html?order=${populatedOrder._id}`;
+		const paymentUrl = `https://www.frischlyshop-server.onrender.com/payment/success-pod.html?order=${populatedOrder._id}`;
 
 		res.status(201).json({
 			success: true,
