@@ -106,6 +106,9 @@ cron.schedule("00 01 * * *", async () => {
 
 const app = express();
 
+// Trust proxy - Required for Render deployment and rate limiting
+app.set("trust proxy", 1);
+
 // Security middleware - Configure CSP with conditional unsafe directives for development
 const isDevelopment = process.env.NODE_ENV === "development";
 
