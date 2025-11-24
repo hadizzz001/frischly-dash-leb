@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 const Zone = require("../models/Zone");
 const User = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 // @desc    Get all orders with enhanced filtering options
 // @route   GET /api/orders
@@ -492,7 +493,59 @@ exports.createOrder = async (req, res) => {
 			);
 
 		// Set default payment URL
-		const paymentUrl = `https://frischlyshop-server.onrender.com/payment/success`;
+		let paymentUrl = `https://frischlyshop-server.onrender.com/payment/success-pod.html?order=${populatedOrder._id}`;
+
+		if (paymentMethod === "online" || paymentMethod === "card") {
+			try {
+				const lineItems = populatedOrder.items.map((item) => ({
+					price_data: {
+						currency: "eur",
+						product_data: {
+							name: item.product.name,
+						},
+						unit_amount: Math.round(item.totalPrice * 100), // Price in cents
+					},
+					quantity: item.quantity,
+				}));
+
+				if (populatedOrder.delivery > 0) {
+					lineItems.push({
+						price_data: {
+							currency: "eur",
+							product_data: {
+								name: "Delivery Fee",
+							},
+							unit_amount: Math.round(populatedOrder.delivery * 100),
+						},
+						quantity: 1,
+					});
+				}
+
+				const session = await stripe.checkout.sessions.create({
+					payment_method_types: ["card"],
+					line_items: lineItems,
+					mode: "payment",
+					success_url: `${
+						process.env.SERVER_URL || "https://frischlyshop-server.onrender.com"
+					}/payment/stripe-success.html?session_id={CHECKOUT_SESSION_ID}&order=${
+						populatedOrder._id
+					}`,
+					cancel_url: `${
+						process.env.SERVER_URL || "https://frischlyshop-server.onrender.com"
+					}/payment/cancel.html?order=${populatedOrder._id}`,
+					client_reference_id: populatedOrder._id.toString(),
+					customer_email: populatedOrder.customer.email,
+				});
+
+				paymentUrl = session.url;
+
+				// Update order with session ID
+				order.paymentLinkId = session.id;
+				await order.save();
+			} catch (error) {
+				console.error("Stripe session creation failed:", error);
+			}
+		}
 
 		res.status(201).json({
 			success: true,
@@ -903,6 +956,46 @@ exports.cancelOrder = async (req, res) => {
 		}
 		console.log("✅ Step 5: Order can be cancelled");
 
+		// Handle Stripe Payment (Refund or Expire Link)
+		if (
+			order.paymentLinkId &&
+			(order.paymentMethod === "online" || order.paymentMethod === "card")
+		) {
+			try {
+				if (order.paymentStatus === "paid") {
+					console.log("Processing refund for paid order...");
+					// Retrieve session to get payment_intent
+					const session = await stripe.checkout.sessions.retrieve(
+						order.paymentLinkId
+					);
+					if (session.payment_intent) {
+						await stripe.refunds.create({
+							payment_intent: session.payment_intent,
+							reason: "requested_by_customer",
+						});
+						console.log("✅ Refund processed successfully");
+						order.notes = `${
+							order.notes || ""
+						}\nRefund processed via Stripe.`.trim();
+					}
+				} else {
+					console.log("Deactivating unpaid payment link...");
+					try {
+						await stripe.checkout.sessions.expire(order.paymentLinkId);
+						console.log("✅ Payment link deactivated");
+					} catch (err) {
+						// Ignore error if session is already expired or invalid
+						console.log(`⚠️ Could not expire session: ${err.message}`);
+					}
+				}
+			} catch (error) {
+				console.error("❌ Error handling Stripe payment:", error);
+				order.notes = `${order.notes || ""}\nPayment handling error: ${
+					error.message
+				}`.trim();
+			}
+		}
+
 		// Step 6: Restore product stock
 		console.log("Step 6: Restoring product stock...");
 		let restoredCount = 0;
@@ -1222,6 +1315,64 @@ exports.getOrdersCount = async (req, res) => {
 		res.status(500).json({
 			success: false,
 			message: "Error retrieving orders count",
+			error: error.message,
+		});
+	}
+};
+
+// @desc    Verify Stripe Payment
+// @route   POST /api/orders/verify-payment
+// @access  Public
+exports.verifyStripePayment = async (req, res) => {
+	try {
+		const { sessionId, orderId } = req.body;
+
+		if (!sessionId || !orderId) {
+			return res.status(400).json({
+				success: false,
+				message: "Session ID and Order ID are required",
+			});
+		}
+
+		const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+		if (!session) {
+			return res.status(404).json({
+				success: false,
+				message: "Session not found",
+			});
+		}
+
+		if (session.payment_status === "paid") {
+			const order = await Order.findById(orderId);
+			if (!order) {
+				return res.status(404).json({
+					success: false,
+					message: "Order not found",
+				});
+			}
+
+			if (order.paymentStatus !== "paid") {
+				order.paymentStatus = "paid";
+				order.paymentMethod = "online"; // Ensure it's marked as online
+				await order.save();
+			}
+
+			return res.json({
+				success: true,
+				message: "Payment verified successfully",
+			});
+		} else {
+			return res.status(400).json({
+				success: false,
+				message: "Payment not completed",
+			});
+		}
+	} catch (error) {
+		console.error("Error verifying payment:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error verifying payment",
 			error: error.message,
 		});
 	}

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Payment Processing - Frischly</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				background-color: #f4f4f4;
+				margin: 0;
+				padding: 0;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				min-height: 100vh;
+			}
+			.container {
+				background-color: white;
+				padding: 40px;
+				border-radius: 8px;
+				box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+				text-align: center;
+				max-width: 500px;
+				width: 100%;
+			}
+			.loader {
+				border: 5px solid #f3f3f3;
+				border-top: 5px solid #007bff;
+				border-radius: 50%;
+				width: 50px;
+				height: 50px;
+				animation: spin 1s linear infinite;
+				margin: 0 auto 20px;
+			}
+			@keyframes spin {
+				0% {
+					transform: rotate(0deg);
+				}
+				100% {
+					transform: rotate(360deg);
+				}
+			}
+			.success-icon {
+				color: #28a745;
+				font-size: 48px;
+				margin-bottom: 20px;
+				display: none;
+			}
+			.error-icon {
+				color: #dc3545;
+				font-size: 48px;
+				margin-bottom: 20px;
+				display: none;
+			}
+			h1 {
+				color: #333;
+				margin-bottom: 20px;
+			}
+			p {
+				color: #666;
+				margin-bottom: 30px;
+				line-height: 1.6;
+			}
+			.btn {
+				display: inline-block;
+				padding: 12px 24px;
+				background-color: #007bff;
+				color: white;
+				text-decoration: none;
+				border-radius: 4px;
+				transition: background-color 0.3s;
+				display: none;
+				cursor: pointer;
+				border: none;
+				font-size: 16px;
+			}
+			.btn:hover {
+				background-color: #0056b3;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<div id="loader" class="loader"></div>
+			<div id="successIcon" class="success-icon">✓</div>
+			<div id="errorIcon" class="error-icon">✕</div>
+
+			<h1 id="title">Processing Payment...</h1>
+			<p id="message">
+				Please wait while we verify your payment. Do not close this window.
+			</p>
+
+			<button
+				id="closeBtn"
+				onclick="window.location.href='https://www.frischlyshop.com'"
+				class="btn"
+			>
+				Return to Shop
+			</button>
+		</div>
+
+		<script>
+			document.addEventListener("DOMContentLoaded", async () => {
+				const urlParams = new URLSearchParams(window.location.search);
+				const sessionId = urlParams.get("session_id");
+				const orderId = urlParams.get("order");
+
+				if (!sessionId || !orderId) {
+					showError("Invalid payment details.");
+					return;
+				}
+
+				try {
+					const response = await fetch(`/api/orders/verify-payment`, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({ sessionId, orderId }),
+					});
+
+					const data = await response.json();
+
+					if (data.success) {
+						showSuccess();
+					} else {
+						showError(data.message || "Payment verification failed.");
+					}
+				} catch (error) {
+					console.error("Error verifying payment:", error);
+					showError("An error occurred while verifying payment.");
+				}
+			});
+
+			function showSuccess() {
+				document.getElementById("loader").style.display = "none";
+				document.getElementById("successIcon").style.display = "block";
+				document.getElementById("title").innerText = "Payment Successful!";
+				document.getElementById("title").style.color = "#28a745";
+				document.getElementById("message").innerHTML = `
+					Thank you for your payment. Your order has been confirmed.<br><br>
+					Vielen Dank für Ihre Zahlung. Ihre Bestellung wurde bestätigt.
+				`;
+				document.getElementById("closeBtn").style.display = "inline-block";
+			}
+
+			function showError(msg) {
+				document.getElementById("loader").style.display = "none";
+				document.getElementById("errorIcon").style.display = "block";
+				document.getElementById("title").innerText = "Payment Failed";
+				document.getElementById("title").style.color = "#dc3545";
+				document.getElementById("message").innerText = msg;
+				document.getElementById("closeBtn").innerText = "Close";
+				document.getElementById("closeBtn").style.display = "inline-block";
+			}
+		</script>
+	</body>
+</html>

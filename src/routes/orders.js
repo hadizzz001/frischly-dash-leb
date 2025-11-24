@@ -11,12 +11,16 @@ const {
 	cancelOrder,
 	getOrdersCount,
 	getOrdersForRiders,
+	verifyStripePayment,
 } = require("../controllers/orderController");
 
 // Import middleware
 const { protect, authorize } = require("../middleware/auth");
 
 const router = express.Router();
+
+// Public routes
+router.post("/verify-payment", verifyStripePayment);
 
 // Protected routes (require authentication)
 router.get("/stats", protect, authorize("admin", "manager"), getOrderStats);
