@@ -76,6 +76,12 @@ const orderSchema = new mongoose.Schema(
 			min: [0, "delivery cannot be negative"],
 		},
 
+		fees: {
+			type: Number,
+			default: 0,
+			min: [0, "Fees cannot be negative"],
+		},
+
 		total: {
 			type: Number,
 			default: 0,

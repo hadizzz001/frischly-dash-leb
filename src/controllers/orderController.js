@@ -456,7 +456,12 @@ exports.createOrder = async (req, res) => {
 			}
 		}
 
-		const total = subtotal + delivery;
+		// Calculate processing fee: 2.9% + 0.30
+		const processingFee = (subtotal + delivery) * 0.029 + 0.3;
+		// Round to 2 decimal places
+		const fees = Math.round(processingFee * 100) / 100;
+
+		const total = subtotal + delivery + fees;
 
 		const order = new Order({
 			customer: dbCustomer,
@@ -464,6 +469,7 @@ exports.createOrder = async (req, res) => {
 			subtotal: subtotal,
 
 			delivery: delivery,
+			fees: fees,
 			total: total,
 			paymentMethod,
 			shelfNumber,
@@ -521,8 +527,21 @@ exports.createOrder = async (req, res) => {
 					});
 				}
 
+				if (populatedOrder.fees > 0) {
+					lineItems.push({
+						price_data: {
+							currency: "eur",
+							product_data: {
+								name: "Processing Fee",
+							},
+							unit_amount: Math.round(populatedOrder.fees * 100),
+						},
+						quantity: 1,
+					});
+				}
+
 				const session = await stripe.checkout.sessions.create({
-					payment_method_types: ["card"],
+					payment_method_types: ["card", "paypal"],
 					line_items: lineItems,
 					mode: "payment",
 					success_url: `${
@@ -607,6 +626,9 @@ exports.createOrder = async (req, res) => {
 					<h3>Order Summary</h3>
 					<p><strong>Subtotal:</strong> €${populatedOrder.subtotal.toFixed(2)}</p>
 					<p><strong>Delivery Fee:</strong> €${populatedOrder.delivery.toFixed(2)}</p>
+					<p><strong>Processing Fee:</strong> €${(populatedOrder.fees || 0).toFixed(
+						2
+					)}</p>
 					<p><strong>Total:</strong> €${populatedOrder.total.toFixed(2)}</p>
 					
 					${
@@ -671,6 +693,9 @@ exports.createOrder = async (req, res) => {
 					<h3>Bestellübersicht</h3>
 					<p><strong>Zwischensumme:</strong> €${populatedOrder.subtotal.toFixed(2)}</p>
 					<p><strong>Liefergebühr:</strong> €${populatedOrder.delivery.toFixed(2)}</p>
+					<p><strong>Bearbeitungsgebühr:</strong> €${(populatedOrder.fees || 0).toFixed(
+						2
+					)}</p>
 					<p><strong>Gesamt:</strong> €${populatedOrder.total.toFixed(2)}</p>
 					
 					${
@@ -969,14 +994,24 @@ exports.cancelOrder = async (req, res) => {
 						order.paymentLinkId
 					);
 					if (session.payment_intent) {
+						// Refund subtotal + delivery (excluding processing fees)
+						const refundAmount = Math.round(
+							(order.subtotal + (order.delivery || 0)) * 100
+						);
+
 						await stripe.refunds.create({
 							payment_intent: session.payment_intent,
+							amount: refundAmount,
 							reason: "requested_by_customer",
 						});
-						console.log("✅ Refund processed successfully");
+						console.log(
+							`✅ Refund processed successfully: €${(
+								order.subtotal + (order.delivery || 0)
+							).toFixed(2)}`
+						);
 						order.notes = `${
 							order.notes || ""
-						}\nRefund processed via Stripe.`.trim();
+						}\nRefund processed via Stripe (excluding processing fees).`.trim();
 					}
 				} else {
 					console.log("Deactivating unpaid payment link...");
