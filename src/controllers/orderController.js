@@ -361,6 +361,11 @@ exports.getOrder = async (req, res) => {
 // @route   POST /api/orders
 // @access  Private
 exports.createOrder = async (req, res) => {
+	// return res.status(400).json({
+	// 	success: false,
+	// 	message: "This Feature is not available until Opening in 7 Dec ",
+	// });
+
 	try {
 		const {
 			customer,
@@ -474,7 +479,7 @@ exports.createOrder = async (req, res) => {
 			paymentMethod,
 			shelfNumber,
 			notes,
-			status: "confirmed",
+			status: "pending",
 			createdBy: req.user.id,
 		});
 
@@ -499,8 +504,7 @@ exports.createOrder = async (req, res) => {
 			);
 
 		// Set default payment URL
-		let paymentUrl = `https://frischlyshop-server.onrender.com/payment/success-pod.html?order=${populatedOrder._id}`;
-
+		let paymentUrl;
 		if (paymentMethod === "online" || paymentMethod === "card") {
 			try {
 				const lineItems = populatedOrder.items.map((item) => ({
@@ -1009,6 +1013,69 @@ exports.cancelOrder = async (req, res) => {
 								order.subtotal + (order.delivery || 0)
 							).toFixed(2)}`
 						);
+
+						// Send refund email
+						try {
+							const emailSubject = `Refund Processed - Order #${order._id}`;
+							const refundAmountEur = (
+								order.subtotal + (order.delivery || 0)
+							).toFixed(2);
+							const emailHtml = `
+								<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+									<h2 style="color: #333; text-align: center;">Refund Processed</h2>
+									<p>Dear ${order.customer.name},</p>
+									<p>Your order #${
+										order._id
+									} has been cancelled and a refund has been processed.</p>
+									
+									<h3>Refund Details</h3>
+									<p><strong>Refund Amount:</strong> €${refundAmountEur}</p>
+									<p><strong>Original Order Total:</strong> €${order.total.toFixed(2)}</p>
+									<p><strong>Processing Fees (Non-refundable):</strong> €${(
+										order.fees || 0
+									).toFixed(2)}</p>
+									
+									<p>Please note that the refund amount does not include the processing fees as they are non-refundable.</p>
+									<p>The refund should appear on your statement within 5-10 business days.</p>
+									
+									<p>If you have any questions, please contact us at info@frischlyshop.com.</p>
+									
+									<p>Best regards,<br>The Frischly Team</p>
+
+									<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+									
+									<h2 style="color: #333; text-align: center;">Rückerstattung bearbeitet</h2>
+									<p>Liebe/r ${order.customer.name},</p>
+									<p>Ihre Bestellung #${
+										order._id
+									} wurde storniert und eine Rückerstattung wurde veranlasst.</p>
+									
+									<h3>Details zur Rückerstattung</h3>
+									<p><strong>Rückerstattungsbetrag:</strong> €${refundAmountEur}</p>
+									<p><strong>Ursprünglicher Bestellwert:</strong> €${order.total.toFixed(2)}</p>
+									<p><strong>Bearbeitungsgebühren (nicht erstattungsfähig):</strong> €${(
+										order.fees || 0
+									).toFixed(2)}</p>
+									
+									<p>Bitte beachten Sie, dass der Rückerstattungsbetrag keine Bearbeitungsgebühren enthält, da diese nicht erstattungsfähig sind.</p>
+									<p>Die Rückerstattung sollte innerhalb von 5-10 Werktagen auf Ihrem Kontoauszug erscheinen.</p>
+									
+									<p>Bei Fragen kontaktieren Sie uns bitte unter info@frischlyshop.com.</p>
+									
+									<p>Mit freundlichen Grüßen,<br>Das Frischly Team</p>
+								</div>
+							`;
+
+							await sendEmail({
+								to: order.customer.email,
+								subject: emailSubject,
+								html: emailHtml,
+							});
+							console.log(`✅ Refund email sent to ${order.customer.email}`);
+						} catch (emailError) {
+							console.error("Error sending refund email:", emailError);
+						}
+
 						order.notes = `${
 							order.notes || ""
 						}\nRefund processed via Stripe (excluding processing fees).`.trim();
@@ -1048,6 +1115,7 @@ exports.cancelOrder = async (req, res) => {
 		// Step 7: Update order status to cancelled
 		console.log("Step 7: Updating order status to cancelled...");
 		order.status = "cancelled";
+		order.paymentStatus = "refunded";
 		order.notes = reason
 			? `${order.notes || ""}\nCancellation reason: ${reason}`.trim()
 			: order.notes;
@@ -1389,6 +1457,7 @@ exports.verifyStripePayment = async (req, res) => {
 
 			if (order.paymentStatus !== "paid") {
 				order.paymentStatus = "paid";
+				order.status = "confirmed"; // Update order status upon payment
 				order.paymentMethod = "online"; // Ensure it's marked as online
 				await order.save();
 			}
