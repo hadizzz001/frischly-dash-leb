@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Riders Location - FRISCHLY Server</title>
+		<link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+		<link rel="stylesheet" href="css/dashboard.css" />
+		<style>
+			body,
+			html {
+				height: 100%;
+				margin: 0;
+				padding: 0;
+				overflow-x: hidden;
+			}
+			.container {
+				max-width: none !important;
+				width: 100% !important;
+				margin: 0 !important;
+				border-radius: 0 !important;
+				box-shadow: none !important;
+				min-height: 100vh;
+				display: flex;
+				flex-direction: column;
+				background: #f0f2f5;
+			}
+			.riders-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+				gap: 10px;
+				padding: 10px;
+				flex: 1;
+				align-content: start;
+			}
+			.rider-card {
+				background: white;
+				border-radius: 8px;
+				box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+				overflow: hidden;
+				display: flex;
+				flex-direction: column;
+				height: 400px; /* Fixed height for uniformity */
+			}
+			.rider-card:hover {
+				box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+				transform: translateY(-2px);
+				transition: all 0.3s ease;
+			}
+			.rider-header {
+				padding: 10px 15px;
+				background: #fff;
+				border-bottom: 1px solid #eee;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				z-index: 10;
+			}
+			.rider-name {
+				font-weight: 600;
+				font-size: 1em;
+				color: #333;
+			}
+			.rider-status {
+				padding: 4px 8px;
+				border-radius: 12px;
+				font-size: 0.75em;
+				font-weight: 600;
+				text-transform: uppercase;
+			}
+			.status-available {
+				background: #d4edda;
+				color: #155724;
+			}
+			.status-busy {
+				background: #fff3cd;
+				color: #856404;
+			}
+			.status-offline {
+				background: #f8d7da;
+				color: #721c24;
+			}
+
+			.map-container {
+				flex: 1;
+				width: 100%;
+				background: #eee;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				position: relative;
+			}
+			.map-container iframe {
+				position: absolute;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 100%;
+			}
+			.rider-info {
+				padding: 10px 15px;
+				font-size: 0.85em;
+				color: #666;
+				background: #fff;
+				border-top: 1px solid #eee;
+				display: flex;
+				justify-content: space-between;
+			}
+			.no-location {
+				color: #666;
+				font-style: italic;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 10px;
+			}
+			.back-btn {
+				padding: 8px 16px;
+				background: #333;
+				color: white;
+				border: none;
+				border-radius: 4px;
+				cursor: pointer;
+				text-decoration: none;
+				font-size: 0.9em;
+				transition: background 0.2s;
+			}
+			.back-btn:hover {
+				background: #000;
+			}
+			.page-header {
+				background: white;
+				padding: 15px 20px;
+				box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				z-index: 20;
+			}
+			.header-actions {
+				display: flex;
+				gap: 10px;
+			}
+			.fullscreen-btn {
+				padding: 8px 16px;
+				background: #007bff;
+				color: white;
+				border: none;
+				border-radius: 4px;
+				cursor: pointer;
+				font-size: 0.9em;
+				transition: background 0.2s;
+			}
+			.fullscreen-btn:hover {
+				background: #0056b3;
+			}
+			h1 {
+				margin: 0;
+				font-size: 1.2em;
+				color: #333;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<div class="page-header">
+				<h1>Riders Live Location</h1>
+				<div class="header-actions">
+					<button
+						onclick="toggleFullscreen()"
+						class="fullscreen-btn"
+						id="fullscreenBtn"
+					>
+						⛶ Fullscreen
+					</button>
+					<a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
+				</div>
+			</div>
+
+			<div id="loading" style="text-align: center; padding: 40px">
+				<div class="spinner"></div>
+				<p>Loading riders locations...</p>
+			</div>
+
+			<div id="riders-grid" class="riders-grid">
+				<!-- Riders will be loaded here -->
+			</div>
+		</div>
+
+		<script src="js/config.js"></script>
+		<script>
+			let currentToken = localStorage.getItem("authToken");
+
+			if (!currentToken) {
+				window.location.href = "signin.html";
+			}
+
+			async function loadRidersLocations() {
+				try {
+					const response = await fetch(`${API_BASE_URL}/riders`, {
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+
+					if (response.ok) {
+						const data = await response.json();
+						const riders = data.data.riders || [];
+						displayRiders(riders);
+					} else {
+						console.error("Failed to load riders");
+						document.getElementById("loading").innerHTML =
+							'<p style="color: red">Failed to load riders data</p>';
+					}
+				} catch (error) {
+					console.error("Error:", error);
+					document.getElementById("loading").innerHTML =
+						'<p style="color: red">Error loading data</p>';
+				}
+			}
+
+			function displayRiders(riders) {
+				const grid = document.getElementById("riders-grid");
+				document.getElementById("loading").style.display = "none";
+				grid.innerHTML = "";
+
+				if (riders.length === 0) {
+					grid.innerHTML =
+						'<p style="text-align: center; grid-column: 1/-1;">No riders found.</p>';
+					return;
+				}
+
+				riders.forEach((rider) => {
+					const card = document.createElement("div");
+					card.className = "rider-card";
+
+					const statusClass = `status-${rider.status || "offline"}`;
+					const hasLocation =
+						rider.currentLocation &&
+						rider.currentLocation.latitude &&
+						rider.currentLocation.longitude;
+
+					let mapContent = "";
+					if (hasLocation) {
+						const lat = rider.currentLocation.latitude;
+						const lng = rider.currentLocation.longitude;
+						mapContent = `
+                        <iframe
+                            width="100%"
+                            height="100%"
+                            style="border:0"
+                            loading="lazy"
+                            allowfullscreen
+                            src="https://maps.google.com/maps?q=${lat},${lng}&t=&z=14&ie=UTF8&iwloc=B&output=embed">
+                        </iframe>
+                    `;
+					} else {
+						mapContent =
+							'<div class="no-location">Location data not available</div>';
+					}
+
+					card.innerHTML = `
+                    <div class="rider-header">
+                        <span class="rider-name">${
+													rider.userInfo
+														? rider.userInfo.name
+														: rider.user
+														? rider.user.name
+														: "Unknown Rider"
+												}</span>
+                        <span class="rider-status ${statusClass}">${
+						rider.status || "Unknown"
+					}</span>
+                    </div>
+                    <div class="map-container">
+                        ${mapContent}
+                    </div>
+                    <div class="rider-info">
+                        <span>🚗 ${rider.vehicleType || "N/A"}</span>
+                        <span>📞 ${
+													rider.userInfo
+														? rider.userInfo.phoneNumber
+														: rider.user
+														? rider.user.phoneNumber
+														: "N/A"
+												}</span>
+                    </div>
+                `;
+
+					grid.appendChild(card);
+				});
+			}
+
+			// Load initially
+			loadRidersLocations();
+
+			// Refresh every 30 seconds
+			setInterval(loadRidersLocations, 30000);
+
+			function toggleFullscreen() {
+				if (!document.fullscreenElement) {
+					document.documentElement.requestFullscreen().catch((err) => {
+						console.error(
+							`Error attempting to enable fullscreen: ${err.message}`
+						);
+					});
+				} else {
+					if (document.exitFullscreen) {
+						document.exitFullscreen();
+					}
+				}
+			}
+
+			// Update button text on fullscreen change
+			document.addEventListener("fullscreenchange", () => {
+				const btn = document.getElementById("fullscreenBtn");
+				if (document.fullscreenElement) {
+					btn.textContent = "⛶ Exit Fullscreen";
+				} else {
+					btn.textContent = "⛶ Fullscreen";
+				}
+			});
+		</script>
+	</body>
+</html>
