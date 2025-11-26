@@ -1121,7 +1121,7 @@ exports.cancelOrder = async (req, res) => {
 		// Step 7: Update order status to cancelled
 		console.log("Step 7: Updating order status to cancelled...");
 		order.status = "cancelled";
-		order.paymentStatus = "refunded";
+
 		order.notes = reason
 			? `${order.notes || ""}\nCancellation reason: ${reason}`.trim()
 			: order.notes;
