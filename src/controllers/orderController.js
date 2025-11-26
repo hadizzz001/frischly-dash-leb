@@ -1013,7 +1013,8 @@ exports.cancelOrder = async (req, res) => {
 								order.subtotal + (order.delivery || 0)
 							).toFixed(2)}`
 						);
-
+						order.paymentStatus = "refunded";
+						order.status = "cancelled";
 						// Send refund email
 						try {
 							const emailSubject = `Refund Processed - Order #${order._id}`;
