@@ -1085,6 +1085,12 @@ exports.cancelOrder = async (req, res) => {
 					try {
 						await stripe.checkout.sessions.expire(order.paymentLinkId);
 						console.log("✅ Payment link deactivated");
+						order.status = "cancelled";
+						order.paymentStatus = "cancelled";
+						order.notes = `${
+							order.notes || ""
+						}\nPayment link expired upon order cancellation.`.trim();
+						await order.save();
 					} catch (err) {
 						// Ignore error if session is already expired or invalid
 						console.log(`⚠️ Could not expire session: ${err.message}`);
@@ -1372,7 +1378,7 @@ exports.updateOrderStatus = async (req, res) => {
 		// Set delivery date if status is delivered
 		if (status === "delivered" && previousStatus !== "delivered") {
 			order.deliveredAt = new Date();
-			order.paymentStatus = "paid";
+			//order.paymentStatus = "paid";
 		}
 
 		await order.save();
