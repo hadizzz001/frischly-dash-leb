@@ -366,7 +366,7 @@ exports.createOrder = async (req, res) => {
 		// Check global settings
 		const settings = await Setting.getSettings();
 		if (settings.isMaintenanceMode || settings.areOrdersDisabled) {
-			return res.status(503).json({
+			return res.status(400).json({
 				success: false,
 				message:
 					settings.maintenanceMessage ||
