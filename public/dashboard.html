@@ -1432,6 +1432,44 @@
 									</p>
 								</div>
 							</div>
+							
+							<div class="settings-card">
+								<h3>🛑 System Status</h3>
+								<div class="setting-item">
+									<label>Maintenance Mode</label>
+									<div class="setting-actions">
+										<label class="switch">
+											<input type="checkbox" id="maintenance-mode-toggle" onchange="toggleMaintenanceMode()">
+											<span class="slider round"></span>
+										</label>
+									</div>
+									<p class="setting-description">
+										Enable maintenance mode to disable all user operations.
+									</p>
+								</div>
+								<div class="setting-item">
+									<label>Disable Order Creation</label>
+									<div class="setting-actions">
+										<label class="switch">
+											<input type="checkbox" id="disable-orders-toggle" onchange="toggleOrderCreation()">
+											<span class="slider round"></span>
+										</label>
+									</div>
+									<p class="setting-description">
+										Prevent users from creating new orders while keeping the site accessible.
+									</p>
+								</div>
+								<div class="setting-item">
+									<label>Maintenance Message</label>
+									<div class="setting-actions" style="display: flex; gap: 10px;">
+										<input type="text" id="maintenance-message-input" class="form-control" placeholder="Enter message to display to users" style="flex: 1;">
+										<button class="btn btn-primary" onclick="saveMaintenanceMessage()">Save</button>
+									</div>
+									<p class="setting-description">
+										Message displayed to users when maintenance mode is active or orders are disabled.
+									</p>
+								</div>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -3386,6 +3424,7 @@
 					case "settings":
 						// Load saved language preference
 						loadSavedLanguage();
+						loadSettings();
 						break;
 				}
 			}
@@ -12939,6 +12978,74 @@
 				} catch (error) {
 					console.error("Error changing language:", error);
 					showMessage(langTranslations["language-change-error"], "error");
+				}
+			}
+
+			async function loadSettings() {
+				try {
+					const response = await authenticatedFetch(`${API_BASE_URL}/admin/settings`);
+					if (!response.ok) throw new Error('Failed to load settings');
+					const data = await response.json();
+					if (data.success) {
+						document.getElementById('maintenance-mode-toggle').checked = data.data.isMaintenanceMode;
+						document.getElementById('disable-orders-toggle').checked = data.data.areOrdersDisabled;
+						document.getElementById('maintenance-message-input').value = data.data.maintenanceMessage || '';
+					}
+				} catch (error) {
+					console.error('Error loading settings:', error);
+					showMessage('Error loading settings', 'error');
+				}
+			}
+
+			async function toggleMaintenanceMode() {
+				const isChecked = document.getElementById('maintenance-mode-toggle').checked;
+				try {
+					const response = await authenticatedFetch(`${API_BASE_URL}/admin/settings`, {
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ isMaintenanceMode: isChecked })
+					});
+					if (!response.ok) throw new Error('Failed to update maintenance mode');
+					showMessage(`Maintenance mode ${isChecked ? 'enabled' : 'disabled'}`, 'success');
+				} catch (error) {
+					console.error('Error updating maintenance mode:', error);
+					showMessage('Error updating maintenance mode', 'error');
+					// Revert toggle
+					document.getElementById('maintenance-mode-toggle').checked = !isChecked;
+				}
+			}
+
+			async function toggleOrderCreation() {
+				const isChecked = document.getElementById('disable-orders-toggle').checked;
+				try {
+					const response = await authenticatedFetch(`${API_BASE_URL}/admin/settings`, {
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ areOrdersDisabled: isChecked })
+					});
+					if (!response.ok) throw new Error('Failed to update order creation status');
+					showMessage(`Order creation ${isChecked ? 'disabled' : 'enabled'}`, 'success');
+				} catch (error) {
+					console.error('Error updating order creation status:', error);
+					showMessage('Error updating order creation status', 'error');
+					// Revert toggle
+					document.getElementById('disable-orders-toggle').checked = !isChecked;
+				}
+			}
+
+			async function saveMaintenanceMessage() {
+				const message = document.getElementById('maintenance-message-input').value;
+				try {
+					const response = await authenticatedFetch(`${API_BASE_URL}/admin/settings`, {
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ maintenanceMessage: message })
+					});
+					if (!response.ok) throw new Error('Failed to update message');
+					showMessage('Maintenance message updated', 'success');
+				} catch (error) {
+					console.error('Error updating message:', error);
+					showMessage('Error updating message', 'error');
 				}
 			}
 

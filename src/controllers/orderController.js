@@ -4,6 +4,7 @@ const Rider = require("../models/Rider");
 const mongoose = require("mongoose");
 const Zone = require("../models/Zone");
 const User = require("../models/User");
+const Setting = require("../models/Setting");
 const sendEmail = require("../utils/sendEmail");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
@@ -361,12 +362,16 @@ exports.getOrder = async (req, res) => {
 // @route   POST /api/orders
 // @access  Private
 exports.createOrder = async (req, res) => {
-	// return res.status(400).json({
-	// 	success: false,
-	// 	message: "This Feature is not available until Opening in 7 Dec ",
-	// });
-
 	try {
+		// Check global settings
+		const settings = await Setting.getSettings();
+		if (settings.isMaintenanceMode || settings.areOrdersDisabled) {
+			return res.status(503).json({
+				success: false,
+				message: settings.maintenanceMessage || "Order creation is currently disabled."
+			});
+		}
+
 		const {
 			customer,
 			items,
@@ -1010,7 +1015,7 @@ exports.cancelOrder = async (req, res) => {
 						// If order is OnTheWay, do not refund delivery fee
 						let refundValue = order.subtotal;
 						if (order.status !== "OnTheWay") {
-							refundValue += (order.delivery || 0);
+							refundValue += order.delivery || 0;
 						}
 
 						const refundAmount = Math.round(refundValue * 100);
