@@ -464,9 +464,17 @@ exports.createOrder = async (req, res) => {
 		// Calculate processing fee: 2.9% + 0.30
 		const processingFee = (subtotal + delivery) * 0.029 + 0.3;
 		// Round to 2 decimal places
-		const fees = Math.round(processingFee * 100) / 100;
+		//const fees = Math.round(processingFee * 100) / 100;
+		const fees = 0;
 
 		const total = subtotal + delivery + fees;
+
+		if (total < 15) {
+			return res.status(400).json({
+				success: false,
+				message: "Minimum order amount is €15",
+			});
+		}
 
 		const order = new Order({
 			customer: dbCustomer,
@@ -974,13 +982,13 @@ exports.cancelOrder = async (req, res) => {
 
 		// Step 5: Check if order can be cancelled
 		console.log("Step 5: Checking if order can be cancelled...");
-		if (order.status === "delivered" || order.status === "OnTheWay") {
+		if (order.status === "delivered") {
 			console.log(
 				`❌ Step 5: Cannot cancel order with status '${order.status}'`
 			);
 			return res.status(400).json({
 				success: false,
-				message: "Cannot cancel delivered or on-the-way order",
+				message: "Cannot cancel delivered order",
 			});
 		}
 		console.log("✅ Step 5: Order can be cancelled");
@@ -999,9 +1007,13 @@ exports.cancelOrder = async (req, res) => {
 					);
 					if (session.payment_intent) {
 						// Refund subtotal + delivery (excluding processing fees)
-						const refundAmount = Math.round(
-							(order.subtotal + (order.delivery || 0)) * 100
-						);
+						// If order is OnTheWay, do not refund delivery fee
+						let refundValue = order.subtotal;
+						if (order.status !== "OnTheWay") {
+							refundValue += (order.delivery || 0);
+						}
+
+						const refundAmount = Math.round(refundValue * 100);
 
 						await stripe.refunds.create({
 							payment_intent: session.payment_intent,
@@ -1009,18 +1021,14 @@ exports.cancelOrder = async (req, res) => {
 							reason: "requested_by_customer",
 						});
 						console.log(
-							`✅ Refund processed successfully: €${(
-								order.subtotal + (order.delivery || 0)
-							).toFixed(2)}`
+							`✅ Refund processed successfully: €${refundValue.toFixed(2)}`
 						);
 						order.paymentStatus = "refunded";
 						order.status = "cancelled";
 						// Send refund email
 						try {
 							const emailSubject = `Refund Processed - Order #${order._id}`;
-							const refundAmountEur = (
-								order.subtotal + (order.delivery || 0)
-							).toFixed(2);
+							const refundAmountEur = refundValue.toFixed(2);
 							const emailHtml = `
 								<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
 									<h2 style="color: #333; text-align: center;">Refund Processed</h2>
