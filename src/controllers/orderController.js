@@ -368,7 +368,9 @@ exports.createOrder = async (req, res) => {
 		if (settings.isMaintenanceMode || settings.areOrdersDisabled) {
 			return res.status(503).json({
 				success: false,
-				message: settings.maintenanceMessage || "Order creation is currently disabled."
+				message:
+					settings.maintenanceMessage ||
+					"Order creation is currently disabled.",
 			});
 		}
 

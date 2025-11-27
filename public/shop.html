@@ -855,7 +855,7 @@
 			// Check system status on load
 			async function checkSystemStatus() {
 				try {
-					const response = await fetch('/api/settings/public');
+					const response = await fetch("/api/settings/public");
 					const data = await response.json();
 					if (data.success) {
 						if (data.data.isMaintenanceMode) {
@@ -867,26 +867,30 @@
 								</div>
 							`;
 						} else if (data.data.areOrdersDisabled) {
-							const checkoutBtn = document.getElementById('checkout-btn');
+							const checkoutBtn = document.getElementById("checkout-btn");
 							if (checkoutBtn) {
 								checkoutBtn.disabled = true;
-								checkoutBtn.textContent = 'Ordering Disabled';
+								checkoutBtn.textContent = "Ordering Disabled";
 								checkoutBtn.title = data.data.maintenanceMessage;
-								checkoutBtn.style.backgroundColor = '#ccc';
-								checkoutBtn.style.cursor = 'not-allowed';
+								checkoutBtn.style.backgroundColor = "#ccc";
+								checkoutBtn.style.cursor = "not-allowed";
 							}
 							// Also show a banner
-							const banner = document.createElement('div');
-							banner.style.cssText = 'background: #ffc107; color: #000; text-align: center; padding: 10px; position: fixed; top: 0; left: 0; right: 0; z-index: 1000; font-weight: bold;';
-							banner.textContent = '⚠️ ' + (data.data.maintenanceMessage || 'Ordering is currently disabled.');
+							const banner = document.createElement("div");
+							banner.style.cssText =
+								"background: #ffc107; color: #000; text-align: center; padding: 10px; position: fixed; top: 0; left: 0; right: 0; z-index: 1000; font-weight: bold;";
+							banner.textContent =
+								"⚠️ " +
+								(data.data.maintenanceMessage ||
+									"Ordering is currently disabled.");
 							document.body.prepend(banner);
 							// Adjust header position if needed
-							const header = document.querySelector('.header');
-							if (header) header.style.top = '40px';
+							const header = document.querySelector(".header");
+							if (header) header.style.top = "40px";
 						}
 					}
 				} catch (error) {
-					console.error('Error checking system status:', error);
+					console.error("Error checking system status:", error);
 				}
 			}
 
