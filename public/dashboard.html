@@ -227,6 +227,12 @@
 					</a>
 				</li>
 				<li class="menu-item">
+					<a href="#" onclick="showSection('statistics')" id="menu-statistics">
+						<span class="menu-icon">📊</span>
+						<span class="menu-text">Sales Statistics</span>
+					</a>
+				</li>
+				<li class="menu-item">
 					<a href="#" onclick="showSection('riders')" id="menu-riders">
 						<span class="menu-icon">🏍️</span>
 						<span class="menu-text">Riders Management</span>
@@ -943,6 +949,12 @@
 						>
 							📋 Staff Manage Orders
 						</button>
+						<button
+							class="btn btn-primary"
+							onclick="showSection('statistics')"
+						>
+							📊 Sales Statistics
+						</button>
 					</div>
 
 						<div class="table-header">
@@ -1040,6 +1052,147 @@
 									</select>
 									<span>per page</span>
 								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Sales Statistics Section -->
+				<div id="statistics-section" class="content-section">
+					<div class="section-header">
+						<h2>📊 Sales Statistics</h2>
+						<p>Analyze product sales performance and trends</p>
+					</div>
+
+					<!-- Statistics Summary Cards -->
+					<div class="stats-grid" id="sales-summary-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+						<div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px;">
+							<div class="stat-icon" style="font-size: 2em;">💰</div>
+							<div class="stat-info">
+								<div class="stat-value" id="stats-total-revenue" style="font-size: 1.8em; font-weight: bold;">€0.00</div>
+								<div class="stat-label" style="opacity: 0.9;">Total Revenue</div>
+							</div>
+						</div>
+						<div class="stat-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 20px; border-radius: 12px;">
+							<div class="stat-icon" style="font-size: 2em;">📦</div>
+							<div class="stat-info">
+								<div class="stat-value" id="stats-total-quantity" style="font-size: 1.8em; font-weight: bold;">0</div>
+								<div class="stat-label" style="opacity: 0.9;">Items Sold</div>
+							</div>
+						</div>
+						<div class="stat-card" style="background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%); color: white; padding: 20px; border-radius: 12px;">
+							<div class="stat-icon" style="font-size: 2em;">🛒</div>
+							<div class="stat-info">
+								<div class="stat-value" id="stats-total-orders" style="font-size: 1.8em; font-weight: bold;">0</div>
+								<div class="stat-label" style="opacity: 0.9;">Total Orders</div>
+							</div>
+						</div>
+						<div class="stat-card" style="background: linear-gradient(135deg, #4776E6 0%, #8E54E9 100%); color: white; padding: 20px; border-radius: 12px;">
+							<div class="stat-icon" style="font-size: 2em;">🏷️</div>
+							<div class="stat-info">
+								<div class="stat-value" id="stats-unique-products" style="font-size: 1.8em; font-weight: bold;">0</div>
+								<div class="stat-label" style="opacity: 0.9;">Products Sold</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Time Filter Section -->
+					<div class="filter-section" style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+						<h4 style="margin-bottom: 15px; color: #333;">🕐 Time Period Filter</h4>
+						<div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
+							<div class="filter-group">
+								<label for="stats-time-range" style="display: block; margin-bottom: 5px; font-weight: 500;">Quick Select:</label>
+								<select id="stats-time-range" class="form-control" style="padding: 10px 15px; border-radius: 8px; border: 1px solid #ddd; min-width: 150px;" onchange="handleTimeRangeChange()">
+									<option value="week">Last Week</option>
+									<option value="month" selected>Last Month</option>
+									<option value="year">Last Year</option>
+									<option value="custom">Custom Range</option>
+								</select>
+							</div>
+							<div class="filter-group" id="custom-date-range" style="display: none;">
+								<label style="display: block; margin-bottom: 5px; font-weight: 500;">Date From:</label>
+								<input type="date" id="stats-date-from" class="form-control" style="padding: 10px 15px; border-radius: 8px; border: 1px solid #ddd;">
+							</div>
+							<div class="filter-group" id="custom-date-to-group" style="display: none;">
+								<label style="display: block; margin-bottom: 5px; font-weight: 500;">Date To:</label>
+								<input type="date" id="stats-date-to" class="form-control" style="padding: 10px 15px; border-radius: 8px; border: 1px solid #ddd;">
+							</div>
+							<div class="filter-group">
+								<label for="stats-sort-by" style="display: block; margin-bottom: 5px; font-weight: 500;">Sort By:</label>
+								<select id="stats-sort-by" class="form-control" style="padding: 10px 15px; border-radius: 8px; border: 1px solid #ddd; min-width: 150px;">
+									<option value="totalQuantitySold-desc">Quantity (High to Low)</option>
+									<option value="totalQuantitySold-asc">Quantity (Low to High)</option>
+									<option value="totalRevenue-desc">Revenue (High to Low)</option>
+									<option value="totalRevenue-asc">Revenue (Low to High)</option>
+									<option value="orderCount-desc">Orders (High to Low)</option>
+									<option value="orderCount-asc">Orders (Low to High)</option>
+									<option value="productName-asc">Product Name (A-Z)</option>
+									<option value="productName-desc">Product Name (Z-A)</option>
+								</select>
+							</div>
+							<button class="btn btn-primary" onclick="loadProductSalesStats(1)" style="padding: 10px 20px; border-radius: 8px;">
+								🔍 Apply Filter
+							</button>
+							<button class="btn btn-secondary" onclick="exportSalesStatistics()" style="padding: 10px 20px; border-radius: 8px;">
+								📥 Export to Excel
+							</button>
+						</div>
+					</div>
+
+					<!-- Sales Statistics Table -->
+					<div class="table-container" style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+						<div class="table-header" style="padding: 15px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+							<h3 style="margin: 0;">🏆 Product Sales Ranking</h3>
+							<span id="sales-stats-count" style="opacity: 0.9;">0 products</span>
+						</div>
+						<div class="table-responsive" style="overflow-x: auto;">
+							<table class="users-table stylish-table" style="width: 100%; border-collapse: collapse;">
+								<thead>
+									<tr style="background: linear-gradient(135deg, #f8f9fa, #e9ecef);">
+										<th style="padding: 15px 20px; text-align: center; font-weight: 600; color: #333; border-bottom: 2px solid #667eea;">Rank</th>
+										<th style="padding: 15px 20px; text-align: left; font-weight: 600; color: #333; border-bottom: 2px solid #667eea;">Product Name</th>
+										<th style="padding: 15px 20px; text-align: center; font-weight: 600; color: #333; border-bottom: 2px solid #667eea;">Barcode</th>
+										<th style="padding: 15px 20px; text-align: center; font-weight: 600; color: #333; border-bottom: 2px solid #667eea;">Qty Sold</th>
+										<th style="padding: 15px 20px; text-align: right; font-weight: 600; color: #333; border-bottom: 2px solid #667eea;">Unit Price</th>
+										<th style="padding: 15px 20px; text-align: right; font-weight: 600; color: #333; border-bottom: 2px solid #667eea;">Total Revenue</th>
+										<th style="padding: 15px 20px; text-align: center; font-weight: 600; color: #333; border-bottom: 2px solid #667eea;">Orders</th>
+										<th style="padding: 15px 20px; text-align: center; font-weight: 600; color: #333; border-bottom: 2px solid #667eea;">Avg/Order</th>
+										<th style="padding: 15px 20px; text-align: center; font-weight: 600; color: #333; border-bottom: 2px solid #667eea;">Last Sale</th>
+										<th style="padding: 15px 20px; text-align: center; font-weight: 600; color: #333; border-bottom: 2px solid #667eea;">Status</th>
+									</tr>
+								</thead>
+								<tbody id="sales-stats-table-body">
+									<tr>
+										<td colspan="10" style="text-align: center; padding: 60px; color: #666;">
+											<div style="font-size: 3em; margin-bottom: 10px;">📊</div>
+											<p>Loading sales statistics...</p>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+
+					<!-- Pagination Controls -->
+					<div class="pagination-container" id="sales-stats-pagination" style="display: flex; justify-content: space-between; align-items: center; padding: 20px; background: #f8f9fa; border-radius: 0 0 12px 12px; margin-top: -1px;">
+						<div class="pagination-info">
+							<span id="sales-stats-pagination-info">Showing 0 of 0 products</span>
+						</div>
+						<div class="pagination-controls" style="display: flex; gap: 5px; align-items: center;">
+							<button class="btn btn-pagination" id="sales-stats-first-btn" onclick="goToSalesStatsPage(1)" title="First page">&laquo;</button>
+							<button class="btn btn-pagination" id="sales-stats-prev-btn" onclick="goToSalesStatsPage(currentSalesStatsPage - 1)" title="Previous page">&lsaquo;</button>
+							<div class="pagination-numbers" id="sales-stats-pagination-numbers" style="display: flex; gap: 5px;"></div>
+							<button class="btn btn-pagination" id="sales-stats-next-btn" onclick="goToSalesStatsPage(currentSalesStatsPage + 1)" title="Next page">&rsaquo;</button>
+							<button class="btn btn-pagination" id="sales-stats-last-btn" onclick="goToSalesStatsPage(totalSalesStatsPages)" title="Last page">&raquo;</button>
+							<div class="page-size-selector" style="display: inline-block; margin-left: 15px;">
+								<label for="sales-stats-page-size">Show:</label>
+								<select id="sales-stats-page-size" onchange="changeSalesStatsPageSize(this.value)" style="padding: 5px 10px; border-radius: 5px; border: 1px solid #ddd;">
+									<option value="10">10</option>
+									<option value="25" selected>25</option>
+									<option value="50">50</option>
+									<option value="100">100</option>
+								</select>
+								<span>per page</span>
 							</div>
 						</div>
 					</div>
@@ -3413,6 +3566,10 @@
 						break;
 					case "orders":
 						startOrdersLiveUpdates();
+						break;
+					case "statistics":
+						// Load product sales statistics
+						loadProductSalesStats(1);
 						break;
 					case "riders":
 						// Default to riders tab, load riders data
@@ -11583,6 +11740,324 @@
 				}
 			}
 
+			// ============================================
+			// PRODUCT SALES STATISTICS FUNCTIONS
+			// ============================================
+
+			let currentSalesStatsPage = 1;
+			let totalSalesStatsPages = 1;
+			let salesStatsPageSize = 25;
+			let allSalesStatsData = [];
+
+			// Handle time range dropdown change
+			function handleTimeRangeChange() {
+				const timeRange = document.getElementById('stats-time-range').value;
+				const customDateRange = document.getElementById('custom-date-range');
+				const customDateToGroup = document.getElementById('custom-date-to-group');
+				
+				if (timeRange === 'custom') {
+					customDateRange.style.display = 'block';
+					customDateToGroup.style.display = 'block';
+					// Set default dates for custom range
+					const today = new Date();
+					const monthAgo = new Date();
+					monthAgo.setMonth(today.getMonth() - 1);
+					document.getElementById('stats-date-from').value = monthAgo.toISOString().split('T')[0];
+					document.getElementById('stats-date-to').value = today.toISOString().split('T')[0];
+				} else {
+					customDateRange.style.display = 'none';
+					customDateToGroup.style.display = 'none';
+				}
+			}
+
+			// Load product sales statistics
+			async function loadProductSalesStats(page = 1) {
+				try {
+					showSectionLoading('statistics', true, 'Loading sales statistics...');
+					
+					const timeRange = document.getElementById('stats-time-range').value;
+					const sortValue = document.getElementById('stats-sort-by').value;
+					const [sortBy, sortOrder] = sortValue.split('-');
+					const pageSize = document.getElementById('sales-stats-page-size').value;
+					
+					let url = `${API_BASE_URL}/orders/sales-stats?page=${page}&limit=${pageSize}&sortBy=${sortBy}&sortOrder=${sortOrder}`;
+					
+					if (timeRange === 'custom') {
+						const dateFrom = document.getElementById('stats-date-from').value;
+						const dateTo = document.getElementById('stats-date-to').value;
+						if (dateFrom) url += `&dateFrom=${dateFrom}`;
+						if (dateTo) url += `&dateTo=${dateTo}`;
+					} else {
+						url += `&timeRange=${timeRange}`;
+					}
+
+					const response = await authenticatedFetch(url);
+					
+					if (!response.ok) {
+						const errorData = await response.json();
+						throw new Error(errorData.message || 'Failed to load sales statistics');
+					}
+
+					const result = await response.json();
+					
+					// Update state
+					currentSalesStatsPage = result.pagination.currentPage;
+					totalSalesStatsPages = result.pagination.totalPages;
+					salesStatsPageSize = result.pagination.limit;
+					allSalesStatsData = result.data;
+					
+					// Display data
+					displayProductSalesStats(result.data, result.pagination);
+					updateSalesSummaryStats(result.summary);
+					updateSalesStatsPagination(result.pagination);
+					
+				} catch (error) {
+					console.error('Error loading sales statistics:', error);
+					showMessage('Error loading sales statistics: ' + error.message, 'error');
+					document.getElementById('sales-stats-table-body').innerHTML = `
+						<tr>
+							<td colspan="10" style="text-align: center; padding: 60px; color: #e74c3c;">
+								<div style="font-size: 3em; margin-bottom: 10px;">❌</div>
+								<p>Failed to load sales statistics</p>
+								<p style="font-size: 0.9em; opacity: 0.7;">${error.message}</p>
+							</td>
+						</tr>
+					`;
+				} finally {
+					showSectionLoading('statistics', false);
+				}
+			}
+
+			// Display product sales statistics in the table
+			function displayProductSalesStats(data, pagination) {
+				const tableBody = document.getElementById('sales-stats-table-body');
+				const countDisplay = document.getElementById('sales-stats-count');
+				
+				if (!data || data.length === 0) {
+					tableBody.innerHTML = `
+						<tr>
+							<td colspan="10" style="text-align: center; padding: 60px; color: #666;">
+								<div style="font-size: 3em; margin-bottom: 10px;">📭</div>
+								<p>No sales data found for the selected period</p>
+								<p style="font-size: 0.9em; opacity: 0.7;">Try adjusting your time filter</p>
+							</td>
+						</tr>
+					`;
+					countDisplay.textContent = '0 products';
+					return;
+				}
+
+				countDisplay.textContent = `${pagination.totalProducts} products`;
+				
+				// Calculate starting rank based on page
+				const startRank = (pagination.currentPage - 1) * pagination.limit + 1;
+				
+				let html = '';
+				data.forEach((item, index) => {
+					const rank = startRank + index;
+					const rankBadge = getRankBadge(rank);
+					const lastSaleDate = item.lastSaleDate ? new Date(item.lastSaleDate).toLocaleDateString() : 'N/A';
+					const statusBadge = item.productIsActive !== false 
+						? '<span style="background: #28a745; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.85em;">Active</span>'
+						: '<span style="background: #dc3545; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.85em;">Inactive</span>';
+					
+					html += `
+						<tr style="transition: all 0.3s ease;">
+							<td style="text-align: center; font-weight: 700; font-size: 1.1em; color: #667eea;">
+								${rankBadge} ${rank}
+							</td>
+							<td style="font-weight: 600; color: #2d3748; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+								${escapeHtml(item.productName)}
+							</td>
+							<td style="text-align: center; font-family: monospace; color: #666;">
+								${item.productBarcode || 'N/A'}
+							</td>
+							<td style="text-align: center;">
+								<span style="background: linear-gradient(135deg, #11998e, #38ef7d); color: white; padding: 6px 14px; border-radius: 20px; font-weight: 600;">
+									${item.totalQuantitySold}
+								</span>
+							</td>
+							<td style="text-align: right; color: #666;">
+								€${item.productPrice ? item.productPrice.toFixed(2) : '0.00'}
+							</td>
+							<td style="text-align: right; font-weight: 700; font-size: 1.05em; color: #e53e3e;">
+								€${item.totalRevenue.toFixed(2)}
+							</td>
+							<td style="text-align: center; color: #4a5568;">
+								${item.orderCount}
+							</td>
+							<td style="text-align: center; color: #718096;">
+								${item.averageQuantityPerOrder}
+							</td>
+							<td style="text-align: center; color: #718096; font-size: 0.9em;">
+								${lastSaleDate}
+							</td>
+							<td style="text-align: center;">
+								${statusBadge}
+							</td>
+						</tr>
+					`;
+				});
+				
+				tableBody.innerHTML = html;
+			}
+
+			// Get rank badge emoji for top 3
+			function getRankBadge(rank) {
+				switch(rank) {
+					case 1: return '🥇';
+					case 2: return '🥈';
+					case 3: return '🥉';
+					default: return '';
+				}
+			}
+
+			// Update sales summary statistics cards
+			function updateSalesSummaryStats(summary) {
+				document.getElementById('stats-total-revenue').textContent = `€${summary.totalRevenue.toFixed(2)}`;
+				document.getElementById('stats-total-quantity').textContent = summary.totalQuantitySold.toLocaleString();
+				document.getElementById('stats-total-orders').textContent = summary.totalOrders.toLocaleString();
+				document.getElementById('stats-unique-products').textContent = summary.uniqueProducts.toLocaleString();
+			}
+
+			// Update pagination controls for sales statistics
+			function updateSalesStatsPagination(pagination) {
+				const container = document.getElementById('sales-stats-pagination-numbers');
+				const infoDisplay = document.getElementById('sales-stats-pagination-info');
+				
+				// Update info text
+				const start = (pagination.currentPage - 1) * pagination.limit + 1;
+				const end = Math.min(pagination.currentPage * pagination.limit, pagination.totalProducts);
+				infoDisplay.textContent = `Showing ${pagination.totalProducts > 0 ? start : 0}-${end} of ${pagination.totalProducts} products`;
+				
+				// Update button states
+				document.getElementById('sales-stats-first-btn').disabled = pagination.currentPage === 1;
+				document.getElementById('sales-stats-prev-btn').disabled = !pagination.hasPrevPage;
+				document.getElementById('sales-stats-next-btn').disabled = !pagination.hasNextPage;
+				document.getElementById('sales-stats-last-btn').disabled = pagination.currentPage === pagination.totalPages;
+				
+				// Generate page numbers
+				let pagesHtml = '';
+				const maxVisiblePages = 5;
+				let startPage = Math.max(1, pagination.currentPage - Math.floor(maxVisiblePages / 2));
+				let endPage = Math.min(pagination.totalPages, startPage + maxVisiblePages - 1);
+				
+				if (endPage - startPage + 1 < maxVisiblePages) {
+					startPage = Math.max(1, endPage - maxVisiblePages + 1);
+				}
+				
+				for (let i = startPage; i <= endPage; i++) {
+					const isActive = i === pagination.currentPage;
+					pagesHtml += `
+						<button 
+							class="btn btn-pagination ${isActive ? 'active' : ''}" 
+							onclick="goToSalesStatsPage(${i})"
+							style="${isActive ? 'background: #667eea; color: white;' : ''}"
+						>
+							${i}
+						</button>
+					`;
+				}
+				
+				container.innerHTML = pagesHtml;
+			}
+
+			// Navigate to a specific page in sales statistics
+			function goToSalesStatsPage(page) {
+				if (page < 1 || page > totalSalesStatsPages) return;
+				loadProductSalesStats(page);
+			}
+
+			// Change page size for sales statistics
+			function changeSalesStatsPageSize(size) {
+				salesStatsPageSize = parseInt(size);
+				loadProductSalesStats(1);
+			}
+
+			// Export sales statistics to Excel
+			async function exportSalesStatistics() {
+				try {
+					showMessage('Preparing export...', 'info');
+					
+					// Get all data without pagination for export
+					const timeRange = document.getElementById('stats-time-range').value;
+					const sortValue = document.getElementById('stats-sort-by').value;
+					const [sortBy, sortOrder] = sortValue.split('-');
+					
+					let url = `${API_BASE_URL}/orders/sales-stats?page=1&limit=10000&sortBy=${sortBy}&sortOrder=${sortOrder}`;
+					
+					if (timeRange === 'custom') {
+						const dateFrom = document.getElementById('stats-date-from').value;
+						const dateTo = document.getElementById('stats-date-to').value;
+						if (dateFrom) url += `&dateFrom=${dateFrom}`;
+						if (dateTo) url += `&dateTo=${dateTo}`;
+					} else {
+						url += `&timeRange=${timeRange}`;
+					}
+
+					const response = await authenticatedFetch(url);
+					
+					if (!response.ok) {
+						throw new Error('Failed to fetch data for export');
+					}
+
+					const result = await response.json();
+					
+					if (!result.data || result.data.length === 0) {
+						showMessage('No data to export', 'warning');
+						return;
+					}
+
+					// Prepare data for Excel
+					const exportData = result.data.map((item, index) => ({
+						'Rank': index + 1,
+						'Product Name': item.productName,
+						'Barcode': item.productBarcode || 'N/A',
+						'Quantity Sold': item.totalQuantitySold,
+						'Unit Price (€)': item.productPrice ? item.productPrice.toFixed(2) : '0.00',
+						'Total Revenue (€)': item.totalRevenue.toFixed(2),
+						'Order Count': item.orderCount,
+						'Avg Qty/Order': item.averageQuantityPerOrder,
+						'First Sale': item.firstSaleDate ? new Date(item.firstSaleDate).toLocaleDateString() : 'N/A',
+						'Last Sale': item.lastSaleDate ? new Date(item.lastSaleDate).toLocaleDateString() : 'N/A',
+						'Status': item.productIsActive !== false ? 'Active' : 'Inactive'
+					}));
+
+					// Create workbook and worksheet
+					const worksheet = XLSX.utils.json_to_sheet(exportData);
+					const workbook = XLSX.utils.book_new();
+					XLSX.utils.book_append_sheet(workbook, worksheet, 'Sales Statistics');
+					
+					// Add summary sheet
+					const summaryData = [
+						{ 'Metric': 'Total Revenue', 'Value': `€${result.summary.totalRevenue.toFixed(2)}` },
+						{ 'Metric': 'Total Items Sold', 'Value': result.summary.totalQuantitySold },
+						{ 'Metric': 'Total Orders', 'Value': result.summary.totalOrders },
+						{ 'Metric': 'Unique Products Sold', 'Value': result.summary.uniqueProducts },
+						{ 'Metric': 'Time Period', 'Value': timeRange === 'custom' ? 
+							`${document.getElementById('stats-date-from').value} to ${document.getElementById('stats-date-to').value}` : 
+							`Last ${timeRange}` },
+						{ 'Metric': 'Export Date', 'Value': new Date().toLocaleString() }
+					];
+					const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+					XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+					
+					// Generate filename with date
+					const filename = `Sales_Statistics_${new Date().toISOString().split('T')[0]}.xlsx`;
+					
+					// Download file
+					XLSX.writeFile(workbook, filename);
+					
+					showMessage('Export completed successfully!', 'success');
+				} catch (error) {
+					console.error('Error exporting sales statistics:', error);
+					showMessage('Failed to export: ' + error.message, 'error');
+				}
+			}
+
+			// ============================================
+			// END PRODUCT SALES STATISTICS FUNCTIONS
+			// ============================================
 
 
 			// Initialize order item listeners when page loads

@@ -1447,6 +1447,199 @@ exports.getOrdersCount = async (req, res) => {
 
 // @desc    Verify Stripe Payment
 // @route   POST /api/orders/verify-payment
+// @desc    Get product sales statistics with time filtering and pagination
+// @route   GET /api/orders/sales-stats
+// @access  Private (Admin, Manager)
+exports.getProductSalesStats = async (req, res) => {
+	try {
+		const {
+			page = 1,
+			limit = 20,
+			dateFrom,
+			dateTo,
+			timeRange, // 'week', 'month', 'year', 'custom'
+			sortBy = "totalQuantitySold",
+			sortOrder = "desc",
+		} = req.query;
+
+		const pageNum = parseInt(page);
+		const limitNum = parseInt(limit);
+		const skip = (pageNum - 1) * limitNum;
+
+		// Build date filter based on timeRange or custom dates
+		let dateFilter = {};
+		const now = new Date();
+
+		if (timeRange === "week") {
+			const weekAgo = new Date(now);
+			weekAgo.setDate(weekAgo.getDate() - 7);
+			dateFilter = { $gte: weekAgo, $lte: now };
+		} else if (timeRange === "month") {
+			const monthAgo = new Date(now);
+			monthAgo.setMonth(monthAgo.getMonth() - 1);
+			dateFilter = { $gte: monthAgo, $lte: now };
+		} else if (timeRange === "year") {
+			const yearAgo = new Date(now);
+			yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+			dateFilter = { $gte: yearAgo, $lte: now };
+		} else if (dateFrom || dateTo) {
+			if (dateFrom) {
+				const fromDate = new Date(dateFrom);
+				if (!isNaN(fromDate.getTime())) {
+					dateFilter.$gte = fromDate;
+				}
+			}
+			if (dateTo) {
+				const toDate = new Date(dateTo);
+				if (!isNaN(toDate.getTime())) {
+					toDate.setHours(23, 59, 59, 999);
+					dateFilter.$lte = toDate;
+				}
+			}
+		}
+
+		// Build match stage for aggregation
+		const matchStage = {
+			isActive: true,
+			status: "delivered", // Include only delivered orders
+		};
+
+		if (Object.keys(dateFilter).length > 0) {
+			matchStage.createdAt = dateFilter;
+		}
+
+		// Aggregation pipeline to get product sales statistics
+		const pipeline = [
+			{ $match: matchStage },
+			{ $unwind: "$items" },
+			{
+				$lookup: {
+					from: "products",
+					localField: "items.product",
+					foreignField: "_id",
+					as: "productDetails",
+				},
+			},
+			{
+				$unwind: { path: "$productDetails", preserveNullAndEmptyArrays: true },
+			},
+			{
+				$group: {
+					_id: "$items.product",
+					productName: { $first: "$productDetails.name" },
+					productBarcode: { $first: "$productDetails.barcode" },
+					productCategory: { $first: "$productDetails.category" },
+					productPrice: { $first: "$productDetails.price" },
+					productPicture: { $first: "$productDetails.picture" },
+					productIsActive: { $first: "$productDetails.isActive" },
+					totalQuantitySold: { $sum: "$items.quantity" },
+					totalRevenue: { $sum: "$items.totalPrice" },
+					orderCount: { $sum: 1 },
+					averageQuantityPerOrder: { $avg: "$items.quantity" },
+					firstSaleDate: { $min: "$createdAt" },
+					lastSaleDate: { $max: "$createdAt" },
+				},
+			},
+			{
+				$project: {
+					_id: 1,
+					productName: { $ifNull: ["$productName", "Unknown Product"] },
+					productBarcode: { $ifNull: ["$productBarcode", "N/A"] },
+					productCategory: 1,
+					productPrice: 1,
+					productPicture: 1,
+					productIsActive: 1,
+					totalQuantitySold: 1,
+					totalRevenue: { $round: ["$totalRevenue", 2] },
+					orderCount: 1,
+					averageQuantityPerOrder: { $round: ["$averageQuantityPerOrder", 2] },
+					averageRevenuePerOrder: {
+						$round: [{ $divide: ["$totalRevenue", "$orderCount"] }, 2],
+					},
+					firstSaleDate: 1,
+					lastSaleDate: 1,
+				},
+			},
+		];
+
+		// Sort stage
+		const sortStage = {};
+		sortStage[sortBy] = sortOrder === "desc" ? -1 : 1;
+		pipeline.push({ $sort: sortStage });
+
+		// Get total count for pagination
+		const countPipeline = [...pipeline];
+		countPipeline.push({ $count: "total" });
+		const countResult = await Order.aggregate(countPipeline);
+		const totalProducts = countResult[0]?.total || 0;
+		const totalPages = Math.ceil(totalProducts / limitNum);
+
+		// Add pagination
+		pipeline.push({ $skip: skip });
+		pipeline.push({ $limit: limitNum });
+
+		const productSales = await Order.aggregate(pipeline);
+
+		// Get summary statistics
+		const summaryPipeline = [
+			{ $match: matchStage },
+			{ $unwind: "$items" },
+			{
+				$group: {
+					_id: null,
+					totalRevenue: { $sum: "$items.totalPrice" },
+					totalQuantitySold: { $sum: "$items.quantity" },
+					totalOrders: { $addToSet: "$_id" },
+					uniqueProducts: { $addToSet: "$items.product" },
+				},
+			},
+			{
+				$project: {
+					_id: 0,
+					totalRevenue: { $round: ["$totalRevenue", 2] },
+					totalQuantitySold: 1,
+					totalOrders: { $size: "$totalOrders" },
+					uniqueProducts: { $size: "$uniqueProducts" },
+				},
+			},
+		];
+
+		const summaryResult = await Order.aggregate(summaryPipeline);
+		const summary = summaryResult[0] || {
+			totalRevenue: 0,
+			totalQuantitySold: 0,
+			totalOrders: 0,
+			uniqueProducts: 0,
+		};
+
+		res.json({
+			success: true,
+			data: productSales,
+			summary,
+			pagination: {
+				currentPage: pageNum,
+				totalPages,
+				totalProducts,
+				hasNextPage: pageNum < totalPages,
+				hasPrevPage: pageNum > 1,
+				limit: limitNum,
+			},
+			filters: {
+				timeRange: timeRange || "custom",
+				dateFrom: dateFilter.$gte || null,
+				dateTo: dateFilter.$lte || null,
+			},
+		});
+	} catch (error) {
+		console.error("Error fetching product sales statistics:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error fetching product sales statistics",
+			error: error.message,
+		});
+	}
+};
+
 // @access  Public
 exports.verifyStripePayment = async (req, res) => {
 	try {

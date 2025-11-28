@@ -8,6 +8,7 @@ const {
 	updateOrderStatus,
 	deleteOrder,
 	getOrderStats,
+	getProductSalesStats,
 	cancelOrder,
 	getOrdersCount,
 	getOrdersForRiders,
@@ -24,6 +25,12 @@ router.post("/verify-payment", verifyStripePayment);
 
 // Protected routes (require authentication)
 router.get("/stats", protect, authorize("admin", "manager"), getOrderStats);
+router.get(
+	"/sales-stats",
+	protect,
+	authorize("admin", "manager"),
+	getProductSalesStats
+);
 router.get(
 	"/count",
 	protect,
