@@ -1066,7 +1066,7 @@
 
 					<!-- Statistics Summary Cards -->
 					<div class="stats-grid" id="sales-summary-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
-						<div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px;">
+						<div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #631ea8 100%); color: white; padding: 20px; border-radius: 12px;">
 							<div class="stat-icon" style="font-size: 2em;">💰</div>
 							<div class="stat-info">
 								<div class="stat-value" id="stats-total-revenue" style="font-size: 1.8em; font-weight: bold;">€0.00</div>
@@ -1084,10 +1084,10 @@
 							<div class="stat-icon" style="font-size: 2em;">🛒</div>
 							<div class="stat-info">
 								<div class="stat-value" id="stats-total-orders" style="font-size: 1.8em; font-weight: bold;">0</div>
-								<div class="stat-label" style="opacity: 0.9;">Total Orders</div>
+								<div class="stat-label" style="opacity: 0.9;">Total Delivered Orders</div>
 							</div>
 						</div>
-						<div class="stat-card" style="background: linear-gradient(135deg, #4776E6 0%, #8E54E9 100%); color: white; padding: 20px; border-radius: 12px;">
+						<div class="stat-card" style="background: linear-gradient(135deg, #0b4fed 0%, #4002ea 100%); color: white; padding: 20px; border-radius: 12px;">
 							<div class="stat-icon" style="font-size: 2em;">🏷️</div>
 							<div class="stat-info">
 								<div class="stat-value" id="stats-unique-products" style="font-size: 1.8em; font-weight: bold;">0</div>
@@ -1187,6 +1187,62 @@
 							<div class="page-size-selector" style="display: inline-block; margin-left: 15px;">
 								<label for="sales-stats-page-size">Show:</label>
 								<select id="sales-stats-page-size" onchange="changeSalesStatsPageSize(this.value)" style="padding: 5px 10px; border-radius: 5px; border: 1px solid #ddd;">
+									<option value="10">10</option>
+									<option value="25" selected>25</option>
+									<option value="50">50</option>
+									<option value="100">100</option>
+								</select>
+								<span>per page</span>
+							</div>
+						</div>
+					</div>
+
+					<!-- Unsold Products Table -->
+					<div class="table-container" style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 30px;">
+						<div class="table-header" style="padding: 15px 20px; background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white;">
+							<h3 style="margin: 0;">📭 Products With No Sales (Selected Period)</h3>
+							<span id="unsold-products-count" style="opacity: 0.9;">0 products</span>
+						</div>
+						<div class="table-responsive" style="overflow-x: auto;">
+							<table class="users-table" style="width: 100%; border-collapse: collapse;">
+								<thead>
+									<tr style="background: linear-gradient(135deg, #f8f9fa, #e9ecef);">
+										<th style="padding: 15px 20px; text-align: center; font-weight: 600; color: #333; border-bottom: 2px solid #e74c3c;">#</th>
+										<th style="padding: 15px 20px; text-align: left; font-weight: 600; color: #333; border-bottom: 2px solid #e74c3c;">Product Name</th>
+										<th style="padding: 15px 20px; text-align: center; font-weight: 600; color: #333; border-bottom: 2px solid #e74c3c;">Barcode</th>
+										<th style="padding: 15px 20px; text-align: center; font-weight: 600; color: #333; border-bottom: 2px solid #e74c3c;">Stock</th>
+										<th style="padding: 15px 20px; text-align: right; font-weight: 600; color: #333; border-bottom: 2px solid #e74c3c;">Price</th>
+										<th style="padding: 15px 20px; text-align: center; font-weight: 600; color: #333; border-bottom: 2px solid #e74c3c;">Category</th>
+										<th style="padding: 15px 20px; text-align: center; font-weight: 600; color: #333; border-bottom: 2px solid #e74c3c;">Created</th>
+										<th style="padding: 15px 20px; text-align: center; font-weight: 600; color: #333; border-bottom: 2px solid #e74c3c;">Status</th>
+									</tr>
+								</thead>
+								<tbody id="unsold-products-table-body">
+									<tr>
+										<td colspan="8" style="text-align: center; padding: 60px; color: #666;">
+											<div style="font-size: 3em; margin-bottom: 10px;">📭</div>
+											<p>Loading unsold products...</p>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+
+					<!-- Unsold Products Pagination Controls -->
+					<div class="pagination-container" id="unsold-products-pagination" style="display: flex; justify-content: space-between; align-items: center; padding: 20px; background: #f8f9fa; border-radius: 0 0 12px 12px; margin-top: -1px;">
+						<div class="pagination-info">
+							<span id="unsold-products-pagination-info">Showing 0 of 0 products</span>
+						</div>
+						<div class="pagination-controls" style="display: flex; gap: 5px; align-items: center;">
+							<button class="btn btn-pagination" id="unsold-products-first-btn" onclick="goToUnsoldProductsPage(1)" title="First page">&laquo;</button>
+							<button class="btn btn-pagination" id="unsold-products-prev-btn" onclick="goToUnsoldProductsPage(currentUnsoldProductsPage - 1)" title="Previous page">&lsaquo;</button>
+							<div class="pagination-numbers" id="unsold-products-pagination-numbers" style="display: flex; gap: 5px;"></div>
+							<button class="btn btn-pagination" id="unsold-products-next-btn" onclick="goToUnsoldProductsPage(currentUnsoldProductsPage + 1)" title="Next page">&rsaquo;</button>
+							<button class="btn btn-pagination" id="unsold-products-last-btn" onclick="goToUnsoldProductsPage(totalUnsoldProductsPages)" title="Last page">&raquo;</button>
+							<div class="page-size-selector" style="display: inline-block; margin-left: 15px;">
+								<label for="unsold-products-page-size">Show:</label>
+								<select id="unsold-products-page-size" onchange="changeUnsoldProductsPageSize(this.value)" style="padding: 5px 10px; border-radius: 5px; border: 1px solid #ddd;">
 									<option value="10">10</option>
 									<option value="25" selected>25</option>
 									<option value="50">50</option>
@@ -11811,6 +11867,9 @@
 					updateSalesSummaryStats(result.summary);
 					updateSalesStatsPagination(result.pagination);
 					
+					// Also load unsold products for the same period
+					loadUnsoldProducts(1);
+					
 				} catch (error) {
 					console.error('Error loading sales statistics:', error);
 					showMessage('Error loading sales statistics: ' + error.message, 'error');
@@ -11973,6 +12032,189 @@
 				salesStatsPageSize = parseInt(size);
 				loadProductSalesStats(1);
 			}
+
+			// ============================================
+			// UNSOLD PRODUCTS FUNCTIONS
+			// ============================================
+
+			let currentUnsoldProductsPage = 1;
+			let totalUnsoldProductsPages = 1;
+			let unsoldProductsPageSize = 25;
+
+			// Load unsold products for the selected time period
+			async function loadUnsoldProducts(page = 1) {
+				try {
+					const timeRange = document.getElementById('stats-time-range').value;
+					const pageSize = document.getElementById('unsold-products-page-size').value;
+					
+					let url = `${API_BASE_URL}/orders/unsold-products?page=${page}&limit=${pageSize}`;
+					
+					if (timeRange === 'custom') {
+						const dateFrom = document.getElementById('stats-date-from').value;
+						const dateTo = document.getElementById('stats-date-to').value;
+						if (dateFrom) url += `&dateFrom=${dateFrom}`;
+						if (dateTo) url += `&dateTo=${dateTo}`;
+					} else {
+						url += `&timeRange=${timeRange}`;
+					}
+
+					const response = await authenticatedFetch(url);
+					
+					if (!response.ok) {
+						const errorData = await response.json();
+						throw new Error(errorData.message || 'Failed to load unsold products');
+					}
+
+					const result = await response.json();
+					
+					// Update state
+					currentUnsoldProductsPage = result.pagination.currentPage;
+					totalUnsoldProductsPages = result.pagination.totalPages;
+					unsoldProductsPageSize = result.pagination.limit;
+					
+					// Display data
+					displayUnsoldProducts(result.data, result.pagination);
+					updateUnsoldProductsPagination(result.pagination);
+					
+				} catch (error) {
+					console.error('Error loading unsold products:', error);
+					document.getElementById('unsold-products-table-body').innerHTML = `
+						<tr>
+							<td colspan="8" style="text-align: center; padding: 60px; color: #e74c3c;">
+								<div style="font-size: 3em; margin-bottom: 10px;">❌</div>
+								<p>Failed to load unsold products</p>
+								<p style="font-size: 0.9em; opacity: 0.7;">${error.message}</p>
+							</td>
+						</tr>
+					`;
+				}
+			}
+
+			// Display unsold products in the table
+			function displayUnsoldProducts(data, pagination) {
+				const tableBody = document.getElementById('unsold-products-table-body');
+				const countDisplay = document.getElementById('unsold-products-count');
+				
+				if (!data || data.length === 0) {
+					tableBody.innerHTML = `
+						<tr>
+							<td colspan="8" style="text-align: center; padding: 60px; color: #27ae60;">
+								<div style="font-size: 3em; margin-bottom: 10px;">🎉</div>
+								<p>Great news! All products have sales in this period</p>
+							</td>
+						</tr>
+					`;
+					countDisplay.textContent = '0 products';
+					return;
+				}
+
+				countDisplay.textContent = `${pagination.totalProducts} products`;
+				
+				// Calculate starting number based on page
+				const startNum = (pagination.currentPage - 1) * pagination.limit + 1;
+				
+				let html = '';
+				data.forEach((item, index) => {
+					const num = startNum + index;
+					const createdDate = item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A';
+					const statusBadge = item.isActive !== false 
+						? '<span style="background: #28a745; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.85em;">Active</span>'
+						: '<span style="background: #dc3545; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.85em;">Inactive</span>';
+					
+					const stockColor = item.stock <= 0 ? '#dc3545' : item.stock < 10 ? '#ffc107' : '#28a745';
+					
+					html += `
+						<tr style="transition: all 0.3s ease; border-bottom: 1px solid #eee;">
+							<td style="text-align: center; font-weight: 600; color: #666; padding: 12px;">
+								${num}
+							</td>
+							<td style="font-weight: 600; color: #2d3748; padding: 12px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+								${escapeHtml(item.name || 'Unknown Product')}
+							</td>
+							<td style="text-align: center; font-family: monospace; color: #666; padding: 12px;">
+								${item.barcode || 'N/A'}
+							</td>
+							<td style="text-align: center; padding: 12px;">
+								<span style="background: ${stockColor}; color: white; padding: 4px 12px; border-radius: 20px; font-weight: 600;">
+									${item.stock !== undefined ? item.stock : 'N/A'}
+								</span>
+							</td>
+							<td style="text-align: right; color: #666; padding: 12px;">
+								€${item.price ? item.price.toFixed(2) : '0.00'}
+							</td>
+							<td style="text-align: center; color: #666; padding: 12px;">
+								${item.categoryName || 'N/A'}
+							</td>
+							<td style="text-align: center; color: #718096; font-size: 0.9em; padding: 12px;">
+								${createdDate}
+							</td>
+							<td style="text-align: center; padding: 12px;">
+								${statusBadge}
+							</td>
+						</tr>
+					`;
+				});
+				
+				tableBody.innerHTML = html;
+			}
+
+			// Update pagination controls for unsold products
+			function updateUnsoldProductsPagination(pagination) {
+				const container = document.getElementById('unsold-products-pagination-numbers');
+				const infoDisplay = document.getElementById('unsold-products-pagination-info');
+				
+				// Update info text
+				const start = (pagination.currentPage - 1) * pagination.limit + 1;
+				const end = Math.min(pagination.currentPage * pagination.limit, pagination.totalProducts);
+				infoDisplay.textContent = `Showing ${pagination.totalProducts > 0 ? start : 0}-${end} of ${pagination.totalProducts} products`;
+				
+				// Update button states
+				document.getElementById('unsold-products-first-btn').disabled = pagination.currentPage === 1;
+				document.getElementById('unsold-products-prev-btn').disabled = !pagination.hasPrevPage;
+				document.getElementById('unsold-products-next-btn').disabled = !pagination.hasNextPage;
+				document.getElementById('unsold-products-last-btn').disabled = pagination.currentPage === pagination.totalPages;
+				
+				// Generate page numbers
+				let pagesHtml = '';
+				const maxVisiblePages = 5;
+				let startPage = Math.max(1, pagination.currentPage - Math.floor(maxVisiblePages / 2));
+				let endPage = Math.min(pagination.totalPages, startPage + maxVisiblePages - 1);
+				
+				if (endPage - startPage + 1 < maxVisiblePages) {
+					startPage = Math.max(1, endPage - maxVisiblePages + 1);
+				}
+				
+				for (let i = startPage; i <= endPage; i++) {
+					const isActive = i === pagination.currentPage;
+					pagesHtml += `
+						<button 
+							class="btn btn-pagination ${isActive ? 'active' : ''}" 
+							onclick="goToUnsoldProductsPage(${i})"
+							style="${isActive ? 'background: #e74c3c; color: white;' : ''}"
+						>
+							${i}
+						</button>
+					`;
+				}
+				
+				container.innerHTML = pagesHtml;
+			}
+
+			// Navigate to a specific page in unsold products
+			function goToUnsoldProductsPage(page) {
+				if (page < 1 || page > totalUnsoldProductsPages) return;
+				loadUnsoldProducts(page);
+			}
+
+			// Change page size for unsold products
+			function changeUnsoldProductsPageSize(size) {
+				unsoldProductsPageSize = parseInt(size);
+				loadUnsoldProducts(1);
+			}
+
+			// ============================================
+			// END UNSOLD PRODUCTS FUNCTIONS
+			// ============================================
 
 			// Export sales statistics to Excel
 			async function exportSalesStatistics() {

@@ -9,6 +9,7 @@ const {
 	deleteOrder,
 	getOrderStats,
 	getProductSalesStats,
+	getUnsoldProducts,
 	cancelOrder,
 	getOrdersCount,
 	getOrdersForRiders,
@@ -30,6 +31,12 @@ router.get(
 	protect,
 	authorize("admin", "manager"),
 	getProductSalesStats
+);
+router.get(
+	"/unsold-products",
+	protect,
+	authorize("admin", "manager"),
+	getUnsoldProducts
 );
 router.get(
 	"/count",

@@ -1640,6 +1640,150 @@ exports.getProductSalesStats = async (req, res) => {
 	}
 };
 
+// @desc    Get products with no sales in the selected time period
+// @route   GET /api/orders/unsold-products
+// @access  Private (Admin, Manager)
+exports.getUnsoldProducts = async (req, res) => {
+	try {
+		const {
+			page = 1,
+			limit = 25,
+			dateFrom,
+			dateTo,
+			timeRange, // 'week', 'month', 'year', 'custom'
+		} = req.query;
+
+		const pageNum = parseInt(page);
+		const limitNum = parseInt(limit);
+		const skip = (pageNum - 1) * limitNum;
+
+		// Build date filter based on timeRange or custom dates
+		let dateFilter = {};
+		const now = new Date();
+
+		if (timeRange === "week") {
+			const weekAgo = new Date(now);
+			weekAgo.setDate(weekAgo.getDate() - 7);
+			dateFilter = { $gte: weekAgo, $lte: now };
+		} else if (timeRange === "month") {
+			const monthAgo = new Date(now);
+			monthAgo.setMonth(monthAgo.getMonth() - 1);
+			dateFilter = { $gte: monthAgo, $lte: now };
+		} else if (timeRange === "year") {
+			const yearAgo = new Date(now);
+			yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+			dateFilter = { $gte: yearAgo, $lte: now };
+		} else if (dateFrom || dateTo) {
+			if (dateFrom) {
+				const fromDate = new Date(dateFrom);
+				if (!isNaN(fromDate.getTime())) {
+					dateFilter.$gte = fromDate;
+				}
+			}
+			if (dateTo) {
+				const toDate = new Date(dateTo);
+				if (!isNaN(toDate.getTime())) {
+					toDate.setHours(23, 59, 59, 999);
+					dateFilter.$lte = toDate;
+				}
+			}
+		}
+
+		// Build match stage for orders in the time period
+		const matchStage = {
+			isActive: true,
+			status: "delivered",
+		};
+
+		if (Object.keys(dateFilter).length > 0) {
+			matchStage.createdAt = dateFilter;
+		}
+
+		// Get all product IDs that have sales in the time period
+		const soldProductsPipeline = [
+			{ $match: matchStage },
+			{ $unwind: "$items" },
+			{
+				$group: {
+					_id: "$items.product",
+				},
+			},
+		];
+
+		const soldProductsResult = await Order.aggregate(soldProductsPipeline);
+		const soldProductIds = soldProductsResult.map((item) => item._id);
+
+		// Get all active products that are NOT in the sold products list
+		const unsoldFilter = {
+			isActive: true,
+		};
+
+		if (soldProductIds.length > 0) {
+			unsoldFilter._id = { $nin: soldProductIds };
+		}
+
+		// Get total count
+		const totalProducts = await Product.countDocuments(unsoldFilter);
+		const totalPages = Math.ceil(totalProducts / limitNum);
+
+		// Get unsold products with pagination
+		const unsoldProducts = await Product.find(unsoldFilter)
+			.populate("subcategory", "name")
+			.select("name barcode stock price isActive createdAt subcategory")
+			.sort({ stock: -1, name: 1 })
+			.skip(skip)
+			.limit(limitNum)
+			.lean();
+
+		// Get category names for the products
+		const Subcategory = require("../models/Subcategory");
+		const Category = require("../models/Category");
+
+		const productsWithCategory = await Promise.all(
+			unsoldProducts.map(async (product) => {
+				let categoryName = "N/A";
+				if (product.subcategory) {
+					const subcategory = await Subcategory.findById(
+						product.subcategory._id || product.subcategory
+					).populate("parentCategory", "name");
+					if (subcategory && subcategory.parentCategory) {
+						categoryName = subcategory.parentCategory.name;
+					}
+				}
+				return {
+					...product,
+					categoryName,
+				};
+			})
+		);
+
+		res.json({
+			success: true,
+			data: productsWithCategory,
+			pagination: {
+				currentPage: pageNum,
+				totalPages,
+				totalProducts,
+				hasNextPage: pageNum < totalPages,
+				hasPrevPage: pageNum > 1,
+				limit: limitNum,
+			},
+			filters: {
+				timeRange: timeRange || "custom",
+				dateFrom: dateFilter.$gte || null,
+				dateTo: dateFilter.$lte || null,
+			},
+		});
+	} catch (error) {
+		console.error("Error fetching unsold products:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error fetching unsold products",
+			error: error.message,
+		});
+	}
+};
+
 // @access  Public
 exports.verifyStripePayment = async (req, res) => {
 	try {
