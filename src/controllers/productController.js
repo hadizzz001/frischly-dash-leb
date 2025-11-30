@@ -147,7 +147,7 @@ exports.getProducts = async (req, res) => {
 			if (!categoryDoc) {
 				return res.status(404).json({
 					success: false,
-					message: `Category "${category}" not found`,
+					message: `Kategorie "${category}" nicht gefunden`,
 				});
 			}
 
@@ -170,7 +170,7 @@ exports.getProducts = async (req, res) => {
 						hasPrevPage: false,
 						limit: parseInt(limit),
 					},
-					message: `No subcategories found in category "${categoryDoc.name}"`,
+					message: `Keine Unterkategorien in Kategorie "${categoryDoc.name}" gefunden`,
 				});
 			}
 
@@ -194,7 +194,7 @@ exports.getProducts = async (req, res) => {
 				} else {
 					return res.status(404).json({
 						success: false,
-						message: `Subcategory "${subcategory}" not found`,
+						message: `Unterkategorie "${subcategory}" nicht gefunden`,
 					});
 				}
 			}
@@ -417,7 +417,7 @@ exports.getProducts = async (req, res) => {
 		console.error("Error getting products:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error retrieving products",
+			message: "Fehler beim Abrufen der Produkte",
 			error: error.message,
 		});
 	}
@@ -433,7 +433,7 @@ exports.getProduct = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid product ID",
+				message: "Ungültige Produkt-ID",
 			});
 		}
 
@@ -452,7 +452,7 @@ exports.getProduct = async (req, res) => {
 		if (!product) {
 			return res.status(404).json({
 				success: false,
-				message: "Product not found",
+				message: "Produkt nicht gefunden",
 			});
 		}
 
@@ -464,7 +464,7 @@ exports.getProduct = async (req, res) => {
 		console.error("Error getting product:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error retrieving product",
+			message: "Fehler beim Abrufen des Produkts",
 			error: error.message,
 		});
 	}
@@ -488,7 +488,7 @@ exports.getProductByBarcode = async (req, res) => {
 		if (!product) {
 			return res.status(404).json({
 				success: false,
-				message: "Product not found with this barcode",
+				message: "Produkt mit diesem Barcode nicht gefunden",
 			});
 		}
 
@@ -500,7 +500,7 @@ exports.getProductByBarcode = async (req, res) => {
 		console.error("Error getting product by barcode:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error retrieving product by barcode",
+			message: "Fehler beim Abrufen des Produkts nach Barcode",
 			error: error.message,
 		});
 	}
@@ -557,7 +557,7 @@ exports.createProduct = async (req, res) => {
 				console.error("Error uploading image to Cloudinary:", uploadError);
 				return res.status(500).json({
 					success: false,
-					message: "Error uploading image",
+					message: "Fehler beim Hochladen des Bildes",
 					error: uploadError.message,
 				});
 			}
@@ -586,7 +586,7 @@ exports.createProduct = async (req, res) => {
 
 		res.status(201).json({
 			success: true,
-			message: "Product created successfully",
+			message: "Produkt erfolgreich erstellt",
 			data: product,
 		});
 	} catch (error) {
@@ -596,13 +596,13 @@ exports.createProduct = async (req, res) => {
 		if (error.code === 11000 && error.keyPattern?.barcode) {
 			return res.status(400).json({
 				success: false,
-				message: "A product with this barcode already exists",
+				message: "Ein Produkt mit diesem Barcode existiert bereits",
 			});
 		}
 
 		res.status(400).json({
 			success: false,
-			message: "Error creating product",
+			message: "Fehler beim Erstellen des Produkts",
 			error: error.message,
 		});
 	}
@@ -648,7 +648,7 @@ exports.updateProduct = async (req, res) => {
 				console.error("Error uploading image to Cloudinary:", uploadError);
 				return res.status(500).json({
 					success: false,
-					message: "Error uploading image",
+					message: "Fehler beim Hochladen des Bildes",
 					error: uploadError.message,
 				});
 			}
@@ -671,7 +671,7 @@ exports.updateProduct = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Product updated successfully",
+			message: "Produkt erfolgreich aktualisiert",
 			data: updatedProduct,
 		});
 	} catch (error) {
@@ -681,13 +681,13 @@ exports.updateProduct = async (req, res) => {
 		if (error.code === 11000 && error.keyPattern?.barcode) {
 			return res.status(400).json({
 				success: false,
-				message: "A product with this barcode already exists",
+				message: "Ein Produkt mit diesem Barcode existiert bereits",
 			});
 		}
 
 		res.status(400).json({
 			success: false,
-			message: "Error updating product",
+			message: "Fehler beim Aktualisieren des Produkts",
 			error: error.message,
 		});
 	}
@@ -704,14 +704,14 @@ exports.updateProductStock = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid product ID",
+				message: "Ungültige Produkt-ID",
 			});
 		}
 
 		if (typeof quantity !== "number" || quantity < 0) {
 			return res.status(400).json({
 				success: false,
-				message: "Quantity must be a non-negative number",
+				message: "Menge muss eine nicht-negative Zahl sein",
 			});
 		}
 
@@ -720,7 +720,7 @@ exports.updateProductStock = async (req, res) => {
 		if (!product) {
 			return res.status(404).json({
 				success: false,
-				message: "Product not found",
+				message: "Produkt nicht gefunden",
 			});
 		}
 
@@ -747,14 +747,14 @@ exports.updateProductStock = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: `Product stock ${operation}ed successfully`,
+			message: `Produktlager erfolgreich ${operation}iert`,
 			data: product,
 		});
 	} catch (error) {
 		console.error("Error updating product stock:", error);
 		res.status(400).json({
 			success: false,
-			message: "Error updating product stock",
+			message: "Fehler beim Aktualisieren des Produktlagers",
 			error: error.message,
 		});
 	}
@@ -771,14 +771,14 @@ exports.updateProductShelfNumber = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid product ID",
+				message: "Ungültige Produkt-ID",
 			});
 		}
 
 		if (!shelfNumber || typeof shelfNumber !== "string") {
 			return res.status(400).json({
 				success: false,
-				message: "Shelf number is required and must be a string",
+				message: "Regalnummer ist erforderlich und muss eine Zeichenkette sein",
 			});
 		}
 
@@ -787,7 +787,7 @@ exports.updateProductShelfNumber = async (req, res) => {
 		if (!product) {
 			return res.status(404).json({
 				success: false,
-				message: "Product not found",
+				message: "Produkt nicht gefunden",
 			});
 		}
 
@@ -810,14 +810,14 @@ exports.updateProductShelfNumber = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Product shelf number updated successfully",
+			message: "Produkt-Regalnummer erfolgreich aktualisiert",
 			data: product,
 		});
 	} catch (error) {
 		console.error("Error updating product shelf number:", error);
 		res.status(400).json({
 			success: false,
-			message: "Error updating product shelf number",
+			message: "Fehler beim Aktualisieren der Produkt-Regalnummer",
 			error: error.message,
 		});
 	}
@@ -833,7 +833,7 @@ exports.deleteProduct = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid product ID",
+				message: "Ungültige Produkt-ID",
 			});
 		}
 
@@ -846,20 +846,20 @@ exports.deleteProduct = async (req, res) => {
 		if (!product) {
 			return res.status(404).json({
 				success: false,
-				message: "Product not found",
+				message: "Produkt nicht gefunden",
 			});
 		}
 
 		res.json({
 			success: true,
-			message: "Product deleted successfully",
+			message: "Produkt erfolgreich gelöscht",
 			data: product,
 		});
 	} catch (error) {
 		console.error("Error deleting product:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error deleting product",
+			message: "Fehler beim Löschen des Produkts",
 			error: error.message,
 		});
 	}
@@ -903,13 +903,13 @@ exports.permanentDeleteProduct = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Product permanently deleted",
+			message: "Produkt dauerhaft gelöscht",
 		});
 	} catch (error) {
 		console.error("Error permanently deleting product:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error permanently deleting product",
+			message: "Fehler beim dauerhaften Löschen des Produkts",
 			error: error.message,
 		});
 	}
@@ -946,7 +946,7 @@ exports.uploadImage = async (req, res) => {
 		if (!req.file) {
 			return res.status(400).json({
 				success: false,
-				message: "No image file provided",
+				message: "Keine Bilddatei bereitgestellt",
 			});
 		}
 
@@ -955,7 +955,7 @@ exports.uploadImage = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Image uploaded successfully",
+			message: "Bild erfolgreich hochgeladen",
 			data: {
 				url: uploadResult.url,
 				public_id: uploadResult.public_id,
@@ -966,7 +966,7 @@ exports.uploadImage = async (req, res) => {
 		console.error("Error uploading image:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error uploading image",
+			message: "Fehler beim Hochladen des Bildes",
 			error: error.message,
 		});
 	}
@@ -993,7 +993,7 @@ exports.getProductsByCategory = async (req, res) => {
 		if (!categoryName) {
 			return res.status(400).json({
 				success: false,
-				message: "Category name is required",
+				message: "Kategoriename ist erforderlich",
 			});
 		}
 
@@ -1007,7 +1007,7 @@ exports.getProductsByCategory = async (req, res) => {
 		if (!category) {
 			return res.status(404).json({
 				success: false,
-				message: `Category "${categoryName}" not found`,
+				message: `Kategorie "${categoryName}" nicht gefunden`,
 			});
 		}
 
@@ -1030,7 +1030,7 @@ exports.getProductsByCategory = async (req, res) => {
 					hasPrevPage: false,
 					limit: parseInt(limit),
 				},
-				message: `No subcategories found in category "${categoryName}"`,
+				message: `Keine Unterkategorien in Kategorie "${categoryName}" gefunden`,
 			});
 		}
 
@@ -1137,13 +1137,13 @@ exports.getProductsByCategory = async (req, res) => {
 				hasPrevPage,
 				limit: limitNumber,
 			},
-			message: `Found ${total} products in category "${categoryName}"`,
+			message: `${total} Produkte in Kategorie "${categoryName}" gefunden`,
 		});
 	} catch (error) {
 		console.error("Error getting products by category:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error retrieving products by category",
+			message: "Fehler beim Abrufen der Produkte nach Kategorie",
 			error: error.message,
 		});
 	}
@@ -1169,7 +1169,7 @@ exports.getProductsBySubcategory = async (req, res) => {
 		if (!subcategoryName) {
 			return res.status(400).json({
 				success: false,
-				message: "Subcategory name is required",
+				message: "Unterkategoriename ist erforderlich",
 			});
 		}
 
@@ -1183,7 +1183,7 @@ exports.getProductsBySubcategory = async (req, res) => {
 		if (!subcategory) {
 			return res.status(404).json({
 				success: false,
-				message: `Subcategory "${subcategoryName}" not found`,
+				message: `Unterkategorie "${subcategoryName}" nicht gefunden`,
 			});
 		}
 
@@ -1288,13 +1288,13 @@ exports.getProductsBySubcategory = async (req, res) => {
 				hasPrevPage,
 				limit: limitNumber,
 			},
-			message: `Found ${total} products in subcategory "${subcategoryName}"`,
+			message: `${total} Produkte in Unterkategorie "${subcategoryName}" gefunden`,
 		});
 	} catch (error) {
 		console.error("Error getting products by subcategory:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error retrieving products by subcategory",
+			message: "Fehler beim Abrufen der Produkte nach Unterkategorie",
 			error: error.message,
 		});
 	}
@@ -1435,13 +1435,13 @@ exports.getProductsWithDiscount = async (req, res) => {
 				hasPrevPage,
 				limit: limitNumber,
 			},
-			message: `Found ${total} products with discount greater than ${minDiscount}%`,
+			message: `${total} Produkte mit Rabatt größer als ${minDiscount}% gefunden`,
 		});
 	} catch (error) {
 		console.error("Error getting products with discount:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error retrieving products with discount",
+			message: "Fehler beim Abrufen der Produkte mit Rabatt",
 			error: error.message,
 		});
 	}
@@ -1456,13 +1456,13 @@ exports.getProductsCount = async (req, res) => {
 		res.json({
 			success: true,
 			count: totalProducts,
-			message: `Total active products: ${totalProducts}`,
+			message: `Gesamtanzahl aktiver Produkte: ${totalProducts}`,
 		});
 	} catch (error) {
 		console.error("Error getting products count:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error retrieving products count",
+			message: "Fehler beim Abrufen der Produktanzahl",
 			error: error.message,
 		});
 	}
@@ -1478,7 +1478,7 @@ exports.bulkUpdateProductStatus = async (req, res) => {
 		if (!status || !["active", "inactive"].includes(status)) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid status. Must be 'active' or 'inactive'",
+				message: "Ungültiger Status. Muss 'active' oder 'inactive' sein",
 			});
 		}
 
@@ -1493,7 +1493,7 @@ exports.bulkUpdateProductStatus = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: `Successfully updated ${result.modifiedCount} products to ${status} status`,
+			message: `Erfolgreich ${result.modifiedCount} Produkte auf ${status}-Status aktualisiert`,
 			modifiedCount: result.modifiedCount,
 			matchedCount: result.matchedCount,
 		});
@@ -1501,7 +1501,7 @@ exports.bulkUpdateProductStatus = async (req, res) => {
 		console.error("Error updating product status:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error updating product status",
+			message: "Fehler beim Aktualisieren des Produktstatus",
 			error: error.message,
 		});
 	}

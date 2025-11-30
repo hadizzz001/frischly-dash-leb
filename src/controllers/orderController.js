@@ -174,7 +174,7 @@ exports.getOrders = async (req, res) => {
 		console.error("Error fetching orders:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error fetching orders",
+			message: "Fehler beim Abrufen der Bestellungen",
 			error: error.message,
 		});
 	}
@@ -296,7 +296,7 @@ exports.getOrdersForRiders = async (req, res) => {
 		console.error("Error fetching completed orders:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error fetching completed orders",
+			message: "Fehler beim Abrufen der abgeschlossenen Bestellungen",
 			error: error.message,
 		});
 	}
@@ -312,7 +312,7 @@ exports.getOrder = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid order ID",
+				message: "Ungültige Bestellungs-ID",
 			});
 		}
 
@@ -328,7 +328,7 @@ exports.getOrder = async (req, res) => {
 		if (!order) {
 			return res.status(404).json({
 				success: false,
-				message: "Order not found",
+				message: "Bestellung nicht gefunden",
 			});
 		}
 
@@ -340,7 +340,7 @@ exports.getOrder = async (req, res) => {
 		) {
 			return res.status(403).json({
 				success: false,
-				message: "You are not authorized to view this order",
+				message: "Sie sind nicht berechtigt, diese Bestellung anzusehen",
 			});
 		}
 
@@ -352,7 +352,7 @@ exports.getOrder = async (req, res) => {
 		console.error("Error fetching order:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error fetching order",
+			message: "Fehler beim Abrufen der Bestellung",
 			error: error.message,
 		});
 	}
@@ -393,14 +393,14 @@ exports.createOrder = async (req, res) => {
 		) {
 			return res.status(400).json({
 				success: false,
-				message: "Customer name, ID, email, and phone are required",
+				message: "Kundenname, ID, E-Mail und Telefon sind erforderlich",
 			});
 		}
 
 		if (!items || !Array.isArray(items) || items.length === 0) {
 			return res.status(400).json({
 				success: false,
-				message: "Order must contain at least one item",
+				message: "Bestellung muss mindestens einen Artikel enthalten",
 			});
 		}
 
@@ -412,7 +412,7 @@ exports.createOrder = async (req, res) => {
 			if (!item.product || !item.quantity) {
 				return res.status(400).json({
 					success: false,
-					message: "Each item must have product, quantity",
+					message: "Jeder Artikel muss Produkt und Menge haben",
 				});
 			}
 
@@ -422,7 +422,7 @@ exports.createOrder = async (req, res) => {
 			if (!product) {
 				return res.status(400).json({
 					success: false,
-					message: `Product with ID ${item.product} not found`,
+					message: `Produkt mit ID ${item.product} nicht gefunden`,
 				});
 			}
 
@@ -430,7 +430,7 @@ exports.createOrder = async (req, res) => {
 			if (product.stock < item.quantity) {
 				return res.status(400).json({
 					success: false,
-					message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`,
+					message: `Unzureichender Lagerbestand für ${product.name}. Verfügbar: ${product.stock}, Angefordert: ${item.quantity}`,
 				});
 			}
 
@@ -479,7 +479,7 @@ exports.createOrder = async (req, res) => {
 		if (total < 15) {
 			return res.status(400).json({
 				success: false,
-				message: "Minimum order amount is €15",
+				message: "Mindestbestellwert beträgt 15 €",
 			});
 		}
 
@@ -587,7 +587,7 @@ exports.createOrder = async (req, res) => {
 
 		res.status(201).json({
 			success: true,
-			message: "Order created successfully",
+			message: "Bestellung erfolgreich erstellt",
 			data: populatedOrder,
 			paymentUrl: paymentUrl,
 		});
@@ -749,7 +749,7 @@ exports.createOrder = async (req, res) => {
 		console.error("Error creating order:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error creating order",
+			message: "Fehler beim Erstellen der Bestellung",
 			error: error.message,
 		});
 	}
@@ -777,7 +777,7 @@ exports.updateOrder = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid order ID",
+				message: "Ungültige Bestellungs-ID",
 			});
 		}
 
@@ -785,7 +785,7 @@ exports.updateOrder = async (req, res) => {
 		if (!order) {
 			return res.status(404).json({
 				success: false,
-				message: "Order not found",
+				message: "Bestellung nicht gefunden",
 			});
 		}
 
@@ -793,7 +793,8 @@ exports.updateOrder = async (req, res) => {
 		if (order.status === "cancelled" || order.status === "delivered") {
 			return res.status(400).json({
 				success: false,
-				message: "Cannot modify cancelled or delivered orders",
+				message:
+					"Stornierte oder gelieferte Bestellungen können nicht geändert werden",
 			});
 		}
 
@@ -824,14 +825,14 @@ exports.updateOrder = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Order updated successfully",
+			message: "Bestellung erfolgreich aktualisiert",
 			data: updatedOrder,
 		});
 	} catch (error) {
 		console.error("Error updating order:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error updating order",
+			message: "Fehler beim Aktualisieren der Bestellung",
 			error: error.message,
 		});
 	}
@@ -847,7 +848,7 @@ exports.deleteOrder = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid order ID",
+				message: "Ungültige Bestellungs-ID",
 			});
 		}
 
@@ -860,20 +861,20 @@ exports.deleteOrder = async (req, res) => {
 		if (!order) {
 			return res.status(404).json({
 				success: false,
-				message: "Order not found",
+				message: "Bestellung nicht gefunden",
 			});
 		}
 
 		res.json({
 			success: true,
-			message: "Order deleted successfully",
+			message: "Bestellung erfolgreich gelöscht",
 			data: order,
 		});
 	} catch (error) {
 		console.error("Error deleting order:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error deleting order",
+			message: "Fehler beim Löschen der Bestellung",
 			error: error.message,
 		});
 	}
@@ -930,7 +931,7 @@ exports.getOrderStats = async (req, res) => {
 		console.error("Error fetching order stats:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error fetching order statistics",
+			message: "Fehler beim Abrufen der Bestellstatistiken",
 			error: error.message,
 		});
 	}
@@ -957,7 +958,7 @@ exports.cancelOrder = async (req, res) => {
 			console.log("❌ Step 2: Invalid order ID format");
 			return res.status(400).json({
 				success: false,
-				message: "Invalid order ID",
+				message: "Ungültige Bestellungs-ID",
 			});
 		}
 		console.log("✅ Step 2: Order ID format is valid");
@@ -969,7 +970,7 @@ exports.cancelOrder = async (req, res) => {
 			console.log("❌ Step 3: Order not found in database");
 			return res.status(404).json({
 				success: false,
-				message: "Order not found",
+				message: "Bestellung nicht gefunden",
 			});
 		}
 		console.log(
@@ -982,7 +983,7 @@ exports.cancelOrder = async (req, res) => {
 			console.log("❌ Step 4: Order is already cancelled");
 			return res.status(400).json({
 				success: false,
-				message: "Order is already cancelled",
+				message: "Bestellung ist bereits storniert",
 			});
 		}
 		console.log("✅ Step 4: Order is not already cancelled");
@@ -995,7 +996,7 @@ exports.cancelOrder = async (req, res) => {
 			);
 			return res.status(400).json({
 				success: false,
-				message: "Cannot cancel delivered order",
+				message: "Gelieferte Bestellung kann nicht storniert werden",
 			});
 		}
 		console.log("✅ Step 5: Order can be cancelled");

@@ -19,7 +19,7 @@ const register = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: "Validation failed",
+				message: "Validierung fehlgeschlagen",
 				errors: errors.array(),
 			});
 		}
@@ -31,7 +31,7 @@ const register = async (req, res) => {
 		if (user) {
 			return res.status(400).json({
 				success: false,
-				message: "User already exists with this email",
+				message: "Ein Benutzer mit dieser E-Mail existiert bereits",
 			});
 		}
 
@@ -84,14 +84,15 @@ const register = async (req, res) => {
 			await User.findByIdAndDelete(user._id);
 			return res.status(500).json({
 				success: false,
-				message: "Unable to send confirmation email. Please try again.",
+				message:
+					"Bestätigungs-E-Mail konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
 			});
 		}
 
 		res.status(201).json({
 			success: true,
 			message:
-				"Signup successful. Please check your email (may appear in junk/spam folder) to confirm your account. ",
+				"Registrierung erfolgreich. Bitte überprüfen Sie Ihre E-Mail (möglicherweise im Spam-Ordner) zur Bestätigung Ihres Kontos.",
 			data: {
 				userId: user._id,
 			},
@@ -100,7 +101,7 @@ const register = async (req, res) => {
 		console.error("Register error:", error);
 		res.status(500).json({
 			success: false,
-			message: "Server error during registration",
+			message: "Serverfehler bei der Registrierung",
 		});
 	}
 };
@@ -110,7 +111,7 @@ const confirmEmail = async (req, res) => {
 		const { token } = req.params;
 
 		if (!token) {
-			return res.status(400).send("Invalid confirmation link");
+			return res.status(400).send("Ungültiger Bestätigungslink");
 		}
 
 		const user = await User.findOne({
@@ -119,7 +120,9 @@ const confirmEmail = async (req, res) => {
 		});
 
 		if (!user) {
-			return res.status(400).send("Invalid or expired confirmation link");
+			return res
+				.status(400)
+				.send("Ungültiger oder abgelaufener Bestätigungslink");
 		}
 
 		user.emailConfirmed = true;
@@ -313,7 +316,7 @@ const login = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: "Validation failed",
+				message: "Validierung fehlgeschlagen",
 				errors: errors.array(),
 			});
 		}
@@ -325,7 +328,7 @@ const login = async (req, res) => {
 		if (!sanitizedEmail) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid email format",
+				message: "Ungültiges E-Mail-Format",
 			});
 		}
 
@@ -336,7 +339,7 @@ const login = async (req, res) => {
 		if (!user) {
 			return res.status(401).json({
 				success: false,
-				message: "Invalid credentials",
+				message: "Ungültige Anmeldedaten",
 			});
 		}
 
@@ -348,7 +351,7 @@ const login = async (req, res) => {
 			);
 			return res.status(423).json({
 				success: false,
-				message: `Account is temporarily locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minute(s).`,
+				message: `Das Konto ist aufgrund mehrerer fehlgeschlagener Anmeldeversuche vorübergehend gesperrt. Bitte versuchen Sie es in ${minutesRemaining} Minute(n) erneut.`,
 				lockTimeRemaining: minutesRemaining,
 			});
 		}
@@ -357,7 +360,7 @@ const login = async (req, res) => {
 		if (!user.isActive) {
 			return res.status(401).json({
 				success: false,
-				message: "Account is deactivated",
+				message: "Konto ist deaktiviert",
 			});
 		}
 
@@ -380,18 +383,18 @@ const login = async (req, res) => {
 				return res.status(401).json({
 					success: false,
 					message:
-						"Invalid credentials. Your account has been temporarily locked for 15 minutes due to multiple failed login attempts.",
+						"Ungültige Anmeldedaten. Ihr Konto wurde aufgrund mehrerer fehlgeschlagener Anmeldeversuche vorübergehend für 15 Minuten gesperrt.",
 				});
 			} else if (attemptsLeft <= 2) {
 				return res.status(401).json({
 					success: false,
-					message: `Invalid credentials. ${attemptsLeft} attempt(s) remaining before account lockout.`,
+					message: `Ungültige Anmeldedaten. Noch ${attemptsLeft} Versuch(e) bis zur Kontosperrung.`,
 					attemptsRemaining: attemptsLeft,
 				});
 			} else {
 				return res.status(401).json({
 					success: false,
-					message: "Invalid credentials",
+					message: "Ungültige Anmeldedaten",
 				});
 			}
 		}
@@ -400,7 +403,7 @@ const login = async (req, res) => {
 			return res.status(403).json({
 				success: false,
 				message:
-					"Please confirm your email (may appear in junk/spam folder) before logging in.",
+					"Bitte bestätigen Sie Ihre E-Mail (möglicherweise im Spam-Ordner) vor dem Einloggen.",
 				needsConfirmation: true,
 			});
 		}
@@ -411,7 +414,7 @@ const login = async (req, res) => {
 			return res.status(403).json({
 				success: false,
 				message:
-					"Access denied.  Access is restricted to managers, administrators, customers, and riders only.",
+					"Zugriff verweigert. Zugriff ist nur für Manager, Administratoren, Kunden und Fahrer beschränkt.",
 			});
 		}
 
@@ -433,7 +436,7 @@ const login = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Login successful",
+			message: "Anmeldung erfolgreich",
 			data: {
 				user: user.toSafeObject(),
 				token,
@@ -444,7 +447,7 @@ const login = async (req, res) => {
 		console.error("Login error:", error);
 		res.status(500).json({
 			success: false,
-			message: "Server error during login",
+			message: "Serverfehler bei der Anmeldung",
 		});
 	}
 };
@@ -466,7 +469,7 @@ const getMe = async (req, res) => {
 		console.error("Get me error:", error);
 		res.status(500).json({
 			success: false,
-			message: "Server error",
+			message: "Serverfehler",
 		});
 	}
 };
@@ -481,7 +484,7 @@ const updateProfile = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: "Validation failed",
+				message: "Validierung fehlgeschlagen",
 				errors: errors.array(),
 			});
 		}
@@ -500,7 +503,7 @@ const updateProfile = async (req, res) => {
 			if (existingUser) {
 				return res.status(400).json({
 					success: false,
-					message: "Email is already taken",
+					message: "E-Mail ist bereits vergeben",
 				});
 			}
 			fieldsToUpdate.email = email;
@@ -515,7 +518,7 @@ const updateProfile = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Profile updated successfully",
+			message: "Profil erfolgreich aktualisiert",
 			data: {
 				user: user.toSafeObject(),
 			},
@@ -524,7 +527,7 @@ const updateProfile = async (req, res) => {
 		console.error("Update profile error:", error);
 		res.status(500).json({
 			success: false,
-			message: "Server error during profile update",
+			message: "Serverfehler bei der Profilaktualisierung",
 		});
 	}
 };
@@ -539,7 +542,7 @@ const changePassword = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: "Validation failed",
+				message: "Validierung fehlgeschlagen",
 				errors: errors.array(),
 			});
 		}
@@ -554,7 +557,7 @@ const changePassword = async (req, res) => {
 		if (!isMatch) {
 			return res.status(400).json({
 				success: false,
-				message: "Current password is incorrect",
+				message: "Aktuelles Passwort ist falsch",
 			});
 		}
 
@@ -564,13 +567,13 @@ const changePassword = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Password changed successfully",
+			message: "Passwort erfolgreich geändert",
 		});
 	} catch (error) {
 		console.error("Change password error:", error);
 		res.status(500).json({
 			success: false,
-			message: "Server error during password change",
+			message: "Serverfehler bei der Passwortänderung",
 		});
 	}
 };
@@ -585,7 +588,7 @@ const loginProfile = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: "Validation failed",
+				message: "Validierung fehlgeschlagen",
 				errors: errors.array(),
 			});
 		}
@@ -597,7 +600,7 @@ const loginProfile = async (req, res) => {
 		if (!sanitizedEmail) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid email format",
+				message: "Ungültiges E-Mail-Format",
 			});
 		}
 
@@ -608,7 +611,7 @@ const loginProfile = async (req, res) => {
 		if (!user) {
 			return res.status(401).json({
 				success: false,
-				message: "Invalid credentials",
+				message: "Ungültige Anmeldedaten",
 			});
 		}
 
@@ -620,7 +623,7 @@ const loginProfile = async (req, res) => {
 			);
 			return res.status(423).json({
 				success: false,
-				message: `Account is temporarily locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minute(s).`,
+				message: `Das Konto ist aufgrund mehrerer fehlgeschlagener Anmeldeversuche vorübergehend gesperrt. Bitte versuchen Sie es in ${minutesRemaining} Minute(n) erneut.`,
 				lockTimeRemaining: minutesRemaining,
 			});
 		}
@@ -629,7 +632,7 @@ const loginProfile = async (req, res) => {
 		if (!user.isActive) {
 			return res.status(401).json({
 				success: false,
-				message: "Account is deactivated",
+				message: "Konto ist deaktiviert",
 			});
 		}
 
@@ -652,18 +655,18 @@ const loginProfile = async (req, res) => {
 				return res.status(401).json({
 					success: false,
 					message:
-						"Invalid credentials. Your account has been temporarily locked for 15 minutes due to multiple failed login attempts.",
+						"Ungültige Anmeldedaten. Ihr Konto wurde aufgrund mehrerer fehlgeschlagener Anmeldeversuche vorübergehend für 15 Minuten gesperrt.",
 				});
 			} else if (attemptsLeft <= 2) {
 				return res.status(401).json({
 					success: false,
-					message: `Invalid credentials. ${attemptsLeft} attempt(s) remaining before account lockout.`,
+					message: `Ungültige Anmeldedaten. Noch ${attemptsLeft} Versuch(e) bis zur Kontosperrung.`,
 					attemptsRemaining: attemptsLeft,
 				});
 			} else {
 				return res.status(401).json({
 					success: false,
-					message: "Invalid credentials",
+					message: "Ungültige Anmeldedaten",
 				});
 			}
 		}
@@ -672,7 +675,7 @@ const loginProfile = async (req, res) => {
 			return res.status(403).json({
 				success: false,
 				message:
-					"Please confirm your email before logging in(may find junk folder).",
+					"Bitte bestätigen Sie Ihre E-Mail vor dem Einloggen (prüfen Sie auch den Spam-Ordner).",
 				needsConfirmation: true,
 			});
 		}
@@ -695,7 +698,7 @@ const loginProfile = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Login successful",
+			message: "Anmeldung erfolgreich",
 			data: {
 				user: user.toMaskedObject(),
 				token,
@@ -710,7 +713,7 @@ const loginProfile = async (req, res) => {
 		console.error("Login profile error:", error);
 		res.status(500).json({
 			success: false,
-			message: "Server error during login",
+			message: "Serverfehler bei der Anmeldung",
 		});
 	}
 };
@@ -726,7 +729,7 @@ const refreshToken = async (req, res) => {
 		if (!refreshToken) {
 			return res.status(400).json({
 				success: false,
-				message: "Refresh token is required",
+				message: "Refresh-Token ist erforderlich",
 			});
 		}
 
@@ -739,7 +742,7 @@ const refreshToken = async (req, res) => {
 			if (!user) {
 				return res.status(401).json({
 					success: false,
-					message: "Invalid refresh token",
+					message: "Ungültiger Refresh-Token",
 				});
 			}
 
@@ -747,14 +750,14 @@ const refreshToken = async (req, res) => {
 			if (!user.isActive) {
 				return res.status(401).json({
 					success: false,
-					message: "User account is deactivated",
+					message: "Benutzerkonto ist deaktiviert",
 				});
 			}
 
 			if (user.emailConfirmed === false) {
 				return res.status(403).json({
 					success: false,
-					message: "Please confirm your email before continuing.",
+					message: "Bitte bestätigen Sie Ihre E-Mail vor dem Fortfahren.",
 					needsConfirmation: true,
 				});
 			}
@@ -767,7 +770,7 @@ const refreshToken = async (req, res) => {
 
 			res.json({
 				success: true,
-				message: "Token refreshed successfully",
+				message: "Token erfolgreich aktualisiert",
 				data: {
 					token: newAccessToken,
 					refreshToken: newRefreshToken,
@@ -777,14 +780,14 @@ const refreshToken = async (req, res) => {
 		} catch (error) {
 			return res.status(401).json({
 				success: false,
-				message: "Invalid refresh token",
+				message: "Ungültiger Refresh-Token",
 			});
 		}
 	} catch (error) {
 		console.error("Refresh token error:", error);
 		res.status(500).json({
 			success: false,
-			message: "Server error during token refresh",
+			message: "Serverfehler bei der Token-Aktualisierung",
 		});
 	}
 };
@@ -800,7 +803,8 @@ const getAllUsers = async (req, res) => {
 		if (!allowedRoles.includes(req.user.role)) {
 			return res.status(403).json({
 				success: false,
-				message: "Access denied. Admin, manager, or staff privileges required.",
+				message:
+					"Zugriff verweigert. Administrator-, Manager- oder Mitarbeiterberechtigung erforderlich.",
 			});
 		}
 
@@ -839,7 +843,7 @@ const getAllUsers = async (req, res) => {
 		console.error("Get all users error:", error);
 		res.status(500).json({
 			success: false,
-			message: "Server error while fetching users",
+			message: "Serverfehler beim Abrufen der Benutzer",
 		});
 	}
 };
@@ -853,7 +857,7 @@ const createUser = async (req, res) => {
 		if (req.user.role !== "admin") {
 			return res.status(403).json({
 				success: false,
-				message: "Access denied. Admin privileges required.",
+				message: "Zugriff verweigert. Administratorberechtigung erforderlich.",
 			});
 		}
 
@@ -862,7 +866,7 @@ const createUser = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: "Validation failed",
+				message: "Validierung fehlgeschlagen",
 				errors: errors.array(),
 			});
 		}
@@ -874,7 +878,7 @@ const createUser = async (req, res) => {
 		if (existingUser) {
 			return res.status(400).json({
 				success: false,
-				message: "User already exists with this email",
+				message: "Ein Benutzer mit dieser E-Mail existiert bereits",
 			});
 		}
 
@@ -892,7 +896,7 @@ const createUser = async (req, res) => {
 
 		res.status(201).json({
 			success: true,
-			message: "User created successfully",
+			message: "Benutzer erfolgreich erstellt",
 			data: {
 				user: user.toSafeObject(),
 			},
@@ -901,7 +905,7 @@ const createUser = async (req, res) => {
 		console.error("Create user error:", error);
 		res.status(500).json({
 			success: false,
-			message: "Server error during user creation",
+			message: "Serverfehler bei der Benutzererstellung",
 		});
 	}
 };
@@ -915,7 +919,7 @@ const updateUser = async (req, res) => {
 		if (req.user.role !== "admin") {
 			return res.status(403).json({
 				success: false,
-				message: "Access denied. Admin privileges required.",
+				message: "Zugriff verweigert. Administratorberechtigung erforderlich.",
 			});
 		}
 
@@ -927,7 +931,7 @@ const updateUser = async (req, res) => {
 		if (!user) {
 			return res.status(404).json({
 				success: false,
-				message: "User not found",
+				message: "Benutzer nicht gefunden",
 			});
 		}
 
@@ -940,7 +944,7 @@ const updateUser = async (req, res) => {
 			if (existingUser) {
 				return res.status(400).json({
 					success: false,
-					message: "Email is already taken",
+					message: "E-Mail ist bereits vergeben",
 				});
 			}
 		}
@@ -961,7 +965,7 @@ const updateUser = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "User updated successfully",
+			message: "Benutzer erfolgreich aktualisiert",
 			data: {
 				user: user.toSafeObject(),
 			},
@@ -970,7 +974,7 @@ const updateUser = async (req, res) => {
 		console.error("Update user error:", error);
 		res.status(500).json({
 			success: false,
-			message: "Server error during user update",
+			message: "Serverfehler bei der Benutzeraktualisierung",
 		});
 	}
 };
@@ -984,7 +988,7 @@ const deleteUser = async (req, res) => {
 		if (req.user.role !== "admin") {
 			return res.status(403).json({
 				success: false,
-				message: "Access denied. Admin privileges required.",
+				message: "Zugriff verweigert. Administratorberechtigung erforderlich.",
 			});
 		}
 
@@ -995,7 +999,7 @@ const deleteUser = async (req, res) => {
 		if (!user) {
 			return res.status(404).json({
 				success: false,
-				message: "User not found",
+				message: "Benutzer nicht gefunden",
 			});
 		}
 
@@ -1003,7 +1007,7 @@ const deleteUser = async (req, res) => {
 		if (userId === req.user._id.toString()) {
 			return res.status(400).json({
 				success: false,
-				message: "You cannot delete your own account",
+				message: "Sie können Ihr eigenes Konto nicht löschen",
 			});
 		}
 
@@ -1011,13 +1015,13 @@ const deleteUser = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "User deleted successfully",
+			message: "Benutzer erfolgreich gelöscht",
 		});
 	} catch (error) {
 		console.error("Delete user error:", error);
 		res.status(500).json({
 			success: false,
-			message: "Server error during user deletion",
+			message: "Serverfehler beim Löschen des Benutzers",
 		});
 	}
 };
@@ -1031,7 +1035,7 @@ const getUserById = async (req, res) => {
 		if (req.user.role !== "admin") {
 			return res.status(403).json({
 				success: false,
-				message: "Not authorized to access this resource",
+				message: "Nicht autorisiert für den Zugriff auf diese Ressource",
 			});
 		}
 
@@ -1040,7 +1044,7 @@ const getUserById = async (req, res) => {
 		if (!user) {
 			return res.status(404).json({
 				success: false,
-				message: "User not found",
+				message: "Benutzer nicht gefunden",
 			});
 		}
 
@@ -1052,7 +1056,7 @@ const getUserById = async (req, res) => {
 		console.error("Error in getUserById:", error);
 		res.status(500).json({
 			success: false,
-			message: "Server error",
+			message: "Serverfehler",
 		});
 	}
 };
@@ -1072,14 +1076,14 @@ const getCustomerCount = async (req, res) => {
 			success: true,
 			data: {
 				customerCount: customerCount,
-				message: `Total active customers: ${customerCount}`,
+				message: `Gesamtanzahl aktiver Kunden: ${customerCount}`,
 			},
 		});
 	} catch (error) {
 		console.error("Get customer count error:", error);
 		res.status(500).json({
 			success: false,
-			message: "Server error while fetching customer count",
+			message: "Serverfehler beim Abrufen der Kundenzahl",
 		});
 	}
 };
@@ -1096,7 +1100,7 @@ const deleteAccount = async (req, res) => {
 		if (!user) {
 			return res.status(404).json({
 				success: false,
-				message: "User not found",
+				message: "Benutzer nicht gefunden",
 			});
 		}
 
@@ -1105,7 +1109,7 @@ const deleteAccount = async (req, res) => {
 		if (!isMatch) {
 			return res.status(401).json({
 				success: false,
-				message: "Invalid password",
+				message: "Ungültiges Passwort",
 			});
 		}
 
@@ -1114,13 +1118,13 @@ const deleteAccount = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Account deleted successfully",
+			message: "Konto erfolgreich gelöscht",
 		});
 	} catch (error) {
 		console.error("Delete account error:", error);
 		res.status(500).json({
 			success: false,
-			message: "Server error during account deletion",
+			message: "Serverfehler beim Löschen des Kontos",
 		});
 	}
 };
@@ -1135,7 +1139,7 @@ const requestPasswordReset = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: "Validation failed",
+				message: "Validierung fehlgeschlagen",
 				errors: errors.array(),
 			});
 		}
@@ -1147,7 +1151,7 @@ const requestPasswordReset = async (req, res) => {
 		if (!sanitizedEmail) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid email format",
+				message: "Ungültiges E-Mail-Format",
 			});
 		}
 
@@ -1158,7 +1162,7 @@ const requestPasswordReset = async (req, res) => {
 			return res.status(200).json({
 				success: true,
 				message:
-					"If an account with that email exists, a password reset link has been sent.",
+					"Falls ein Konto mit dieser E-Mail existiert, wurde ein Passwortzurücksetzungslink gesendet.",
 			});
 		}
 
@@ -1167,7 +1171,7 @@ const requestPasswordReset = async (req, res) => {
 			return res.status(200).json({
 				success: true,
 				message:
-					"If an account with that email exists, a password reset link has been sent.",
+					"Falls ein Konto mit dieser E-Mail existiert, wurde ein Passwortzurücksetzungslink gesendet.",
 			});
 		}
 
@@ -1211,20 +1215,21 @@ const requestPasswordReset = async (req, res) => {
 			await user.save();
 			return res.status(500).json({
 				success: false,
-				message: "Unable to send password reset email. Please try again.",
+				message:
+					"Passwortzurücksetzungs-E-Mail konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
 			});
 		}
 
 		res.status(200).json({
 			success: true,
 			message:
-				"If an account with that email exists, a password reset link has been sent.",
+				"Falls ein Konto mit dieser E-Mail existiert, wurde ein Passwortzurücksetzungslink gesendet.",
 		});
 	} catch (error) {
 		console.error("Request password reset error:", error);
 		res.status(500).json({
 			success: false,
-			message: "Server error during password reset request",
+			message: "Serverfehler bei der Passwortzurücksetzungsanfrage",
 		});
 	}
 };
@@ -1239,7 +1244,7 @@ const resetPassword = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: "Validation failed",
+				message: "Validierung fehlgeschlagen",
 				errors: errors.array(),
 			});
 		}
@@ -1249,7 +1254,7 @@ const resetPassword = async (req, res) => {
 		if (!token) {
 			return res.status(400).json({
 				success: false,
-				message: "Reset token is required",
+				message: "Reset-Token ist erforderlich",
 			});
 		}
 
@@ -1262,7 +1267,7 @@ const resetPassword = async (req, res) => {
 		if (!user) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid or expired reset token",
+				message: "Ungültiger oder abgelaufener Reset-Token",
 			});
 		}
 
@@ -1270,7 +1275,7 @@ const resetPassword = async (req, res) => {
 		if (!user.isActive) {
 			return res.status(400).json({
 				success: false,
-				message: "Account is deactivated",
+				message: "Konto ist deaktiviert",
 			});
 		}
 
@@ -1282,13 +1287,13 @@ const resetPassword = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Password reset successfully",
+			message: "Passwort erfolgreich zurückgesetzt",
 		});
 	} catch (error) {
 		console.error("Reset password error:", error);
 		res.status(500).json({
 			success: false,
-			message: "Server error during password reset",
+			message: "Serverfehler bei der Passwortzurücksetzung",
 		});
 	}
 };
@@ -1302,7 +1307,7 @@ const resetCustomerPassword = async (req, res) => {
 		if (req.user.role !== "admin") {
 			return res.status(403).json({
 				success: false,
-				message: "Access denied. Admin privileges required.",
+				message: "Zugriff verweigert. Administratorberechtigung erforderlich.",
 			});
 		}
 
@@ -1313,14 +1318,14 @@ const resetCustomerPassword = async (req, res) => {
 		if (!user) {
 			return res.status(404).json({
 				success: false,
-				message: "User not found",
+				message: "Benutzer nicht gefunden",
 			});
 		}
 
 		if (user.role !== "customer") {
 			return res.status(400).json({
 				success: false,
-				message: "Password reset is only allowed for customers",
+				message: "Passwortzurücksetzung ist nur für Kunden erlaubt",
 			});
 		}
 
@@ -1330,13 +1335,13 @@ const resetCustomerPassword = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Customer password reset successfully",
+			message: "Kundenpasswort erfolgreich zurückgesetzt",
 		});
 	} catch (error) {
 		console.error("Reset customer password error:", error);
 		res.status(500).json({
 			success: false,
-			message: "Server error during password reset",
+			message: "Serverfehler bei der Passwortzurücksetzung",
 		});
 	}
 };

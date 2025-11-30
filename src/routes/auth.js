@@ -29,56 +29,60 @@ const registerValidation = [
 	body("name")
 		.trim()
 		.isLength({ min: 2, max: 100 })
-		.withMessage("Name must be between 2 and 100 characters"),
+		.withMessage("Name muss zwischen 2 und 100 Zeichen lang sein"),
 	body("phoneNumber")
 		.trim()
 		.matches(/^[\+]?[1-9][\d]{0,15}$/)
-		.withMessage("Please provide a valid phone number"),
+		.withMessage("Bitte geben Sie eine gültige Telefonnummer an"),
 	body("email")
 		.isEmail()
 		.normalizeEmail()
-		.withMessage("Please provide a valid email"),
+		.withMessage("Bitte geben Sie eine gültige E-Mail-Adresse an"),
 	body("password")
 		.isLength({ min: 6 })
-		.withMessage("Password must be at least 6 characters long")
+		.withMessage("Passwort muss mindestens 6 Zeichen lang sein")
 		.matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
 		.withMessage(
-			"Password must contain at least one lowercase letter, one uppercase letter, and one number"
+			"Passwort muss mindestens einen Kleinbuchstaben, einen Großbuchstaben und eine Zahl enthalten"
 		),
 	body("address.street")
 		.trim()
 		.isLength({ min: 1, max: 200 })
 		.withMessage(
-			"Street address is required and must be less than 200 characters"
+			"Straßenadresse ist erforderlich und muss weniger als 200 Zeichen lang sein"
 		),
 	body("address.city")
 		.trim()
 		.isLength({ min: 1, max: 100 })
-		.withMessage("City is required and must be less than 100 characters"),
+		.withMessage(
+			"Stadt ist erforderlich und muss weniger als 100 Zeichen lang sein"
+		),
 	body("address.state")
 		.trim()
 		.isLength({ min: 1, max: 100 })
 		.withMessage(
-			"State/Province is required and must be less than 100 characters"
+			"Bundesland/Provinz ist erforderlich und muss weniger als 100 Zeichen lang sein"
 		),
 	body("address.zipCode")
 		.trim()
 		.isLength({ min: 1, max: 20 })
 		.withMessage(
-			"Zip/Postal code is required and must be less than 20 characters"
+			"Postleitzahl ist erforderlich und muss weniger als 20 Zeichen lang sein"
 		),
 	body("address.country")
 		.trim()
 		.isLength({ min: 1, max: 100 })
-		.withMessage("Country is required and must be less than 100 characters"),
+		.withMessage(
+			"Land ist erforderlich und muss weniger als 100 Zeichen lang sein"
+		),
 ];
 
 const loginValidation = [
 	body("email")
 		.isEmail()
 		.normalizeEmail()
-		.withMessage("Please provide a valid email"),
-	body("password").notEmpty().withMessage("Password is required"),
+		.withMessage("Bitte geben Sie eine gültige E-Mail-Adresse an"),
+	body("password").notEmpty().withMessage("Passwort ist erforderlich"),
 ];
 
 const updateProfileValidation = [
@@ -86,47 +90,47 @@ const updateProfileValidation = [
 		.optional()
 		.trim()
 		.isLength({ min: 2, max: 100 })
-		.withMessage("Name must be between 2 and 100 characters"),
+		.withMessage("Name muss zwischen 2 und 100 Zeichen lang sein"),
 	body("phoneNumber")
 		.optional()
 		.trim()
 		.matches(/^[\+]?[1-9][\d]{0,15}$/)
-		.withMessage("Please provide a valid phone number"),
+		.withMessage("Bitte geben Sie eine gültige Telefonnummer an"),
 	body("email")
 		.optional()
 		.isEmail()
 		.normalizeEmail()
-		.withMessage("Please provide a valid email"),
+		.withMessage("Bitte geben Sie eine gültige E-Mail-Adresse an"),
 	body("address.street")
 		.optional()
 		.trim()
 		.isLength({ min: 1, max: 200 })
-		.withMessage("Street address must be less than 200 characters"),
+		.withMessage("Straßenadresse muss weniger als 200 Zeichen lang sein"),
 	body("address.city")
 		.optional()
 		.trim()
 		.isLength({ min: 1, max: 100 })
-		.withMessage("City must be less than 100 characters"),
+		.withMessage("Stadt muss weniger als 100 Zeichen lang sein"),
 	body("address.state")
 		.optional()
 		.trim()
 		.isLength({ min: 1, max: 100 })
-		.withMessage("State/Province must be less than 100 characters"),
+		.withMessage("Bundesland/Provinz muss weniger als 100 Zeichen lang sein"),
 	body("address.zipCode")
 		.optional()
 		.trim()
 		.isLength({ min: 1, max: 20 })
-		.withMessage("Zip/Postal code must be less than 20 characters"),
+		.withMessage("Postleitzahl muss weniger als 20 Zeichen lang sein"),
 	body("address.country")
 		.optional()
 		.trim()
 		.isLength({ min: 1, max: 100 })
-		.withMessage("Country must be less than 100 characters"),
+		.withMessage("Land muss weniger als 100 Zeichen lang sein"),
 	body("creditCard.cardNumber")
 		.optional()
 		.trim()
 		.matches(/^\d{13,19}$/)
-		.withMessage("Card number must be between 13 and 19 digits"),
+		.withMessage("Kartennummer muss zwischen 13 und 19 Ziffern lang sein"),
 	body("creditCard.expiryMonth")
 		.optional()
 		.isIn([
@@ -143,69 +147,72 @@ const updateProfileValidation = [
 			"11",
 			"12",
 		])
-		.withMessage("Expiry month must be a valid month (01-12)"),
+		.withMessage("Ablaufmonat muss ein gültiger Monat sein (01-12)"),
 	body("creditCard.expiryYear")
 		.optional()
 		.isLength({ min: 4, max: 4 })
 		.matches(/^\d{4}$/)
-		.withMessage("Expiry year must be a 4-digit year"),
+		.withMessage("Ablaufjahr muss ein 4-stelliges Jahr sein"),
 	body("creditCard.cvv")
 		.optional()
 		.trim()
 		.matches(/^\d{3,4}$/)
-		.withMessage("CVV must be 3 or 4 digits"),
+		.withMessage("CVV muss 3 oder 4 Ziffern lang sein"),
 	body("creditCard.holderName")
 		.optional()
 		.trim()
 		.isLength({ min: 1, max: 100 })
-		.withMessage("Cardholder name must be less than 100 characters"),
+		.withMessage("Karteninhabername muss weniger als 100 Zeichen lang sein"),
 	body("creditCard.cardType")
 		.optional()
 		.isIn(["visa", "mastercard", "amex", "discover", "other"])
 		.withMessage(
-			"Card type must be one of: visa, mastercard, amex, discover, other"
+			"Kartentyp muss einer der folgenden sein: visa, mastercard, amex, discover, other"
 		),
 ];
 
 const changePasswordValidation = [
 	body("currentPassword")
 		.notEmpty()
-		.withMessage("Current password is required"),
+		.withMessage("Aktuelles Passwort ist erforderlich"),
 	body("newPassword")
 		.isLength({ min: 6 })
-		.withMessage("New password must be at least 6 characters long")
+		.withMessage("Neues Passwort muss mindestens 6 Zeichen lang sein")
 		.matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
 		.withMessage(
-			"New password must contain at least one lowercase letter, one uppercase letter, and one number"
+			"Neues Passwort muss mindestens einen Kleinbuchstaben, einen Großbuchstaben und eine Zahl enthalten"
 		),
 ];
 
 const refreshTokenValidation = [
-	body("refreshToken").notEmpty().withMessage("Refresh token is required"),
+	body("refreshToken").notEmpty().withMessage("Refresh-Token ist erforderlich"),
 ];
 
 const deleteAccountValidation = [
 	body("password")
 		.isString()
 		.notEmpty()
-		.withMessage("Password is required for account deletion"),
+		.withMessage("Passwort ist für die Kontolöschung erforderlich"),
 ];
 
 const requestPasswordResetValidation = [
 	body("email")
 		.isEmail()
 		.normalizeEmail()
-		.withMessage("Please provide a valid email"),
+		.withMessage("Bitte geben Sie eine gültige E-Mail-Adresse an"),
 ];
 
 const resetPasswordValidation = [
-	body("token").isString().notEmpty().withMessage("Reset token is required"),
+	body("token")
+		.isString()
+		.notEmpty()
+		.withMessage("Reset-Token ist erforderlich"),
 	body("newPassword")
 		.isLength({ min: 6 })
-		.withMessage("New password must be at least 6 characters long")
+		.withMessage("Neues Passwort muss mindestens 6 Zeichen lang sein")
 		.matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
 		.withMessage(
-			"New password must contain at least one lowercase letter, one uppercase letter, and one number"
+			"Neues Passwort muss mindestens einen Kleinbuchstaben, einen Großbuchstaben und eine Zahl enthalten"
 		),
 ];
 

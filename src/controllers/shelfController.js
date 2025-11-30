@@ -91,7 +91,7 @@ exports.getShelves = async (req, res) => {
 		console.error("Error getting shelves:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error retrieving shelves",
+			message: "Fehler beim Abrufen der Regale",
 			error: error.message,
 		});
 	}
@@ -108,7 +108,7 @@ exports.getShelf = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid shelf ID",
+				message: "Ungültige Regal-ID",
 			});
 		}
 
@@ -136,7 +136,7 @@ exports.getShelf = async (req, res) => {
 		if (!shelf) {
 			return res.status(404).json({
 				success: false,
-				message: "Shelf not found",
+				message: "Regal nicht gefunden",
 			});
 		}
 
@@ -148,7 +148,7 @@ exports.getShelf = async (req, res) => {
 		console.error("Error getting shelf:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error retrieving shelf",
+			message: "Fehler beim Abrufen des Regals",
 			error: error.message,
 		});
 	}
@@ -184,7 +184,7 @@ exports.getShelfByNumber = async (req, res) => {
 		if (!shelf) {
 			return res.status(404).json({
 				success: false,
-				message: "Shelf not found with this shelf number",
+				message: "Regal mit dieser Regalnummer nicht gefunden",
 			});
 		}
 
@@ -196,7 +196,7 @@ exports.getShelfByNumber = async (req, res) => {
 		console.error("Error getting shelf by number:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error retrieving shelf by number",
+			message: "Fehler beim Abrufen des Regals nach Nummer",
 			error: error.message,
 		});
 	}
@@ -221,7 +221,7 @@ exports.createShelf = async (req, res) => {
 
 		res.status(201).json({
 			success: true,
-			message: "Shelf created successfully",
+			message: "Regal erfolgreich erstellt",
 			data: shelf,
 		});
 	} catch (error) {
@@ -231,13 +231,13 @@ exports.createShelf = async (req, res) => {
 		if (error.code === 11000 && error.keyPattern?.shelfNumber) {
 			return res.status(400).json({
 				success: false,
-				message: "A shelf with this shelf number already exists",
+				message: "Ein Regal mit dieser Regalnummer existiert bereits",
 			});
 		}
 
 		res.status(400).json({
 			success: false,
-			message: "Error creating shelf",
+			message: "Fehler beim Erstellen des Regals",
 			error: error.message,
 		});
 	}
@@ -253,7 +253,7 @@ exports.updateShelf = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid shelf ID",
+				message: "Ungültige Regal-ID",
 			});
 		}
 
@@ -261,7 +261,7 @@ exports.updateShelf = async (req, res) => {
 		if (!shelf) {
 			return res.status(404).json({
 				success: false,
-				message: "Shelf not found",
+				message: "Regal nicht gefunden",
 			});
 		}
 
@@ -274,7 +274,7 @@ exports.updateShelf = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Shelf updated successfully",
+			message: "Regal erfolgreich aktualisiert",
 			data: updatedShelf,
 		});
 	} catch (error) {
@@ -284,13 +284,13 @@ exports.updateShelf = async (req, res) => {
 		if (error.code === 11000 && error.keyPattern?.shelfNumber) {
 			return res.status(400).json({
 				success: false,
-				message: "A shelf with this shelf number already exists",
+				message: "Ein Regal mit dieser Regalnummer existiert bereits",
 			});
 		}
 
 		res.status(400).json({
 			success: false,
-			message: "Error updating shelf",
+			message: "Fehler beim Aktualisieren des Regals",
 			error: error.message,
 		});
 	}
@@ -306,7 +306,7 @@ exports.deleteShelf = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid shelf ID",
+				message: "Ungültige Regal-ID",
 			});
 		}
 
@@ -315,7 +315,7 @@ exports.deleteShelf = async (req, res) => {
 		if (!shelf) {
 			return res.status(404).json({
 				success: false,
-				message: "Shelf not found",
+				message: "Regal nicht gefunden",
 			});
 		}
 
@@ -323,7 +323,7 @@ exports.deleteShelf = async (req, res) => {
 		if (shelf.products.length > 0 || shelf.orders.length > 0) {
 			return res.status(400).json({
 				success: false,
-				message: `Cannot delete shelf because it has ${shelf.products.length} products and ${shelf.orders.length} orders. Please remove them first.`,
+				message: `Regal kann nicht gelöscht werden, da es ${shelf.products.length} Produkte und ${shelf.orders.length} Bestellungen enthält. Bitte entfernen Sie diese zuerst.`,
 			});
 		}
 
@@ -335,14 +335,14 @@ exports.deleteShelf = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Shelf deleted successfully",
+			message: "Regal erfolgreich gelöscht",
 			data: updatedShelf,
 		});
 	} catch (error) {
 		console.error("Error deleting shelf:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error deleting shelf",
+			message: "Fehler beim Löschen des Regals",
 			error: error.message,
 		});
 	}
@@ -358,7 +358,7 @@ exports.permanentDeleteShelf = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid shelf ID",
+				message: "Ungültige Regal-ID",
 			});
 		}
 
@@ -367,7 +367,7 @@ exports.permanentDeleteShelf = async (req, res) => {
 		if (!shelf) {
 			return res.status(404).json({
 				success: false,
-				message: "Shelf not found",
+				message: "Regal nicht gefunden",
 			});
 		}
 
@@ -375,7 +375,7 @@ exports.permanentDeleteShelf = async (req, res) => {
 		if (shelf.products.length > 0 || shelf.orders.length > 0) {
 			return res.status(400).json({
 				success: false,
-				message: `Cannot permanently delete shelf because it has ${shelf.products.length} products and ${shelf.orders.length} orders`,
+				message: `Regal kann nicht dauerhaft gelöscht werden, da es ${shelf.products.length} Produkte und ${shelf.orders.length} Bestellungen enthält`,
 			});
 		}
 
@@ -384,13 +384,13 @@ exports.permanentDeleteShelf = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Shelf permanently deleted",
+			message: "Regal dauerhaft gelöscht",
 		});
 	} catch (error) {
 		console.error("Error permanently deleting shelf:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error permanently deleting shelf",
+			message: "Fehler beim dauerhaften Löschen des Regals",
 			error: error.message,
 		});
 	}
@@ -409,7 +409,7 @@ exports.addProductToShelf = async (req, res) => {
 		) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid shelf or product ID",
+				message: "Ungültige Regal- oder Produkt-ID",
 			});
 		}
 
@@ -418,7 +418,7 @@ exports.addProductToShelf = async (req, res) => {
 		if (!product) {
 			return res.status(404).json({
 				success: false,
-				message: "Product not found",
+				message: "Produkt nicht gefunden",
 			});
 		}
 
@@ -427,14 +427,15 @@ exports.addProductToShelf = async (req, res) => {
 		if (!shelf) {
 			return res.status(404).json({
 				success: false,
-				message: "Shelf not found",
+				message: "Regal nicht gefunden",
 			});
 		}
 
 		if (!shelf.isActive) {
 			return res.status(400).json({
 				success: false,
-				message: "Cannot add products to an inactive shelf",
+				message:
+					"Produkte können nicht zu einem inaktiven Regal hinzugefügt werden",
 			});
 		}
 
@@ -442,7 +443,7 @@ exports.addProductToShelf = async (req, res) => {
 		if (!shelf.hasSpace()) {
 			return res.status(400).json({
 				success: false,
-				message: "Shelf is at full capacity",
+				message: "Regal ist bei voller Kapazität",
 			});
 		}
 
@@ -450,7 +451,7 @@ exports.addProductToShelf = async (req, res) => {
 		if (shelf.products.includes(productId)) {
 			return res.status(400).json({
 				success: false,
-				message: "Product is already on this shelf",
+				message: "Produkt ist bereits auf diesem Regal",
 			});
 		}
 
@@ -465,14 +466,14 @@ exports.addProductToShelf = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Product added to shelf successfully",
+			message: "Produkt erfolgreich zum Regal hinzugefügt",
 			data: shelf,
 		});
 	} catch (error) {
 		console.error("Error adding product to shelf:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error adding product to shelf",
+			message: "Fehler beim Hinzufügen des Produkts zum Regal",
 			error: error.message,
 		});
 	}
@@ -491,7 +492,7 @@ exports.removeProductFromShelf = async (req, res) => {
 		) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid shelf or product ID",
+				message: "Ungültige Regal- oder Produkt-ID",
 			});
 		}
 
@@ -499,7 +500,7 @@ exports.removeProductFromShelf = async (req, res) => {
 		if (!shelf) {
 			return res.status(404).json({
 				success: false,
-				message: "Shelf not found",
+				message: "Regal nicht gefunden",
 			});
 		}
 
@@ -507,7 +508,7 @@ exports.removeProductFromShelf = async (req, res) => {
 		if (!shelf.products.includes(productId)) {
 			return res.status(400).json({
 				success: false,
-				message: "Product is not on this shelf",
+				message: "Produkt ist nicht auf diesem Regal",
 			});
 		}
 
@@ -522,14 +523,14 @@ exports.removeProductFromShelf = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Product removed from shelf successfully",
+			message: "Produkt erfolgreich vom Regal entfernt",
 			data: shelf,
 		});
 	} catch (error) {
 		console.error("Error removing product from shelf:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error removing product from shelf",
+			message: "Fehler beim Entfernen des Produkts vom Regal",
 			error: error.message,
 		});
 	}
@@ -548,7 +549,7 @@ exports.addOrderToShelf = async (req, res) => {
 		) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid shelf or order ID",
+				message: "Ungültige Regal- oder Bestellungs-ID",
 			});
 		}
 
@@ -557,7 +558,7 @@ exports.addOrderToShelf = async (req, res) => {
 		if (!order) {
 			return res.status(404).json({
 				success: false,
-				message: "Order not found",
+				message: "Bestellung nicht gefunden",
 			});
 		}
 
@@ -566,14 +567,15 @@ exports.addOrderToShelf = async (req, res) => {
 		if (!shelf) {
 			return res.status(404).json({
 				success: false,
-				message: "Shelf not found",
+				message: "Regal nicht gefunden",
 			});
 		}
 
 		if (!shelf.isActive) {
 			return res.status(400).json({
 				success: false,
-				message: "Cannot add orders to an inactive shelf",
+				message:
+					"Bestellungen können nicht zu einem inaktiven Regal hinzugefügt werden",
 			});
 		}
 
@@ -581,7 +583,7 @@ exports.addOrderToShelf = async (req, res) => {
 		if (!shelf.hasSpace()) {
 			return res.status(400).json({
 				success: false,
-				message: "Shelf is at full capacity",
+				message: "Regal ist bei voller Kapazität",
 			});
 		}
 
@@ -589,7 +591,7 @@ exports.addOrderToShelf = async (req, res) => {
 		if (shelf.orders.includes(orderId)) {
 			return res.status(400).json({
 				success: false,
-				message: "Order is already on this shelf",
+				message: "Bestellung ist bereits auf diesem Regal",
 			});
 		}
 
@@ -604,14 +606,14 @@ exports.addOrderToShelf = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Order added to shelf successfully",
+			message: "Bestellung erfolgreich zum Regal hinzugefügt",
 			data: shelf,
 		});
 	} catch (error) {
 		console.error("Error adding order to shelf:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error adding order to shelf",
+			message: "Fehler beim Hinzufügen der Bestellung zum Regal",
 			error: error.message,
 		});
 	}
@@ -630,7 +632,7 @@ exports.removeOrderFromShelf = async (req, res) => {
 		) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid shelf or order ID",
+				message: "Ungültige Regal- oder Bestellungs-ID",
 			});
 		}
 
@@ -638,7 +640,7 @@ exports.removeOrderFromShelf = async (req, res) => {
 		if (!shelf) {
 			return res.status(404).json({
 				success: false,
-				message: "Shelf not found",
+				message: "Regal nicht gefunden",
 			});
 		}
 
@@ -646,7 +648,7 @@ exports.removeOrderFromShelf = async (req, res) => {
 		if (!shelf.orders.includes(orderId)) {
 			return res.status(400).json({
 				success: false,
-				message: "Order is not on this shelf",
+				message: "Bestellung ist nicht auf diesem Regal",
 			});
 		}
 
@@ -661,14 +663,14 @@ exports.removeOrderFromShelf = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Order removed from shelf successfully",
+			message: "Bestellung erfolgreich vom Regal entfernt",
 			data: shelf,
 		});
 	} catch (error) {
 		console.error("Error removing order from shelf:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error removing order from shelf",
+			message: "Fehler beim Entfernen der Bestellung vom Regal",
 			error: error.message,
 		});
 	}
@@ -748,7 +750,7 @@ exports.getShelfStats = async (req, res) => {
 		console.error("Error getting shelf statistics:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error retrieving shelf statistics",
+			message: "Fehler beim Abrufen der Regalstatistiken",
 			error: error.message,
 		});
 	}
@@ -772,7 +774,7 @@ exports.getAvailableShelves = async (req, res) => {
 		console.error("Error getting available shelves:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error retrieving available shelves",
+			message: "Fehler beim Abrufen der verfügbaren Regale",
 			error: error.message,
 		});
 	}
@@ -788,7 +790,7 @@ exports.clearShelf = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid shelf ID",
+				message: "Ungültige Regal-ID",
 			});
 		}
 
@@ -796,7 +798,7 @@ exports.clearShelf = async (req, res) => {
 		if (!shelf) {
 			return res.status(404).json({
 				success: false,
-				message: "Shelf not found",
+				message: "Regal nicht gefunden",
 			});
 		}
 
@@ -811,14 +813,14 @@ exports.clearShelf = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Shelf cleared successfully",
+			message: "Regal erfolgreich geleert",
 			data: shelf,
 		});
 	} catch (error) {
 		console.error("Error clearing shelf:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error clearing shelf",
+			message: "Fehler beim Leeren des Regals",
 			error: error.message,
 		});
 	}
@@ -835,14 +837,14 @@ exports.bulkAddProductsToShelf = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid shelf ID",
+				message: "Ungültige Regal-ID",
 			});
 		}
 
 		if (!Array.isArray(productIds) || productIds.length === 0) {
 			return res.status(400).json({
 				success: false,
-				message: "productIds must be a non-empty array",
+				message: "productIds muss ein nicht-leeres Array sein",
 			});
 		}
 
@@ -853,7 +855,7 @@ exports.bulkAddProductsToShelf = async (req, res) => {
 		if (invalidIds.length > 0) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid product IDs found",
+				message: "Ungültige Produkt-IDs gefunden",
 				invalidIds,
 			});
 		}
@@ -862,14 +864,15 @@ exports.bulkAddProductsToShelf = async (req, res) => {
 		if (!shelf) {
 			return res.status(404).json({
 				success: false,
-				message: "Shelf not found",
+				message: "Regal nicht gefunden",
 			});
 		}
 
 		if (!shelf.isActive) {
 			return res.status(400).json({
 				success: false,
-				message: "Cannot add products to an inactive shelf",
+				message:
+					"Produkte können nicht zu einem inaktiven Regal hinzugefügt werden",
 			});
 		}
 
@@ -880,7 +883,7 @@ exports.bulkAddProductsToShelf = async (req, res) => {
 		if (!shelf.hasSpace(newProductsCount)) {
 			return res.status(400).json({
 				success: false,
-				message: `Shelf does not have enough capacity. Available: ${shelf.availableCapacity}, Required: ${newProductsCount}`,
+				message: `Regal hat nicht genug Kapazität. Verfügbar: ${shelf.availableCapacity}, Erforderlich: ${newProductsCount}`,
 			});
 		}
 
@@ -889,7 +892,7 @@ exports.bulkAddProductsToShelf = async (req, res) => {
 		if (products.length !== productIds.length) {
 			return res.status(404).json({
 				success: false,
-				message: "Some products were not found",
+				message: "Einige Produkte wurden nicht gefunden",
 			});
 		}
 
@@ -915,7 +918,7 @@ exports.bulkAddProductsToShelf = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: `${added.length} products added to shelf, ${skipped.length} already existed`,
+			message: `${added.length} Produkte zum Regal hinzugefügt, ${skipped.length} waren bereits vorhanden`,
 			data: {
 				shelf,
 				added: added.length,
@@ -926,7 +929,7 @@ exports.bulkAddProductsToShelf = async (req, res) => {
 		console.error("Error bulk adding products to shelf:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error bulk adding products to shelf",
+			message: "Fehler beim Massenhinzufügen von Produkten zum Regal",
 			error: error.message,
 		});
 	}
@@ -943,14 +946,14 @@ exports.bulkAddOrdersToShelf = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid shelf ID",
+				message: "Ungültige Regal-ID",
 			});
 		}
 
 		if (!Array.isArray(orderIds) || orderIds.length === 0) {
 			return res.status(400).json({
 				success: false,
-				message: "orderIds must be a non-empty array",
+				message: "orderIds muss ein nicht-leeres Array sein",
 			});
 		}
 
@@ -961,7 +964,7 @@ exports.bulkAddOrdersToShelf = async (req, res) => {
 		if (invalidIds.length > 0) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid order IDs found",
+				message: "Ungültige Bestellungs-IDs gefunden",
 				invalidIds,
 			});
 		}
@@ -970,14 +973,15 @@ exports.bulkAddOrdersToShelf = async (req, res) => {
 		if (!shelf) {
 			return res.status(404).json({
 				success: false,
-				message: "Shelf not found",
+				message: "Regal nicht gefunden",
 			});
 		}
 
 		if (!shelf.isActive) {
 			return res.status(400).json({
 				success: false,
-				message: "Cannot add orders to an inactive shelf",
+				message:
+					"Bestellungen können nicht zu einem inaktiven Regal hinzugefügt werden",
 			});
 		}
 
@@ -988,7 +992,7 @@ exports.bulkAddOrdersToShelf = async (req, res) => {
 		if (!shelf.hasSpace(newOrdersCount)) {
 			return res.status(400).json({
 				success: false,
-				message: `Shelf does not have enough capacity. Available: ${shelf.availableCapacity}, Required: ${newOrdersCount}`,
+				message: `Regal hat nicht genug Kapazität. Verfügbar: ${shelf.availableCapacity}, Erforderlich: ${newOrdersCount}`,
 			});
 		}
 
@@ -997,7 +1001,7 @@ exports.bulkAddOrdersToShelf = async (req, res) => {
 		if (orders.length !== orderIds.length) {
 			return res.status(404).json({
 				success: false,
-				message: "Some orders were not found",
+				message: "Einige Bestellungen wurden nicht gefunden",
 			});
 		}
 
@@ -1023,7 +1027,7 @@ exports.bulkAddOrdersToShelf = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: `${added.length} orders added to shelf, ${skipped.length} already existed`,
+			message: `${added.length} Bestellungen zum Regal hinzugefügt, ${skipped.length} waren bereits vorhanden`,
 			data: {
 				shelf,
 				added: added.length,
@@ -1034,7 +1038,7 @@ exports.bulkAddOrdersToShelf = async (req, res) => {
 		console.error("Error bulk adding orders to shelf:", error);
 		res.status(500).json({
 			success: false,
-			message: "Error bulk adding orders to shelf",
+			message: "Fehler beim Massenhinzufügen von Bestellungen zum Regal",
 			error: error.message,
 		});
 	}
