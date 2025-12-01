@@ -427,6 +427,7 @@
 											<th>Contact</th>
 											<th>Address</th>
 											<th>Status</th>
+											<th>Confirmed</th>
 											<th>Joined</th>
 											<th>Last Login</th>
 											<th>Actions</th>
@@ -435,7 +436,7 @@
 									<tbody id="customers-table-body">
 										<tr>
 											<td
-												colspan="8"
+												colspan="9"
 												style="text-align: center; padding: 40px; color: #666"
 											>
 												No customers found.
@@ -7401,7 +7402,7 @@
 				if (customers.length === 0) {
 					tbody.innerHTML = `
 						<tr>
-							<td colspan="8" style="text-align: center; padding: 40px; color: #666">
+							<td colspan="9" style="text-align: center; padding: 40px; color: #666">
 								No customers found. ${
 									filteredCustomersData.length !== customersData.length
 										? "Try adjusting your filters."
@@ -7454,6 +7455,11 @@
 						<td>
 							<span class="status-badge ${customer.isActive ? "active" : "inactive"}">
 								${customer.isActive ? "Active" : "Inactive"}
+							</span>
+						</td>
+						<td>
+							<span class="status-badge ${customer.emailConfirmed ? "active" : "inactive"}">
+								${customer.emailConfirmed ? "Confirmed" : "Unconfirmed"}
 							</span>
 						</td>
 						<td>${new Date(customer.createdAt).toLocaleDateString()}</td>
@@ -7572,6 +7578,7 @@
 							? customer.address.zipCode
 							: "No zip",
 					Status: customer.isActive ? "Active" : "Inactive",
+					Confirmed: customer.emailConfirmed ? "Yes" : "No",
 					"Joined Date": new Date(customer.createdAt).toLocaleDateString(),
 					"Last Login": customer.lastLogin
 						? new Date(customer.lastLogin).toLocaleDateString()
