@@ -1310,8 +1310,8 @@ exports.getProductsWithDiscount = async (req, res) => {
 			limit = 10,
 			search,
 			isActive = true,
-			sortBy = "discount",
-			sortOrder = "desc",
+			sortBy = "finalPrice",
+			sortOrder = "asc",
 			priceRange,
 			stockLevel,
 			inAds,
@@ -1395,9 +1395,14 @@ exports.getProductsWithDiscount = async (req, res) => {
 		const limitNumber = parseInt(limit);
 		const skip = (pageNumber - 1) * limitNumber;
 
-		// Build sort object
-		const sort = {};
-		sort[sortBy] = sortOrder === "desc" ? -1 : 1;
+		// Determine if we need to sort by final price (computed field)
+		const isSortingByFinalPrice = sortBy === "finalPrice";
+
+		// Build sort object for MongoDB (skip if sorting by final price)
+		let mongoSort = {};
+		if (!isSortingByFinalPrice) {
+			mongoSort[sortBy] = sortOrder === "desc" ? -1 : 1;
+		}
 
 		// Execute queries with population
 		const [products, total] = await Promise.all([
@@ -1412,12 +1417,25 @@ exports.getProductsWithDiscount = async (req, res) => {
 					},
 				})
 				.populate("createdBy", "name email")
-				.sort(sort)
+				.sort(isSortingByFinalPrice ? {} : mongoSort) // Skip MongoDB sort if sorting by final price
 				.skip(skip)
 				.limit(limitNumber)
 				.lean(),
 			Product.countDocuments(baseFilter),
 		]);
+
+		// Sort by final discounted price if requested
+		if (isSortingByFinalPrice) {
+			products.sort((a, b) => {
+				const finalPriceA = a.price * (1 - (a.discount || 0) / 100);
+				const finalPriceB = b.price * (1 - (b.discount || 0) / 100);
+				if (sortOrder === "desc") {
+					return finalPriceB - finalPriceA;
+				} else {
+					return finalPriceA - finalPriceB;
+				}
+			});
+		}
 
 		// Calculate pagination info
 		const totalPages = Math.ceil(total / limitNumber);
