@@ -19,7 +19,10 @@ const register = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: "Validierung fehlgeschlagen",
+				message: `Validierung fehlgeschlagen: ${errors
+					.array()
+					.map((e) => e.msg)
+					.join(", ")}`,
 				errors: errors.array(),
 			});
 		}
@@ -316,7 +319,10 @@ const login = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: "Validierung fehlgeschlagen",
+				message: `Validierung fehlgeschlagen: ${errors
+					.array()
+					.map((e) => e.msg)
+					.join(", ")}`,
 				errors: errors.array(),
 			});
 		}
@@ -484,7 +490,10 @@ const updateProfile = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: "Validierung fehlgeschlagen",
+				message: `Validierung fehlgeschlagen: ${errors
+					.array()
+					.map((e) => e.msg)
+					.join(", ")}`,
 				errors: errors.array(),
 			});
 		}
@@ -542,7 +551,10 @@ const changePassword = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: "Validierung fehlgeschlagen",
+				message: `Validierung fehlgeschlagen: ${errors
+					.array()
+					.map((e) => e.msg)
+					.join(", ")}`,
 				errors: errors.array(),
 			});
 		}
@@ -588,7 +600,10 @@ const loginProfile = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: "Validierung fehlgeschlagen",
+				message: `Validierung fehlgeschlagen: ${errors
+					.array()
+					.map((e) => e.msg)
+					.join(", ")}`,
 				errors: errors.array(),
 			});
 		}
@@ -866,7 +881,10 @@ const createUser = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: "Validierung fehlgeschlagen",
+				message: `Validierung fehlgeschlagen: ${errors
+					.array()
+					.map((e) => e.msg)
+					.join(", ")}`,
 				errors: errors.array(),
 			});
 		}
@@ -1139,7 +1157,10 @@ const requestPasswordReset = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: "Validierung fehlgeschlagen",
+				message: `Validierung fehlgeschlagen: ${errors
+					.array()
+					.map((e) => e.msg)
+					.join(", ")}`,
 				errors: errors.array(),
 			});
 		}
@@ -1244,7 +1265,10 @@ const resetPassword = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: "Validierung fehlgeschlagen",
+				message: `Validierung fehlgeschlagen: ${errors
+					.array()
+					.map((e) => e.msg)
+					.join(", ")}`,
 				errors: errors.array(),
 			});
 		}
