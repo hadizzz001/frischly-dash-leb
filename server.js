@@ -300,6 +300,7 @@ app.use("/api/settings", settingRoutes);
 // Route for customer shop page
 app.get("/shop", (req, res) => {
 	res.sendFile(__dirname + "/public/shop.html");
+	res.redirect("https://frischlyshop.com");
 });
 
 // Route for staff dashboard page
@@ -347,9 +348,9 @@ app.get("/payment/success", (req, res) => {
 	res.sendFile(__dirname + "/public/payment/success-pod.html");
 });
 
-// Route for shop1 page
+// Route for shop1 page - redirect to frischlyshop.com
 app.get("/shop1", (req, res) => {
-	res.sendFile(__dirname + "/public/shop1.html");
+	res.redirect("https://frischlyshop.com");
 });
 
 // Health check route
