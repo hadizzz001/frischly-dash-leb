@@ -38,8 +38,7 @@ router.get("/discount", getProductsWithDiscount);
 // );
 router.get(
 	"/barcode/:barcode",
-	protect,
-	authorize("admin", "manager", "staff"),
+
 	getProductByBarcode
 );
 //router.get("/shelf/:shelfNumber", getProductsByShelfNumber);
