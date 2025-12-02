@@ -477,7 +477,7 @@ exports.getProductByBarcode = async (req, res) => {
 	try {
 		const { barcode } = req.params;
 
-		const product = await Product.findByBarcode(barcode).populate({
+		let product = await Product.findByBarcode(barcode).populate({
 			path: "subcategory",
 			select: "name parentCategory",
 			populate: {
@@ -485,6 +485,24 @@ exports.getProductByBarcode = async (req, res) => {
 				select: "name",
 			},
 		});
+
+		// If not found, try to find by prefix (e.g. if check digit is missing in search)
+		if (!product) {
+			// Escape special regex characters to prevent ReDoS
+			const escapedBarcode = barcode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+			product = await Product.findOne({
+				barcode: new RegExp(`^${escapedBarcode}`),
+				isActive: true,
+			}).populate({
+				path: "subcategory",
+				select: "name parentCategory",
+				populate: {
+					path: "parentCategory",
+					select: "name",
+				},
+			});
+		}
+
 		if (!product) {
 			return res.status(404).json({
 				success: false,
