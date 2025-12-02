@@ -122,5 +122,5 @@ dist
 backups/*
 
 # Scripts directory
-scripts/
+#scripts/
 
