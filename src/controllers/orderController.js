@@ -656,6 +656,7 @@ exports.createOrder = async (req, res) => {
 							: ""
 					}
 					
+					<p>If the order contains alcohol, the rider will need to check your identity at delivery</p>
 					<p>If you have any questions about your order, please contact us at info@frischlyshop.com .</p>
 					
 					<p>Thank you for choosing Frischly!</p>
@@ -723,6 +724,7 @@ exports.createOrder = async (req, res) => {
 							: ""
 					}
 					
+					<p>Falls die Bestellung Alkohol enthält, muss der Fahrer Ihre Identität bei der Lieferung überprüfen.</p>
 					<p>Bei Fragen zu Ihrer Bestellung kontaktieren Sie uns bitte unter info@frischlyshop.com.</p>
 					
 					<p>Vielen Dank, dass Sie sich für Frischly entschieden haben!</p>

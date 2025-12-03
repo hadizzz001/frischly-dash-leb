@@ -20,6 +20,7 @@ const subcategoryRoutes = require("./src/routes/subcategories");
 const adminRoutes = require("./src/routes/admin");
 const shelfRoutes = require("./src/routes/shelves");
 const settingRoutes = require("./src/routes/settings");
+const promoCodeRoutes = require("./src/routes/promoCodes");
 
 // Controllers
 const { cancelOrder } = require("./src/controllers/orderController");
@@ -296,6 +297,7 @@ app.use("/api/subcategories", subcategoryRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/shelves", shelfRoutes);
 app.use("/api/settings", settingRoutes);
+app.use("/api/promocodes", promoCodeRoutes);
 
 // Route for customer shop page
 app.get("/shop", (req, res) => {
