@@ -825,6 +825,83 @@ exports.updateOrder = async (req, res) => {
 				"name barcode shelfNumber price discount tax bottlerefund picture"
 			);
 
+		// Send delivery confirmation email
+		if (status === "delivered") {
+			try {
+				const emailSubject = `Order Delivered - Order #${updatedOrder._id}`;
+
+				let promoCodeHtml = "";
+				if (updatedOrder.total > 100) {
+					promoCodeHtml = `
+						<div style="background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-left: 4px solid #28a745; border-radius: 4px;">
+							<h3 style="color: #28a745; margin-top: 0;">Congratulations! 🎉</h3>
+							<p>Since your order was over €100, you have won a special promo code for your next purchase!</p>
+							<p>We will send you the code in a separate email shortly.</p>
+							
+							<hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;">
+							
+							<h3 style="color: #28a745; margin-top: 0;">Herzlichen Glückwunsch! 🎉</h3>
+							<p>Da Ihre Bestellung über 100 € lag, haben Sie einen speziellen Gutscheincode für Ihren nächsten Einkauf gewonnen!</p>
+							<p>Wir senden Ihnen den Code in Kürze in einer separaten E-Mail zu.</p>
+						</div>
+					`;
+				}
+
+				const emailHtml = `
+					<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+						<h2 style="color: #333; text-align: center;">Order Delivered</h2>
+						<p>Dear ${updatedOrder.customer.name},</p>
+						<p>Good news! Your order has been delivered successfully.</p>
+						
+						${promoCodeHtml}
+
+						<h3>Order Details</h3>
+						<p><strong>Order ID:</strong> ${updatedOrder._id}</p>
+						<p><strong>Delivery Date:</strong> ${new Date().toLocaleDateString()}</p>
+						
+						<p>We hope you enjoy your purchase!</p>
+						
+						<p>If you have any feedback or issues, please contact us at info@frischlyshop.com.</p>
+						
+						<p>Thank you for choosing Frischly!</p>
+						
+						<p>Best regards,<br>The Frischly Team</p>
+						
+						<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+						
+						<h2 style="color: #333; text-align: center;">Bestellung Geliefert</h2>
+						<p>Liebe/r ${updatedOrder.customer.name},</p>
+						<p>Gute Nachrichten! Ihre Bestellung wurde erfolgreich zugestellt.</p>
+						
+						<h3>Bestelldetails</h3>
+						<p><strong>Bestell-ID:</strong> ${updatedOrder._id}</p>
+						<p><strong>Lieferdatum:</strong> ${new Date().toLocaleDateString("de-DE")}</p>
+						
+						<p>Wir hoffen, Sie haben Freude an Ihrem Einkauf!</p>
+						
+						<p>Bei Fragen oder Problemen kontaktieren Sie uns bitte unter info@frischlyshop.com.</p>
+						
+						<p>Vielen Dank, dass Sie sich für Frischly entschieden haben!</p>
+						
+						<p>Mit freundlichen Grüßen,<br>Das Frischly Team</p>
+						
+						<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+						<p style="font-size: 12px; color: #666; text-align: center;">
+							Dies ist eine automatische E-Mail. Bitte antworten Sie nicht auf diese Nachricht.
+						</p>
+					</div>
+				`;
+
+				await sendEmail({
+					to: updatedOrder.customer.email,
+					subject: emailSubject,
+					html: emailHtml,
+				});
+			} catch (emailError) {
+				console.error("Error sending delivery confirmation email:", emailError);
+			}
+		}
+
 		res.json({
 			success: true,
 			message: "Bestellung erfolgreich aktualisiert",
@@ -1410,6 +1487,83 @@ exports.updateOrderStatus = async (req, res) => {
 				"items.product",
 				"name barcode shelfNumber price discount tax bottlerefund picture"
 			);
+
+		// Send delivery confirmation email
+		if (status === "delivered" && previousStatus !== "delivered") {
+			try {
+				const emailSubject = `Order Delivered - Order #${updatedOrder._id}`;
+
+				let promoCodeHtml = "";
+				if (updatedOrder.total > 100) {
+					promoCodeHtml = `
+						<div style="background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-left: 4px solid #28a745; border-radius: 4px;">
+							<h3 style="color: #28a745; margin-top: 0;">Congratulations! 🎉</h3>
+							<p>Since your order was over €100, you have won a special promo code for your next purchase!</p>
+							<p>We will send you the code in a separate email shortly.</p>
+							
+							<hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;">
+							
+							<h3 style="color: #28a745; margin-top: 0;">Herzlichen Glückwunsch! 🎉</h3>
+							<p>Da Ihre Bestellung über 100 € lag, haben Sie einen speziellen Gutscheincode für Ihren nächsten Einkauf gewonnen!</p>
+							<p>Wir senden Ihnen den Code in Kürze in einer separaten E-Mail zu.</p>
+						</div>
+					`;
+				}
+
+				const emailHtml = `
+					<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+						<h2 style="color: #333; text-align: center;">Order Delivered</h2>
+						<p>Dear ${updatedOrder.customer.name},</p>
+						<p>Good news! Your order has been delivered successfully.</p>
+						
+						${promoCodeHtml}
+
+						<h3>Order Details</h3>
+						<p><strong>Order ID:</strong> ${updatedOrder._id}</p>
+						<p><strong>Delivery Date:</strong> ${new Date().toLocaleDateString()}</p>
+						
+						<p>We hope you enjoy your purchase!</p>
+						
+						<p>If you have any feedback or issues, please contact us at info@frischlyshop.com.</p>
+						
+						<p>Thank you for choosing Frischly!</p>
+						
+						<p>Best regards,<br>The Frischly Team</p>
+						
+						<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+						
+						<h2 style="color: #333; text-align: center;">Bestellung Geliefert</h2>
+						<p>Liebe/r ${updatedOrder.customer.name},</p>
+						<p>Gute Nachrichten! Ihre Bestellung wurde erfolgreich zugestellt.</p>
+						
+						<h3>Bestelldetails</h3>
+						<p><strong>Bestell-ID:</strong> ${updatedOrder._id}</p>
+						<p><strong>Lieferdatum:</strong> ${new Date().toLocaleDateString("de-DE")}</p>
+						
+						<p>Wir hoffen, Sie haben Freude an Ihrem Einkauf!</p>
+						
+						<p>Bei Fragen oder Problemen kontaktieren Sie uns bitte unter info@frischlyshop.com.</p>
+						
+						<p>Vielen Dank, dass Sie sich für Frischly entschieden haben!</p>
+						
+						<p>Mit freundlichen Grüßen,<br>Das Frischly Team</p>
+						
+						<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+						<p style="font-size: 12px; color: #666; text-align: center;">
+							Dies ist eine automatische E-Mail. Bitte antworten Sie nicht auf diese Nachricht.
+						</p>
+					</div>
+				`;
+
+				await sendEmail({
+					to: updatedOrder.customer.email,
+					subject: emailSubject,
+					html: emailHtml,
+				});
+			} catch (emailError) {
+				console.error("Error sending delivery confirmation email:", emailError);
+			}
+		}
 
 		res.json({
 			success: true,
