@@ -124,7 +124,8 @@ exports.getAllWaste = async (req, res) => {
 			.sort(sort)
 			.limit(parseInt(limit))
 			.skip(skip)
-			.populate("recordedBy", "name email");
+			.populate("recordedBy", "name email")
+			.populate("productId", "name picture");
 
 		// Get total count
 		const total = await Waste.countDocuments(query);

@@ -12926,11 +12926,29 @@
 						? waste.recordedBy.name
 						: "Unknown";
 
+					// Get product details from populated field or fallback
+					const productName = waste.productId
+						? waste.productId.name
+						: waste.productName || "-";
+					const productPicture =
+						waste.productId && waste.productId.picture
+							? waste.productId.picture
+							: null;
+
 					html += `
 						<tr>
 							<td>${date}</td>
 							<td>${waste.barcode || "-"}</td>
-							<td>${waste.productName || "-"}</td>
+							<td>
+								<div style="display: flex; align-items: center; gap: 10px;">
+									${
+										productPicture
+											? `<img src="${productPicture}" alt="${productName}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">`
+											: `<div style="width: 40px; height: 40px; background-color: #f0f0f0; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #999;"><i class="fas fa-box"></i></div>`
+									}
+									<span>${productName}</span>
+								</div>
+							</td>
 							<td>${waste.quantity}</td>
 							<td>${waste.reason}</td>
 							<td>${recordedBy}</td>
@@ -13107,12 +13125,20 @@
 					"Edit Waste Record";
 				document.getElementById("waste-id").value = id;
 				document.getElementById("waste-barcode").value = waste.barcode || "";
-				document.getElementById("waste-product-id").value =
-					waste.productId || "";
-				document.getElementById("waste-product-name").value =
-					waste.productName || "";
+				
+				// Handle populated productId
+				const productId = waste.productId && typeof waste.productId === 'object' 
+					? waste.productId._id 
+					: waste.productId;
+				document.getElementById("waste-product-id").value = productId || "";
+				
+				// Handle product name from populated object or direct field
+				const productName = waste.productId && waste.productId.name 
+					? waste.productId.name 
+					: waste.productName;
+				document.getElementById("waste-product-name").value = productName || "";
+				
 				document.getElementById("waste-quantity").value = waste.quantity;
-				document.getElementById("waste-reason").value = waste.reason;
 				document.getElementById("waste-reason").value = waste.reason;
 				document.getElementById("waste-notes").value = waste.notes || "";
 
