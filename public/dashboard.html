@@ -5747,7 +5747,7 @@
 
 			async function loadSubcategoriesForDropdown() {
 				try {
-					const response = await fetch(`${API_BASE_URL}/subcategories`, {
+					const response = await fetch(`${API_BASE_URL}/subcategories?active=all`, {
 						headers: {
 							Authorization: `Bearer ${currentToken}`,
 							"Content-Type": "application/json",
@@ -5780,7 +5780,7 @@
 
 			async function loadCategoriesForProductForm() {
 				try {
-					const response = await fetch(`${API_BASE_URL}/categories`, {
+					const response = await fetch(`${API_BASE_URL}/categories?isActive=all`, {
 						headers: {
 							Authorization: `Bearer ${currentToken}`,
 							"Content-Type": "application/json",
@@ -5796,7 +5796,6 @@
 							select.innerHTML =
 								'<option value="">Select Category (Optional)</option>';
 							categories
-								.filter((category) => category.isActive)
 								.forEach((category) => {
 									const option = document.createElement("option");
 									option.value = category._id;
@@ -5835,7 +5834,7 @@
 
 					// Load subcategories filtered by category
 					const response = await fetch(
-						`${API_BASE_URL}/subcategories?parent=${selectedCategoryId}`,
+						`${API_BASE_URL}/subcategories?active=all&parent=${selectedCategoryId}`,
 						{
 							headers: {
 								Authorization: `Bearer ${currentToken}`,

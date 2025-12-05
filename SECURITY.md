@@ -44,7 +44,7 @@
 - `PORT`: Server port (default: 3001)
 - `CLIENT_URL`: Comma-separated list of allowed CORS origins
 - `FRONTEND_URL`: Your frontend application URL
-- `BACKEND_URL`: Your backend server URL (for webhooks)
+- `SERVER_PUBLIC_URL`: Your backend server URL (for webhooks)
 
 ## 🚨 Security Checklist
 

@@ -16,20 +16,15 @@ const requiredVars = {
 		"CLOUDINARY_CLOUD_NAME",
 		"CLOUDINARY_API_KEY",
 		"CLOUDINARY_API_SECRET",
-		"PORTAL_KEY",
-		"MERCHANT_ID",
-		"PORTAL_ID",
-		"ACCOUNT_ID",
 	],
 	important: [
 		"NODE_ENV",
 		"PORT",
 		"CLIENT_URL",
 		"FRONTEND_URL",
-		"BACKEND_URL",
+		"SERVER_PUBLIC_URL",
 		"EMAIL_USER",
 		"EMAIL_PASS",
-		"PAYONE_MODE",
 	],
 	optional: [
 		"IMAGEKIT_PUBLIC_KEY",
@@ -38,7 +33,6 @@ const requiredVars = {
 		"EMAIL_SERVICE",
 		"EMAIL_HOST",
 		"EMAIL_PORT",
-		"PAYONE_API_BASE_URL",
 	],
 };
 
@@ -123,22 +117,6 @@ if (
 	hasWarnings = true;
 } else {
 	console.log(`   ✅ NODE_ENV is set to "${process.env.NODE_ENV}"`);
-}
-
-// Check PAYONE_MODE
-if (process.env.PAYONE_MODE) {
-	if (
-		process.env.PAYONE_MODE !== "live" &&
-		process.env.PAYONE_MODE !== "test"
-	) {
-		console.log('   ⚠️  PAYONE_MODE should be either "live" or "test"');
-		hasWarnings = true;
-	} else {
-		console.log(`   ✅ PAYONE_MODE is set to "${process.env.PAYONE_MODE}"`);
-	}
-} else {
-	console.log("   ⚠️  PAYONE_MODE not set - will default to 'test'");
-	hasWarnings = true;
 }
 
 // Check CORS configuration
