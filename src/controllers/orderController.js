@@ -577,8 +577,9 @@ exports.createOrder = async (req, res) => {
 
 				paymentUrl = session.url;
 
-				// Update order with session ID
+				// Update order with session ID and payment URL
 				order.paymentLinkId = session.id;
+				order.paymentUrl = paymentUrl;
 				await order.save();
 			} catch (error) {
 				console.error("Stripe session creation failed:", error);

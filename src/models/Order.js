@@ -137,6 +137,11 @@ const orderSchema = new mongoose.Schema(
 			default: "online",
 			required: false,
 		},
+		paymentUrl: {
+			type: String,
+			trim: true,
+			required: false,
+		},
 		shelfNumber: {
 			type: String,
 			default: "",
