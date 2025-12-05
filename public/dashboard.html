@@ -1073,13 +1073,6 @@
 
 					<!-- Statistics Summary Cards -->
 					<div class="stats-grid" id="sales-summary-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
-						<div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #631ea8 100%); color: white; padding: 20px; border-radius: 12px;">
-							<div class="stat-icon" style="font-size: 2em;">💰</div>
-							<div class="stat-info">
-								<div class="stat-value" id="stats-total-revenue" style="font-size: 1.8em; font-weight: bold;">€0.00</div>
-								<div class="stat-label" style="opacity: 0.9;">Total Revenue</div>
-							</div>
-						</div>
 						<div class="stat-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 20px; border-radius: 12px;">
 							<div class="stat-icon" style="font-size: 2em;">📦</div>
 							<div class="stat-info">
@@ -1161,7 +1154,6 @@
 										<th style="padding: 15px 20px; text-align: center; font-weight: 600; color: #333; border-bottom: 2px solid #667eea;">Barcode</th>
 										<th style="padding: 15px 20px; text-align: center; font-weight: 600; color: #333; border-bottom: 2px solid #667eea;">Qty Sold</th>
 										<th style="padding: 15px 20px; text-align: right; font-weight: 600; color: #333; border-bottom: 2px solid #667eea;">Unit Price</th>
-										<th style="padding: 15px 20px; text-align: right; font-weight: 600; color: #333; border-bottom: 2px solid #667eea;">Total Revenue</th>
 										<th style="padding: 15px 20px; text-align: center; font-weight: 600; color: #333; border-bottom: 2px solid #667eea;">Orders</th>
 										<th style="padding: 15px 20px; text-align: center; font-weight: 600; color: #333; border-bottom: 2px solid #667eea;">Avg/Order</th>
 										<th style="padding: 15px 20px; text-align: center; font-weight: 600; color: #333; border-bottom: 2px solid #667eea;">Last Sale</th>
@@ -1170,7 +1162,7 @@
 								</thead>
 								<tbody id="sales-stats-table-body">
 									<tr>
-										<td colspan="10" style="text-align: center; padding: 60px; color: #666;">
+										<td colspan="9" style="text-align: center; padding: 60px; color: #666;">
 											<div style="font-size: 3em; margin-bottom: 10px;">📊</div>
 											<p>Loading sales statistics...</p>
 										</td>
@@ -4599,17 +4591,19 @@
 					'<option value="all">All Subcategories</option>';
 
 				// Add subcategories as options
-				allSubcategories
-					.filter((subcategory) => subcategory.isActive)
-					.forEach((subcategory) => {
-						const option = document.createElement("option");
-						option.value = subcategory._id;
-						option.textContent = subcategory.name;
-						if (currentValue === subcategory._id) {
-							option.selected = true;
-						}
-						productCategoryFilter.appendChild(option);
-					});
+				allSubcategories.forEach((subcategory) => {
+					const option = document.createElement("option");
+					option.value = subcategory._id;
+					// Show both subcategory name and parent category for clarity
+					const displayText = subcategory.parentCategory
+						? `${subcategory.name} (${subcategory.parentCategory.name})`
+						: subcategory.name;
+					option.textContent = displayText;
+					if (currentValue === subcategory._id) {
+						option.selected = true;
+					}
+					productCategoryFilter.appendChild(option);
+				});
 			}
 
 			// Function to update subcategory parent filter options
@@ -4619,18 +4613,18 @@
 				);
 				if (!parentFilter || !allCategories) return;
 
+				console.log(allCategories);
+
 				// Clear existing options except "All Parent Categories"
 				const currentValue = parentFilter.value;
 				parentFilter.innerHTML =
 					'<option value="all">All Parent Categories</option>';
 
 				// Add categories as options
-				allCategories
-					.filter((category) => category.isActive)
-					.forEach((category) => {
-						const option = document.createElement("option");
-						option.value = category._id;
-						option.textContent = category.name;
+				allCategories.forEach((category) => {
+					const option = document.createElement("option");
+					option.value = category._id;
+					option.textContent = category.name;
 						if (currentValue === category._id) {
 							option.selected = true;
 						}
@@ -4805,7 +4799,7 @@
 					showMessage("Loading subcategories...", "info", 1000);
 
 					const response = await authenticatedFetch(
-						`${API_BASE_URL}/subcategories`
+						`${API_BASE_URL}/subcategories?active=all`
 					);
 					if (!response.ok) {
 						throw new Error("Failed to fetch subcategories");
@@ -4989,13 +4983,11 @@
 					'<option value="all">All Parent Categories</option>';
 
 				// Add categories as options
-				allCategories
-					.filter((category) => category.isActive)
-					.forEach((category) => {
-						const option = document.createElement("option");
-						option.value = category._id;
-						option.textContent = category.name;
-						parentFilter.appendChild(option);
+				allCategories.forEach((category) => {
+					const option = document.createElement("option");
+					option.value = category._id;
+					option.textContent = category.name;
+					parentFilter.appendChild(option);
 					});
 			}
 
@@ -6691,7 +6683,7 @@
 			async function loadSubcategoriesForProductFilter() {
 				try {
 					const response = await fetch(
-						`${API_BASE_URL}/subcategories?isActive=all`,
+						`${API_BASE_URL}/subcategories?active=all`,
 						{
 							method: "GET",
 							headers: {
@@ -6704,6 +6696,7 @@
 					if (response.ok) {
 						const data = await response.json();
 						const subcategories = data.data || [];
+						console.log(subcategories);
 						const categoryFilter = document.getElementById(
 							"product-category-filter"
 						);
@@ -6715,16 +6708,14 @@
 
 							// Add subcategory options
 							subcategories.forEach((subcategory) => {
-								if (subcategory.isActive) {
-									const option = document.createElement("option");
-									option.value = subcategory._id;
-									// Show both subcategory name and parent category for clarity
-									const displayText = subcategory.parentCategory
-										? `${subcategory.name} (${subcategory.parentCategory.name})`
-										: subcategory.name;
-									option.textContent = displayText;
-									categoryFilter.appendChild(option);
-								}
+								const option = document.createElement("option");
+								option.value = subcategory._id;
+								// Show both subcategory name and parent category for clarity
+								const displayText = subcategory.parentCategory
+									? `${subcategory.name} (${subcategory.parentCategory.name})`
+									: subcategory.name;
+								option.textContent = displayText;
+								categoryFilter.appendChild(option);
 							});
 						}
 
@@ -11899,9 +11890,7 @@
 					const result = await response.json();
 					if (response.ok) {
 						const stats = result.data;
-						const message = `Order Statistics:\n\nTotal Orders: ${
-							stats.totalOrders
-						}\nTotal Revenue: $${stats.totalRevenue.toFixed(
+						const message = `Order Statistics:\n\nTotal Revenue: $${stats.totalRevenue.toFixed(
 							2
 						)}\nToday's Orders: ${stats.todayOrders}\nMonthly Orders: ${
 							stats.monthlyOrders
@@ -11994,7 +11983,7 @@
 					showMessage('Error loading sales statistics: ' + error.message, 'error');
 					document.getElementById('sales-stats-table-body').innerHTML = `
 						<tr>
-							<td colspan="10" style="text-align: center; padding: 60px; color: #e74c3c;">
+							<td colspan="9" style="text-align: center; padding: 60px; color: #e74c3c;">
 								<div style="font-size: 3em; margin-bottom: 10px;">❌</div>
 								<p>Failed to load sales statistics</p>
 								<p style="font-size: 0.9em; opacity: 0.7;">${error.message}</p>
@@ -12014,7 +12003,7 @@
 				if (!data || data.length === 0) {
 					tableBody.innerHTML = `
 						<tr>
-							<td colspan="10" style="text-align: center; padding: 60px; color: #666;">
+							<td colspan="9" style="text-align: center; padding: 60px; color: #666;">
 								<div style="font-size: 3em; margin-bottom: 10px;">📭</div>
 								<p>No sales data found for the selected period</p>
 								<p style="font-size: 0.9em; opacity: 0.7;">Try adjusting your time filter</p>
@@ -12058,9 +12047,6 @@
 							<td style="text-align: right; color: #666;">
 								€${item.productPrice ? item.productPrice.toFixed(2) : '0.00'}
 							</td>
-							<td style="text-align: right; font-weight: 700; font-size: 1.05em; color: #e53e3e;">
-								€${item.totalRevenue.toFixed(2)}
-							</td>
 							<td style="text-align: center; color: #4a5568;">
 								${item.orderCount}
 							</td>
@@ -12092,7 +12078,6 @@
 
 			// Update sales summary statistics cards
 			function updateSalesSummaryStats(summary) {
-				document.getElementById('stats-total-revenue').textContent = `€${summary.totalRevenue.toFixed(2)}`;
 				document.getElementById('stats-total-quantity').textContent = summary.totalQuantitySold.toLocaleString();
 				document.getElementById('stats-total-orders').textContent = summary.totalOrders.toLocaleString();
 				document.getElementById('stats-unique-products').textContent = summary.uniqueProducts.toLocaleString();

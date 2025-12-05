@@ -36,8 +36,17 @@ exports.createSubcategory = async (req, res) => {
 // Get all subcategories (with optional parent filter)
 exports.getAllSubcategories = async (req, res) => {
 	try {
-		const { parent } = req.query;
-		const query = { isActive: true };
+		const { parent, active } = req.query;
+		const query = {};
+		if (active !== undefined) {
+			if (active === "all") {
+				// no isActive filter
+			} else {
+				query.isActive = active === "false" ? false : true;
+			}
+		} else {
+			query.isActive = true; // default
+		}
 		if (parent) query.parentCategory = parent;
 
 		const subcategories = await Subcategory.find(query)
