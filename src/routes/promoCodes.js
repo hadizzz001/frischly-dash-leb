@@ -2,6 +2,7 @@ const express = require("express");
 const {
 	getPromoCodes,
 	getPromoCode,
+	getPublicPromoCodes,
 	createPromoCode,
 	updatePromoCode,
 	deletePromoCode,
@@ -10,7 +11,10 @@ const { protect, authorize } = require("../middleware/auth");
 
 const router = express.Router();
 
-// Protect all routes
+// Public routes
+router.route("/public").get(getPublicPromoCodes);
+
+// Protect all routes below
 router.use(protect);
 router.use(authorize("admin"));
 

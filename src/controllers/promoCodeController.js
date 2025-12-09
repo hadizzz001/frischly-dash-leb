@@ -1,5 +1,28 @@
 const PromoCode = require("../models/PromoCode");
 
+// @desc    Get all promo codes (public - without code)
+// @route   GET /api/promocodes/public
+// @access  Public
+exports.getPublicPromoCodes = async (req, res) => {
+	try {
+		const promoCodes = await PromoCode.find({ isActive: true })
+			.select("-code")
+			.sort({ createdAt: -1 });
+
+		res.status(200).json({
+			success: true,
+			count: promoCodes.length,
+			data: promoCodes,
+		});
+	} catch (err) {
+		res.status(500).json({
+			success: false,
+			message: "Server Error",
+			error: err.message,
+		});
+	}
+};
+
 // @desc    Get all promo codes
 // @route   GET /api/promocodes
 // @access  Private/Admin
