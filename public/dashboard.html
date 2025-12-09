@@ -10494,15 +10494,10 @@
 							</td>
 							<td>${orderDate}</td>
 							<td class="actions">
-								<button class="action-btn view" onclick="viewOrder('${
-									order._id
-								}')">View</button>
-								<button class="action-btn cancel" onclick="cancelOrder('${order._id}', '${
-						order.orderNumber
-					}')">Cancel</button>
-								<button class="action-btn delete" onclick="deleteOrder('${order._id}', '${
-						order.orderNumber
-					}')">Delete</button>
+								<button class="action-btn view" onclick="viewOrder('${order._id}')">View</button>
+								${order.paymentStatus === 'ondelivery' ? `<button class="action-btn edit" onclick="markOrderAsPaid('${order._id}', '${order.orderNumber}')">Payed</button>` : ''}
+								<button class="action-btn cancel" onclick="cancelOrder('${order._id}', '${order.orderNumber}')">Cancel</button>
+								<button class="action-btn delete" onclick="deleteOrder('${order._id}', '${order.orderNumber}')">Delete</button>
 							</td>
 						</tr>
 					`;
@@ -10529,6 +10524,8 @@
 					paid: "#28a745",
 					failed: "#dc3545",
 					refunded: "#fd7e14",
+					ondelivery: "#17a2b8",
+					cancelled: "#6c757d",
 				};
 				return colors[status] || "#6c757d";
 			}
@@ -11839,6 +11836,45 @@
 					}
 				} catch (error) {
 					showMessage("Error cancelling order: " + error.message, "error");
+				}
+			}
+
+			// Mark order as paid (for cash on delivery orders)
+			async function markOrderAsPaid(orderId, orderNumber) {
+				if (
+					!confirm(
+						`Are you sure you want to mark order "${orderNumber}" as paid?`
+					)
+				) {
+					return;
+				}
+
+				try {
+					const response = await fetch(
+						`${API_BASE_URL}/orders/${orderId}`,
+						{
+							method: "PUT",
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({ paymentStatus: "paidondelivery" }),
+						}
+					);
+
+					const result = await response.json();
+
+					if (response.ok) {
+						showMessage(
+							`Order "${orderNumber}" marked as paid successfully`,
+							"success"
+						);
+						loadOrders();
+					} else {
+						showMessage(result.message || "Failed to update payment status", "error");
+					}
+				} catch (error) {
+					showMessage("Error updating payment status: " + error.message, "error");
 				}
 			}
 

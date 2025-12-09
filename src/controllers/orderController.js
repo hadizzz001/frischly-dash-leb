@@ -483,6 +483,11 @@ exports.createOrder = async (req, res) => {
 			});
 		}
 
+		// Determine initial status and payment status based on payment method
+		const isCashPayment = paymentMethod === "cash";
+		const initialStatus = isCashPayment ? "confirmed" : "pending";
+		const initialPaymentStatus = isCashPayment ? "ondelivery" : "pending";
+
 		const order = new Order({
 			customer: dbCustomer,
 			items: processedItems,
@@ -494,7 +499,8 @@ exports.createOrder = async (req, res) => {
 			paymentMethod,
 			shelfNumber,
 			notes,
-			status: "pending",
+			status: initialStatus,
+			paymentStatus: initialPaymentStatus,
 			createdBy: req.user.id,
 		});
 
@@ -518,9 +524,12 @@ exports.createOrder = async (req, res) => {
 				"name barcode shelfNumber price discount tax bottlerefund"
 			);
 
-		// Set default payment URL
+		// Set default payment URL - only for online/card payments (skip for cash)
 		let paymentUrl;
-		if (paymentMethod === "online" || paymentMethod === "card") {
+		if (
+			!isCashPayment &&
+			(paymentMethod === "online" || paymentMethod === "card")
+		) {
 			try {
 				const lineItems = populatedOrder.items.map((item) => ({
 					price_data: {
@@ -1081,11 +1090,21 @@ exports.cancelOrder = async (req, res) => {
 		}
 		console.log("✅ Step 5: Order can be cancelled");
 
-		// Handle Stripe Payment (Refund or Expire Link)
-		if (
+		// Handle payment cancellation based on payment method
+		if (order.paymentMethod === "cash") {
+			// Cash on delivery orders - no Stripe handling needed
+			console.log("Step 5.5: Handling cash on delivery order cancellation...");
+			order.status = "cancelled";
+			order.paymentStatus = "cancelled";
+			order.notes = `${
+				order.notes || ""
+			}\nCash on delivery order cancelled.`.trim();
+			console.log("✅ Step 5.5: Cash order cancellation handled");
+		} else if (
 			order.paymentLinkId &&
 			(order.paymentMethod === "online" || order.paymentMethod === "card")
 		) {
+			// Handle Stripe Payment (Refund or Expire Link)
 			try {
 				if (order.paymentStatus === "paid") {
 					console.log("Processing refund for paid order...");
@@ -1199,6 +1218,17 @@ exports.cancelOrder = async (req, res) => {
 					error.message
 				}`.trim();
 			}
+		} else if (
+			order.paymentMethod === "online" ||
+			order.paymentMethod === "card"
+		) {
+			// Online/card order without payment link - just cancel
+			console.log(
+				"Step 5.5: Online/card order without payment link, cancelling..."
+			);
+			order.status = "cancelled";
+			order.paymentStatus = "cancelled";
+			console.log("✅ Step 5.5: Order cancellation status updated");
 		}
 
 		// Step 6: Restore product stock

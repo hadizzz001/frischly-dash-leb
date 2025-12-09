@@ -553,6 +553,73 @@
 				cursor: not-allowed;
 			}
 
+			/* Payment Method Selection */
+			.payment-method-section {
+				margin-bottom: 15px;
+				padding-bottom: 15px;
+				border-bottom: 1px solid #eee;
+			}
+
+			.payment-method-label {
+				font-size: 14px;
+				font-weight: 600;
+				color: #333;
+				margin-bottom: 10px;
+				display: block;
+			}
+
+			.payment-options {
+				display: flex;
+				gap: 10px;
+			}
+
+			.payment-option {
+				flex: 1;
+				position: relative;
+			}
+
+			.payment-option input[type="radio"] {
+				position: absolute;
+				opacity: 0;
+				width: 100%;
+				height: 100%;
+				cursor: pointer;
+				z-index: 1;
+			}
+
+			.payment-option label {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				padding: 12px 8px;
+				border: 2px solid #ddd;
+				border-radius: 8px;
+				cursor: pointer;
+				transition: all 0.3s ease;
+				background: #fff;
+			}
+
+			.payment-option input[type="radio"]:checked + label {
+				border-color: #28a745;
+				background: #f0fff4;
+			}
+
+			.payment-option label:hover {
+				border-color: #28a745;
+			}
+
+			.payment-option .payment-icon {
+				font-size: 24px;
+				margin-bottom: 5px;
+			}
+
+			.payment-option .payment-text {
+				font-size: 12px;
+				font-weight: 500;
+				color: #333;
+				text-align: center;
+			}
+
 			.empty-cart {
 				text-align: center;
 				padding: 60px 20px;
@@ -841,6 +908,36 @@
 				<div class="cart-total">
 					<span>Total:</span>
 					<span id="cart-total">€0.00</span>
+				</div>
+				<div class="payment-method-section">
+					<span class="payment-method-label">Payment Method:</span>
+					<div class="payment-options">
+						<div class="payment-option">
+							<input
+								type="radio"
+								id="payment-online"
+								name="paymentMethod"
+								value="card"
+								checked
+							/>
+							<label for="payment-online">
+								<span class="payment-icon">💳</span>
+								<span class="payment-text">Online Payment</span>
+							</label>
+						</div>
+						<div class="payment-option">
+							<input
+								type="radio"
+								id="payment-cash"
+								name="paymentMethod"
+								value="cash"
+							/>
+							<label for="payment-cash">
+								<span class="payment-icon">💵</span>
+								<span class="payment-text">Cash on Delivery</span>
+							</label>
+						</div>
+					</div>
 				</div>
 				<button onclick="checkout()" class="checkout-btn" disabled>
 					Checkout
@@ -1611,6 +1708,11 @@
 					const tax = subtotal; // 10% tax
 					const total = subtotal + tax;
 
+					// Get selected payment method
+					const selectedPaymentMethod = document.querySelector(
+						'input[name="paymentMethod"]:checked'
+					).value;
+
 					// Prepare order data
 					const orderData = {
 						customer: {
@@ -1618,10 +1720,9 @@
 						},
 						items: orderItems,
 
-						paymentMethod: "card",
+						paymentMethod: selectedPaymentMethod,
 						notes: "Order placed from shop",
 					};
-
 					console.log("Order data to be sent:", orderData);
 
 					// Create the order
@@ -1689,6 +1790,8 @@
 							${
 								url
 									? `<a href="${url}" target="_blank" style="color: #155724; text-decoration: underline;">Complete Payment Here</a>`
+									: order.paymentMethod === "cash"
+									? "<strong>💵 Cash on Delivery</strong> - Please have the exact amount ready."
 									: ""
 							}
 						</div>
