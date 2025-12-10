@@ -9913,6 +9913,10 @@
 							<div class="info-value" id="modal-customer-info"></div>
 						</div>
 						<div class="info-card">
+							<h4><span class="icon">📞</span> Phone Number</h4>
+							<div class="info-value" id="modal-customer-phone"></div>
+						</div>
+						<div class="info-card">
 							<h4><span class="icon">📊</span> Order Status</h4>
 							<div class="info-value" id="modal-order-status"></div>
 						</div>
@@ -9928,10 +9932,7 @@
 							<h4><span class="icon">👨‍💼</span> Created By</h4>
 							<div class="info-value" id="modal-created-by"></div>
 						</div>
-						<div class="info-card">
-							<h4><span class="icon">🏪</span> Service Type</h4>
-							<div class="info-value" id="modal-service-type"></div>
-						</div>
+						
 					</div>
 
 					<div class="order-items-section">
@@ -10959,10 +10960,11 @@
 				if (order.customer.email) {
 					customerInfo += `<br>📧 ${order.customer.email}`;
 				}
-				if (order.customer.phone) {
-					customerInfo += `<br>📞 ${order.customer.phone}`;
-				}
 				document.getElementById("modal-customer-info").innerHTML = customerInfo;
+
+				// Set customer phone
+				document.getElementById("modal-customer-phone").textContent =
+					order.customer.phoneNumber || "-";
 
 				// Set order status with appropriate styling
 				const statusElement = document.getElementById("modal-order-status");
@@ -10983,10 +10985,6 @@
 				// Set created by
 				document.getElementById("modal-created-by").textContent =
 					order.createdBy.name;
-
-				// Set service type
-				document.getElementById("modal-service-type").textContent =
-					order.serviceType || "Dine In";
 
 				// Populate order items
 				const itemsContainer = document.getElementById("modal-order-items");
