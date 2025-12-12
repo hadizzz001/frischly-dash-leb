@@ -130,6 +130,10 @@ const userSchema = new mongoose.Schema(
 		lockUntil: {
 			type: Date,
 		},
+		fcmToken: {
+			type: String,
+			default: null,
+		},
 	},
 	{
 		timestamps: true,

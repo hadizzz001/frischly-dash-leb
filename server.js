@@ -7,6 +7,7 @@ const cron = require("node-cron");
 require("dotenv").config();
 
 const connectDB = require("./src/config/database");
+const initializeFirebase = require("./src/config/firebase");
 
 // Route files
 const authRoutes = require("./src/routes/auth");
@@ -21,6 +22,7 @@ const adminRoutes = require("./src/routes/admin");
 const shelfRoutes = require("./src/routes/shelves");
 const settingRoutes = require("./src/routes/settings");
 const promoCodeRoutes = require("./src/routes/promoCodes");
+const notificationRoutes = require("./src/routes/notifications");
 
 // Controllers
 const { cancelOrder } = require("./src/controllers/orderController");
@@ -30,6 +32,9 @@ const Order = require("./src/models/Order");
 
 // Connect to database
 connectDB();
+
+// Initialize Firebase
+initializeFirebase();
 
 // Cron job to count orders and cancel expired orders every end of day
 cron.schedule("00 01 * * *", async () => {
@@ -298,6 +303,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/shelves", shelfRoutes);
 app.use("/api/settings", settingRoutes);
 app.use("/api/promocodes", promoCodeRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Route for customer shop page
 app.get("/shop", (req, res) => {

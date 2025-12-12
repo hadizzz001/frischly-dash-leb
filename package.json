@@ -28,7 +28,9 @@
 		"deactivate-default-icon-products": "node scripts/deactivate_default_icon_products.js",
 		"prepare-deploy": "powershell -ExecutionPolicy Bypass -File prepare-deploy.ps1",
 		"update-client-url": "powershell -ExecutionPolicy Bypass -File update-client-url.ps1",
-		"check-deploy": "node scripts/checkDeployment.js",
+		"send-bulk-email": "node scripts/send-bulk-email.js",
+		"send-notification-campaign": "node scripts/send-notification-campaign.js",
+		"send-test-notification": "node scripts/send-test-notification.js",
 		"build": "echo Build complete - static files ready",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
@@ -52,6 +54,7 @@
 		"express-mongo-sanitize": "^2.2.0",
 		"express-rate-limit": "^7.1.5",
 		"express-validator": "^7.0.1",
+		"firebase-admin": "^13.6.0",
 		"helmet": "^7.1.0",
 		"jsonwebtoken": "^9.0.2",
 		"mongoose": "^7.6.3",
