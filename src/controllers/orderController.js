@@ -838,11 +838,18 @@ exports.updateOrder = async (req, res) => {
 		}
 
 		// Check if order can be modified
-		if (order.status === "cancelled" || order.status === "delivered") {
+		if (order.status === "cancelled") {
 			return res.status(400).json({
 				success: false,
-				message:
-					"Stornierte oder gelieferte Bestellungen können nicht geändert werden",
+				message: "Stornierte Bestellungen können nicht geändert werden",
+			});
+		}
+
+		// Check if order can be modified
+		if (order.status === "delivered" && req.user.role !== "admin") {
+			return res.status(400).json({
+				success: false,
+				message: "Gelieferte Bestellungen können nicht geändert werden",
 			});
 		}
 
