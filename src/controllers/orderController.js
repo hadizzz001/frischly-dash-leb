@@ -156,6 +156,25 @@ exports.getOrders = async (req, res) => {
 			.skip(skip)
 			.limit(limitNum);
 
+		// Sort items by shelfNumber
+		orders.forEach((order) => {
+			if (order.items && order.items.length > 0) {
+				order.items.sort((a, b) => {
+					const shelfA =
+						a.product && a.product.shelfNumber
+							? a.product.shelfNumber.toString().toLowerCase()
+							: "";
+					const shelfB =
+						b.product && b.product.shelfNumber
+							? b.product.shelfNumber.toString().toLowerCase()
+							: "";
+					if (shelfA < shelfB) return -1;
+					if (shelfA > shelfB) return 1;
+					return 0;
+				});
+			}
+		});
+
 		const totalOrders = await Order.countDocuments(filter);
 		const totalPages = Math.ceil(totalOrders / limitNum);
 
@@ -329,6 +348,23 @@ exports.getOrder = async (req, res) => {
 			return res.status(404).json({
 				success: false,
 				message: "Bestellung nicht gefunden",
+			});
+		}
+
+		// Sort items by shelfNumber
+		if (order.items && order.items.length > 0) {
+			order.items.sort((a, b) => {
+				const shelfA =
+					a.product && a.product.shelfNumber
+						? a.product.shelfNumber.toString().toLowerCase()
+						: "";
+				const shelfB =
+					b.product && b.product.shelfNumber
+						? b.product.shelfNumber.toString().toLowerCase()
+						: "";
+				if (shelfA < shelfB) return -1;
+				if (shelfA > shelfB) return 1;
+				return 0;
 			});
 		}
 
