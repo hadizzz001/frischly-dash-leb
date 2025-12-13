@@ -10,7 +10,11 @@ exports.updateFcmToken = async (req, res) => {
 		const { fcmToken } = req.body;
 		const userId = req.user.id;
 
+		console.log(`📱 FCM Token Update Request - User: ${userId}`);
+		console.log(`📱 Token received: ${fcmToken ? fcmToken.substring(0, 30) + '...' : 'null'}`);
+
 		if (!fcmToken) {
+			console.log(`❌ FCM Token Update Failed - No token provided`);
 			return res.status(400).json({
 				success: false,
 				message: "FCM token is required",
@@ -19,12 +23,13 @@ exports.updateFcmToken = async (req, res) => {
 
 		await NotificationService.updateUserToken(userId, fcmToken);
 
+		console.log(`✅ FCM Token Updated Successfully - User: ${userId}`);
 		res.json({
 			success: true,
 			message: "FCM token updated successfully",
 		});
 	} catch (error) {
-		console.error("Error updating FCM token:", error);
+		console.error("❌ Error updating FCM token:", error);
 		res.status(500).json({
 			success: false,
 			message: "Failed to update FCM token",

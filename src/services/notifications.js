@@ -66,7 +66,7 @@ class NotificationService {
 				},
 			}));
 
-			const response = await admin.messaging().sendAll(messages);
+			const response = await admin.messaging().sendEach(messages);
 			console.log(`✅ Notifications sent to ${users.length} users`);
 			return { success: true, responses: response.responses };
 		} catch (error) {
@@ -109,7 +109,7 @@ class NotificationService {
 
 			for (let i = 0; i < messages.length; i += batchSize) {
 				const batch = messages.slice(i, i + batchSize);
-				const response = await admin.messaging().sendAll(batch);
+				const response = await admin.messaging().sendEach(batch);
 				results.push(...response.responses);
 			}
 
@@ -151,7 +151,7 @@ class NotificationService {
 				},
 			}));
 
-			const response = await admin.messaging().sendAll(messages);
+			const response = await admin.messaging().sendEach(messages);
 			console.log(`✅ Notifications sent to ${users.length} ${role}s`);
 			return { success: true, responses: response.responses };
 		} catch (error) {
