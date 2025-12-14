@@ -6,6 +6,7 @@ const Zone = require("../models/Zone");
 const User = require("../models/User");
 const Setting = require("../models/Setting");
 const sendEmail = require("../utils/sendEmail");
+const NotificationService = require("../services/notifications");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 // @desc    Get all orders with enhanced filtering options
@@ -792,6 +793,32 @@ exports.createOrder = async (req, res) => {
 		} catch (emailError) {
 			console.error("Error sending order confirmation email:", emailError);
 			// Don't fail the order creation if email fails
+		}
+
+		// Send FCM notification to all staff users
+		try {
+			const staffUsers = await User.find({
+				role: "staff",
+				fcmToken: { $ne: null },
+				isActive: true,
+			});
+
+			if (staffUsers.length > 0) {
+				const staffUserIds = staffUsers.map(user => user._id.toString());
+				await NotificationService.sendToUsers(
+					staffUserIds,
+					"New Order Created",
+					`Order #${populatedOrder._id} has been placed by ${populatedOrder.customer.name}`
+				);
+				console.log(
+					`✅ FCM notification sent to ${staffUsers.length} staff users for order ${populatedOrder._id}`
+				);
+			} else {
+				console.log(`⚠️ No active staff users with FCM tokens found`);
+			}
+		} catch (fcmError) {
+			console.error("Error sending FCM notification to staff:", fcmError);
+			// Don't fail the order creation if FCM fails
 		}
 	} catch (error) {
 		console.error("Error creating order:", error);
