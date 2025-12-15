@@ -804,7 +804,7 @@ exports.createOrder = async (req, res) => {
 			});
 
 			if (staffUsers.length > 0) {
-				const staffUserIds = staffUsers.map(user => user._id.toString());
+				const staffUserIds = staffUsers.map((user) => user._id.toString());
 				await NotificationService.sendToUsers(
 					staffUserIds,
 					"New Order Created",
