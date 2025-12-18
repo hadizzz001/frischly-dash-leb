@@ -414,10 +414,17 @@ exports.createOrder = async (req, res) => {
 		const {
 			customer,
 			items,
+			address,
 			paymentMethod = "card",
 			shelfNumber = 0,
 			notes,
+			deliveryTime,
 		} = req.body;
+
+		// Set default delivery time to now if not provided
+		const orderDeliveryTime = deliveryTime
+			? new Date(deliveryTime)
+			: new Date();
 
 		// Validate required fields
 		const dbCustomer = await User.findById(customer.id);
@@ -433,6 +440,9 @@ exports.createOrder = async (req, res) => {
 				message: "Kundenname, ID, E-Mail und Telefon sind erforderlich",
 			});
 		}
+
+		// Handle new address if provided
+		const orderAddress = address || customer.address || dbCustomer.address;
 
 		if (!items || !Array.isArray(items) || items.length === 0) {
 			return res.status(400).json({
@@ -490,10 +500,10 @@ exports.createOrder = async (req, res) => {
 		// Create order
 		// Calculate delivery charge based on customer's zone
 		let delivery = 0;
-		if (dbCustomer.address && dbCustomer.address.zipCode) {
+		if (orderAddress && orderAddress.zipCode) {
 			try {
 				const zone = await Zone.findOne({
-					zipCode: dbCustomer.address.zipCode,
+					zipCode: orderAddress.zipCode,
 					isActive: true,
 				});
 				if (zone && zone.deliveryFee) {
@@ -526,7 +536,10 @@ exports.createOrder = async (req, res) => {
 		const initialPaymentStatus = isCashPayment ? "ondelivery" : "pending";
 
 		const order = new Order({
-			customer: dbCustomer,
+			customer: {
+				...dbCustomer.toObject(),
+				address: orderAddress,
+			},
 			items: processedItems,
 			subtotal: subtotal,
 
@@ -536,6 +549,7 @@ exports.createOrder = async (req, res) => {
 			paymentMethod,
 			shelfNumber,
 			notes,
+			deliveryTime: orderDeliveryTime,
 			status: initialStatus,
 			paymentStatus: initialPaymentStatus,
 			createdBy: req.user.id,

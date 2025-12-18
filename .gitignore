@@ -129,3 +129,4 @@ scripts/
 # firebase-service-account.json
 # *.firebase.json
 
+public/emails.txt

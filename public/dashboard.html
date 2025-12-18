@@ -980,13 +980,14 @@
 										<th>Status</th>
 										<th>Payment</th>
 										<th>Date</th>
+										<th>Delivery Time</th>
 										<th>Actions</th>
 									</tr>
 								</thead>
 								<tbody id="orders-table-body">
 									<tr>
 										<td
-											colspan="9"
+											colspan="10"
 											style="text-align: center; padding: 40px; color: #666"
 										>
 											No orders found.
@@ -10449,7 +10450,7 @@
 				if (orders.length === 0) {
 					tbody.innerHTML = `
 						<tr>
-							<td colspan="9" style="text-align: center; padding: 40px; color: #666;">
+							<td colspan="10" style="text-align: center; padding: 40px; color: #666;">
 								<div style="font-size: 48px; margin-bottom: 16px;">📦</div>
 								<div style="font-size: 18px; margin-bottom: 8px; font-weight: 500;">No orders found</div>
 								<div style="font-size: 14px;">Create your first order to get started</div>
@@ -10494,6 +10495,7 @@
 								</span>
 							</td>
 							<td>${orderDate}</td>
+							<td>${order.deliveryTime ? new Date(order.deliveryTime).toLocaleString() : "ASAP"}</td>
 							<td class="actions">
 								<button class="action-btn view" onclick="viewOrder('${order._id}')">View</button>
 								${order.paymentStatus === 'ondelivery' ? `<button class="action-btn edit" onclick="markOrderAsPaid('${order._id}', '${order.orderNumber}')">Payed</button>` : ''}

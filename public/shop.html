@@ -620,6 +620,113 @@
 				text-align: center;
 			}
 
+			/* Delivery Time Selection */
+			.delivery-time-section {
+				margin-bottom: 15px;
+			}
+
+			.delivery-time-label {
+				font-size: 14px;
+				font-weight: 600;
+				color: #333;
+				margin-bottom: 8px;
+				display: block;
+			}
+
+			.delivery-time-input {
+				width: 100%;
+				padding: 12px;
+				border: 2px solid #ddd;
+				border-radius: 8px;
+				font-size: 14px;
+				transition: border-color 0.3s ease;
+			}
+
+			.delivery-time-input:focus {
+				outline: none;
+				border-color: #28a745;
+			}
+
+			/* Address Form */
+			.address-section {
+				margin-bottom: 15px;
+				border: 1px solid #eee;
+				border-radius: 8px;
+				overflow: hidden;
+			}
+
+			.address-toggle {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				padding: 12px 15px;
+				background: #f8f9fa;
+				cursor: pointer;
+				transition: background-color 0.3s ease;
+			}
+
+			.address-toggle:hover {
+				background: #e9ecef;
+			}
+
+			.address-toggle-label {
+				font-size: 14px;
+				font-weight: 600;
+				color: #333;
+			}
+
+			.address-toggle-icon {
+				font-size: 12px;
+				color: #666;
+				transition: transform 0.3s ease;
+			}
+
+			.address-section.expanded .address-toggle-icon {
+				transform: rotate(180deg);
+			}
+
+			.address-form {
+				padding: 15px;
+				background: #fff;
+				border-top: 1px solid #eee;
+			}
+
+			.form-row {
+				display: flex;
+				gap: 10px;
+				margin-bottom: 12px;
+			}
+
+			.form-row:last-child {
+				margin-bottom: 0;
+			}
+
+			.form-group {
+				flex: 1;
+			}
+
+			.form-group label {
+				display: block;
+				font-size: 12px;
+				font-weight: 600;
+				color: #555;
+				margin-bottom: 4px;
+			}
+
+			.form-group input {
+				width: 100%;
+				padding: 8px 10px;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				font-size: 14px;
+				transition: border-color 0.3s ease;
+			}
+
+			.form-group input:focus {
+				outline: none;
+				border-color: #28a745;
+			}
+
 			.empty-cart {
 				text-align: center;
 				padding: 60px 20px;
@@ -936,6 +1043,76 @@
 								<span class="payment-icon">💵</span>
 								<span class="payment-text">Cash on Delivery</span>
 							</label>
+						</div>
+					</div>
+				</div>
+				<div class="delivery-time-section">
+					<label for="delivery-time" class="delivery-time-label"
+						>Delivery Time:</label
+					>
+					<input
+						type="datetime-local"
+						id="delivery-time"
+						name="deliveryTime"
+						class="delivery-time-input"
+					/>
+				</div>
+				<div class="address-section">
+					<div class="address-toggle" onclick="toggleAddressForm()">
+						<span class="address-toggle-label">Delivery Address</span>
+						<span class="address-toggle-icon">▼</span>
+					</div>
+					<div id="address-form" class="address-form" style="display: none">
+						<div class="form-row">
+							<div class="form-group">
+								<label for="street">Street Address:</label>
+								<input
+									type="text"
+									id="street"
+									name="street"
+									placeholder="Enter street address"
+								/>
+							</div>
+						</div>
+						<div class="form-row">
+							<div class="form-group">
+								<label for="city">City:</label>
+								<input
+									type="text"
+									id="city"
+									name="city"
+									placeholder="Enter city"
+								/>
+							</div>
+							<div class="form-group">
+								<label for="state">State:</label>
+								<input
+									type="text"
+									id="state"
+									name="state"
+									placeholder="Enter state"
+								/>
+							</div>
+						</div>
+						<div class="form-row">
+							<div class="form-group">
+								<label for="zipCode">ZIP Code:</label>
+								<input
+									type="text"
+									id="zipCode"
+									name="zipCode"
+									placeholder="Enter ZIP code"
+								/>
+							</div>
+							<div class="form-group">
+								<label for="country">Country:</label>
+								<input
+									type="text"
+									id="country"
+									name="country"
+									placeholder="Enter country"
+								/>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -1617,6 +1794,28 @@
 
 				// Update checkout button
 				checkoutBtn.disabled = cart.length === 0;
+
+				// Set default delivery time to now if not already set
+				const deliveryTimeInput = document.getElementById("delivery-time");
+				if (deliveryTimeInput && !deliveryTimeInput.value) {
+					const now = new Date();
+					const formattedNow = now.toISOString().slice(0, 16); // Format for datetime-local
+					deliveryTimeInput.value = formattedNow;
+				}
+			}
+
+			function toggleAddressForm() {
+				const addressSection = document.querySelector(".address-section");
+				const addressForm = document.getElementById("address-form");
+				const isExpanded = addressSection.classList.contains("expanded");
+
+				if (isExpanded) {
+					addressForm.style.display = "none";
+					addressSection.classList.remove("expanded");
+				} else {
+					addressForm.style.display = "block";
+					addressSection.classList.add("expanded");
+				}
 			}
 
 			function toggleCart() {
@@ -1713,14 +1912,40 @@
 						'input[name="paymentMethod"]:checked'
 					).value;
 
+					// Get delivery time
+					const deliveryTimeInput = document.getElementById("delivery-time");
+					const deliveryTime = deliveryTimeInput.value
+						? new Date(deliveryTimeInput.value).toISOString()
+						: null;
+
+					// Get delivery address
+					let deliveryAddress = null;
+					const street = document.getElementById("street").value.trim();
+					const city = document.getElementById("city").value.trim();
+					const state = document.getElementById("state").value.trim();
+					const zipCode = document.getElementById("zipCode").value.trim();
+					const country = document.getElementById("country").value.trim();
+
+					if (street || city || state || zipCode || country) {
+						deliveryAddress = {
+							street: street || undefined,
+							city: city || undefined,
+							state: state || undefined,
+							zipCode: zipCode || undefined,
+							country: country || undefined,
+						};
+					}
+
 					// Prepare order data
 					const orderData = {
 						customer: {
 							id: userData.data.user._id,
+							address: deliveryAddress,
 						},
 						items: orderItems,
 
 						paymentMethod: selectedPaymentMethod,
+						deliveryTime: deliveryTime,
 						notes: "Order placed from shop",
 					};
 					console.log("Order data to be sent:", orderData);

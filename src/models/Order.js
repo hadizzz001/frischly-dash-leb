@@ -170,6 +170,9 @@ const orderSchema = new mongoose.Schema(
 		deliveryCompletedAt: {
 			type: Date,
 		},
+		deliveryTime: {
+			type: Date,
+		},
 		notes: {
 			type: String,
 			trim: true,
