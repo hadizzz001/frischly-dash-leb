@@ -15,6 +15,11 @@ const userSchema = new mongoose.Schema(
 			trim: true,
 			match: [/^[\+]?[1-9][\d]{0,15}$/, "Please provide a valid phone number"],
 		},
+		age: {
+			type: Number,
+			//required: [true, "Please provide your age"],
+			min: [0, "Age must be a positive number"],
+		},
 		email: {
 			type: String,
 			required: [true, "Please provide an email"],

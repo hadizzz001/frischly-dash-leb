@@ -523,10 +523,10 @@ exports.createOrder = async (req, res) => {
 
 		const total = subtotal + delivery + fees;
 
-		if (total < 15) {
+		if (total < 10) {
 			return res.status(400).json({
 				success: false,
-				message: "Mindestbestellwert beträgt 15 €",
+				message: "Mindestbestellwert beträgt 10 €",
 			});
 		}
 
