@@ -1781,6 +1781,16 @@
 										Message displayed to users when maintenance mode is active or orders are disabled.
 									</p>
 								</div>
+								<div class="setting-item">
+									<label data-translation="Minimum Order Value (€)">Minimum Order Value (€)</label>
+									<div class="setting-actions" style="display: flex; gap: 10px;">
+										<input type="number" id="minimum-order-value-input" class="form-control" placeholder="10.00" min="0" step="0.01" style="flex: 1;">
+										<button class="btn btn-primary" onclick="saveMinimumOrderValue()">Save</button>
+									</div>
+									<p class="setting-description" data-translation="Set the minimum order value required for customers to place orders.">
+										Set the minimum order value required for customers to place orders.
+									</p>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -2386,6 +2396,9 @@
 					"Application Language": "Anwendungssprache",
 					"Change the language of the application interface.":
 						"Ändern Sie die Sprache der Anwendungsoberfläche.",
+					"Minimum Order Value (€)": "Mindestbestellwert (€)",
+					"Set the minimum order value required for customers to place orders.":
+						"Legen Sie den Mindestbestellwert fest, der für Kunden zum Aufgeben von Bestellungen erforderlich ist.",
 
 					// Profile section
 					"profile-settings": "Profileinstellungen",
@@ -13875,6 +13888,7 @@
 						document.getElementById('maintenance-mode-toggle').checked = data.data.isMaintenanceMode;
 						document.getElementById('disable-orders-toggle').checked = data.data.areOrdersDisabled;
 						document.getElementById('maintenance-message-input').value = data.data.maintenanceMessage || '';
+						document.getElementById('minimum-order-value-input').value = data.data.minimumOrderValue || 10;
 					}
 				} catch (error) {
 					console.error('Error loading settings:', error);
@@ -13931,6 +13945,26 @@
 				} catch (error) {
 					console.error('Error updating message:', error);
 					showMessage('Error updating message', 'error');
+				}
+			}
+
+			async function saveMinimumOrderValue() {
+				const value = parseFloat(document.getElementById('minimum-order-value-input').value);
+				if (isNaN(value) || value < 0) {
+					showMessage('Please enter a valid minimum order value', 'error');
+					return;
+				}
+				try {
+					const response = await authenticatedFetch(`${API_BASE_URL}/admin/settings`, {
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ minimumOrderValue: value })
+					});
+					if (!response.ok) throw new Error('Failed to update minimum order value');
+					showMessage('Minimum order value updated', 'success');
+				} catch (error) {
+					console.error('Error updating minimum order value:', error);
+					showMessage('Error updating minimum order value', 'error');
 				}
 			}
 

@@ -15,6 +15,10 @@ const SettingSchema = new mongoose.Schema(
 			default:
 				"We are currently undergoing maintenance. Please check back later.",
 		},
+		minimumOrderValue: {
+			type: Number,
+			default: 10,
+		},
 	},
 	{ timestamps: true }
 );

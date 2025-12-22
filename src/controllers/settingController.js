@@ -35,6 +35,9 @@ exports.updateSettings = async (req, res) => {
 		if (req.body.maintenanceMessage !== undefined) {
 			settings.maintenanceMessage = req.body.maintenanceMessage;
 		}
+		if (req.body.minimumOrderValue !== undefined) {
+			settings.minimumOrderValue = req.body.minimumOrderValue;
+		}
 
 		await settings.save();
 
@@ -62,6 +65,7 @@ exports.getPublicSettings = async (req, res) => {
 				isMaintenanceMode: settings.isMaintenanceMode,
 				areOrdersDisabled: settings.areOrdersDisabled,
 				maintenanceMessage: settings.maintenanceMessage,
+				minimumOrderValue: settings.minimumOrderValue,
 			},
 		});
 	} catch (error) {
