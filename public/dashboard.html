@@ -964,6 +964,54 @@
 						</button>
 					</div>
 
+					<!-- Orders Filters -->
+					<div class="filters-section" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
+						<h4 style="margin: 0 0 15px 0; color: #495057;">Filter Orders</h4>
+						<div class="filters-grid" style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
+							<div class="filter-group">
+								<label for="order-search" style="display: block; margin-bottom: 5px; font-weight: 500;">Search</label>
+								<input type="text" id="order-search" placeholder="Order ID, Customer name, email..." style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;" onkeyup="if(event.key === 'Enter') searchOrders()">
+							</div>
+							<div class="filter-group">
+								<label for="order-status-filter" style="display: block; margin-bottom: 5px; font-weight: 500;">Status</label>
+								<select id="order-status-filter" style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+									<option value="all">All Statuses</option>
+									<option value="pending">Pending</option>
+									<option value="confirmed">Confirmed</option>
+									<option value="processing">Processing</option>
+									<option value="OnTheWay">On The Way</option>
+									<option value="delivered">Delivered</option>
+									<option value="cancelled">Cancelled</option>
+								</select>
+							</div>
+							<div class="filter-group">
+								<label for="order-payment-filter" style="display: block; margin-bottom: 5px; font-weight: 500;">Payment Status</label>
+								<select id="order-payment-filter" style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+									<option value="all">All Payments</option>
+									<option value="pending">Pending</option>
+									<option value="paid">Paid</option>
+									<option value="failed">Failed</option>
+									<option value="refunded">Refunded</option>
+									<option value="ondelivery">On Delivery</option>
+									<option value="paidondelivery">Paid on Delivery</option>
+									<option value="cancelled">Cancelled</option>
+								</select>
+							</div>
+							<div class="filter-group">
+								<label for="order-date-from" style="display: block; margin-bottom: 5px; font-weight: 500;">Date From</label>
+								<input type="date" id="order-date-from" style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+							</div>
+							<div class="filter-group">
+								<label for="order-date-to" style="display: block; margin-bottom: 5px; font-weight: 500;">Date To</label>
+								<input type="date" id="order-date-to" style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;">
+							</div>
+						</div>
+						<div class="filter-actions" style="display: flex; gap: 10px; justify-content: flex-end;">
+							<button class="btn btn-secondary" onclick="clearOrderFilters()">🗑️ Clear</button>
+							<button class="btn btn-primary" onclick="searchOrders()">🔍 Search</button>
+						</div>
+					</div>
+
 						<div class="table-header">
 							<h3>Recent Orders</h3>
 							<span id="orders-count-display">0 orders</span>
@@ -10340,30 +10388,53 @@
 			let totalOrdersPages = 1;
 			let ordersPageSize = 10;
 			let currentOrderId = null;
+			let currentOrderFilters = {}; // Store current filter values for pagination
 
 			// Live updates variables
 			let ordersPollingInterval = null;
 			let lastOrderCount = 0;
 			const ORDERS_POLLING_INTERVAL = 60000; // 60 seconds
 
-			// Load orders with pagination
-			async function loadOrders(
+			// Load orders with optional filters
+			async function loadOrdersWithFilters(
 				page = currentOrdersPage,
-				pageSize = ordersPageSize
+				pageSize = ordersPageSize,
+				filters = {}
 			) {
+				// Store current filters for pagination
+				currentOrderFilters = { ...filters };
+
 				showSectionLoading("orders", true, "Loading orders...");
 
 				try {
-					const response = await fetch(
-						`${API_BASE_URL}/orders?page=${page}&limit=${pageSize}&isActive=true`,
-						{
-							method: "GET",
-							headers: {
-								Authorization: `Bearer ${currentToken}`,
-								"Content-Type": "application/json",
-							},
-						}
-					);
+					let url = `${API_BASE_URL}/orders?page=${page}&limit=${pageSize}`;
+
+					// Apply filters
+					if (filters.search) {
+						url += `&search=${encodeURIComponent(filters.search)}`;
+					}
+					if (filters.status && filters.status !== "all") {
+						url += `&status=${filters.status}`;
+					}
+					if (filters.paymentStatus && filters.paymentStatus !== "all") {
+						url += `&paymentStatus=${filters.paymentStatus}`;
+					}
+					if (filters.dateFrom) {
+						url += `&dateFrom=${encodeURIComponent(filters.dateFrom)}`;
+					}
+					if (filters.dateTo) {
+						url += `&dateTo=${encodeURIComponent(filters.dateTo)}`;
+					}
+
+					url += `&isActive=true`;
+
+					const response = await fetch(url, {
+						method: "GET",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
 
 					const result = await response.json();
 
@@ -10390,6 +10461,14 @@
 				} finally {
 					showSectionLoading("orders", false);
 				}
+			}
+
+			// Load orders with pagination
+			async function loadOrders(
+				page = currentOrdersPage,
+				pageSize = ordersPageSize
+			) {
+				await loadOrdersWithFilters(page, pageSize, {});
 			}
 
 			// Start live updates for orders section
@@ -10447,8 +10526,8 @@
 						// Only reload if the total order count changed
 						if (currentOrderCount !== lastOrderCount) {
 							lastOrderCount = currentOrderCount;
-							// Reload the currently viewed page to avoid jumping the user to page 1
-							loadOrders(currentOrdersPage, ordersPageSize);
+							// Reload the currently viewed page with current filters to avoid jumping the user to page 1
+							loadOrdersWithFilters(currentOrdersPage, ordersPageSize, currentOrderFilters);
 						}
 					}
 				} catch (error) {
@@ -10544,6 +10623,7 @@
 					failed: "#dc3545",
 					refunded: "#fd7e14",
 					ondelivery: "#17a2b8",
+					paidondelivery: "#20c997",
 					cancelled: "#6c757d",
 				};
 				return colors[status] || "#6c757d";
@@ -10602,8 +10682,8 @@
 			// Change orders page size from selector
 			function changeOrdersPageSize(size) {
 				const newSize = parseInt(size) || 20;
-				// reload starting at first page
-				loadOrders(1, newSize);
+				// reload starting at first page with current filters
+				loadOrdersWithFilters(1, newSize, currentOrderFilters);
 			}
 
 			// Navigate to page from pagination buttons
@@ -10613,7 +10693,7 @@
 						? totalOrdersPages
 						: 999999;
 				const validPage = Math.max(1, Math.min(page || 1, maxPage));
-				loadOrders(validPage, ordersPageSize);
+				loadOrdersWithFilters(validPage, ordersPageSize, currentOrderFilters);
 			}
 
 			// Show add order modal
@@ -10902,49 +10982,29 @@
 					"order-payment-filter"
 				).value;
 				const search = document.getElementById("order-search").value;
+				const dateFrom = document.getElementById("order-date-from").value;
+				const dateTo = document.getElementById("order-date-to").value;
 
-				showSectionLoading("orders", true, "Searching orders...");
+				const filters = {
+					search: search,
+					status: status,
+					paymentStatus: paymentStatus,
+					dateFrom: dateFrom,
+					dateTo: dateTo,
+				};
 
-				try {
-					let url = `${API_BASE_URL}/orders?page=1&limit=${ordersPageSize}`;
+				await loadOrdersWithFilters(1, ordersPageSize, filters);
+			}
 
-					if (search) {
-						url += `&search=${encodeURIComponent(search)}`;
-					}
-
-					if (status && status !== "all") {
-						url += `&status=${status}`;
-					}
-
-					if (paymentStatus && paymentStatus !== "all") {
-						url += `&paymentStatus=${paymentStatus}`;
-					}
-
-					url += `&isActive=true`;
-
-					const response = await fetch(url, {
-						method: "GET",
-						headers: {
-							Authorization: `Bearer ${currentToken}`,
-							"Content-Type": "application/json",
-						},
-					});
-
-					const result = await response.json();
-
-					if (response.ok) {
-						// Ensure page state is correct before rendering
-						currentOrdersPage = 1;
-						displayOrders(result.data || []);
-						updateOrdersPagination(result.pagination);
-					} else {
-						showMessage(result.message || "Failed to search orders", "error");
-					}
-				} catch (error) {
-					showMessage("Error searching orders: " + error.message, "error");
-				} finally {
-					showSectionLoading("orders", false);
-				}
+			// Clear order filters
+			function clearOrderFilters() {
+				document.getElementById("order-search").value = "";
+				document.getElementById("order-status-filter").value = "all";
+				document.getElementById("order-payment-filter").value = "all";
+				document.getElementById("order-date-from").value = "";
+				document.getElementById("order-date-to").value = "";
+				currentOrderFilters = {}; // Reset stored filters
+				loadOrders(); // Reload all orders
 			}
 
 			// View order details
@@ -12031,7 +12091,7 @@
 							`Order "${orderNumber}" cancelled successfully`,
 							"success"
 						);
-						loadOrders();
+						loadOrdersWithFilters(currentOrdersPage, ordersPageSize, currentOrderFilters);
 					} else {
 						showMessage(result.message || "Failed to cancel order", "error");
 					}
@@ -12070,7 +12130,7 @@
 							`Order "${orderNumber}" marked as paid successfully`,
 							"success"
 						);
-						loadOrders();
+						loadOrdersWithFilters(currentOrdersPage, ordersPageSize, currentOrderFilters);
 					} else {
 						showMessage(result.message || "Failed to update payment status", "error");
 					}
@@ -12105,7 +12165,7 @@
 							`Order "${orderNumber}" deleted successfully`,
 							"success"
 						);
-						loadOrders();
+						loadOrdersWithFilters(currentOrdersPage, ordersPageSize, currentOrderFilters);
 					} else {
 						showMessage(result.message || "Failed to delete order", "error");
 					}
