@@ -1303,6 +1303,7 @@
 									View
 								</button>
 								${getStatusActionButton(order)}
+								${getPaymentActionButton(order)}
 							</div>
 						</td>
 					`;
@@ -1334,9 +1335,26 @@
 						return `<button class="action-btn edit" onclick="updateOrderStatus('${order._id}', 'delivered')">
 							Mark Delivered
 						</button>`;
+					case "pending":
+						return `<button class="action-btn edit" onclick="updateOrderStatus('${order._id}', 'confirmed')">
+							Confirm Order
+						</button>`;
 					default:
 						return "";
 				}
+			}
+
+			// Get payment-specific action button
+			function getPaymentActionButton(order) {
+				const paymentStatus = order.paymentStatus || "pending";
+
+				if (paymentStatus !== "paid") {
+					return `<button class="action-btn edit" onclick="updatePaymentStatus('${order._id}', 'paid')">
+						Mark as Paid
+					</button>`;
+				}
+
+				return "";
 			}
 
 			// Update order status
@@ -1381,6 +1399,47 @@
 				} catch (error) {
 					console.error("Error updating order status:", error);
 					showMessage("Error updating order status", "error");
+				} finally {
+					hideLoading();
+				}
+			}
+
+			// Update payment status
+			async function updatePaymentStatus(orderId, newPaymentStatus) {
+				try {
+					showLoading();
+					const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+						method: "PUT",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({ paymentStatus: newPaymentStatus }),
+					});
+
+					const result = await response.json();
+
+					if (response.ok) {
+						showMessage(
+							`Payment status updated to ${newPaymentStatus}`,
+							"success"
+						);
+						loadOrders(
+							currentPage,
+							currentStatusFilter,
+							currentSearchFilter,
+							currentDateFromFilter,
+							currentDateToFilter
+						); // Refresh the current page with current filters
+					} else {
+						showMessage(
+							result.message || "Failed to update payment status",
+							"error"
+						);
+					}
+				} catch (error) {
+					console.error("Error updating payment status:", error);
+					showMessage("Error updating payment status", "error");
 				} finally {
 					hideLoading();
 				}
