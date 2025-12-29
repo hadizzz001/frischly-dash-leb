@@ -1491,6 +1491,10 @@
 										<i class="fas">+</i> Record Waste
 									</button>
 
+									<button class="btn btn-outline" onclick="exportWasteRecords()">
+										<i class="fas fa-download"></i> Export Waste Records
+									</button>
+
 									<div class="filter-group">
 										<select
 											id="waste-reason-filter"
@@ -13327,6 +13331,68 @@
 				document.getElementById("waste-date-from").value = "";
 				document.getElementById("waste-date-to").value = "";
 				loadWasteRecords(1);
+			}
+
+			// Export waste records to CSV
+			async function exportWasteRecords() {
+				try {
+					showMessage("Exporting waste records...", "info");
+
+					// Fetch all waste records (set high limit to get all)
+					const response = await authenticatedFetch('/api/waste?limit=10000');
+
+					if (!response.ok) {
+						throw new Error('Failed to fetch waste records');
+					}
+
+					const data = await response.json();
+					const records = data.data || [];
+
+					if (records.length === 0) {
+						showMessage("No waste records to export", "warning");
+						return;
+					}
+
+					// Create CSV content
+					const headers = ['Date', 'Barcode', 'Product', 'Quantity', 'Reason', 'Recorded By'];
+					let csvContent = headers.join(',') + '\n';
+
+					records.forEach(record => {
+						const row = [
+							new Date(record.createdAt).toLocaleDateString(),
+							record.barcode || '',
+							record.productId?.name || '',
+							record.quantity || 0,
+							record.reason || '',
+							record.recordedBy?.name || ''
+						];
+						// Escape commas and quotes in fields
+						const escapedRow = row.map(field => {
+							const str = String(field);
+							if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+								return '"' + str.replace(/"/g, '""') + '"';
+							}
+							return str;
+						});
+						csvContent += escapedRow.join(',') + '\n';
+					});
+
+					// Create and download the file
+					const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+					const link = document.createElement('a');
+					const url = URL.createObjectURL(blob);
+					link.setAttribute('href', url);
+					link.setAttribute('download', `waste_records_${new Date().toISOString().split('T')[0]}.csv`);
+					link.style.visibility = 'hidden';
+					document.body.appendChild(link);
+					link.click();
+					document.body.removeChild(link);
+
+					showMessage("Waste records exported successfully", "success");
+				} catch (error) {
+					console.error('Error exporting waste records:', error);
+					showMessage("Failed to export waste records", "error");
+				}
 			}
 
 			// Look up product by barcode
