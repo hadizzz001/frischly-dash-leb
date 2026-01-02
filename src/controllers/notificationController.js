@@ -11,7 +11,11 @@ exports.updateFcmToken = async (req, res) => {
 		const userId = req.user.id;
 
 		console.log(`📱 FCM Token Update Request - User: ${userId}`);
-		console.log(`📱 Token received: ${fcmToken ? fcmToken.substring(0, 30) + '...' : 'null'}`);
+		console.log(
+			`📱 Token received: ${
+				fcmToken ? fcmToken.substring(0, 30) + "..." : "null"
+			}`
+		);
 
 		if (!fcmToken) {
 			console.log(`❌ FCM Token Update Failed - No token provided`);
@@ -22,6 +26,29 @@ exports.updateFcmToken = async (req, res) => {
 		}
 
 		await NotificationService.updateUserToken(userId, fcmToken);
+
+		// Send confirmation notification if user is a customer
+		const user = await User.findById(userId);
+		if (user && user.role === "customer" && user.fcmToken) {
+			try {
+				// Lazy load Expo notification sender
+				const sendExpoNotification = require("../services/expoNotification");
+				await sendExpoNotification(
+					user.fcmToken,
+					"Benachrichtigung aktiviert!",
+					"Du erhältst jetzt Push-Benachrichtigungen von Frischly.",
+					{ type: "confirm", timestamp: new Date().toISOString() }
+				);
+				console.log(
+					`✅ Confirmation notification sent to customer ${user.email}`
+				);
+			} catch (err) {
+				console.error(
+					"❌ Error sending confirmation notification to customer:",
+					err
+				);
+			}
+		}
 
 		console.log(`✅ FCM Token Updated Successfully - User: ${userId}`);
 		res.json({
