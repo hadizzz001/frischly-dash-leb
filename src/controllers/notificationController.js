@@ -31,10 +31,8 @@ exports.updateFcmToken = async (req, res) => {
 		const user = await User.findById(userId);
 		if (user && user.role === "customer" && user.fcmToken) {
 			try {
-				// Lazy load Expo notification sender
-				const sendExpoNotification = require("../services/expoNotification");
-				await sendExpoNotification(
-					user.fcmToken,
+				await NotificationService.sendToUser(
+					userId,
 					"Benachrichtigung aktiviert!",
 					"Du erhältst jetzt Push-Benachrichtigungen von Frischly.",
 					{ type: "confirm", timestamp: new Date().toISOString() }
