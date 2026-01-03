@@ -182,7 +182,7 @@ exports.sendToAllUsers = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: `Notifications sent to ${result.totalSent} users`,
+			message: `Notifications sent to ${result.totalSent} customers`,
 			data: result,
 		});
 	} catch (error) {

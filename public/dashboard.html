@@ -1698,7 +1698,7 @@
 
 					<div class="settings-content">
 						<div class="settings-grid">
-							<div class="settings-card">
+							<div class="settings-card" style="display: none">
 								<h3>🛍️ Product Management</h3>
 								<div class="setting-item">
 									<label>Product Status Control</label>
@@ -1724,7 +1724,7 @@
 								</div>
 							</div>
 
-							<div class="settings-card">
+							<div class="settings-card" style="display: none">
 								<h3>🗃️ Database Management</h3>
 								<div class="setting-item">
 									<label>Database Operations</label>
@@ -1778,26 +1778,6 @@
 							</div>
 
 							<div class="settings-card">
-								<h3>🌐 Language Settings</h3>
-								<div class="setting-item">
-									<label>Application Language</label>
-									<div class="setting-actions">
-										<select
-											id="language-select"
-											class="form-control"
-											onchange="changeLanguage(this.value)"
-										>
-											<option value="en">English</option>
-											<option value="de">Deutsch (German)</option>
-										</select>
-									</div>
-									<p class="setting-description">
-										Change the language of the application interface.
-									</p>
-								</div>
-							</div>
-							
-							<div class="settings-card">
 								<h3>🛑 System Status</h3>
 								<div class="setting-item">
 									<label>Maintenance Mode</label>
@@ -1841,6 +1821,41 @@
 									</div>
 									<p class="setting-description" data-translation="Set the minimum order value required for customers to place orders.">
 										Set the minimum order value required for customers to place orders.
+									</p>
+								</div>
+							</div>
+
+							<div class="settings-card">
+								<h3>📢 FCM Notifications</h3>
+								<div class="setting-item">
+									<label>Send Notification to All Customers</label>
+									<div class="setting-actions" style="display: flex; flex-direction: column; gap: 10px;">
+										<input type="text" id="fcm-title" class="form-control" placeholder="Notification Title" style="flex: 1;">
+										<textarea id="fcm-message" class="form-control" placeholder="Notification Message" rows="3" style="flex: 1;"></textarea>
+										<button class="btn btn-primary" onclick="sendFCMToAllCustomers()">Send to All Customers</button>
+									</div>
+									<p class="setting-description">
+										Send a push notification to all customers who have FCM tokens registered.
+									</p>
+								</div>
+							</div>
+
+							<div class="settings-card">
+								<h3>🌐 Language Settings</h3>
+								<div class="setting-item">
+									<label>Application Language</label>
+									<div class="setting-actions">
+										<select
+											id="language-select"
+											class="form-control"
+											onchange="changeLanguage(this.value)"
+										>
+											<option value="en">English</option>
+											<option value="de">Deutsch (German)</option>
+										</select>
+									</div>
+									<p class="setting-description">
+										Change the language of the application interface.
 									</p>
 								</div>
 							</div>
@@ -14276,6 +14291,40 @@
 				} catch (error) {
 					console.error('Error updating minimum order value:', error);
 					showMessage('Error updating minimum order value', 'error');
+				}
+			}
+
+			async function sendFCMToAllCustomers() {
+				const title = document.getElementById('fcm-title').value.trim();
+				const message = document.getElementById('fcm-message').value.trim();
+
+				if (!title || !message) {
+					showMessage('Please enter both title and message', 'error');
+					return;
+				}
+
+				if (!confirm('Are you sure you want to send this notification to all customers?')) {
+					return;
+				}
+
+				try {
+					const response = await authenticatedFetch(`${API_BASE_URL}/notifications/send/all`, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ title, body: message })
+					});
+
+					if (!response.ok) throw new Error('Failed to send notifications');
+
+					const result = await response.json();
+					showMessage(`Notifications sent to ${result.data.totalSent} customers`, 'success');
+
+					// Clear the inputs
+					document.getElementById('fcm-title').value = '';
+					document.getElementById('fcm-message').value = '';
+				} catch (error) {
+					console.error('Error sending FCM notifications:', error);
+					showMessage('Error sending notifications', 'error');
 				}
 			}
 

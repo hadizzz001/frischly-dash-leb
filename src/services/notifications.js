@@ -86,9 +86,10 @@ class NotificationService {
 			const users = await User.find({
 				fcmToken: { $ne: null },
 				isActive: true,
+				role: 'customer',
 			});
 			if (users.length === 0) {
-				throw new Error("No active users found with FCM tokens");
+				throw new Error("No active customers found with FCM tokens");
 			}
 
 			const messages = users.map((user) => ({
@@ -113,7 +114,7 @@ class NotificationService {
 				results.push(...response.responses);
 			}
 
-			console.log(`✅ Notifications sent to ${users.length} users`);
+			console.log(`✅ Notifications sent to ${users.length} customers`);
 			return { success: true, totalSent: users.length, responses: results };
 		} catch (error) {
 			console.error("❌ Error sending notifications to all users:", error);
