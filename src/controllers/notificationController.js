@@ -29,24 +29,24 @@ exports.updateFcmToken = async (req, res) => {
 
 		// Send confirmation notification if user is a customer
 		const user = await User.findById(userId);
-		if (user && user.role === "customer" && user.fcmToken) {
-			try {
-				await NotificationService.sendToUser(
-					userId,
-					"Benachrichtigung aktiviert!",
-					"Du erhältst jetzt Push-Benachrichtigungen von Frischly.",
-					{ type: "confirm", timestamp: new Date().toISOString() }
-				);
-				console.log(
-					`✅ Confirmation notification sent to customer ${user.email}`
-				);
-			} catch (err) {
-				console.error(
-					"❌ Error sending confirmation notification to customer:",
-					err
-				);
-			}
-		}
+		// if (user && user.role === "customer" && user.fcmToken) {
+		// 	try {
+		// 		await NotificationService.sendToUser(
+		// 			userId,
+		// 			"Benachrichtigung aktiviert!",
+		// 			"Du erhältst jetzt Push-Benachrichtigungen von Frischly.",
+		// 			{ type: "confirm", timestamp: new Date().toISOString() }
+		// 		);
+		// 		console.log(
+		// 			`✅ Confirmation notification sent to customer ${user.email}`
+		// 		);
+		// 	} catch (err) {
+		// 		console.error(
+		// 			"❌ Error sending confirmation notification to customer:",
+		// 			err
+		// 		);
+		// 	}
+		// }
 
 		console.log(`✅ FCM Token Updated Successfully - User: ${userId}`);
 		res.json({
