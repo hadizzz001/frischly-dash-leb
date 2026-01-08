@@ -402,6 +402,21 @@
 								</select>
 							</div>
 							<div class="filter-group">
+								<label for="customer-sort">Sort by:</label>
+								<select id="customer-sort" onchange="sortCustomers()">
+									<option value="name-asc">Name A-Z</option>
+									<option value="name-desc">Name Z-A</option>
+									<option value="email-asc">Email A-Z</option>
+									<option value="email-desc">Email Z-A</option>
+									<option value="orders-desc">Most Orders</option>
+									<option value="orders-asc">Least Orders</option>
+									<option value="joined-desc">Newest First</option>
+									<option value="joined-asc">Oldest First</option>
+									<option value="lastLogin-desc">Recently Active</option>
+									<option value="lastLogin-asc">Least Active</option>
+								</select>
+							</div>
+							<div class="filter-group">
 								<label for="customer-search">Search:</label>
 								<input
 									type="text"
@@ -432,6 +447,7 @@
 											<th>Customer</th>
 											<th>Contact</th>
 											<th>Address</th>
+											<th>Orders</th>
 											<th>Status</th>
 											<th>Confirmed</th>
 											<th>Joined</th>
@@ -7552,6 +7568,7 @@
 			// Customer Management Functions
 			let customersData = [];
 			let filteredCustomersData = [];
+			let customerOrderCounts = {};
 
 			async function loadCustomers() {
 				try {
@@ -7566,12 +7583,82 @@
 					const result = await response.json();
 					customersData = result.data.users || [];
 					filteredCustomersData = [...customersData];
+
+					// Fetch order counts for customers
+					try {
+						const orderCountsResponse = await authenticatedFetch(
+							`${API_BASE_URL}/orders/customer-order-counts`
+						);
+						if (orderCountsResponse.ok) {
+							const orderCountsResult = await orderCountsResponse.json();
+							customerOrderCounts = {};
+							orderCountsResult.data.forEach(count => {
+								customerOrderCounts[count.email] = count.orderCount;
+							});
+						}
+					} catch (error) {
+						console.error("Error fetching customer order counts:", error);
+						customerOrderCounts = {};
+					}
+
 					displayCustomers(filteredCustomersData);
+					// Apply default sorting
+					sortCustomers();
 					updateCustomerSummary();
 				} catch (error) {
 					console.error("Error loading customers:", error);
 					showMessage("Failed to load customers", "error");
 				}
+			}
+
+			function getOrderBadgeClass(orderCount) {
+				if (orderCount === 0) return 'zero';
+				if (orderCount === 1) return 'low';
+				if (orderCount ===2) return 'medium';
+				if (orderCount <= 3) return 'high';
+				return 'loyal';
+			}
+
+			function sortCustomers() {
+				const sortValue = document.getElementById("customer-sort").value;
+				const [field, direction] = sortValue.split("-");
+
+				filteredCustomersData.sort((a, b) => {
+					let aValue, bValue;
+
+					switch (field) {
+						case "name":
+							aValue = a.name.toLowerCase();
+							bValue = b.name.toLowerCase();
+							break;
+						case "email":
+							aValue = a.email.toLowerCase();
+							bValue = b.email.toLowerCase();
+							break;
+						case "orders":
+							aValue = customerOrderCounts[a.email] || 0;
+							bValue = customerOrderCounts[b.email] || 0;
+							break;
+						case "joined":
+							aValue = new Date(a.createdAt);
+							bValue = new Date(b.createdAt);
+							break;
+						case "lastLogin":
+							aValue = a.lastLogin ? new Date(a.lastLogin) : new Date(0);
+							bValue = b.lastLogin ? new Date(b.lastLogin) : new Date(0);
+							break;
+						default:
+							return 0;
+					}
+
+					if (direction === "asc") {
+						return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+					} else {
+						return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+					}
+				});
+
+				displayCustomers(filteredCustomersData);
 			}
 
 			function displayCustomers(customers) {
@@ -7585,7 +7672,7 @@
 				if (customers.length === 0) {
 					tbody.innerHTML = `
 						<tr>
-							<td colspan="9" style="text-align: center; padding: 40px; color: #666">
+							<td colspan="10" style="text-align: center; padding: 40px; color: #666">
 								No customers found. ${
 									filteredCustomersData.length !== customersData.length
 										? "Try adjusting your filters."
@@ -7630,11 +7717,9 @@
 								}
 							</div>
 						</td>
-						<td>${
-							customer.lastLogin
-								? new Date(customer.lastLogin).toLocaleDateString()
-								: "Never"
-						}</td>
+						<td>
+							<span class="order-badge ${getOrderBadgeClass(customerOrderCounts[customer.email] || 0)}">${customerOrderCounts[customer.email] || 0}</span>
+						</td>
 						<td>
 							<span class="status-badge ${customer.isActive ? "active" : "inactive"}">
 								${customer.isActive ? "Active" : "Inactive"}
@@ -7646,6 +7731,11 @@
 							</span>
 						</td>
 						<td>${new Date(customer.createdAt).toLocaleDateString()}</td>
+						<td>${
+							customer.lastLogin
+								? new Date(customer.lastLogin).toLocaleDateString()
+								: "Never"
+						}</td>
 						<td>
 							<div class="table-actions">
 								<button class="btn-icon" onclick="viewCustomer('${customer._id}')" title="View Details">
@@ -7723,7 +7813,8 @@
 					return matchesStatus && matchesSearch;
 				});
 
-				displayCustomers(filteredCustomersData);
+				// Apply sorting after filtering
+				sortCustomers();
 
 				// Update table title
 				const title = document.getElementById("customers-table-title");
@@ -7737,6 +7828,7 @@
 			function clearCustomerFilters() {
 				document.getElementById("customer-filter").value = "all";
 				document.getElementById("customer-search").value = "";
+				document.getElementById("customer-sort").value = "name-asc";
 				filterCustomers();
 			}
 

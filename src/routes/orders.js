@@ -14,6 +14,7 @@ const {
 	getOrdersCount,
 	getOrdersForRiders,
 	verifyStripePayment,
+	getCustomerOrderCounts,
 } = require("../controllers/orderController");
 
 // Import middleware
@@ -43,6 +44,12 @@ router.get(
 	protect,
 	authorize("admin", "manager", "staff"),
 	getOrdersCount
+);
+router.get(
+	"/customer-order-counts",
+	protect,
+	authorize("admin", "manager"),
+	getCustomerOrderCounts
 );
 router.get(
 	"/",

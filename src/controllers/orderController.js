@@ -2112,3 +2112,41 @@ exports.verifyStripePayment = async (req, res) => {
 		});
 	}
 };
+
+// @desc    Get order counts per customer
+// @route   GET /api/orders/customer-order-counts
+// @access  Private (Admin, Manager)
+exports.getCustomerOrderCounts = async (req, res) => {
+	try {
+		const orderCounts = await Order.aggregate([
+			{
+				$match: { isActive: true },
+			},
+			{
+				$group: {
+					_id: "$customer.email",
+					orderCount: { $sum: 1 },
+				},
+			},
+			{
+				$project: {
+					email: "$_id",
+					orderCount: 1,
+					_id: 0,
+				},
+			},
+		]);
+
+		res.json({
+			success: true,
+			data: orderCounts,
+		});
+	} catch (error) {
+		console.error("Error getting customer order counts:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error retrieving customer order counts",
+			error: error.message,
+		});
+	}
+};
