@@ -1,8 +1,7 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
 const User = require("../src/models/User");
-const NotificationService = require("../src/services/notifications");
-const initializeFirebase = require("../src/config/firebase");
+const sendExpoNotification = require("../src/services/expoNotification");
 
 const connectDB = async () => {
 	try {
@@ -22,12 +21,6 @@ const sendTestNotification = async () => {
 	try {
 		await connectDB();
 
-		// Initialize Firebase
-		const firebase = initializeFirebase();
-		if (!firebase) {
-			throw new Error("Failed to initialize Firebase");
-		}
-
 		// Get email from command line argument
 		const email = process.argv[2];
 		if (!email) {
@@ -46,35 +39,27 @@ const sendTestNotification = async () => {
 
 		console.log(`👤 Found user: ${user.name} (${user.email})`);
 		console.log(`Role: ${user.role}`);
-		console.log(`📱 Token: ${user.fcmToken ? "Present" : "Not set"}`);
+		console.log(`📱 Token: ${user.fcmToken}`);
 		if (!user.fcmToken) {
 			console.log("⚠️  User does not have a token. Cannot send notification.");
 			process.exit(1);
 		}
 
-		// Send notification via Firebase
-		const title = "Test Notification";
-		const body = "This is a test notification sent via Firebase!";
+		// Send notification via Expo
+		const title = "Test Notification From Frischly Server";
+		const body = "This is a test notification sent via Expo!";
 		const data = {
 			type: "test",
 			timestamp: new Date().toISOString(),
 			testId: user.role + Date.now(),
 		};
 
-		console.log("📤 Sending via Firebase (FCM)...");
-		const result = await NotificationService.sendToUser(
-			user._id.toString(),
-			title,
-			body,
-			data
-		);
+		console.log("📤 Sending via Expo...");
+		const result = await sendExpoNotification(user.fcmToken, title, body, data);
 		if (result && result.success) {
-			console.log(
-				"✅ Firebase notification sent! Message ID:",
-				result.messageId || result
-			);
+			console.log("✅ Successful notification sent! Ticket:", result.ticket);
 		} else {
-			console.error("❌ Failed to send Firebase notification.");
+			console.error("❌ Failed to send Expo notification:", result.error);
 		}
 	} catch (error) {
 		console.error("❌ Error sending test notification:", error.message);
