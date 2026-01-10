@@ -1,5 +1,7 @@
 const admin = require("firebase-admin");
 const User = require("../models/User");
+const { Expo } = require("expo-server-sdk");
+const expo = new Expo();
 
 class NotificationService {
 	/**
@@ -86,36 +88,116 @@ class NotificationService {
 			const users = await User.find({
 				fcmToken: { $ne: null },
 				isActive: true,
-				role: 'customer',
+				role: "customer",
 			});
 			if (users.length === 0) {
 				throw new Error("No active customers found with FCM tokens");
 			}
 
-			const messages = users.map((user) => ({
-				token: user.fcmToken,
-				notification: {
-					title,
-					body,
-				},
-				data: {
-					...data,
-					userId: user._id.toString(),
-				},
-			}));
+			console.log(
+				`📤 Sending notifications to ${users.length} customers via Firebase & Expo...`
+			);
 
-			// Send in batches of 500 (FCM limit)
-			const batchSize = 500;
-			const results = [];
+			// Send through both Firebase and Expo simultaneously
+			const [firebaseResult, expoResult] = await Promise.allSettled([
+				// Firebase FCM
+				(async () => {
+					try {
+						const messages = users.map((user) => ({
+							token: user.fcmToken,
+							notification: { title, body },
+							data: { ...data, userId: user._id.toString() },
+						}));
 
-			for (let i = 0; i < messages.length; i += batchSize) {
-				const batch = messages.slice(i, i + batchSize);
-				const response = await admin.messaging().sendEach(batch);
-				results.push(...response.responses);
-			}
+						// Send in batches of 500 (FCM limit)
+						const batchSize = 500;
+						const results = [];
 
-			console.log(`✅ Notifications sent to ${users.length} customers`);
-			return { success: true, totalSent: users.length, responses: results };
+						for (let i = 0; i < messages.length; i += batchSize) {
+							const batch = messages.slice(i, i + batchSize);
+							const response = await admin.messaging().sendEach(batch);
+							results.push(...response.responses);
+						}
+
+						const successCount = results.filter((r) => r.success).length;
+						console.log(
+							`✅ Firebase: Sent to ${successCount}/${users.length} customers`
+						);
+						return {
+							success: true,
+							totalSent: successCount,
+							responses: results,
+						};
+					} catch (error) {
+						console.error(
+							"❌ Firebase: Failed to send notifications:",
+							error.message
+						);
+						return { success: false, error: error.message };
+					}
+				})(),
+
+				// Expo Push Notifications
+				(async () => {
+					try {
+						const expoMessages = users
+							.filter((user) => Expo.isExpoPushToken(user.fcmToken))
+							.map((user) => ({
+								to: user.fcmToken,
+								sound: "default",
+								title,
+								body,
+								data: { ...data, userId: user._id.toString() },
+							}));
+
+						if (expoMessages.length === 0) {
+							console.log("⚠️  Expo: No valid Expo push tokens found");
+							return { success: true, totalSent: 0, tickets: [] };
+						}
+
+						// Send in chunks (Expo recommends batches of 100)
+						const chunks = expo.chunkPushNotifications(expoMessages);
+						const tickets = [];
+
+						for (const chunk of chunks) {
+							const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+							tickets.push(...ticketChunk);
+						}
+
+						console.log(`✅ Expo: Sent to ${expoMessages.length} customers`);
+						return { success: true, totalSent: expoMessages.length, tickets };
+					} catch (error) {
+						console.error(
+							"❌ Expo: Failed to send notifications:",
+							error.message
+						);
+						return { success: false, error: error.message };
+					}
+				})(),
+			]);
+
+			// Combine results
+			const firebaseData =
+				firebaseResult.status === "fulfilled"
+					? firebaseResult.value
+					: { success: false };
+			const expoData =
+				expoResult.status === "fulfilled"
+					? expoResult.value
+					: { success: false };
+
+			console.log("\n📊 Notification Results:");
+			console.log(
+				`Firebase: ${firebaseData.success ? "✅ Success" : "❌ Failed"}`
+			);
+			console.log(`Expo: ${expoData.success ? "✅ Success" : "❌ Failed"}\n`);
+
+			return {
+				success: true,
+				totalSent: users.length,
+				firebase: firebaseData,
+				expo: expoData,
+			};
 		} catch (error) {
 			console.error("❌ Error sending notifications to all users:", error);
 			throw error;
@@ -140,21 +222,104 @@ class NotificationService {
 				throw new Error(`No active ${role}s found with FCM tokens`);
 			}
 
-			const messages = users.map((user) => ({
-				token: user.fcmToken,
-				notification: {
-					title,
-					body,
-				},
-				data: {
-					...data,
-					userId: user._id.toString(),
-				},
-			}));
+			console.log(
+				`📤 Sending notifications to ${users.length} ${role}s via Firebase & Expo...`
+			);
 
-			const response = await admin.messaging().sendEach(messages);
-			console.log(`✅ Notifications sent to ${users.length} ${role}s`);
-			return { success: true, responses: response.responses };
+			// Send through both Firebase and Expo simultaneously
+			const [firebaseResult, expoResult] = await Promise.allSettled([
+				// Firebase FCM
+				(async () => {
+					try {
+						const messages = users.map((user) => ({
+							token: user.fcmToken,
+							notification: { title, body },
+							data: { ...data, userId: user._id.toString() },
+						}));
+
+						const response = await admin.messaging().sendEach(messages);
+						const successCount = response.responses.filter(
+							(r) => r.success
+						).length;
+						console.log(
+							`✅ Firebase: Sent to ${successCount}/${users.length} ${role}s`
+						);
+						return {
+							success: true,
+							totalSent: successCount,
+							responses: response.responses,
+						};
+					} catch (error) {
+						console.error(
+							`❌ Firebase: Failed to send to ${role}s:`,
+							error.message
+						);
+						return { success: false, error: error.message };
+					}
+				})(),
+
+				// Expo Push Notifications
+				(async () => {
+					try {
+						const expoMessages = users
+							.filter((user) => Expo.isExpoPushToken(user.fcmToken))
+							.map((user) => ({
+								to: user.fcmToken,
+								sound: "default",
+								title,
+								body,
+								data: { ...data, userId: user._id.toString() },
+							}));
+
+						if (expoMessages.length === 0) {
+							console.log(
+								`⚠️  Expo: No valid Expo push tokens found for ${role}s`
+							);
+							return { success: true, totalSent: 0, tickets: [] };
+						}
+
+						const chunks = expo.chunkPushNotifications(expoMessages);
+						const tickets = [];
+
+						for (const chunk of chunks) {
+							const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+							tickets.push(...ticketChunk);
+						}
+
+						console.log(`✅ Expo: Sent to ${expoMessages.length} ${role}s`);
+						return { success: true, totalSent: expoMessages.length, tickets };
+					} catch (error) {
+						console.error(
+							`❌ Expo: Failed to send to ${role}s:`,
+							error.message
+						);
+						return { success: false, error: error.message };
+					}
+				})(),
+			]);
+
+			// Combine results
+			const firebaseData =
+				firebaseResult.status === "fulfilled"
+					? firebaseResult.value
+					: { success: false };
+			const expoData =
+				expoResult.status === "fulfilled"
+					? expoResult.value
+					: { success: false };
+
+			console.log("\n📊 Notification Results:");
+			console.log(
+				`Firebase: ${firebaseData.success ? "✅ Success" : "❌ Failed"}`
+			);
+			console.log(`Expo: ${expoData.success ? "✅ Success" : "❌ Failed"}\n`);
+
+			return {
+				success: true,
+				totalSent: users.length,
+				firebase: firebaseData,
+				expo: expoData,
+			};
 		} catch (error) {
 			console.error(`❌ Error sending notifications to ${role}s:`, error);
 			throw error;

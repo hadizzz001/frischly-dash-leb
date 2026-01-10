@@ -2,6 +2,15 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const User = require("../src/models/User");
 const sendExpoNotification = require("../src/services/expoNotification");
+const admin = require("firebase-admin");
+const serviceAccount = require("../src/config/firebase-service-account.json");
+
+// Initialize Firebase Admin
+if (!admin.apps.length) {
+	admin.initializeApp({
+		credential: admin.credential.cert(serviceAccount),
+	});
+}
 
 const connectDB = async () => {
 	try {
@@ -45,22 +54,85 @@ const sendTestNotification = async () => {
 			process.exit(1);
 		}
 
-		// Send notification via Expo
+		// Prepare notification data
 		const title = "Test Notification From Frischly Server";
-		const body = "This is a test notification sent via Expo!";
+		const body = "This is a test notification sent via Firebase & Expo!";
 		const data = {
 			type: "test",
 			timestamp: new Date().toISOString(),
 			testId: user.role + Date.now(),
 		};
 
-		console.log("📤 Sending via Expo...");
-		const result = await sendExpoNotification(user.fcmToken, title, body, data);
-		if (result && result.success) {
-			console.log("✅ Successful notification sent! Ticket:", result.ticket);
-		} else {
-			console.error("❌ Failed to send Expo notification:", result.error);
-		}
+		console.log("\n📤 Sending notifications via both Firebase and Expo...\n");
+
+		// Send through both services simultaneously
+		const [firebaseResult, expoResult] = await Promise.allSettled([
+			// Firebase notification
+			(async () => {
+				try {
+					console.log("🔥 Sending via Firebase FCM...");
+					const message = {
+						token: user.fcmToken,
+						notification: {
+							title,
+							body,
+						},
+						data: {
+							...data,
+							userId: user._id.toString(),
+						},
+					};
+					const response = await admin.messaging().send(message);
+					console.log("✅ Firebase notification sent! Message ID:", response);
+					return { success: true, messageId: response };
+				} catch (error) {
+					console.error("❌ Firebase notification failed:", error.message);
+					return { success: false, error: error.message };
+				}
+			})(),
+
+			// Expo notification
+			(async () => {
+				try {
+					console.log("📱 Sending via Expo...");
+					const result = await sendExpoNotification(
+						user.fcmToken,
+						title,
+						body,
+						data
+					);
+					if (result && result.success) {
+						console.log("✅ Expo notification sent! Ticket:", result.ticket);
+						return result;
+					} else {
+						console.error("❌ Expo notification failed:", result.error);
+						return result;
+					}
+				} catch (error) {
+					console.error("❌ Expo notification failed:", error.message);
+					return { success: false, error: error.message };
+				}
+			})(),
+		]);
+
+		// Summary of results
+		console.log("\n📊 Results Summary:");
+		console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+		console.log(
+			`Firebase: ${
+				firebaseResult.status === "fulfilled" && firebaseResult.value.success
+					? "✅ Success"
+					: "❌ Failed"
+			}`
+		);
+		console.log(
+			`Expo: ${
+				expoResult.status === "fulfilled" && expoResult.value.success
+					? "✅ Success"
+					: "❌ Failed"
+			}`
+		);
+		console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 	} catch (error) {
 		console.error("❌ Error sending test notification:", error.message);
 	} finally {
