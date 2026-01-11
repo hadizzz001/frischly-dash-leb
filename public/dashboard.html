@@ -1554,6 +1554,7 @@
 												<th>Date</th>
 												<th>Barcode</th>
 												<th>Product</th>
+												<th>Price</th>
 												<th>Quantity</th>
 												<th>Reason</th>
 												<th>Recorded By</th>
@@ -1563,7 +1564,7 @@
 										<tbody id="waste-records-list">
 											<tr class="empty-row">
 												<td
-													colspan="6"
+													colspan="8"
 													style="text-align: center; padding: 40px; color: #666"
 												>
 													No waste records found. Click "Record Waste" to add
@@ -13300,7 +13301,7 @@
 				if (!data.data || data.data.length === 0) {
 					tableBody.innerHTML = `
 						<tr class="empty-row">
-							<td colspan="7" style="text-align: center; padding: 40px; color: #666">
+							<td colspan="8" style="text-align: center; padding: 40px; color: #666">
 								No waste records found. Click "Record Waste" to add one.
 							</td>
 						</tr>
@@ -13326,6 +13327,10 @@
 						waste.productId && waste.productId.picture
 							? waste.productId.picture
 							: null;
+					const productPrice = 
+						waste.productId && waste.productId.price !== undefined
+							? `€${waste.productId.price.toFixed(2)}`
+							: "-";
 
 					html += `
 						<tr>
@@ -13341,6 +13346,7 @@
 									<span>${productName}</span>
 								</div>
 							</td>
+							<td>${productPrice}</td>
 							<td>${waste.quantity}</td>
 							<td>${waste.reason}</td>
 							<td>${recordedBy}</td>
@@ -13461,14 +13467,19 @@
 					}
 
 					// Create CSV content
-					const headers = ['Date', 'Barcode', 'Product', 'Quantity', 'Reason', 'Recorded By'];
+					const headers = ['Date', 'Barcode', 'Product', 'Price', 'Quantity', 'Reason', 'Recorded By'];
 					let csvContent = headers.join(',') + '\n';
 
 					records.forEach(record => {
+						const price = record.productId && record.productId.price !== undefined 
+							? record.productId.price.toFixed(2) 
+							: '';
+
 						const row = [
 							new Date(record.createdAt).toLocaleDateString(),
 							record.barcode || '',
-							record.productId?.name || '',
+							record.productId?.name || record.productName || '',
+							price,
 							record.quantity || 0,
 							record.reason || '',
 							record.recordedBy?.name || ''
