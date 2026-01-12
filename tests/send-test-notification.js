@@ -55,8 +55,8 @@ const sendTestNotification = async () => {
 		}
 
 		// Prepare notification data
-		const title = "Test Notification From Frischly Server";
-		const body = "This is a test notification sent via Firebase & Expo!";
+		const title = "Frischly GmbH";
+		const body = "Benachrichtigungen über Verkäufe und Angebote💛";
 		const data = {
 			type: "test",
 			timestamp: new Date().toISOString(),

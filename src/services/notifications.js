@@ -333,8 +333,10 @@ class NotificationService {
 	 */
 	async updateUserToken(userId, fcmToken) {
 		try {
-			await User.findByIdAndUpdate(userId, { fcmToken });
-			console.log(`✅ FCM token updated for user ${userId}`);
+			const user = await User.findByIdAndUpdate(userId, { fcmToken });
+			console.log(
+				`✅ FCM token updated for user ${user ? user.email : userId}`
+			);
 			return { success: true };
 		} catch (error) {
 			console.error("❌ Error updating FCM token:", error);
