@@ -400,9 +400,14 @@ exports.getOrder = async (req, res) => {
 // @access  Private
 exports.createOrder = async (req, res) => {
 	try {
+		console.log("Starting createOrder...");
 		// Check global settings
 		const settings = await Setting.getSettings();
+		console.log("Settings fetched:", settings);
 		if (settings.isMaintenanceMode || settings.areOrdersDisabled) {
+			console.log(
+				"Order creation disabled due to maintenance or disabled settings."
+			);
 			return res.status(400).json({
 				success: false,
 				message:
@@ -420,6 +425,12 @@ exports.createOrder = async (req, res) => {
 			notes,
 			deliveryTime,
 		} = req.body;
+		console.log(
+			"Request body parsed. Customer:",
+			customer?.id,
+			"Items count:",
+			items?.length
+		);
 
 		// Set default delivery time to now if not provided
 		const orderDeliveryTime = deliveryTime
@@ -428,6 +439,7 @@ exports.createOrder = async (req, res) => {
 
 		// Validate required fields
 		const dbCustomer = await User.findById(customer.id);
+		console.log("Customer found:", dbCustomer ? dbCustomer._id : "Not found");
 		if (
 			!dbCustomer ||
 			!dbCustomer.name ||
@@ -435,6 +447,7 @@ exports.createOrder = async (req, res) => {
 			!dbCustomer.email ||
 			!dbCustomer.phoneNumber
 		) {
+			console.log("Customer validation failed. Missing required fields.");
 			return res.status(400).json({
 				success: false,
 				message: "Kundenname, ID, E-Mail und Telefon sind erforderlich",
@@ -443,8 +456,10 @@ exports.createOrder = async (req, res) => {
 
 		// Handle new address if provided
 		const orderAddress = address || customer.address || dbCustomer.address;
+		console.log("Order address determined:", orderAddress);
 
 		if (!items || !Array.isArray(items) || items.length === 0) {
+			console.log("No items provided in order.");
 			return res.status(400).json({
 				success: false,
 				message: "Bestellung muss mindestens einen Artikel enthalten",
@@ -454,9 +469,12 @@ exports.createOrder = async (req, res) => {
 		// Validate and process items
 		const processedItems = [];
 		let subtotal = 0;
+		console.log("Processing items...");
 
 		for (const item of items) {
+			console.log("Processing item:", item.product);
 			if (!item.product || !item.quantity) {
+				console.log("Invalid item structure:", item);
 				return res.status(400).json({
 					success: false,
 					message: "Jeder Artikel muss Produkt und Menge haben",
@@ -467,6 +485,7 @@ exports.createOrder = async (req, res) => {
 			const product = await Product.findById(item.product);
 
 			if (!product) {
+				console.log("Product not found:", item.product);
 				return res.status(400).json({
 					success: false,
 					message: `Produkt mit ID ${item.product} nicht gefunden`,
@@ -475,6 +494,14 @@ exports.createOrder = async (req, res) => {
 
 			// Check stock availability
 			if (product.stock < item.quantity) {
+				console.log(
+					"Insufficient stock for product:",
+					product.name,
+					"Stock:",
+					product.stock,
+					"Requested:",
+					item.quantity
+				);
 				return res.status(400).json({
 					success: false,
 					message: `Unzureichender Lagerbestand für ${product.name}. Verfügbar: ${product.stock}, Angefordert: ${item.quantity}`,
@@ -495,11 +522,14 @@ exports.createOrder = async (req, res) => {
 
 				totalPrice,
 			});
+			console.log("Item processed successfully. New subtotal:", subtotal);
 		}
+		console.log("All items processed. Final subtotal:", subtotal);
 
 		// Create order
 		// Calculate delivery charge based on customer's zone
 		let delivery = 0;
+		console.log("Calculating delivery fee. ZipCode:", orderAddress?.zipCode);
 		if (orderAddress && orderAddress.zipCode) {
 			try {
 				const zone = await Zone.findOne({
@@ -508,6 +538,9 @@ exports.createOrder = async (req, res) => {
 				});
 				if (zone && zone.deliveryFee) {
 					delivery = zone.deliveryFee;
+					console.log("Zone found. Delivery fee:", delivery);
+				} else {
+					console.log("Zone not found or no delivery fee.");
 				}
 			} catch (error) {
 				console.warn("Error fetching delivery fee from zone:", error.message);
@@ -522,8 +555,19 @@ exports.createOrder = async (req, res) => {
 		const fees = 0;
 
 		const total = subtotal + delivery + fees;
+		console.log(
+			"Total calculated:",
+			total,
+			"Subtotal:",
+			subtotal,
+			"Delivery:",
+			delivery,
+			"Fees:",
+			fees
+		);
 
 		if (total < settings.minimumOrderValue) {
+			console.log("Order total below minimum:", settings.minimumOrderValue);
 			return res.status(400).json({
 				success: false,
 				message: `Mindestbestellwert beträgt ${settings.minimumOrderValue} €`,
@@ -534,6 +578,12 @@ exports.createOrder = async (req, res) => {
 		const isCashPayment = paymentMethod === "cash";
 		const initialStatus = isCashPayment ? "confirmed" : "pending";
 		const initialPaymentStatus = isCashPayment ? "ondelivery" : "pending";
+		console.log(
+			"Initial status:",
+			initialStatus,
+			"Initial payment status:",
+			initialPaymentStatus
+		);
 
 		const order = new Order({
 			customer: {
@@ -555,14 +605,18 @@ exports.createOrder = async (req, res) => {
 			createdBy: req.user.id,
 		});
 
+		console.log("Saving order...");
 		await order.save();
+		console.log("Order saved:", order._id);
 
 		// Update product stock
+		console.log("Updating product stock...");
 		for (const item of processedItems) {
 			await Product.findByIdAndUpdate(item.product, {
 				$inc: { stock: -item.quantity },
 			});
 		}
+		console.log("Stock updated.");
 
 		// Populate the created order
 
@@ -574,13 +628,16 @@ exports.createOrder = async (req, res) => {
 				"items.product",
 				"name barcode shelfNumber price discount tax bottlerefund"
 			);
+		console.log("Order populated.");
 
 		// Set default payment URL - only for online/card payments (skip for cash)
 		let paymentUrl;
+		console.log("Checking payment method for Stripe:", paymentMethod);
 		if (
 			!isCashPayment &&
 			(paymentMethod === "online" || paymentMethod === "card")
 		) {
+			console.log("Initiating Stripe session creation...");
 			try {
 				const lineItems = populatedOrder.items.map((item) => ({
 					price_data: {
@@ -636,16 +693,19 @@ exports.createOrder = async (req, res) => {
 				});
 
 				paymentUrl = session.url;
+				console.log("Stripe session created. Payment URL:", paymentUrl);
 
 				// Update order with session ID and payment URL
 				order.paymentLinkId = session.id;
 				order.paymentUrl = paymentUrl;
 				await order.save();
+				console.log("Order updated with payment info.");
 			} catch (error) {
 				console.error("Stripe session creation failed:", error);
 			}
 		}
 
+		console.log("Sending response to client...");
 		res.status(201).json({
 			success: true,
 			message: "Bestellung erfolgreich erstellt",
@@ -654,6 +714,7 @@ exports.createOrder = async (req, res) => {
 		});
 
 		// Send confirmation email to customer
+		console.log("Preparing confirmation email...");
 		try {
 			const emailSubject = `Order Confirmation - Order #${populatedOrder._id}`;
 			const emailHtml = `
@@ -804,18 +865,21 @@ exports.createOrder = async (req, res) => {
 				subject: emailSubject,
 				html: emailHtml,
 			});
+			console.log("Confirmation email sent.");
 		} catch (emailError) {
 			console.error("Error sending order confirmation email:", emailError);
 			// Don't fail the order creation if email fails
 		}
 
 		// Send FCM notification to all staff users
+		console.log("Sending FCM notification to staff...");
 		try {
 			const staffUsers = await User.find({
 				role: "staff",
 				fcmToken: { $ne: null },
 				isActive: true,
 			});
+			console.log("Staff users found:", staffUsers.length);
 
 			if (staffUsers.length > 0) {
 				const staffUserIds = staffUsers.map((user) => user._id.toString());
@@ -842,6 +906,7 @@ exports.createOrder = async (req, res) => {
 			error: error.message,
 		});
 	}
+	console.log("createOrder finished.");
 };
 
 // @desc    Update order
