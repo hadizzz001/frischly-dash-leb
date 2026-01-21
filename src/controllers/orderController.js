@@ -151,7 +151,7 @@ exports.getOrders = async (req, res) => {
 			.populate("assignedRider", "name email phone")
 			.populate(
 				"items.product",
-				"name barcode shelfNumber price discount tax bottlerefund picture"
+				"name barcode shelfNumber price discount tax bottlerefund picture",
 			)
 			.sort(sortOptions)
 			.skip(skip)
@@ -292,7 +292,7 @@ exports.getOrdersForRiders = async (req, res) => {
 			.populate("assignedRider", "name email phone")
 			.populate(
 				"items.product",
-				"name barcode shelfNumber price discount tax bottlerefund picture"
+				"name barcode shelfNumber price discount tax bottlerefund picture",
 			)
 			.sort(sortOptions)
 			.skip(skip)
@@ -342,7 +342,7 @@ exports.getOrder = async (req, res) => {
 			.populate("assignedRider", "name email phone")
 			.populate(
 				"items.product",
-				"name barcode shelfNumber price discount tax bottlerefund picture"
+				"name barcode shelfNumber price discount tax bottlerefund picture",
 			);
 
 		if (!order) {
@@ -406,7 +406,7 @@ exports.createOrder = async (req, res) => {
 		console.log("Settings fetched:", settings);
 		if (settings.isMaintenanceMode || settings.areOrdersDisabled) {
 			console.log(
-				"Order creation disabled due to maintenance or disabled settings."
+				"Order creation disabled due to maintenance or disabled settings.",
 			);
 			return res.status(400).json({
 				success: false,
@@ -429,7 +429,7 @@ exports.createOrder = async (req, res) => {
 			"Request body parsed. Customer:",
 			customer?.id,
 			"Items count:",
-			items?.length
+			items?.length,
 		);
 
 		// Set default delivery time to now if not provided
@@ -500,7 +500,7 @@ exports.createOrder = async (req, res) => {
 					"Stock:",
 					product.stock,
 					"Requested:",
-					item.quantity
+					item.quantity,
 				);
 				return res.status(400).json({
 					success: false,
@@ -563,7 +563,7 @@ exports.createOrder = async (req, res) => {
 			"Delivery:",
 			delivery,
 			"Fees:",
-			fees
+			fees,
 		);
 
 		if (total < settings.minimumOrderValue) {
@@ -582,7 +582,7 @@ exports.createOrder = async (req, res) => {
 			"Initial status:",
 			initialStatus,
 			"Initial payment status:",
-			initialPaymentStatus
+			initialPaymentStatus,
 		);
 
 		const order = new Order({
@@ -626,7 +626,7 @@ exports.createOrder = async (req, res) => {
 			.populate("updatedBy", "name email")
 			.populate(
 				"items.product",
-				"name barcode shelfNumber price discount tax bottlerefund"
+				"name barcode shelfNumber price discount tax bottlerefund",
 			);
 		console.log("Order populated.");
 
@@ -726,7 +726,7 @@ exports.createOrder = async (req, res) => {
 					<h3>Order Details</h3>
 					<p><strong>Order ID:</strong> ${populatedOrder._id}</p>
 					<p><strong>Order Date:</strong> ${new Date(
-						populatedOrder.createdAt
+						populatedOrder.createdAt,
 					).toLocaleDateString()}</p>
 					<p><strong>Status:</strong> ${populatedOrder.status}</p>
 					<p><strong>Payment Method:</strong> ${populatedOrder.paymentMethod}</p>
@@ -752,13 +752,13 @@ exports.createOrder = async (req, res) => {
 										item.quantity
 									}</td>
 									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">€${item.totalPrice.toFixed(
-										2
+										2,
 									)}</td>
 									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">€${
 										item.totalPrice.toFixed(2) * item.quantity
 									}</td>
 								</tr>
-							`
+							`,
 								)
 								.join("")}
 						</tbody>
@@ -768,7 +768,7 @@ exports.createOrder = async (req, res) => {
 					<p><strong>Subtotal:</strong> €${populatedOrder.subtotal.toFixed(2)}</p>
 					<p><strong>Delivery Fee:</strong> €${populatedOrder.delivery.toFixed(2)}</p>
 					<p><strong>Processing Fee:</strong> €${(populatedOrder.fees || 0).toFixed(
-						2
+						2,
 					)}</p>
 					<p><strong>Total:</strong> €${populatedOrder.total.toFixed(2)}</p>
 					
@@ -794,7 +794,7 @@ exports.createOrder = async (req, res) => {
 					<h3>Bestelldetails</h3>
 					<p><strong>Bestell-ID:</strong> ${populatedOrder._id}</p>
 					<p><strong>Bestelldatum:</strong> ${new Date(
-						populatedOrder.createdAt
+						populatedOrder.createdAt,
 					).toLocaleDateString("de-DE")}</p>
 					<p><strong>Status:</strong> ${populatedOrder.status}</p>
 					<p><strong>Zahlungsmethode:</strong> ${populatedOrder.paymentMethod}</p>
@@ -820,13 +820,13 @@ exports.createOrder = async (req, res) => {
 										item.quantity
 									}</td>
 									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">€${item.totalPrice.toFixed(
-										2
+										2,
 									)}</td>
 									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">€${
 										item.totalPrice.toFixed(2) * item.quantity
 									}</td>
 								</tr>
-							`
+							`,
 								)
 								.join("")}
 						</tbody>
@@ -836,7 +836,7 @@ exports.createOrder = async (req, res) => {
 					<p><strong>Zwischensumme:</strong> €${populatedOrder.subtotal.toFixed(2)}</p>
 					<p><strong>Liefergebühr:</strong> €${populatedOrder.delivery.toFixed(2)}</p>
 					<p><strong>Bearbeitungsgebühr:</strong> €${(populatedOrder.fees || 0).toFixed(
-						2
+						2,
 					)}</p>
 					<p><strong>Gesamt:</strong> €${populatedOrder.total.toFixed(2)}</p>
 					
@@ -886,10 +886,10 @@ exports.createOrder = async (req, res) => {
 				await NotificationService.sendToUsers(
 					staffUserIds,
 					"New Order Created",
-					`Order #${populatedOrder._id} has been placed by ${populatedOrder.customer.name}`
+					`Order #${populatedOrder._id} has been placed by ${populatedOrder.customer.name}`,
 				);
 				console.log(
-					`✅ FCM notification sent to ${staffUsers.length} staff users for order ${populatedOrder._id}`
+					`✅ FCM notification sent to ${staffUsers.length} staff users for order ${populatedOrder._id}`,
 				);
 			} else {
 				console.log(`⚠️ No active staff users with FCM tokens found`);
@@ -981,7 +981,7 @@ exports.updateOrder = async (req, res) => {
 			.populate("assignedRider", "name email phone")
 			.populate(
 				"items.product",
-				"name barcode shelfNumber price discount tax bottlerefund picture"
+				"name barcode shelfNumber price discount tax bottlerefund picture",
 			);
 
 		// Send delivery confirmation email
@@ -1093,7 +1093,7 @@ exports.deleteOrder = async (req, res) => {
 		const order = await Order.findByIdAndUpdate(
 			id,
 			{ isActive: false, updatedBy: req.user.id },
-			{ new: true }
+			{ new: true },
 		);
 
 		if (!order) {
@@ -1187,7 +1187,7 @@ exports.cancelOrder = async (req, res) => {
 		console.log(`Step 1: Received cancellation request for order ID: ${id}`);
 		console.log(`Step 1: Cancellation reason: ${reason || "Not provided"}`);
 		console.log(
-			`Step 1: Request made by user ID: ${req.user?.id || "Unknown"}`
+			`Step 1: Request made by user ID: ${req.user?.id || "Unknown"}`,
 		);
 
 		// Step 2: Validate order ID
@@ -1212,7 +1212,7 @@ exports.cancelOrder = async (req, res) => {
 			});
 		}
 		console.log(
-			`✅ Step 3: Order found - Status: ${order.status}, Payment: ${order.paymentStatus}, Total: €${order.total}`
+			`✅ Step 3: Order found - Status: ${order.status}, Payment: ${order.paymentStatus}, Total: €${order.total}`,
 		);
 
 		// Step 4: Check if order is already cancelled
@@ -1230,7 +1230,7 @@ exports.cancelOrder = async (req, res) => {
 		console.log("Step 5: Checking if order can be cancelled...");
 		if (order.status === "delivered") {
 			console.log(
-				`❌ Step 5: Cannot cancel order with status '${order.status}'`
+				`❌ Step 5: Cannot cancel order with status '${order.status}'`,
 			);
 			return res.status(400).json({
 				success: false,
@@ -1259,7 +1259,7 @@ exports.cancelOrder = async (req, res) => {
 					console.log("Processing refund for paid order...");
 					// Retrieve session to get payment_intent
 					const session = await stripe.checkout.sessions.retrieve(
-						order.paymentLinkId
+						order.paymentLinkId,
 					);
 					if (session.payment_intent) {
 						// Refund subtotal + delivery (excluding processing fees)
@@ -1277,7 +1277,7 @@ exports.cancelOrder = async (req, res) => {
 							reason: "requested_by_customer",
 						});
 						console.log(
-							`✅ Refund processed successfully: €${refundValue.toFixed(2)}`
+							`✅ Refund processed successfully: €${refundValue.toFixed(2)}`,
 						);
 						order.paymentStatus = "refunded";
 						order.status = "cancelled";
@@ -1373,7 +1373,7 @@ exports.cancelOrder = async (req, res) => {
 		) {
 			// Online/card order without payment link - just cancel
 			console.log(
-				"Step 5.5: Online/card order without payment link, cancelling..."
+				"Step 5.5: Online/card order without payment link, cancelling...",
 			);
 			order.status = "cancelled";
 			order.paymentStatus = "cancelled";
@@ -1389,7 +1389,7 @@ exports.cancelOrder = async (req, res) => {
 			});
 			restoredCount += item.quantity;
 			console.log(
-				`   - Restored ${item.quantity} units of product ${item.product}`
+				`   - Restored ${item.quantity} units of product ${item.product}`,
 			);
 		}
 		console.log(`✅ Step 6: Restored total of ${restoredCount} product units`);
@@ -1411,7 +1411,7 @@ exports.cancelOrder = async (req, res) => {
 			.populate("updatedBy", "name email")
 			.populate(
 				"items.product",
-				"name barcode  price discount tax bottlerefund picture"
+				"name barcode  price discount tax bottlerefund picture",
 			);
 
 		console.log("=== ORDER CANCELLATION COMPLETED SUCCESSFULLY ===");
@@ -1494,7 +1494,7 @@ exports.updateOrderShelfNumber = async (req, res) => {
 			.populate("assignedRider", "name email phone")
 			.populate(
 				"items.product",
-				"name barcode shelfNumber price discount tax bottlerefund picture"
+				"name barcode shelfNumber price discount tax bottlerefund picture",
 			);
 
 		res.json({
@@ -1665,7 +1665,7 @@ exports.updateOrderStatus = async (req, res) => {
 			.populate("assignedRider", "name email phone")
 			.populate(
 				"items.product",
-				"name barcode shelfNumber price discount tax bottlerefund picture"
+				"name barcode shelfNumber price discount tax bottlerefund picture",
 			);
 
 		// Send delivery confirmation email
@@ -2081,7 +2081,7 @@ exports.getUnsoldProducts = async (req, res) => {
 				let categoryName = "N/A";
 				if (product.subcategory) {
 					const subcategory = await Subcategory.findById(
-						product.subcategory._id || product.subcategory
+						product.subcategory._id || product.subcategory,
 					).populate("parentCategory", "name");
 					if (subcategory && subcategory.parentCategory) {
 						categoryName = subcategory.parentCategory.name;
@@ -2091,7 +2091,7 @@ exports.getUnsoldProducts = async (req, res) => {
 					...product,
 					categoryName,
 				};
-			})
+			}),
 		);
 
 		res.json({
@@ -2125,26 +2125,38 @@ exports.getUnsoldProducts = async (req, res) => {
 exports.verifyStripePayment = async (req, res) => {
 	try {
 		const { sessionId, orderId } = req.body;
+		console.log(
+			"Verifying Stripe payment. Session ID:",
+			sessionId,
+			"Order ID:",
+			orderId,
+		);
 
 		if (!sessionId || !orderId) {
+			console.log("Missing sessionId or orderId in request");
 			return res.status(400).json({
 				success: false,
 				message: "Session ID and Order ID are required",
 			});
 		}
 
+		console.log("Retrieving Stripe session...");
 		const session = await stripe.checkout.sessions.retrieve(sessionId);
 
 		if (!session) {
+			console.log("Stripe session not found for ID:", sessionId);
 			return res.status(404).json({
 				success: false,
 				message: "Session not found",
 			});
 		}
 
+		console.log("Stripe session payment status:", session.payment_status);
 		if (session.payment_status === "paid") {
+			console.log("Payment is paid. Finding order...");
 			const order = await Order.findById(orderId);
 			if (!order) {
+				console.log("Order not found for ID:", orderId);
 				return res.status(404).json({
 					success: false,
 					message: "Order not found",
@@ -2152,17 +2164,25 @@ exports.verifyStripePayment = async (req, res) => {
 			}
 
 			if (order.paymentStatus !== "paid") {
+				console.log(
+					"Updating order payment status to paid and status to confirmed",
+				);
 				order.paymentStatus = "paid";
 				order.status = "confirmed"; // Update order status upon payment
 				order.paymentMethod = "online"; // Ensure it's marked as online
 				await order.save();
+				console.log("Order updated successfully");
+			} else {
+				console.log("Order already marked as paid");
 			}
 
+			console.log("Payment verification successful");
 			return res.json({
 				success: true,
 				message: "Payment verified successfully",
 			});
 		} else {
+			console.log("Payment not completed. Status:", session.payment_status);
 			return res.status(400).json({
 				success: false,
 				message: "Payment not completed",
