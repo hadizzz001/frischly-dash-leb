@@ -1,4 +1,5 @@
 const PromoCode = require("../models/PromoCode");
+const { t } = require("../utils/translations");
 
 // @desc    Get all promo codes (public - without code)
 // @route   GET /api/promocodes/public
@@ -33,7 +34,7 @@ exports.validatePromoCode = async (req, res) => {
 		if (!code) {
 			return res.status(400).json({
 				success: false,
-				message: "Promo code is required",
+				message: t('promoCodeRequired', req),
 			});
 		}
 
@@ -46,7 +47,7 @@ exports.validatePromoCode = async (req, res) => {
 		if (!promoCode) {
 			return res.status(404).json({
 				success: false,
-				message: "Invalid or inactive promo code",
+				message: t('invalidPromoCode', req),
 			});
 		}
 
@@ -79,12 +80,12 @@ exports.validatePromoCode = async (req, res) => {
 				originalTotal: orderTotal,
 				finalTotal: parseFloat(finalTotal.toFixed(2)),
 			},
-			message: "Promo code applied successfully",
+			message: t('promoCodeApplied', req),
 		});
 	} catch (err) {
 		res.status(500).json({
 			success: false,
-			message: "Server Error",
+			message: t('serverError', req),
 			error: err.message,
 		});
 	}
@@ -105,7 +106,7 @@ exports.getPromoCodes = async (req, res) => {
 	} catch (err) {
 		res.status(500).json({
 			success: false,
-			message: "Server Error",
+			message: t('serverError', req),
 			error: err.message,
 		});
 	}
@@ -121,7 +122,7 @@ exports.getPromoCode = async (req, res) => {
 		if (!promoCode) {
 			return res.status(404).json({
 				success: false,
-				message: "Promo code not found",
+				message: t('promoCodeNotFound', req),
 			});
 		}
 
@@ -132,7 +133,7 @@ exports.getPromoCode = async (req, res) => {
 	} catch (err) {
 		res.status(500).json({
 			success: false,
-			message: "Server Error",
+			message: t('serverError', req),
 			error: err.message,
 		});
 	}
@@ -161,7 +162,7 @@ exports.createPromoCode = async (req, res) => {
 		if (existingCode) {
 			return res.status(400).json({
 				success: false,
-				message: "Promo code already exists",
+				message: t('promoCodeExists', req),
 			});
 		}
 
@@ -172,14 +173,14 @@ exports.createPromoCode = async (req, res) => {
 		) {
 			return res.status(400).json({
 				success: false,
-				message: "Percentage discount must be between 0 and 100",
+				message: t('percentageDiscountRange', req),
 			});
 		}
 
 		if (discountType === "cash" && discountValue < 0) {
 			return res.status(400).json({
 				success: false,
-				message: "Cash discount cannot be negative",
+				message: t('cashDiscountNegative', req),
 			});
 		}
 
@@ -199,12 +200,12 @@ exports.createPromoCode = async (req, res) => {
 		res.status(201).json({
 			success: true,
 			data: promoCode,
-			message: "Promo code created successfully",
+			message: t('promoCodeCreated', req),
 		});
 	} catch (err) {
 		res.status(500).json({
 			success: false,
-			message: "Server Error",
+			message: t('serverError', req),
 			error: err.message,
 		});
 	}
@@ -220,7 +221,7 @@ exports.updatePromoCode = async (req, res) => {
 		if (!promoCode) {
 			return res.status(404).json({
 				success: false,
-				message: "Promo code not found",
+				message: t('promoCodeNotFound', req),
 			});
 		}
 
@@ -232,12 +233,12 @@ exports.updatePromoCode = async (req, res) => {
 		res.status(200).json({
 			success: true,
 			data: promoCode,
-			message: "Promo code updated successfully",
+			message: t('promoCodeUpdated', req),
 		});
 	} catch (err) {
 		res.status(500).json({
 			success: false,
-			message: "Server Error",
+			message: t('serverError', req),
 			error: err.message,
 		});
 	}
@@ -253,7 +254,7 @@ exports.deletePromoCode = async (req, res) => {
 		if (!promoCode) {
 			return res.status(404).json({
 				success: false,
-				message: "Promo code not found",
+				message: t('promoCodeNotFound', req),
 			});
 		}
 
@@ -262,12 +263,12 @@ exports.deletePromoCode = async (req, res) => {
 		res.status(200).json({
 			success: true,
 			data: {},
-			message: "Promo code deleted successfully",
+			message: t('promoCodeDeleted', req),
 		});
 	} catch (err) {
 		res.status(500).json({
 			success: false,
-			message: "Server Error",
+			message: t('serverError', req),
 			error: err.message,
 		});
 	}
