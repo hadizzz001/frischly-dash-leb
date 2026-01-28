@@ -6,6 +6,7 @@ const {
 	createPromoCode,
 	updatePromoCode,
 	deletePromoCode,
+	validatePromoCode,
 } = require("../controllers/promoCodeController");
 const { protect, authorize } = require("../middleware/auth");
 
@@ -13,6 +14,7 @@ const router = express.Router();
 
 // Public routes
 router.route("/public").get(getPublicPromoCodes);
+router.route("/validate").post(validatePromoCode);
 
 // Protect all routes below
 router.use(protect);
