@@ -34,7 +34,7 @@ exports.validatePromoCode = async (req, res) => {
 		if (!code) {
 			return res.status(400).json({
 				success: false,
-				message: t('promoCodeRequired', req),
+				message: ("Promo-Code ist erforderlich", req), //do not translate
 			});
 		}
 
@@ -47,7 +47,7 @@ exports.validatePromoCode = async (req, res) => {
 		if (!promoCode) {
 			return res.status(404).json({
 				success: false,
-				message: t('invalidPromoCode', req),
+				message: ("Ungültiger oder inaktiver Promo-Code", req), //do not translate
 			});
 		}
 
@@ -80,12 +80,12 @@ exports.validatePromoCode = async (req, res) => {
 				originalTotal: orderTotal,
 				finalTotal: parseFloat(finalTotal.toFixed(2)),
 			},
-			message: t('promoCodeApplied', req),
+			message: t("promoCodeApplied", req),
 		});
 	} catch (err) {
 		res.status(500).json({
 			success: false,
-			message: t('serverError', req),
+			message: t("serverError", req),
 			error: err.message,
 		});
 	}
@@ -106,7 +106,7 @@ exports.getPromoCodes = async (req, res) => {
 	} catch (err) {
 		res.status(500).json({
 			success: false,
-			message: t('serverError', req),
+			message: t("serverError", req),
 			error: err.message,
 		});
 	}
@@ -122,7 +122,7 @@ exports.getPromoCode = async (req, res) => {
 		if (!promoCode) {
 			return res.status(404).json({
 				success: false,
-				message: t('promoCodeNotFound', req),
+				message: t("promoCodeNotFound", req),
 			});
 		}
 
@@ -133,7 +133,7 @@ exports.getPromoCode = async (req, res) => {
 	} catch (err) {
 		res.status(500).json({
 			success: false,
-			message: t('serverError', req),
+			message: t("serverError", req),
 			error: err.message,
 		});
 	}
@@ -162,7 +162,7 @@ exports.createPromoCode = async (req, res) => {
 		if (existingCode) {
 			return res.status(400).json({
 				success: false,
-				message: t('promoCodeExists', req),
+				message: t("promoCodeExists", req),
 			});
 		}
 
@@ -173,14 +173,14 @@ exports.createPromoCode = async (req, res) => {
 		) {
 			return res.status(400).json({
 				success: false,
-				message: t('percentageDiscountRange', req),
+				message: t("percentageDiscountRange", req),
 			});
 		}
 
 		if (discountType === "cash" && discountValue < 0) {
 			return res.status(400).json({
 				success: false,
-				message: t('cashDiscountNegative', req),
+				message: t("cashDiscountNegative", req),
 			});
 		}
 
@@ -200,12 +200,12 @@ exports.createPromoCode = async (req, res) => {
 		res.status(201).json({
 			success: true,
 			data: promoCode,
-			message: t('promoCodeCreated', req),
+			message: t("promoCodeCreated", req),
 		});
 	} catch (err) {
 		res.status(500).json({
 			success: false,
-			message: t('serverError', req),
+			message: t("serverError", req),
 			error: err.message,
 		});
 	}
@@ -221,7 +221,7 @@ exports.updatePromoCode = async (req, res) => {
 		if (!promoCode) {
 			return res.status(404).json({
 				success: false,
-				message: t('promoCodeNotFound', req),
+				message: t("promoCodeNotFound", req),
 			});
 		}
 
@@ -233,12 +233,12 @@ exports.updatePromoCode = async (req, res) => {
 		res.status(200).json({
 			success: true,
 			data: promoCode,
-			message: t('promoCodeUpdated', req),
+			message: t("promoCodeUpdated", req),
 		});
 	} catch (err) {
 		res.status(500).json({
 			success: false,
-			message: t('serverError', req),
+			message: t("serverError", req),
 			error: err.message,
 		});
 	}
@@ -254,7 +254,7 @@ exports.deletePromoCode = async (req, res) => {
 		if (!promoCode) {
 			return res.status(404).json({
 				success: false,
-				message: t('promoCodeNotFound', req),
+				message: t("promoCodeNotFound", req),
 			});
 		}
 
@@ -263,12 +263,12 @@ exports.deletePromoCode = async (req, res) => {
 		res.status(200).json({
 			success: true,
 			data: {},
-			message: t('promoCodeDeleted', req),
+			message: t("promoCodeDeleted", req),
 		});
 	} catch (err) {
 		res.status(500).json({
 			success: false,
-			message: t('serverError', req),
+			message: t("serverError", req),
 			error: err.message,
 		});
 	}
