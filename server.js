@@ -23,6 +23,7 @@ const shelfRoutes = require("./src/routes/shelves");
 const settingRoutes = require("./src/routes/settings");
 const promoCodeRoutes = require("./src/routes/promoCodes");
 const notificationRoutes = require("./src/routes/notifications");
+const announcementRoutes = require("./src/routes/announcements");
 
 // Controllers
 const { cancelOrder } = require("./src/controllers/orderController");
@@ -160,7 +161,7 @@ app.use(
 				], // Allow Google Maps and Google domains
 			},
 		},
-	})
+	}),
 );
 
 // CORS Configuration with Security
@@ -229,7 +230,7 @@ app.use(
 				// If no origins configured, warn and reject in production
 				if (process.env.NODE_ENV === "production") {
 					console.error(
-						"❌ SECURITY WARNING: No CORS origins configured in production!"
+						"❌ SECURITY WARNING: No CORS origins configured in production!",
 					);
 					return callback(new Error("CORS origin not allowed"), false);
 				}
@@ -244,7 +245,7 @@ app.use(
 			} else {
 				// Origin is not allowed
 				console.warn(
-					`⚠️  CORS blocked request from unauthorized origin: ${origin}`
+					`⚠️  CORS blocked request from unauthorized origin: ${origin}`,
 				);
 				callback(new Error("CORS policy: Origin not allowed"), false);
 			}
@@ -254,7 +255,7 @@ app.use(
 		allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
 		exposedHeaders: ["Content-Range", "X-Content-Range"],
 		maxAge: 600, // Cache preflight requests for 10 minutes
-	})
+	}),
 );
 
 // Rate limiting - Enabled in both development and production with different limits
@@ -284,7 +285,7 @@ app.use(
 		onSanitize: ({ req, key }) => {
 			console.warn(`⚠️  NoSQL injection attempt detected and blocked: ${key}`);
 		},
-	})
+	}),
 );
 
 // Serve static files
@@ -304,6 +305,7 @@ app.use("/api/shelves", shelfRoutes);
 app.use("/api/settings", settingRoutes);
 app.use("/api/promocodes", promoCodeRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/announcements", announcementRoutes);
 
 // Route for customer shop page
 app.get("/shop", (req, res) => {
