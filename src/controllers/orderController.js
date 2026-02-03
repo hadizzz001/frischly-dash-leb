@@ -424,6 +424,7 @@ exports.createOrder = async (req, res) => {
 			shelfNumber = 0,
 			notes,
 			deliveryTime,
+			promoCode,
 		} = req.body;
 		console.log(
 			"Request body parsed. Customer:",
@@ -603,11 +604,21 @@ exports.createOrder = async (req, res) => {
 			status: initialStatus,
 			paymentStatus: initialPaymentStatus,
 			createdBy: req.user.id,
+			promoCode: promoCode,
 		});
 
 		console.log("Saving order...");
 		await order.save();
 		console.log("Order saved:", order._id);
+
+		// Update user's usedPromoCodes if promo code was used
+		if (promoCode) {
+			console.log("Updating user's usedPromoCodes with promo code:", promoCode);
+			await User.findByIdAndUpdate(dbCustomer._id, {
+				$addToSet: { usedPromoCodes: promoCode }
+			});
+			console.log("User's usedPromoCodes updated.");
+		}
 
 		// Update product stock
 		console.log("Updating product stock...");
@@ -624,6 +635,7 @@ exports.createOrder = async (req, res) => {
 			.populate("customer", "name address")
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
+			.populate("promoCode", "code companyName description discountType discountValue")
 			.populate(
 				"items.product",
 				"name barcode shelfNumber price discount tax bottlerefund",

@@ -191,6 +191,10 @@ const orderSchema = new mongoose.Schema(
 			default: true,
 			index: true,
 		},
+		promoCode: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "PromoCode",
+		},
 	},
 	{
 		timestamps: true,

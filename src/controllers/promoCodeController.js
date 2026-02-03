@@ -1,4 +1,5 @@
 const PromoCode = require("../models/PromoCode");
+const User = require("../models/User");
 const { t } = require("../utils/translations");
 
 // @desc    Get all promo codes (public - without code)
@@ -48,6 +49,15 @@ exports.validatePromoCode = async (req, res) => {
 			return res.status(404).json({
 				success: false,
 				message: "Ungültiger oder inaktiver Promo-Code",
+			});
+		}
+
+		// Check if user has already used this promo code
+		const user = await User.findById(req.user.id).select('usedPromoCodes');
+		if (user && user.usedPromoCodes && user.usedPromoCodes.includes(promoCode._id)) {
+			return res.status(400).json({
+				success: false,
+				message: "Sie haben diesen Promo-Code bereits verwendet",
 			});
 		}
 
