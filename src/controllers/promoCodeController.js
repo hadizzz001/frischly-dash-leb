@@ -53,8 +53,12 @@ exports.validatePromoCode = async (req, res) => {
 		}
 
 		// Check if user has already used this promo code
-		const user = await User.findById(req.user.id).select('usedPromoCodes');
-		if (user && user.usedPromoCodes && user.usedPromoCodes.includes(promoCode._id)) {
+		const user = await User.findById(req.user.id).select("usedPromoCodes");
+		if (
+			user &&
+			user.usedPromoCodes &&
+			user.usedPromoCodes.includes(promoCode._id)
+		) {
 			return res.status(400).json({
 				success: false,
 				message: "Sie haben diesen Promo-Code bereits verwendet",

@@ -137,11 +137,13 @@ const userSchema = new mongoose.Schema(
 			type: String,
 			default: null,
 		},
-		usedPromoCodes: [{
-			type: mongoose.Schema.Types.ObjectId,
-			ref: 'PromoCode',
-			default: [],
-		}],
+		usedPromoCodes: [
+			{
+				type: mongoose.Schema.Types.ObjectId,
+				ref: "PromoCode",
+				default: [],
+			},
+		],
 	},
 	{
 		timestamps: true,
