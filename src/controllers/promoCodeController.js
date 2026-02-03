@@ -26,7 +26,7 @@ exports.getPublicPromoCodes = async (req, res) => {
 
 // @desc    Validate and apply promo code
 // @route   POST /api/promocodes/validate
-// @access  Public
+// @access  Private
 exports.validatePromoCode = async (req, res) => {
 	try {
 		const { code, orderTotal } = req.body;

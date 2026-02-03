@@ -137,10 +137,16 @@ const userSchema = new mongoose.Schema(
 			type: String,
 			default: null,
 		},
+		usedPromoCodes: [
+			{
+				string: String,
+				default: [],
+			},
+		],
 	},
 	{
 		timestamps: true,
-	}
+	},
 );
 
 // Hash password before saving

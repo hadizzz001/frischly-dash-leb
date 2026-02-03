@@ -1619,33 +1619,82 @@
 						<p>Manage promotional codes</p>
 					</div>
 
-					<div class="action-bar">
-						<button class="btn btn-primary" onclick="showAddPromoCodeModal()">
-							<i class="fas">+</i> Add Promo Code
+					<!-- Tab Navigation -->
+					<div class="staff-tabs">
+						<button
+							class="staff-tab-btn active"
+							onclick="showPromoTab('promo')"
+						>
+							Promo
+						</button>
+						<button class="staff-tab-btn" onclick="showPromoTab('onetime')">
+							Onetime Promo
 						</button>
 					</div>
 
-					<div class="data-table">
-						<div class="table-header">
-							<h3>All Promo Codes</h3>
+					<!-- Promo Tab Content -->
+					<div id="promo-tab-content" class="staff-tab-content active">
+						<div class="action-bar">
+							<button class="btn btn-primary" onclick="showAddPromoCodeModal('promo')">
+								<i class="fas">+</i> Add Promo Code
+							</button>
 						</div>
-						<div class="users-table-container">
-							<table class="users-table" id="promocodes-table">
-								<thead>
-									<tr>
-										<th>Company Name</th>
-										<th>Code</th>
-										<th>Description</th>
-										<th>Discount</th>
-										<th>Type</th>
-										<th>Status</th>
-										<th>Actions</th>
-									</tr>
-								</thead>
-								<tbody id="promocodes-table-body">
-									<!-- Promo codes will be loaded here -->
-								</tbody>
-							</table>
+
+						<div class="data-table">
+							<div class="table-header">
+								<h3>Promo Codes</h3>
+							</div>
+							<div class="users-table-container">
+								<table class="users-table" id="promo-table">
+									<thead>
+										<tr>
+											<th>Company Name</th>
+											<th>Code</th>
+											<th>Description</th>
+											<th>Discount</th>
+											<th>Type</th>
+											<th>Status</th>
+											<th>Actions</th>
+										</tr>
+									</thead>
+									<tbody id="promo-table-body">
+										<!-- Promo codes will be loaded here -->
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+
+					<!-- Onetime Promo Tab Content -->
+					<div id="onetime-tab-content" class="staff-tab-content">
+						<div class="action-bar">
+							<button class="btn btn-primary" onclick="showAddPromoCodeModal('onetime')">
+								<i class="fas">+</i> Add Onetime Promo Code
+							</button>
+						</div>
+
+						<div class="data-table">
+							<div class="table-header">
+								<h3>Onetime Promo Codes</h3>
+							</div>
+							<div class="users-table-container">
+								<table class="users-table" id="onetime-table">
+									<thead>
+										<tr>
+											<th>Company Name</th>
+											<th>Code</th>
+											<th>Description</th>
+											<th>Discount</th>
+											<th>Type</th>
+											<th>Status</th>
+											<th>Actions</th>
+										</tr>
+									</thead>
+									<tbody id="onetime-table-body">
+										<!-- Onetime promo codes will be loaded here -->
+									</tbody>
+								</table>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -1905,7 +1954,7 @@
 							</div>
 
 							<div class="settings-card">
-								<h3>📢 FCM Notifications</h3>
+								<h2>📢 FCM Notifications</h2>
 								<div class="setting-item">
 									<label>Send Notification to All Customers</label>
 									<div class="setting-actions" style="display: flex; flex-direction: column; gap: 10px;">
@@ -4012,7 +4061,8 @@
 						loadSettings();
 						break;
 					case "promocodes":
-						loadPromoCodes();
+						loadPromoCodes(true); // Load promo tab (own company)
+						loadPromoCodes(false); // Load onetime tab (other company)
 						break;
 					case "announcements":
 						loadAnnouncements();
@@ -7712,6 +7762,25 @@
 			} else if (tabName === "shelfs") {
 				loadShelfs();
 			}
+		}
+
+		function showPromoTab(tabName) {
+			// Remove active class from all promo tabs and content
+			document
+				.querySelectorAll("#promocodes-section .staff-tab-btn")
+				.forEach((btn) => btn.classList.remove("active"));
+			document
+				.querySelectorAll("#promocodes-section .staff-tab-content")
+				.forEach((content) => content.classList.remove("active"));
+
+			// Add active class to clicked tab and corresponding content
+			event.target.classList.add("active");
+			document
+				.getElementById(`${tabName}-tab-content`)
+				.classList.add("active");
+
+			// Load data based on active tab
+			loadPromoCodes(tabName === "promo" ? true : false);
 		}			// Category Tabs Management
 			function showCategoryTab(tabName, filter) {
 				// Remove active class from all tabs and content
@@ -15516,16 +15585,33 @@
 			}
 
 			// Promo Codes Management
-			async function loadPromoCodes() {
+			async function loadPromoCodes(isFromOwnCompany = null) {
 				try {
 					const response = await authenticatedFetch(`${API_BASE_URL}/promocodes`);
 					const result = await response.json();
 
 					if (result.success) {
-						const tbody = document.getElementById("promocodes-table-body");
+						// Determine which table to populate based on the filter
+						let tbodyId;
+						if (isFromOwnCompany === true) {
+							tbodyId = "promo-table-body";
+						} else if (isFromOwnCompany === false) {
+							tbodyId = "onetime-table-body";
+						} else {
+							// For backward compatibility, if no filter, use the old table
+							tbodyId = "promocodes-table-body";
+						}
+
+						const tbody = document.getElementById(tbodyId);
+						if (!tbody) return; // Skip if table doesn't exist (for backward compatibility)
 						tbody.innerHTML = "";
 
-						result.data.forEach((promo) => {
+						// Filter data based on isFromOwnCompany
+						const filteredData = isFromOwnCompany !== null 
+							? result.data.filter(promo => promo.isFromOwnCompany === isFromOwnCompany)
+							: result.data;
+
+						filteredData.forEach((promo) => {
 							const discountDisplay = promo.discountType === "percentage" 
 								? `${promo.discountValue}%`
 								: `€${promo.discountValue}`;
@@ -15564,13 +15650,13 @@
 				}
 			}
 
-			function showAddPromoCodeModal() {
-				document.getElementById("promocode-modal-title").textContent = "Add Promo Code";
+			function showAddPromoCodeModal(tabType = 'promo') {
+				document.getElementById("promocode-modal-title").textContent = tabType === 'promo' ? "Add Promo Code" : "Add Onetime Promo Code";
 				document.getElementById("promocode-form").reset();
 				document.getElementById("promocode-id").value = "";
-				// Set default values
+				// Set default values based on tab
 				document.getElementById("promocode-discount-type").value = "percentage";
-				document.getElementById("promocode-own-company").value = "true";
+				document.getElementById("promocode-own-company").value = tabType === 'promo' ? "true" : "false";
 				togglePromoCodeFields();
 				document.getElementById("promocode-modal").style.display = "block";
 			}
@@ -15668,7 +15754,7 @@
 					if (result.success) {
 						showMessage(result.message, "success");
 						closePromoCodeModal();
-						loadPromoCodes();
+						loadPromoCodes(isFromOwnCompany); // Reload the appropriate tab
 					} else {
 						showMessage(result.message || "Operation failed", "error");
 					}
@@ -15721,7 +15807,8 @@
 
 					if (result.success) {
 						showMessage(result.message, "success");
-						loadPromoCodes();
+						loadPromoCodes(true); // Reload both tabs
+						loadPromoCodes(false);
 					} else {
 						showMessage(result.message || "Failed to delete promo code", "error");
 					}

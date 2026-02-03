@@ -14,10 +14,13 @@ const router = express.Router();
 
 // Public routes
 router.route("/public").get(getPublicPromoCodes);
+
+// Protect routes below (authenticated users only)
+router.use(protect);
+
 router.route("/validate").post(validatePromoCode);
 
-// Protect all routes below
-router.use(protect);
+// Admin only routes
 router.use(authorize("admin"));
 
 router.route("/").get(getPromoCodes).post(createPromoCode);
