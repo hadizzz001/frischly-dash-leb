@@ -401,6 +401,8 @@ exports.getOrder = async (req, res) => {
 // @access  Private
 exports.createOrder = async (req, res) => {
 	try {
+		console.log("createOrder req.body:", JSON.stringify(req.body, null, 2));
+		console.log("createOrder req.user:", req.user);
 		console.log("Starting createOrder...");
 		// Check global settings
 		const settings = await Setting.getSettings();
