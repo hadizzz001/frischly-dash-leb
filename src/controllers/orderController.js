@@ -568,7 +568,11 @@ exports.createOrder = async (req, res) => {
 				"Promo code lookup result:",
 				promoCodeDoc ? promoCodeDoc.code : "Not found",
 			);
-			if (!promoCodeDoc || !promoCodeDoc.isActive || !promoCodeDoc.isFromOwnCompany) {
+			if (
+				!promoCodeDoc ||
+				!promoCodeDoc.isActive ||
+				!promoCodeDoc.isFromOwnCompany
+			) {
 				console.log("Invalid promo code:", promoCode);
 				return res.status(400).json({
 					success: false,
@@ -746,6 +750,20 @@ exports.createOrder = async (req, res) => {
 								name: "Processing Fee",
 							},
 							unit_amount: Math.round(populatedOrder.fees * 100),
+						},
+						quantity: 1,
+					});
+				}
+
+				// Apply promo code discount as a negative line item
+				if (populatedOrder.discount > 0) {
+					lineItems.push({
+						price_data: {
+							currency: "eur",
+							product_data: {
+								name: "Promo Code Discount",
+							},
+							unit_amount: -Math.round(populatedOrder.discount * 100),
 						},
 						quantity: 1,
 					});
