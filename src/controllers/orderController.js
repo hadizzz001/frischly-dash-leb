@@ -563,16 +563,12 @@ exports.createOrder = async (req, res) => {
 		let promoCodeDoc = null;
 		if (promoCode) {
 			console.log("Validating promo code:", promoCode);
-			promoCodeDoc = await PromoCode.findOne({
-				code: promoCode.toUpperCase(),
-				isActive: true,
-				isFromOwnCompany: true,
-			});
+			promoCodeDoc = await PromoCode.findById(promoCode);
 			console.log(
 				"Promo code lookup result:",
 				promoCodeDoc ? promoCodeDoc.code : "Not found",
 			);
-			if (!promoCodeDoc) {
+			if (!promoCodeDoc || !promoCodeDoc.isActive || !promoCodeDoc.isFromOwnCompany) {
 				console.log("Invalid promo code:", promoCode);
 				return res.status(400).json({
 					success: false,
