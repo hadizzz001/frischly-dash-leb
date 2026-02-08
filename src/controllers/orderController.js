@@ -566,7 +566,10 @@ exports.createOrder = async (req, res) => {
 				isActive: true,
 				isFromOwnCompany: true,
 			});
-
+			console.log(
+				"Promo code lookup result:",
+				promoCodeDoc ? promoCodeDoc.code : "Not found",
+			);
 			if (!promoCodeDoc) {
 				console.log("Invalid promo code:", promoCode);
 				return res.status(400).json({
@@ -590,7 +593,8 @@ exports.createOrder = async (req, res) => {
 			// Calculate discount
 			const orderTotalBeforeDiscount = subtotal + delivery + fees;
 			if (promoCodeDoc.discountType === "percentage") {
-				discount = (orderTotalBeforeDiscount * promoCodeDoc.discountValue) / 100;
+				discount =
+					(orderTotalBeforeDiscount * promoCodeDoc.discountValue) / 100;
 			} else if (promoCodeDoc.discountType === "cash") {
 				discount = promoCodeDoc.discountValue;
 				// Ensure discount doesn't exceed order total
@@ -598,7 +602,16 @@ exports.createOrder = async (req, res) => {
 					discount = orderTotalBeforeDiscount;
 				}
 			}
-			console.log("Promo code applied. Code:", promoCode, "Discount:", discount, "Type:", promoCodeDoc.discountType, "Value:", promoCodeDoc.discountValue);
+			console.log(
+				"Promo code applied. Code:",
+				promoCode,
+				"Discount:",
+				discount,
+				"Type:",
+				promoCodeDoc.discountType,
+				"Value:",
+				promoCodeDoc.discountValue,
+			);
 		}
 
 		const total = subtotal + delivery + fees - discount;
