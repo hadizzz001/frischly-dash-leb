@@ -1,6 +1,7 @@
 const Order = require("../models/Order");
 const Product = require("../models/Product");
 const Rider = require("../models/Rider");
+const PromoCode = require("../models/PromoCode");
 const mongoose = require("mongoose");
 const Zone = require("../models/Zone");
 const User = require("../models/User");
@@ -555,7 +556,52 @@ exports.createOrder = async (req, res) => {
 		//const fees = Math.round(processingFee * 100) / 100;
 		const fees = 0;
 
-		const total = subtotal + delivery + fees;
+		// Validate and calculate promo code discount
+		let discount = 0;
+		let promoCodeDoc = null;
+		if (promoCode) {
+			console.log("Validating promo code:", promoCode);
+			promoCodeDoc = await PromoCode.findOne({
+				code: promoCode.toUpperCase(),
+				isActive: true,
+				isFromOwnCompany: true,
+			});
+
+			if (!promoCodeDoc) {
+				console.log("Invalid promo code:", promoCode);
+				return res.status(400).json({
+					success: false,
+					message: "Ungültiger oder inaktiver Promo-Code",
+				});
+			}
+
+			// Check if user has already used this promo code
+			if (
+				dbCustomer.usedPromoCodes &&
+				dbCustomer.usedPromoCodes.includes(promoCodeDoc._id)
+			) {
+				console.log("User has already used promo code:", promoCode);
+				return res.status(400).json({
+					success: false,
+					message: "Sie haben diesen Promo-Code bereits verwendet",
+				});
+			}
+
+			// Calculate discount
+			const orderTotalBeforeDiscount = subtotal + delivery + fees;
+			if (promoCodeDoc.discountType === "percentage") {
+				discount = (orderTotalBeforeDiscount * promoCodeDoc.discountValue) / 100;
+			} else if (promoCodeDoc.discountType === "cash") {
+				discount = promoCodeDoc.discountValue;
+				// Ensure discount doesn't exceed order total
+				if (discount > orderTotalBeforeDiscount) {
+					discount = orderTotalBeforeDiscount;
+				}
+			}
+			console.log("Promo code applied. Code:", promoCode, "Discount:", discount, "Type:", promoCodeDoc.discountType, "Value:", promoCodeDoc.discountValue);
+		}
+
+		const total = subtotal + delivery + fees - discount;
 		console.log(
 			"Total calculated:",
 			total,
@@ -565,6 +611,8 @@ exports.createOrder = async (req, res) => {
 			delivery,
 			"Fees:",
 			fees,
+			"Discount:",
+			discount,
 		);
 
 		if (total < settings.minimumOrderValue) {
@@ -596,6 +644,7 @@ exports.createOrder = async (req, res) => {
 
 			delivery: delivery,
 			fees: fees,
+			discount: discount,
 			total: total,
 			paymentMethod,
 			shelfNumber,
@@ -604,7 +653,7 @@ exports.createOrder = async (req, res) => {
 			status: initialStatus,
 			paymentStatus: initialPaymentStatus,
 			createdBy: req.user.id,
-			promoCode: promoCode,
+			promoCode: promoCodeDoc ? promoCodeDoc._id : null,
 		});
 
 		console.log("Saving order...");
@@ -612,10 +661,10 @@ exports.createOrder = async (req, res) => {
 		console.log("Order saved:", order._id);
 
 		// Update user's usedPromoCodes if promo code was used
-		if (promoCode) {
+		if (promoCodeDoc) {
 			console.log("Updating user's usedPromoCodes with promo code:", promoCode);
 			await User.findByIdAndUpdate(dbCustomer._id, {
-				$addToSet: { usedPromoCodes: promoCode }
+				$addToSet: { usedPromoCodes: promoCodeDoc._id },
 			});
 			console.log("User's usedPromoCodes updated.");
 		}
@@ -635,7 +684,10 @@ exports.createOrder = async (req, res) => {
 			.populate("customer", "name address")
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
-			.populate("promoCode", "code companyName description discountType discountValue")
+			.populate(
+				"promoCode",
+				"code companyName description discountType discountValue",
+			)
 			.populate(
 				"items.product",
 				"name barcode shelfNumber price discount tax bottlerefund",
