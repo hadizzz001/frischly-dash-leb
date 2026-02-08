@@ -757,7 +757,8 @@ exports.createOrder = async (req, res) => {
 
 				console.log("Stripe line items:", JSON.stringify(lineItems, null, 2));
 
-				const session = await stripe.checkout.sessions.create({
+				// Create Stripe session options
+				const sessionOptions = {
 					payment_method_types: ["card", "paypal"],
 					line_items: lineItems,
 					mode: "payment",
@@ -771,7 +772,29 @@ exports.createOrder = async (req, res) => {
 					}/payment/cancel.html?order=${populatedOrder._id}`,
 					client_reference_id: populatedOrder._id.toString(),
 					customer_email: populatedOrder.customer.email,
-				});
+				};
+
+				// Apply promo code discount if present
+				if (populatedOrder.discount > 0 && promoCodeDoc) {
+					let couponParams = {
+						duration: "once",
+						name: "Promo Code Discount",
+					};
+
+					if (promoCodeDoc.discountType === "percentage") {
+						couponParams.percent_off = promoCodeDoc.discountValue;
+					} else {
+						// Cash discount
+						couponParams.amount_off = Math.round(populatedOrder.discount * 100);
+						couponParams.currency = "eur";
+					}
+
+					const coupon = await stripe.coupons.create(couponParams);
+					sessionOptions.discounts = [{ coupon: coupon.id }];
+					console.log("Created Stripe coupon for discount:", coupon.id, "Type:", promoCodeDoc.discountType);
+				}
+
+				const session = await stripe.checkout.sessions.create(sessionOptions);
 
 				paymentUrl = session.url;
 				console.log("Stripe session created. Payment URL:", paymentUrl);
