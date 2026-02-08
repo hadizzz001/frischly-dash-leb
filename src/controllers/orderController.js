@@ -755,19 +755,7 @@ exports.createOrder = async (req, res) => {
 					});
 				}
 
-				// Apply promo code discount as a negative line item
-				if (populatedOrder.discount > 0) {
-					lineItems.push({
-						price_data: {
-							currency: "eur",
-							product_data: {
-								name: "Promo Code Discount",
-							},
-							unit_amount: -Math.round(populatedOrder.discount * 100),
-						},
-						quantity: 1,
-					});
-				}
+				console.log("Stripe line items:", JSON.stringify(lineItems, null, 2));
 
 				const session = await stripe.checkout.sessions.create({
 					payment_method_types: ["card", "paypal"],
