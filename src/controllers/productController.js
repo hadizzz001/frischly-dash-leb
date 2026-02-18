@@ -19,10 +19,10 @@ if (
 	!process.env.CLOUDINARY_API_SECRET
 ) {
 	console.error(
-		"❌ CRITICAL: Cloudinary credentials are not configured properly in environment variables"
+		"❌ CRITICAL: Cloudinary credentials are not configured properly in environment variables",
 	);
 	console.error(
-		"Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in .env file"
+		"Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in .env file",
 	);
 }
 
@@ -76,7 +76,7 @@ const uploadToCloudinary = (buffer, folder = "products") => {
 						public_id: result.public_id,
 					});
 				}
-			}
+			},
 		);
 
 		stream.end(buffer);
@@ -128,6 +128,7 @@ exports.getProducts = async (req, res) => {
 		}
 		if (inAds !== undefined && inAds !== "all") {
 			filter.inAds = inAds === "true" || inAds === true;
+			limit = 100; // Override limit to show all products in ads if inAds filter is applied
 		}
 
 		// Handle category filtering (same as getProductsByCategory)
@@ -858,7 +859,7 @@ exports.deleteProduct = async (req, res) => {
 		const product = await Product.findByIdAndUpdate(
 			id,
 			{ isActive: false, updatedAt: new Date() },
-			{ new: true }
+			{ new: true },
 		);
 
 		if (!product) {
@@ -1524,7 +1525,7 @@ exports.bulkUpdateProductStatus = async (req, res) => {
 			{
 				isActive: status === "active",
 				updatedAt: new Date(),
-			}
+			},
 		);
 
 		res.json({
