@@ -268,7 +268,7 @@ exports.getProducts = async (req, res) => {
 		// Calculate pagination
 		const pageNumber = parseInt(page);
 		const isInAdsFilter = inAds === "true" || inAds === true;
-		const limitNumber = isInAdsFilter ? 30 : parseInt(limit);
+		const limitNumber = isInAdsFilter ? 30 : parseInt(30);
 		const skip = (pageNumber - 1) * limitNumber;
 
 		// Build sort object
