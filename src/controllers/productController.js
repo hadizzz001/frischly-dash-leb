@@ -128,7 +128,6 @@ exports.getProducts = async (req, res) => {
 		}
 		if (inAds !== undefined && inAds !== "all") {
 			filter.inAds = inAds === "true" || inAds === true;
-			limit = 100; // Override limit to show all products in ads if inAds filter is applied
 		}
 
 		// Handle category filtering (same as getProductsByCategory)
