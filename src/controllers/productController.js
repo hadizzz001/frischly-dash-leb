@@ -267,12 +267,7 @@ exports.getProducts = async (req, res) => {
 
 		// Calculate pagination
 		const pageNumber = parseInt(page);
-		const isInAdsFilter =
-			inAds === "true" ||
-			inAds === true ||
-			discount === "true" ||
-			discount === true;
-		const limitNumber = isInAdsFilter ? 30 : parseInt(limit);
+		const limitNumber = parseInt(limit);
 		const skip = (pageNumber - 1) * limitNumber;
 
 		// Build sort object
@@ -1415,7 +1410,7 @@ exports.getProductsWithDiscount = async (req, res) => {
 
 		// Calculate pagination
 		const pageNumber = parseInt(page);
-		const limitNumber = parseInt(limit);
+		const limitNumber = parseInt(50);
 		const skip = (pageNumber - 1) * limitNumber;
 
 		// Determine if we need to sort by final price (computed field)
