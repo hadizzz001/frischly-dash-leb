@@ -580,18 +580,6 @@ exports.createOrder = async (req, res) => {
 				});
 			}
 
-			// Check if user has already used this promo code
-			if (
-				dbCustomer.usedPromoCodes &&
-				dbCustomer.usedPromoCodes.includes(promoCodeDoc._id)
-			) {
-				console.log("User has already used promo code:", promoCode);
-				return res.status(400).json({
-					success: false,
-					message: "Sie haben diesen Promo-Code bereits verwendet",
-				});
-			}
-
 			// Calculate discount
 			const orderTotalBeforeDiscount = subtotal + delivery + fees;
 			if (promoCodeDoc.discountType === "percentage") {
@@ -674,15 +662,6 @@ exports.createOrder = async (req, res) => {
 		console.log("Saving order...");
 		await order.save();
 		console.log("Order saved:", order._id);
-
-		// Update user's usedPromoCodes if promo code was used
-		if (promoCodeDoc) {
-			console.log("Updating user's usedPromoCodes with promo code:", promoCode);
-			await User.findByIdAndUpdate(dbCustomer._id, {
-				$addToSet: { usedPromoCodes: promoCodeDoc._id },
-			});
-			console.log("User's usedPromoCodes updated.");
-		}
 
 		// Update product stock
 		console.log("Updating product stock...");

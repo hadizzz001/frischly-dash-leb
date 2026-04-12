@@ -12,7 +12,7 @@ const CONFIG = {
 
 	// API URLs
 	API_URLS: {
-		development: "http://localhost:3001/api",
+		development: "http://localhost:10000/api",
 		production: "https://frischlyshop-server.onrender.com/api",
 	},
 
