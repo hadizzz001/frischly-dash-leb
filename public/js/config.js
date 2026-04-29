@@ -13,7 +13,7 @@ const CONFIG = {
 	// API URLs
 	API_URLS: {
 		development: "http://localhost:10000/api",
-		production: "https://frischlyshop-server.onrender.com/api",
+		production: "https://frischlylebanon.onrender.com/api",
 	},
 
 	// Get current API base URL based on environment
