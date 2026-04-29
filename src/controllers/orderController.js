@@ -195,7 +195,7 @@ exports.getOrders = async (req, res) => {
 		console.error("Error fetching orders:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Abrufen der Bestellungen",
+			message: "Error fetching orders",
 			error: error.message,
 		});
 	}
@@ -317,7 +317,7 @@ exports.getOrdersForRiders = async (req, res) => {
 		console.error("Error fetching completed orders:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Abrufen der abgeschlossenen Bestellungen",
+			message: "Error fetching completed orders",
 			error: error.message,
 		});
 	}
@@ -333,7 +333,7 @@ exports.getOrder = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Ungültige Bestellungs-ID",
+				message: "Invalid order ID",
 			});
 		}
 
@@ -349,7 +349,7 @@ exports.getOrder = async (req, res) => {
 		if (!order) {
 			return res.status(404).json({
 				success: false,
-				message: "Bestellung nicht gefunden",
+				message: "Order not found",
 			});
 		}
 
@@ -378,7 +378,7 @@ exports.getOrder = async (req, res) => {
 		) {
 			return res.status(403).json({
 				success: false,
-				message: "Sie sind nicht berechtigt, diese Bestellung anzusehen",
+				message: "You are not authorized to view this order",
 			});
 		}
 
@@ -390,7 +390,7 @@ exports.getOrder = async (req, res) => {
 		console.error("Error fetching order:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Abrufen der Bestellung",
+			message: "Error fetching order",
 			error: error.message,
 		});
 	}
@@ -454,7 +454,7 @@ exports.createOrder = async (req, res) => {
 			console.log("Customer validation failed. Missing required fields.");
 			return res.status(400).json({
 				success: false,
-				message: "Kundenname, ID, E-Mail und Telefon sind erforderlich",
+				message: "Customer name, ID, email and phone are required",
 			});
 		}
 
@@ -466,7 +466,7 @@ exports.createOrder = async (req, res) => {
 			console.log("No items provided in order.");
 			return res.status(400).json({
 				success: false,
-				message: "Bestellung muss mindestens einen Artikel enthalten",
+				message: "Order must contain at least one item",
 			});
 		}
 
@@ -492,7 +492,7 @@ exports.createOrder = async (req, res) => {
 				console.log("Product not found:", item.product);
 				return res.status(400).json({
 					success: false,
-					message: `Produkt mit ID ${item.product} nicht gefunden`,
+					message: `Product with ID ${item.product} not found`,
 				});
 			}
 
@@ -508,7 +508,7 @@ exports.createOrder = async (req, res) => {
 				);
 				return res.status(400).json({
 					success: false,
-					message: `Unzureichender Lagerbestand für ${product.name}. Verfügbar: ${product.stock}, Angefordert: ${item.quantity}`,
+					message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`,
 				});
 			}
 
@@ -576,7 +576,7 @@ exports.createOrder = async (req, res) => {
 				console.log("Invalid promo code:", promoCode);
 				return res.status(400).json({
 					success: false,
-					message: "Ungültiger oder inaktiver Promo-Code",
+					message: "Invalid or inactive promo code",
 				});
 			}
 
@@ -622,7 +622,7 @@ exports.createOrder = async (req, res) => {
 			console.log("Order total below minimum:", settings.minimumOrderValue);
 			return res.status(400).json({
 				success: false,
-				message: `Mindestbestellwert beträgt ${settings.minimumOrderValue} €`,
+				message: `Minimum order value is €${settings.minimumOrderValue}`,
 			});
 		}
 
@@ -791,7 +791,7 @@ exports.createOrder = async (req, res) => {
 		console.log("Sending response to client...");
 		res.status(201).json({
 			success: true,
-			message: "Bestellung erfolgreich erstellt",
+			message: "Order created successfully",
 			data: populatedOrder,
 			paymentUrl: paymentUrl,
 		});
@@ -870,9 +870,9 @@ exports.createOrder = async (req, res) => {
 					
 					<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
 					
-					<h2 style="color: #333; text-align: center;">Bestellbestätigung</h2>
+					<h2 style="color: #333; text-align: center;">Order Confirmation</h2>
 					<p>Liebe/r ${populatedOrder.customer.name},</p>
-					<p>Vielen Dank für Ihre Bestellung! Wir haben Ihre Bestellung erhalten und sie wird bearbeitet. Hier sind die Details:</p>
+					<p>Thank you for your order! We have received your order and it is being processed. Here are the details:</p>
 					
 					<h3>Bestelldetails</h3>
 					<p><strong>Bestell-ID:</strong> ${populatedOrder._id}</p>
@@ -881,7 +881,7 @@ exports.createOrder = async (req, res) => {
 					).toLocaleDateString("de-DE")}</p>
 					<p><strong>Status:</strong> ${populatedOrder.status}</p>
 					<p><strong>Zahlungsmethode:</strong> ${populatedOrder.paymentMethod}</p>
-					<p><strong>Schließen Sie Ihre Bestellung ab unter:</strong> <a href="${paymentUrl}" style="color: #007bff;">${paymentUrl}</a></p>
+					<p><strong>Complete your order at:</strong> <a href="${paymentUrl}" style="color: #007bff;">${paymentUrl}</a></p>
 					
 					<h3>Bestellte Artikel</h3>
 					<table style="width: 100%; border-collapse: collapse;">
@@ -915,10 +915,10 @@ exports.createOrder = async (req, res) => {
 						</tbody>
 					</table>
 					
-					<h3>Bestellübersicht</h3>
+					<h3>Order Summary</h3>
 					<p><strong>Zwischensumme:</strong> €${populatedOrder.subtotal.toFixed(2)}</p>
-					<p><strong>Liefergebühr:</strong> €${populatedOrder.delivery.toFixed(2)}</p>
-					<p><strong>Bearbeitungsgebühr:</strong> €${(populatedOrder.fees || 0).toFixed(
+					<p><strong>Delivery Fee:</strong> €${populatedOrder.delivery.toFixed(2)}</p>
+					<p><strong>Processing Fee:</strong> €${(populatedOrder.fees || 0).toFixed(
 						2,
 					)}</p>
 					<p><strong>Gesamt:</strong> €${populatedOrder.total.toFixed(2)}</p>
@@ -929,16 +929,16 @@ exports.createOrder = async (req, res) => {
 							: ""
 					}
 					
-					<p>Falls die Bestellung Alkohol enthält, muss der Fahrer Ihre Identität bei der Lieferung überprüfen.</p>
-					<p>Bei Fragen zu Ihrer Bestellung kontaktieren Sie uns bitte unter info@frischlyshop.com.</p>
+					<p>If the order contains alcohol, the rider must verify your identity upon delivery.</p>
+					<p>For questions about your order, please contact us at info@frischlyshop.com.</p>
 					
-					<p>Vielen Dank, dass Sie sich für Frischly entschieden haben!</p>
+					<p>Thank you for choosing Frischly!</p>
 					
-					<p>Mit freundlichen Grüßen,<br>Das Frischly Team</p>
+					<p>Best regards,<br>The Frischly Team</p>
 					
 					<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
 					<p style="font-size: 12px; color: #666; text-align: center;">
-						Dies ist eine automatische E-Mail. Bitte antworten Sie nicht auf diese Nachricht.
+						This is an automated email. Please do not reply to this message.
 					</p>
 				</div>
 			`;
@@ -985,7 +985,7 @@ exports.createOrder = async (req, res) => {
 		console.error("Error creating order:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Erstellen der Bestellung",
+			message: "Error creating order",
 			error: error.message,
 		});
 	}
@@ -1014,7 +1014,7 @@ exports.updateOrder = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Ungültige Bestellungs-ID",
+				message: "Invalid order ID",
 			});
 		}
 
@@ -1022,7 +1022,7 @@ exports.updateOrder = async (req, res) => {
 		if (!order) {
 			return res.status(404).json({
 				success: false,
-				message: "Bestellung nicht gefunden",
+				message: "Order not found",
 			});
 		}
 
@@ -1030,7 +1030,7 @@ exports.updateOrder = async (req, res) => {
 		if (order.status === "cancelled") {
 			return res.status(400).json({
 				success: false,
-				message: "Stornierte Bestellungen können nicht geändert werden",
+				message: "Cancelled orders cannot be modified",
 			});
 		}
 
@@ -1038,7 +1038,7 @@ exports.updateOrder = async (req, res) => {
 		if (order.status === "delivered" && req.user.role !== "admin") {
 			return res.status(400).json({
 				success: false,
-				message: "Gelieferte Bestellungen können nicht geändert werden",
+				message: "Delivered orders cannot be modified",
 			});
 		}
 
@@ -1082,9 +1082,9 @@ exports.updateOrder = async (req, res) => {
 							
 							<hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;">
 							
-							<h3 style="color: #28a745; margin-top: 0;">Herzlichen Glückwunsch! 🎉</h3>
-							<p>Da Ihre Bestellung über 100 € lag, haben Sie einen speziellen Gutscheincode für Ihren nächsten Einkauf gewonnen!</p>
-							<p>Wir senden Ihnen den Code in Kürze in einer separaten E-Mail zu.</p>
+							<h3 style="color: #28a745; margin-top: 0;">Congratulations! 🎉</h3>
+							<p>Because your order was over €100, you have won a special voucher code for your next purchase!</p>
+							<p>We will send you the code shortly in a separate email.</p>
 						</div>
 					`;
 				}
@@ -1111,9 +1111,9 @@ exports.updateOrder = async (req, res) => {
 						
 						<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
 						
-						<h2 style="color: #333; text-align: center;">Bestellung Geliefert</h2>
+						<h2 style="color: #333; text-align: center;">Order Delivered</h2>
 						<p>Liebe/r ${updatedOrder.customer.name},</p>
-						<p>Gute Nachrichten! Ihre Bestellung wurde erfolgreich zugestellt.</p>
+						<p>Good news! Your order has been successfully delivered.</p>
 						
 						<h3>Bestelldetails</h3>
 						<p><strong>Bestell-ID:</strong> ${updatedOrder._id}</p>
@@ -1121,15 +1121,15 @@ exports.updateOrder = async (req, res) => {
 						
 						<p>Wir hoffen, Sie haben Freude an Ihrem Einkauf!</p>
 						
-						<p>Bei Fragen oder Problemen kontaktieren Sie uns bitte unter info@frischlyshop.com.</p>
+						<p>If you have any questions or issues, please contact us at info@frischlyshop.com.</p>
 						
-						<p>Vielen Dank, dass Sie sich für Frischly entschieden haben!</p>
+						<p>Thank you for choosing Frischly!</p>
 						
-						<p>Mit freundlichen Grüßen,<br>Das Frischly Team</p>
+						<p>Best regards,<br>The Frischly Team</p>
 						
 						<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
 						<p style="font-size: 12px; color: #666; text-align: center;">
-							Dies ist eine automatische E-Mail. Bitte antworten Sie nicht auf diese Nachricht.
+							This is an automated email. Please do not reply to this message.
 						</p>
 					</div>
 				`;
@@ -1146,14 +1146,14 @@ exports.updateOrder = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Bestellung erfolgreich aktualisiert",
+			message: "Order updated successfully",
 			data: updatedOrder,
 		});
 	} catch (error) {
 		console.error("Error updating order:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Aktualisieren der Bestellung",
+			message: "Error updating order",
 			error: error.message,
 		});
 	}
@@ -1169,7 +1169,7 @@ exports.deleteOrder = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Ungültige Bestellungs-ID",
+				message: "Invalid order ID",
 			});
 		}
 
@@ -1182,20 +1182,20 @@ exports.deleteOrder = async (req, res) => {
 		if (!order) {
 			return res.status(404).json({
 				success: false,
-				message: "Bestellung nicht gefunden",
+				message: "Order not found",
 			});
 		}
 
 		res.json({
 			success: true,
-			message: "Bestellung erfolgreich gelöscht",
+			message: "Order deleted successfully",
 			data: order,
 		});
 	} catch (error) {
 		console.error("Error deleting order:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Löschen der Bestellung",
+			message: "Error deleting order",
 			error: error.message,
 		});
 	}
@@ -1252,7 +1252,7 @@ exports.getOrderStats = async (req, res) => {
 		console.error("Error fetching order stats:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Abrufen der Bestellstatistiken",
+			message: "Error fetching order statistics",
 			error: error.message,
 		});
 	}
@@ -1279,7 +1279,7 @@ exports.cancelOrder = async (req, res) => {
 			console.log("❌ Step 2: Invalid order ID format");
 			return res.status(400).json({
 				success: false,
-				message: "Ungültige Bestellungs-ID",
+				message: "Invalid order ID",
 			});
 		}
 		console.log("✅ Step 2: Order ID format is valid");
@@ -1291,7 +1291,7 @@ exports.cancelOrder = async (req, res) => {
 			console.log("❌ Step 3: Order not found in database");
 			return res.status(404).json({
 				success: false,
-				message: "Bestellung nicht gefunden",
+				message: "Order not found",
 			});
 		}
 		console.log(
@@ -1304,7 +1304,7 @@ exports.cancelOrder = async (req, res) => {
 			console.log("❌ Step 4: Order is already cancelled");
 			return res.status(400).json({
 				success: false,
-				message: "Bestellung ist bereits storniert",
+				message: "Order is already cancelled",
 			});
 		}
 		console.log("✅ Step 4: Order is not already cancelled");
@@ -1317,7 +1317,7 @@ exports.cancelOrder = async (req, res) => {
 			);
 			return res.status(400).json({
 				success: false,
-				message: "Gelieferte Bestellung kann nicht storniert werden",
+				message: "Delivered order cannot be cancelled",
 			});
 		}
 		console.log("✅ Step 5: Order can be cancelled");
@@ -1392,25 +1392,25 @@ exports.cancelOrder = async (req, res) => {
 
 									<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
 									
-									<h2 style="color: #333; text-align: center;">Rückerstattung bearbeitet</h2>
+									<h2 style="color: #333; text-align: center;">Refund Processed</h2>
 									<p>Liebe/r ${order.customer.name},</p>
-									<p>Ihre Bestellung #${
+									<p>Your order #${
 										order._id
-									} wurde storniert und eine Rückerstattung wurde veranlasst.</p>
+									} has been cancelled and a refund has been initiated.</p>
 									
-									<h3>Details zur Rückerstattung</h3>
-									<p><strong>Rückerstattungsbetrag:</strong> €${refundAmountEur}</p>
-									<p><strong>Ursprünglicher Bestellwert:</strong> €${order.total.toFixed(2)}</p>
-									<p><strong>Bearbeitungsgebühren (nicht erstattungsfähig):</strong> €${(
+									<h3>Refund Details</h3>
+									<p><strong>Refund Amount:</strong> €${refundAmountEur}</p>
+									<p><strong>Original Order Total:</strong> €${order.total.toFixed(2)}</p>
+									<p><strong>Processing Fees (non-refundable):</strong> €${(
 										order.fees || 0
 									).toFixed(2)}</p>
 									
-									<p>Bitte beachten Sie, dass der Rückerstattungsbetrag keine Bearbeitungsgebühren enthält, da diese nicht erstattungsfähig sind.</p>
-									<p>Die Rückerstattung sollte innerhalb von 5-10 Werktagen auf Ihrem Kontoauszug erscheinen.</p>
+									<p>Please note that the refund amount does not include processing fees, as these are non-refundable.</p>
+									<p>The refund should appear on your statement within 5-10 business days.</p>
 									
-									<p>Bei Fragen kontaktieren Sie uns bitte unter info@frischlyshop.com.</p>
+									<p>For questions, please contact us at info@frischlyshop.com.</p>
 									
-									<p>Mit freundlichen Grüßen,<br>Das Frischly Team</p>
+									<p>Best regards,<br>The Frischly Team</p>
 								</div>
 							`;
 
@@ -1766,9 +1766,9 @@ exports.updateOrderStatus = async (req, res) => {
 							
 							<hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;">
 							
-							<h3 style="color: #28a745; margin-top: 0;">Herzlichen Glückwunsch! 🎉</h3>
-							<p>Da Ihre Bestellung über 100 € lag, haben Sie einen speziellen Gutscheincode für Ihren nächsten Einkauf gewonnen!</p>
-							<p>Wir senden Ihnen den Code in Kürze in einer separaten E-Mail zu.</p>
+							<h3 style="color: #28a745; margin-top: 0;">Congratulations! 🎉</h3>
+							<p>Because your order was over €100, you have won a special voucher code for your next purchase!</p>
+							<p>We will send you the code shortly in a separate email.</p>
 						</div>
 					`;
 				}
@@ -1795,9 +1795,9 @@ exports.updateOrderStatus = async (req, res) => {
 						
 						<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
 						
-						<h2 style="color: #333; text-align: center;">Bestellung Geliefert</h2>
+						<h2 style="color: #333; text-align: center;">Order Delivered</h2>
 						<p>Liebe/r ${updatedOrder.customer.name},</p>
-						<p>Gute Nachrichten! Ihre Bestellung wurde erfolgreich zugestellt.</p>
+						<p>Good news! Your order has been successfully delivered.</p>
 						
 						<h3>Bestelldetails</h3>
 						<p><strong>Bestell-ID:</strong> ${updatedOrder._id}</p>
@@ -1805,15 +1805,15 @@ exports.updateOrderStatus = async (req, res) => {
 						
 						<p>Wir hoffen, Sie haben Freude an Ihrem Einkauf!</p>
 						
-						<p>Bei Fragen oder Problemen kontaktieren Sie uns bitte unter info@frischlyshop.com.</p>
+						<p>If you have any questions or issues, please contact us at info@frischlyshop.com.</p>
 						
-						<p>Vielen Dank, dass Sie sich für Frischly entschieden haben!</p>
+						<p>Thank you for choosing Frischly!</p>
 						
-						<p>Mit freundlichen Grüßen,<br>Das Frischly Team</p>
+						<p>Best regards,<br>The Frischly Team</p>
 						
 						<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
 						<p style="font-size: 12px; color: #666; text-align: center;">
-							Dies ist eine automatische E-Mail. Bitte antworten Sie nicht auf diese Nachricht.
+							This is an automated email. Please do not reply to this message.
 						</p>
 					</div>
 				`;

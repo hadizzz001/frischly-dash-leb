@@ -157,13 +157,13 @@ exports.getRiders = async (req, res) => {
 					hasPrev: pageNum > 1,
 				},
 			},
-			message: `Es wurden ${riders.length} Fahrer erfolgreich abgerufen`,
+			message: `Successfully retrieved ${riders.length} riders`,
 		});
 	} catch (error) {
 		console.error("Error getting riders:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Abrufen der Fahrer",
+			message: "Error fetching riders",
 			error: error.message,
 		});
 	}
@@ -179,7 +179,7 @@ exports.getRider = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Ungültige Fahrer-ID",
+				message: "Invalid rider ID",
 			});
 		}
 
@@ -193,7 +193,7 @@ exports.getRider = async (req, res) => {
 		if (!rider) {
 			return res.status(404).json({
 				success: false,
-				message: "Fahrer nicht gefunden",
+				message: "Rider not found",
 			});
 		}
 
@@ -205,20 +205,20 @@ exports.getRider = async (req, res) => {
 		) {
 			return res.status(403).json({
 				success: false,
-				message: "Nicht autorisiert, diesen Fahrer anzusehen",
+				message: "Not authorized to view this rider",
 			});
 		}
 
 		res.json({
 			success: true,
 			data: rider,
-			message: "Fahrer erfolgreich abgerufen",
+			message: "Rider retrieved successfully",
 		});
 	} catch (error) {
 		console.error("Error getting rider:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Abrufen des Fahrers",
+			message: "Error fetching rider",
 			error: error.message,
 		});
 	}
@@ -248,7 +248,7 @@ exports.createRider = async (req, res) => {
 		) {
 			return res.status(400).json({
 				success: false,
-				message: "Benutzer-ID, Zonen (Array) und Fahrzeugtyp sind erforderlich",
+				message: "User ID, zones (array) and vehicle type are required",
 			});
 		}
 
@@ -257,14 +257,14 @@ exports.createRider = async (req, res) => {
 		if (!user) {
 			return res.status(404).json({
 				success: false,
-				message: "Benutzer nicht gefunden",
+				message: "User not found",
 			});
 		}
 
 		if (user.role !== "rider") {
 			return res.status(400).json({
 				success: false,
-				message: "Benutzer muss Fahrer-Rolle haben",
+				message: "User must have rider role",
 			});
 		}
 
@@ -273,7 +273,7 @@ exports.createRider = async (req, res) => {
 		if (existingRider) {
 			return res.status(400).json({
 				success: false,
-				message: "Fahrerprofil existiert bereits für diesen Benutzer",
+				message: "Rider profile already exists for this user",
 			});
 		}
 
@@ -295,7 +295,7 @@ exports.createRider = async (req, res) => {
 		res.status(201).json({
 			success: true,
 			data: rider,
-			message: "Fahrerprofil erfolgreich erstellt",
+			message: "Rider profile created successfully",
 		});
 	} catch (error) {
 		console.error("Error creating rider:", error);
@@ -303,13 +303,13 @@ exports.createRider = async (req, res) => {
 		if (error.code === 11000) {
 			return res.status(400).json({
 				success: false,
-				message: "Fahrerprofil existiert bereits für diesen Benutzer",
+				message: "Rider profile already exists for this user",
 			});
 		}
 
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Erstellen des Fahrerprofils",
+			message: "Error creating rider profile",
 			error: error.message,
 		});
 	}
@@ -326,7 +326,7 @@ exports.updateRider = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Ungültige Fahrer-ID",
+				message: "Invalid rider ID",
 			});
 		}
 
@@ -334,7 +334,7 @@ exports.updateRider = async (req, res) => {
 		if (!rider) {
 			return res.status(404).json({
 				success: false,
-				message: "Fahrer nicht gefunden",
+				message: "Rider not found",
 			});
 		}
 
@@ -346,7 +346,7 @@ exports.updateRider = async (req, res) => {
 		) {
 			return res.status(403).json({
 				success: false,
-				message: "Nicht autorisiert, diesen Fahrer zu aktualisieren",
+				message: "Not authorized to update this rider",
 			});
 		}
 
@@ -386,13 +386,13 @@ exports.updateRider = async (req, res) => {
 		res.json({
 			success: true,
 			data: rider,
-			message: "Fahrerprofil erfolgreich aktualisiert",
+			message: "Rider profile updated successfully",
 		});
 	} catch (error) {
 		console.error("Error updating rider:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Aktualisieren des Fahrerprofils",
+			message: "Error updating rider profile",
 			error: error.message,
 		});
 	}
@@ -409,14 +409,14 @@ exports.updateRiderStatus = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Ungültige Fahrer-ID",
+				message: "Invalid rider ID",
 			});
 		}
 
 		if (!status) {
 			return res.status(400).json({
 				success: false,
-				message: "Status ist erforderlich",
+				message: "Status is required",
 			});
 		}
 
@@ -424,7 +424,7 @@ exports.updateRiderStatus = async (req, res) => {
 		if (!rider) {
 			return res.status(404).json({
 				success: false,
-				message: "Fahrer nicht gefunden",
+				message: "Rider not found",
 			});
 		}
 
@@ -461,13 +461,13 @@ exports.updateRiderStatus = async (req, res) => {
 				currentLocation: rider.currentLocation,
 				lastActiveAt: rider.lastActiveAt,
 			},
-			message: "Fahrerstatus erfolgreich aktualisiert",
+			message: "Rider status updated successfully",
 		});
 	} catch (error) {
 		console.error("Error updating rider status:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Aktualisieren des Fahrerstatus",
+			message: "Error updating rider status",
 			error: error.message,
 		});
 	}
@@ -484,7 +484,7 @@ exports.updateRiderLocation = async (req, res) => {
 		if (latitude === undefined || longitude === undefined) {
 			return res.status(400).json({
 				success: false,
-				message: "Breitengrad und Längengrad sind erforderlich",
+				message: "Latitude and longitude are required",
 			});
 		}
 
@@ -500,7 +500,7 @@ exports.updateRiderLocation = async (req, res) => {
 		if (longitude < -180 || longitude > 180) {
 			return res.status(400).json({
 				success: false,
-				message: "Längengrad muss zwischen -180 und 180 liegen",
+				message: "Longitude must be between -180 and 180",
 			});
 		}
 
@@ -509,7 +509,7 @@ exports.updateRiderLocation = async (req, res) => {
 		if (!rider) {
 			return res.status(404).json({
 				success: false,
-				message: "Fahrer nicht gefunden",
+				message: "Rider not found",
 			});
 		}
 
@@ -528,13 +528,13 @@ exports.updateRiderLocation = async (req, res) => {
 				riderId: rider._id,
 				currentLocation: rider.currentLocation,
 			},
-			message: "Fahrerstandort erfolgreich aktualisiert",
+			message: "Rider location updated successfully",
 		});
 	} catch (error) {
 		console.error("Error updating rider location:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Aktualisieren des Fahrerstandorts",
+			message: "Error updating rider location",
 			error: error.message,
 		});
 	}
@@ -553,13 +553,13 @@ exports.getAvailableRiders = async (req, res) => {
 			success: true,
 			data: availableRiders,
 			count: availableRiders.length,
-			message: `Es wurden ${availableRiders.length} verfügbare Fahrer in ${zone} gefunden`,
+			message: `Found ${availableRiders.length} available riders in ${zone}`,
 		});
 	} catch (error) {
 		console.error("Error getting available riders:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Abrufen verfügbarer Fahrer",
+			message: "Error fetching available riders",
 			error: error.message,
 		});
 	}
@@ -639,13 +639,13 @@ exports.getRiderStats = async (req, res) => {
 				byZone: zoneStats,
 				byVehicleType: vehicleStats,
 			},
-			message: "Fahrerstatistiken erfolgreich abgerufen",
+			message: "Rider statistics fetched successfully",
 		});
 	} catch (error) {
 		console.error("Error getting rider stats:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Abrufen der Fahrerstatistiken",
+			message: "Error fetching rider statistics",
 			error: error.message,
 		});
 	}
@@ -661,7 +661,7 @@ exports.deleteRider = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Ungültige Fahrer-ID",
+				message: "Invalid rider ID",
 			});
 		}
 
@@ -669,7 +669,7 @@ exports.deleteRider = async (req, res) => {
 		if (!rider) {
 			return res.status(404).json({
 				success: false,
-				message: "Fahrer nicht gefunden",
+				message: "Rider not found",
 			});
 		}
 
@@ -682,7 +682,7 @@ exports.deleteRider = async (req, res) => {
 		if (activeOrders > 0) {
 			return res.status(400).json({
 				success: false,
-				message: `Fahrer mit ${activeOrders} aktiven Bestellungen kann nicht gelöscht werden`,
+				message: `Cannot delete rider with ${activeOrders} active orders`,
 			});
 		}
 
@@ -691,13 +691,13 @@ exports.deleteRider = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Fahrerprofil dauerhaft gelöscht",
+			message: "Rider profile permanently deleted",
 		});
 	} catch (error) {
 		console.error("Error deleting rider:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Löschen des Fahrerprofils",
+			message: "Error deleting rider profile",
 			error: error.message,
 		});
 	}

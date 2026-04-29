@@ -56,7 +56,7 @@ const sendTestNotification = async () => {
 
 		// Prepare notification data
 		const title = "Frischly GmbH";
-		const body = "Benachrichtigungen über Verkäufe und Angebote💛";
+		const body = "Notifications about sales and offers 💛";
 		const data = {
 			type: "test",
 			timestamp: new Date().toISOString(),

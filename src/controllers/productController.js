@@ -147,7 +147,7 @@ exports.getProducts = async (req, res) => {
 			if (!categoryDoc) {
 				return res.status(404).json({
 					success: false,
-					message: `Kategorie "${category}" nicht gefunden`,
+					message: `Category "${category}" not found`,
 				});
 			}
 
@@ -170,7 +170,7 @@ exports.getProducts = async (req, res) => {
 						hasPrevPage: false,
 						limit: parseInt(limit),
 					},
-					message: `Keine Unterkategorien in Kategorie "${categoryDoc.name}" gefunden`,
+					message: `No subcategories found in category "${categoryDoc.name}"`,
 				});
 			}
 
@@ -194,7 +194,7 @@ exports.getProducts = async (req, res) => {
 				} else {
 					return res.status(404).json({
 						success: false,
-						message: `Unterkategorie "${subcategory}" nicht gefunden`,
+						message: `Subcategory "${subcategory}" not found`,
 					});
 				}
 			}
@@ -417,7 +417,7 @@ exports.getProducts = async (req, res) => {
 		console.error("Error getting products:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Abrufen der Produkte",
+			message: "Error fetching products",
 			error: error.message,
 		});
 	}
@@ -433,7 +433,7 @@ exports.getProduct = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Ungültige Produkt-ID",
+				message: "Invalid product ID",
 			});
 		}
 
@@ -452,7 +452,7 @@ exports.getProduct = async (req, res) => {
 		if (!product) {
 			return res.status(404).json({
 				success: false,
-				message: "Produkt nicht gefunden",
+				message: "Product not found",
 			});
 		}
 
@@ -464,7 +464,7 @@ exports.getProduct = async (req, res) => {
 		console.error("Error getting product:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Abrufen des Produkts",
+			message: "Error fetching product",
 			error: error.message,
 		});
 	}
@@ -506,7 +506,7 @@ exports.getProductByBarcode = async (req, res) => {
 		if (!product) {
 			return res.status(404).json({
 				success: false,
-				message: "Produkt mit diesem Barcode nicht gefunden",
+				message: "Product with this barcode not found",
 			});
 		}
 
@@ -518,7 +518,7 @@ exports.getProductByBarcode = async (req, res) => {
 		console.error("Error getting product by barcode:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Abrufen des Produkts nach Barcode",
+			message: "Error fetching product by barcode",
 			error: error.message,
 		});
 	}
@@ -575,7 +575,7 @@ exports.createProduct = async (req, res) => {
 				console.error("Error uploading image to Cloudinary:", uploadError);
 				return res.status(500).json({
 					success: false,
-					message: "Fehler beim Hochladen des Bildes",
+					message: "Error uploading image",
 					error: uploadError.message,
 				});
 			}
@@ -604,7 +604,7 @@ exports.createProduct = async (req, res) => {
 
 		res.status(201).json({
 			success: true,
-			message: "Produkt erfolgreich erstellt",
+			message: "Product created successfully",
 			data: product,
 		});
 	} catch (error) {
@@ -620,7 +620,7 @@ exports.createProduct = async (req, res) => {
 
 		res.status(400).json({
 			success: false,
-			message: "Fehler beim Erstellen des Produkts",
+			message: "Error creating product",
 			error: error.message,
 		});
 	}
@@ -666,7 +666,7 @@ exports.updateProduct = async (req, res) => {
 				console.error("Error uploading image to Cloudinary:", uploadError);
 				return res.status(500).json({
 					success: false,
-					message: "Fehler beim Hochladen des Bildes",
+					message: "Error uploading image",
 					error: uploadError.message,
 				});
 			}
@@ -689,7 +689,7 @@ exports.updateProduct = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Produkt erfolgreich aktualisiert",
+			message: "Product updated successfully",
 			data: updatedProduct,
 		});
 	} catch (error) {
@@ -705,7 +705,7 @@ exports.updateProduct = async (req, res) => {
 
 		res.status(400).json({
 			success: false,
-			message: "Fehler beim Aktualisieren des Produkts",
+			message: "Error updating product",
 			error: error.message,
 		});
 	}
@@ -722,7 +722,7 @@ exports.updateProductStock = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Ungültige Produkt-ID",
+				message: "Invalid product ID",
 			});
 		}
 
@@ -738,7 +738,7 @@ exports.updateProductStock = async (req, res) => {
 		if (!product) {
 			return res.status(404).json({
 				success: false,
-				message: "Produkt nicht gefunden",
+				message: "Product not found",
 			});
 		}
 
@@ -765,14 +765,14 @@ exports.updateProductStock = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: `Produktlager erfolgreich ${operation}iert`,
+			message: `Product stock ${operation}ed successfully`,
 			data: product,
 		});
 	} catch (error) {
 		console.error("Error updating product stock:", error);
 		res.status(400).json({
 			success: false,
-			message: "Fehler beim Aktualisieren des Produktlagers",
+			message: "Error updating product stock",
 			error: error.message,
 		});
 	}
@@ -789,14 +789,14 @@ exports.updateProductShelfNumber = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Ungültige Produkt-ID",
+				message: "Invalid product ID",
 			});
 		}
 
 		if (!shelfNumber || typeof shelfNumber !== "string") {
 			return res.status(400).json({
 				success: false,
-				message: "Regalnummer ist erforderlich und muss eine Zeichenkette sein",
+				message: "Shelf number is required and must be a string",
 			});
 		}
 
@@ -805,7 +805,7 @@ exports.updateProductShelfNumber = async (req, res) => {
 		if (!product) {
 			return res.status(404).json({
 				success: false,
-				message: "Produkt nicht gefunden",
+				message: "Product not found",
 			});
 		}
 
@@ -828,14 +828,14 @@ exports.updateProductShelfNumber = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Produkt-Regalnummer erfolgreich aktualisiert",
+			message: "Product shelf number updated successfully",
 			data: product,
 		});
 	} catch (error) {
 		console.error("Error updating product shelf number:", error);
 		res.status(400).json({
 			success: false,
-			message: "Fehler beim Aktualisieren der Produkt-Regalnummer",
+			message: "Error updating product shelf number",
 			error: error.message,
 		});
 	}
@@ -851,7 +851,7 @@ exports.deleteProduct = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Ungültige Produkt-ID",
+				message: "Invalid product ID",
 			});
 		}
 
@@ -864,20 +864,20 @@ exports.deleteProduct = async (req, res) => {
 		if (!product) {
 			return res.status(404).json({
 				success: false,
-				message: "Produkt nicht gefunden",
+				message: "Product not found",
 			});
 		}
 
 		res.json({
 			success: true,
-			message: "Produkt erfolgreich gelöscht",
+			message: "Product deleted successfully",
 			data: product,
 		});
 	} catch (error) {
 		console.error("Error deleting product:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Löschen des Produkts",
+			message: "Error deleting product",
 			error: error.message,
 		});
 	}
@@ -921,13 +921,13 @@ exports.permanentDeleteProduct = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Produkt dauerhaft gelöscht",
+			message: "Product permanently deleted",
 		});
 	} catch (error) {
 		console.error("Error permanently deleting product:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim dauerhaften Löschen des Produkts",
+			message: "Error permanently deleting product",
 			error: error.message,
 		});
 	}
@@ -973,7 +973,7 @@ exports.uploadImage = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Bild erfolgreich hochgeladen",
+			message: "Image uploaded successfully",
 			data: {
 				url: uploadResult.url,
 				public_id: uploadResult.public_id,
@@ -984,7 +984,7 @@ exports.uploadImage = async (req, res) => {
 		console.error("Error uploading image:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Hochladen des Bildes",
+			message: "Error uploading image",
 			error: error.message,
 		});
 	}
@@ -1011,7 +1011,7 @@ exports.getProductsByCategory = async (req, res) => {
 		if (!categoryName) {
 			return res.status(400).json({
 				success: false,
-				message: "Kategoriename ist erforderlich",
+				message: "Category name is required",
 			});
 		}
 
@@ -1025,7 +1025,7 @@ exports.getProductsByCategory = async (req, res) => {
 		if (!category) {
 			return res.status(404).json({
 				success: false,
-				message: `Kategorie "${categoryName}" nicht gefunden`,
+				message: `Category "${categoryName}" not found`,
 			});
 		}
 
@@ -1048,7 +1048,7 @@ exports.getProductsByCategory = async (req, res) => {
 					hasPrevPage: false,
 					limit: parseInt(limit),
 				},
-				message: `Keine Unterkategorien in Kategorie "${categoryName}" gefunden`,
+				message: `No subcategories found in category "${categoryName}"`,
 			});
 		}
 
@@ -1155,13 +1155,13 @@ exports.getProductsByCategory = async (req, res) => {
 				hasPrevPage,
 				limit: limitNumber,
 			},
-			message: `${total} Produkte in Kategorie "${categoryName}" gefunden`,
+			message: `${total} products found in category "${categoryName}"`,
 		});
 	} catch (error) {
 		console.error("Error getting products by category:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Abrufen der Produkte nach Kategorie",
+			message: "Error fetching products by category",
 			error: error.message,
 		});
 	}
@@ -1187,7 +1187,7 @@ exports.getProductsBySubcategory = async (req, res) => {
 		if (!subcategoryName) {
 			return res.status(400).json({
 				success: false,
-				message: "Unterkategoriename ist erforderlich",
+				message: "Subcategory name is required",
 			});
 		}
 
@@ -1201,7 +1201,7 @@ exports.getProductsBySubcategory = async (req, res) => {
 		if (!subcategory) {
 			return res.status(404).json({
 				success: false,
-				message: `Unterkategorie "${subcategoryName}" nicht gefunden`,
+				message: `Subcategory "${subcategoryName}" not found`,
 			});
 		}
 
@@ -1312,7 +1312,7 @@ exports.getProductsBySubcategory = async (req, res) => {
 		console.error("Error getting products by subcategory:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Abrufen der Produkte nach Unterkategorie",
+			message: "Error fetching products by subcategory",
 			error: error.message,
 		});
 	}
@@ -1471,13 +1471,13 @@ exports.getProductsWithDiscount = async (req, res) => {
 				hasPrevPage,
 				limit: limitNumber,
 			},
-			message: `${total} Produkte mit Rabatt größer als ${minDiscount}% gefunden`,
+			message: `${total} products with discount greater than ${minDiscount}% found`,
 		});
 	} catch (error) {
 		console.error("Error getting products with discount:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Abrufen der Produkte mit Rabatt",
+			message: "Error fetching discounted products",
 			error: error.message,
 		});
 	}
@@ -1492,13 +1492,13 @@ exports.getProductsCount = async (req, res) => {
 		res.json({
 			success: true,
 			count: totalProducts,
-			message: `Gesamtanzahl aktiver Produkte: ${totalProducts}`,
+			message: `Total number of active products: ${totalProducts}`,
 		});
 	} catch (error) {
 		console.error("Error getting products count:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Abrufen der Produktanzahl",
+			message: "Error fetching product count",
 			error: error.message,
 		});
 	}
@@ -1514,7 +1514,7 @@ exports.bulkUpdateProductStatus = async (req, res) => {
 		if (!status || !["active", "inactive"].includes(status)) {
 			return res.status(400).json({
 				success: false,
-				message: "Ungültiger Status. Muss 'active' oder 'inactive' sein",
+				message: "Invalid status. Must be 'active' or 'inactive'",
 			});
 		}
 
@@ -1529,7 +1529,7 @@ exports.bulkUpdateProductStatus = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: `Erfolgreich ${result.modifiedCount} Produkte auf ${status}-Status aktualisiert`,
+			message: `Successfully updated ${result.modifiedCount} products to ${status} status`,
 			modifiedCount: result.modifiedCount,
 			matchedCount: result.matchedCount,
 		});
@@ -1537,7 +1537,7 @@ exports.bulkUpdateProductStatus = async (req, res) => {
 		console.error("Error updating product status:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Aktualisieren des Produktstatus",
+			message: "Error updating product status",
 			error: error.message,
 		});
 	}

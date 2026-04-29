@@ -34,7 +34,7 @@ exports.updateFcmToken = async (req, res) => {
 		// 		await NotificationService.sendToUser(
 		// 			userId,
 		// 			"Benachrichtigung aktiviert!",
-		// 			"Du erhältst jetzt Push-Benachrichtigungen von Frischly.",
+		// 			"You will now receive push notifications from Frischly.",
 		// 			{ type: "confirm", timestamp: new Date().toISOString() }
 		// 		);
 		// 		console.log(

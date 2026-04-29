@@ -35,7 +35,7 @@ exports.validatePromoCode = async (req, res) => {
 		if (!code) {
 			return res.status(400).json({
 				success: false,
-				message: "Promo-Code ist erforderlich",
+				message: "Promo code is required",
 			});
 		}
 
@@ -48,7 +48,7 @@ exports.validatePromoCode = async (req, res) => {
 		if (!promoCode) {
 			return res.status(404).json({
 				success: false,
-				message: "Ungültiger oder inaktiver Promo-Code",
+				message: "Invalid or inactive promo code",
 			});
 		}
 

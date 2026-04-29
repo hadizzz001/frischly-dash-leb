@@ -150,7 +150,7 @@ exports.getCategories = async (req, res) => {
 		console.error("Error getting categories:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Abrufen der Kategorien",
+			message: "Error fetching categories",
 			error: error.message,
 		});
 	}
@@ -167,7 +167,7 @@ exports.getCategory = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Ungültige Kategorie-ID",
+				message: "Invalid category ID",
 			});
 		}
 
@@ -182,7 +182,7 @@ exports.getCategory = async (req, res) => {
 		if (!category) {
 			return res.status(404).json({
 				success: false,
-				message: "Kategorie nicht gefunden",
+				message: "Category not found",
 			});
 		}
 
@@ -194,7 +194,7 @@ exports.getCategory = async (req, res) => {
 		console.error("Error getting category:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Abrufen der Kategorie",
+			message: "Error fetching category",
 			error: error.message,
 		});
 	}
@@ -257,7 +257,7 @@ exports.createCategory = async (req, res) => {
 				console.error("Error uploading image to Cloudinary:", uploadError);
 				return res.status(500).json({
 					success: false,
-					message: "Fehler beim Hochladen des Bildes",
+					message: "Error uploading image",
 					error: uploadError.message,
 				});
 			}
@@ -275,7 +275,7 @@ exports.createCategory = async (req, res) => {
 
 		res.status(201).json({
 			success: true,
-			message: "Kategorie erfolgreich erstellt",
+			message: "Category created successfully",
 			data: category,
 		});
 	} catch (error) {
@@ -285,13 +285,13 @@ exports.createCategory = async (req, res) => {
 		if (error.code === 11000 && error.keyPattern?.name) {
 			return res.status(400).json({
 				success: false,
-				message: "Eine Kategorie mit diesem Namen existiert bereits",
+				message: "A category with this name already exists",
 			});
 		}
 
 		res.status(400).json({
 			success: false,
-			message: "Fehler beim Erstellen der Kategorie",
+			message: "Error creating category",
 			error: error.message,
 		});
 	}
@@ -307,7 +307,7 @@ exports.updateCategory = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Ungültige Kategorie-ID",
+				message: "Invalid category ID",
 			});
 		}
 
@@ -315,7 +315,7 @@ exports.updateCategory = async (req, res) => {
 		if (!category) {
 			return res.status(404).json({
 				success: false,
-				message: "Kategorie nicht gefunden",
+				message: "Category not found",
 			});
 		}
 
@@ -337,7 +337,7 @@ exports.updateCategory = async (req, res) => {
 				console.error("Error uploading image to Cloudinary:", uploadError);
 				return res.status(500).json({
 					success: false,
-					message: "Fehler beim Hochladen des Bildes",
+					message: "Error uploading image",
 					error: uploadError.message,
 				});
 			}
@@ -359,7 +359,7 @@ exports.updateCategory = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Kategorie erfolgreich aktualisiert",
+			message: "Category updated successfully",
 			data: updatedCategory,
 		});
 	} catch (error) {
@@ -369,13 +369,13 @@ exports.updateCategory = async (req, res) => {
 		if (error.code === 11000 && error.keyPattern?.name) {
 			return res.status(400).json({
 				success: false,
-				message: "Eine Kategorie mit diesem Namen existiert bereits",
+				message: "A category with this name already exists",
 			});
 		}
 
 		res.status(400).json({
 			success: false,
-			message: "Fehler beim Aktualisieren der Kategorie",
+			message: "Error updating category",
 			error: error.message,
 		});
 	}
@@ -391,7 +391,7 @@ exports.deleteCategory = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Ungültige Kategorie-ID",
+				message: "Invalid category ID",
 			});
 		}
 
@@ -411,7 +411,7 @@ exports.deleteCategory = async (req, res) => {
 		if (productCount > 0) {
 			return res.status(400).json({
 				success: false,
-				message: `Kategorie kann nicht gelöscht werden, da sie ${productCount} aktive Produkte hat`,
+				message: `Category cannot be deleted because it has ${productCount} active products`,
 			});
 		}
 
@@ -424,7 +424,7 @@ exports.deleteCategory = async (req, res) => {
 		if (!category) {
 			return res.status(404).json({
 				success: false,
-				message: "Kategorie nicht gefunden",
+				message: "Category not found",
 			});
 		}
 
@@ -436,14 +436,14 @@ exports.deleteCategory = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Kategorie und ihre Unterkategorien erfolgreich gelöscht",
+			message: "Category and its subcategories deleted successfully",
 			data: category,
 		});
 	} catch (error) {
 		console.error("Error deleting category:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Löschen der Kategorie",
+			message: "Error deleting category",
 			error: error.message,
 		});
 	}
@@ -459,7 +459,7 @@ exports.permanentDeleteCategory = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Ungültige Kategorie-ID",
+				message: "Invalid category ID",
 			});
 		}
 
@@ -476,7 +476,7 @@ exports.permanentDeleteCategory = async (req, res) => {
 		if (productCount > 0) {
 			return res.status(400).json({
 				success: false,
-				message: `Kategorie kann nicht dauerhaft gelöscht werden, da sie ${productCount} zugehörige Produkte hat`,
+				message: `Category cannot be permanently deleted because it has ${productCount} associated products`,
 			});
 		}
 
@@ -485,7 +485,7 @@ exports.permanentDeleteCategory = async (req, res) => {
 		if (!category) {
 			return res.status(404).json({
 				success: false,
-				message: "Kategorie nicht gefunden",
+				message: "Category not found",
 			});
 		}
 
@@ -504,13 +504,13 @@ exports.permanentDeleteCategory = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Kategorie dauerhaft gelöscht",
+			message: "Category permanently deleted",
 		});
 	} catch (error) {
 		console.error("Error permanently deleting category:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim dauerhaften Löschen der Kategorie",
+			message: "Error permanently deleting category",
 			error: error.message,
 		});
 	}
@@ -626,7 +626,7 @@ exports.uploadImage = async (req, res) => {
 
 		res.json({
 			success: true,
-			message: "Bild erfolgreich hochgeladen",
+			message: "Image uploaded successfully",
 			data: {
 				url: uploadResult.url,
 				public_id: uploadResult.public_id,
@@ -637,7 +637,7 @@ exports.uploadImage = async (req, res) => {
 		console.error("Error uploading image:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Hochladen des Bildes",
+			message: "Error uploading image",
 			error: error.message,
 		});
 	}
@@ -654,7 +654,7 @@ exports.getCategoryProductCount = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({
 				success: false,
-				message: "Ungültiges Kategorie-ID-Format",
+				message: "Invalid category ID format",
 			});
 		}
 
@@ -663,7 +663,7 @@ exports.getCategoryProductCount = async (req, res) => {
 		if (!category) {
 			return res.status(404).json({
 				success: false,
-				message: "Kategorie nicht gefunden",
+				message: "Category not found",
 			});
 		}
 
@@ -691,13 +691,13 @@ exports.getCategoryProductCount = async (req, res) => {
 				categoryName: category.name,
 				productCount: productCount,
 			},
-			message: `Kategorie '${category.name}' hat ${productCount} aktive Produkte`,
+			message: `Category '${category.name}' has ${productCount} active products`,
 		});
 	} catch (error) {
 		console.error("Error getting category product count:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Abrufen der Kategorie-Produktanzahl",
+			message: "Error fetching category product count",
 			error: error.message,
 		});
 	}
@@ -772,13 +772,13 @@ exports.getAllCategoriesProductCount = async (req, res) => {
 			success: true,
 			data: categoryProductCounts,
 			total: categoryProductCounts.length,
-			message: `Produktanzahlen für ${categoryProductCounts.length} Kategorien abgerufen`,
+			message: `Product counts retrieved for ${categoryProductCounts.length} categories`,
 		});
 	} catch (error) {
 		console.error("Error getting all categories product count:", error);
 		res.status(500).json({
 			success: false,
-			message: "Fehler beim Abrufen der Kategorien-Produktanzahlen",
+			message: "Error fetching category product counts",
 			error: error.message,
 		});
 	}
