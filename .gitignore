@@ -124,9 +124,9 @@ backups/*
 # Scripts directory
 scripts/
 
-# # Firebase credentials
-# src/config/firebase-service-account.json
-# firebase-service-account.json
-# *.firebase.json
+# Firebase credentials
+src/config/firebase-service-account.json
+firebase-service-account.json
+*.firebase.json
 
 public/emails.txt

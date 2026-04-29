@@ -9,7 +9,7 @@ const initializeFirebase = () => {
 			// The SDK automatically detects and uses this environment variable
 			admin.initializeApp({
 				credential: admin.credential.applicationDefault(),
-				projectId: "frischlyshop", // Explicitly set project ID
+				projectId: "frischlyshop-lb", // Explicitly set project ID
 			});
 		}
 		console.log("🔥 Firebase Admin SDK initialized successfully");
