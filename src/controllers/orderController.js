@@ -742,12 +742,12 @@ exports.createOrder = async (req, res) => {
 					line_items: lineItems,
 					mode: "payment",
 					success_url: `${
-						process.env.SERVER_URL || "https://frischlylebanon.onrender.com"
+						process.env.SERVER_URL || "https://frischly-dash-leb.onrender.com"
 					}/payment/stripe-success.html?session_id={CHECKOUT_SESSION_ID}&order=${
 						populatedOrder._id
 					}`,
 					cancel_url: `${
-						process.env.SERVER_URL || "https://frischlylebanon.onrender.com"
+						process.env.SERVER_URL || "https://frischly-dash-leb.onrender.com"
 					}/payment/cancel.html?order=${populatedOrder._id}`,
 					client_reference_id: populatedOrder._id.toString(),
 					customer_email: populatedOrder.customer.email,

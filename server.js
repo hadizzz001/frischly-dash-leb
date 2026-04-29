@@ -134,8 +134,8 @@ app.use(
 					"https://unpkg.com",
 					// Add onrender.com domains
 					"https://*.onrender.com",
-					//"https://frischlylebanon.onrender.com",
-					"https://frischlylebanon.onrender.com",
+					//"https://frischly-dash-leb.onrender.com",
+					"https://frischly-dash-leb.onrender.com",
 				],
 				scriptSrcAttr: ["'unsafe-inline'"], // Allow inline event handlers in both dev and production
 				styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
@@ -145,8 +145,8 @@ app.use(
 					"http://localhost:*",
 					"https://localhost:*",
 					// Add production API URLs
-					//"https://frischlylebanon.onrender.com",
-					"https://frischlylebanon.onrender.com",
+					//"https://frischly-dash-leb.onrender.com",
+					"https://frischly-dash-leb.onrender.com",
 				], // Allow API calls
 				fontSrc: [
 					"'self'",
