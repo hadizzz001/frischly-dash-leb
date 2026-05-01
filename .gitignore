@@ -122,7 +122,8 @@ dist
 backups/*
 
 # Scripts directory
-scripts/
+scripts/*
+!scripts/remove-postal-codes.js
 
 # Firebase credentials
 src/config/firebase-service-account.json

@@ -1420,7 +1420,7 @@
 								<input
 									type="text"
 									id="zone-search"
-									placeholder="Search by zone name, zip code..."
+									placeholder="Search by zone name..."
 									onkeyup="filterZones()"
 								/>
 							</div>
@@ -1444,7 +1444,6 @@
 										<tr>
 											<th>#</th>
 											<th>Zone Name</th>
-											<th>Zip Code</th>
 											<th>Distance</th>
 											<th>Delivery Fee (€)</th>
 											<th>Est. Time</th>
@@ -1456,7 +1455,7 @@
 									<tbody id="zones-table-body">
 										<tr>
 											<td
-												colspan="9"
+												colspan="8"
 												style="text-align: center; padding: 40px; color: #666"
 											>
 												No zones found. Click "Add Zone" to create one.
@@ -2255,10 +2254,6 @@
 							</div>
 						</div>
 						<div class="form-row">
-							<div class="form-group half">
-								<label for="edit-zipcode">ZIP Code</label>
-								<input type="text" id="edit-zipcode" name="zipCode" required />
-							</div>
 							<div class="form-group half">
 								<label for="edit-country">Country</label>
 								<input type="text" id="edit-country" name="country" required />
@@ -3084,7 +3079,7 @@
 							user.role.toUpperCase();
 
 						// Update address
-						const addressText = `${user.address.street}, ${user.address.city}, ${user.address.state} ${user.address.zipCode}, ${user.address.country}`;
+						const addressText = `${user.address.street}, ${user.address.city}, ${user.address.state}, ${user.address.country}`;
 						document.getElementById("user-address").textContent = addressText;
 
 						// Update stats
@@ -3141,8 +3136,6 @@
 							currentUser.address.city || "";
 						document.getElementById("edit-state").value =
 							currentUser.address.state || "";
-						document.getElementById("edit-zipcode").value =
-							currentUser.address.zipCode || "";
 						document.getElementById("edit-country").value =
 							currentUser.address.country || "";
 					}
@@ -3165,7 +3158,6 @@
 				const street = document.getElementById("edit-street").value.trim();
 				const city = document.getElementById("edit-city").value.trim();
 				const state = document.getElementById("edit-state").value.trim();
-				const zipCode = document.getElementById("edit-zipcode").value.trim();
 				const country = document.getElementById("edit-country").value.trim();
 
 				// Basic validation
@@ -3176,7 +3168,6 @@
 					!street ||
 					!city ||
 					!state ||
-					!zipCode ||
 					!country
 				) {
 					showMessage(
@@ -3217,7 +3208,6 @@
 						street: street,
 						city: city,
 						state: state,
-						zipCode: zipCode,
 						country: country,
 					},
 				};
@@ -3250,7 +3240,7 @@
 							currentUser.phoneNumber;
 
 						// Update address display
-						const addressText = `${currentUser.address.street}, ${currentUser.address.city}, ${currentUser.address.state} ${currentUser.address.zipCode}, ${currentUser.address.country}`;
+						const addressText = `${currentUser.address.street}, ${currentUser.address.city}, ${currentUser.address.state}, ${currentUser.address.country}`;
 						document.getElementById("user-address").textContent = addressText;
 
 						// Update welcome message
@@ -3703,13 +3693,11 @@
 					const streetField = document.getElementById("user-edit-street");
 					const cityField = document.getElementById("user-edit-city");
 					const stateField = document.getElementById("user-edit-state");
-					const zipcodeField = document.getElementById("user-edit-zipcode");
 					const countryField = document.getElementById("user-edit-country");
 
 					if (streetField) streetField.value = address.street || "";
 					if (cityField) cityField.value = address.city || "";
 					if (stateField) stateField.value = address.state || "";
-					if (zipcodeField) zipcodeField.value = address.zipCode || "";
 					if (countryField) countryField.value = address.country || "";
 					if (idField) idField.value = user._id || "";
 					if (nameField) nameField.value = user.name || "";
@@ -3723,7 +3711,6 @@
 						street: streetField ? streetField.value : "field not found",
 						city: cityField ? cityField.value : "field not found",
 						state: stateField ? stateField.value : "field not found",
-						zipcode: zipcodeField ? zipcodeField.value : "field not found",
 						country: countryField ? countryField.value : "field not found",
 					});
 
@@ -3841,7 +3828,6 @@
 						"street",
 						"city",
 						"state",
-						"zipcode",
 						"country",
 					];
 					for (const field of requiredFields) {
@@ -3874,7 +3860,6 @@
 							street: formData.get("street"),
 							city: formData.get("city"),
 							state: formData.get("state"),
-							zipCode: formData.get("zipcode"),
 							country: formData.get("country"),
 						},
 					};
@@ -7391,7 +7376,6 @@
 									: ""
 							}
 						</td>
-						<td><code>${zone.zipCode}</code></td>
 						<td>${zone.distance} km</td>
 						<td>€${zone.deliveryFee ? zone.deliveryFee.toFixed(2) : "0.00"}</td>
 						<td>${zone.estimatedDeliveryTime || "N/A"}</td>
@@ -7488,8 +7472,7 @@
 
 					const matchesSearch =
 						searchQuery === "" ||
-						zone.zoneName.toLowerCase().includes(searchQuery) ||
-						zone.zipCode.toLowerCase().includes(searchQuery);
+						zone.zoneName.toLowerCase().includes(searchQuery);
 
 					return matchesStatus && matchesSearch;
 				});
@@ -7537,7 +7520,6 @@
 				// Clear custom validation messages
 				const inputs = [
 					"zone-name",
-					"zone-zip-code",
 					"zone-distance",
 					"zone-delivery-fee",
 				];
@@ -7555,14 +7537,10 @@
 
 					// Validate required fields
 					const zoneName = formData.get("zoneName")?.trim();
-					const zipCode = formData.get("zipCode")?.trim();
 					const distance = formData.get("distance");
 
 					if (!zoneName) {
 						throw new Error("Zone name is required");
-					}
-					if (!zipCode) {
-						throw new Error("Zip code is required");
 					}
 					if (
 						!distance ||
@@ -7583,7 +7561,6 @@
 
 					const zoneData = {
 						zoneName: zoneName,
-						zipCode: zipCode.toUpperCase(),
 						distance: parseFloat(distance),
 						deliveryFee: deliveryFee ? parseFloat(deliveryFee) : 0,
 						estimatedDeliveryTime: formData.get("estimatedDeliveryTime")
@@ -7654,7 +7631,6 @@
 					"Update Zone";
 				document.getElementById("zone-id").value = zone._id;
 				document.getElementById("zone-name").value = zone.zoneName;
-				document.getElementById("zone-zip-code").value = zone.zipCode;
 				document.getElementById("zone-distance").value = zone.distance;
 				document.getElementById("zone-delivery-fee").value =
 					zone.deliveryFee || "";
@@ -7955,11 +7931,7 @@
 						</td>
 						<td>
 							<div style="font-size: 12px; color: #666; max-width: 150px;">
-								${
-									customer.address && customer.address.zipCode
-										? customer.address.zipCode
-										: "No zip"
-								}
+								${customer.address && customer.address.city ? customer.address.city : "No city"}
 							</div>
 						</td>
 						<td>
@@ -8093,10 +8065,10 @@
 					Name: customer.name,
 					Email: customer.email,
 					Phone: customer.phoneNumber || "N/A",
-					"Zip Code":
-						customer.address && customer.address.zipCode
-							? customer.address.zipCode
-							: "No zip",
+					City:
+						customer.address && customer.address.city
+							? customer.address.city
+							: "No city",
 					Status: customer.isActive ? "Active" : "Inactive",
 					Confirmed: customer.emailConfirmed ? "Yes" : "No",
 					"Joined Date": new Date(customer.createdAt).toLocaleDateString(),
@@ -8162,8 +8134,6 @@
 					address.city || "Not provided";
 				document.getElementById("customer-state").textContent =
 					address.state || "Not provided";
-				document.getElementById("customer-zipcode").textContent =
-					address.zipCode || "Not provided";
 				document.getElementById("customer-country").textContent =
 					address.country || "Not provided";
 
@@ -8336,8 +8306,6 @@
 					address.street || "";
 				document.getElementById("user-edit-city").value = address.city || "";
 				document.getElementById("user-edit-state").value = address.state || "";
-				document.getElementById("user-edit-zipcode").value =
-					address.zipCode || "";
 				document.getElementById("user-edit-country").value =
 					address.country || "";
 
@@ -8442,7 +8410,7 @@
 
 						const label = document.createElement("label");
 						label.htmlFor = `zone-${zone._id}`;
-						label.textContent = `${zone.zoneName} (${zone.zipCode})`;
+						label.textContent = zone.zoneName;
 						label.style.cursor = "pointer";
 
 						checkboxItem.appendChild(checkbox);
@@ -8975,7 +8943,7 @@
 						userRoleEl.textContent = currentUser.role.toUpperCase();
 
 					if (userAddressEl && currentUser.address) {
-						const addressText = `${currentUser.address.street}, ${currentUser.address.city}, ${currentUser.address.state} ${currentUser.address.zipCode}, ${currentUser.address.country}`;
+						const addressText = `${currentUser.address.street}, ${currentUser.address.city}, ${currentUser.address.state}, ${currentUser.address.country}`;
 						userAddressEl.textContent = addressText;
 					}
 				}
@@ -9345,16 +9313,6 @@
 						</div>
 
 						<div class="form-group">
-							<label for="user-edit-zipcode">ZIP/Postal Code *</label>
-							<input
-								type="text"
-								id="user-edit-zipcode"
-								name="zipcode"
-								required
-							/>
-						</div>
-
-						<div class="form-group">
 							<label for="user-edit-country">Country *</label>
 							<input
 								type="text"
@@ -9446,10 +9404,6 @@
 							<div class="detail-item">
 								<label>State:</label>
 								<span id="customer-state"></span>
-							</div>
-							<div class="detail-item">
-								<label>ZIP Code:</label>
-								<span id="customer-zipcode"></span>
 							</div>
 							<div class="detail-item">
 								<label>Country:</label>
@@ -13103,19 +13057,6 @@
 						</div>
 
 						<div class="form-group">
-							<label for="zone-zip-code">Zip Code *</label>
-							<input
-								type="text"
-								id="zone-zip-code"
-								name="zipCode"
-								required
-								placeholder="Enter zip code (e.g., 12345)"
-								pattern="[0-9]{5}(-[0-9]{4})?"
-								title="Please enter a valid zip code (12345 or 12345-6789)"
-							/>
-						</div>
-
-						<div class="form-group">
 							<label for="zone-distance">Distance (km) *</label>
 							<input
 								type="number"
@@ -13210,26 +13151,6 @@
 								this.setCustomValidity(
 									"Zone name cannot exceed 100 characters"
 								);
-							} else {
-								this.setCustomValidity("");
-							}
-						});
-					}
-
-					// Zip code validation
-					const zipCodeInput = document.getElementById("zone-zip-code");
-					if (zipCodeInput) {
-						zipCodeInput.addEventListener("input", function () {
-							// Convert to uppercase
-							this.value = this.value.toUpperCase();
-						});
-
-						zipCodeInput.addEventListener("blur", function () {
-							const value = this.value.trim();
-							if (!value) {
-								this.setCustomValidity("Zip code is required");
-							} else if (!/^[0-9A-Z\s\-]{3,20}$/.test(value)) {
-								this.setCustomValidity("Please enter a valid zip code");
 							} else {
 								this.setCustomValidity("");
 							}

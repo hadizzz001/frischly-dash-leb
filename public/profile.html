@@ -396,12 +396,11 @@
 				const currentAddress =
 					document.getElementById("user-address").textContent;
 
-				// Parse address components (assuming format: "street, city, state zipCode, country")
+				// Parse address components (assuming format: "street, city, state, country")
 				const addressParts = currentAddress.split(", ");
 				const street = addressParts[0] || "";
 				const city = addressParts[1] || "";
-				const stateZip = addressParts[2] || "";
-				const [state, zipCode] = stateZip.split(" ");
+				const state = addressParts[2] || "";
 				const country = addressParts[3] || "";
 
 				profileContent.innerHTML = `
@@ -437,11 +436,6 @@
 							<div style="margin-bottom: 15px; text-align: left;">
 								<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">State:</label>
 								<input type="text" id="edit-state" value="${state || ""}" 
-									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
-							</div>
-							<div style="margin-bottom: 15px; text-align: left;">
-								<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">ZIP Code:</label>
-								<input type="text" id="edit-zip" value="${zipCode || ""}" 
 									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
 							</div>
 							<div style="margin-bottom: 20px; text-align: left;">
@@ -516,7 +510,6 @@
 				const street = document.getElementById("edit-street").value.trim();
 				const city = document.getElementById("edit-city").value.trim();
 				const state = document.getElementById("edit-state").value.trim();
-				const zipCode = document.getElementById("edit-zip").value.trim();
 				const country = document.getElementById("edit-country").value.trim();
 
 				// Credit card information
@@ -537,7 +530,7 @@
 					return;
 				}
 
-				if (!street || !city || !zipCode || !country) {
+				if (!street || !city || !country) {
 					showMessage("All address fields are required", "error");
 					return;
 				}
@@ -561,7 +554,6 @@
 							street,
 							city,
 							state,
-							zipCode,
 							country,
 						},
 					};
@@ -718,7 +710,7 @@
 						roleBadge.className = `role-badge ${user.role}`;
 
 						// Update address
-						const addressText = `${user.address.street}, ${user.address.city}, ${user.address.state} ${user.address.zipCode}, ${user.address.country}`;
+						const addressText = `${user.address.street}, ${user.address.city}, ${user.address.state}, ${user.address.country}`;
 						document.getElementById("user-address").textContent = addressText;
 
 						// Update account info

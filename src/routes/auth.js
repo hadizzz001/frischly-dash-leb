@@ -63,12 +63,6 @@ const registerValidation = [
 		.withMessage(
 			"State/Province is required and must be less than 100 characters"
 		),
-	body("address.zipCode")
-		.trim()
-		.isLength({ min: 1, max: 20 })
-		.withMessage(
-			"Postal code is required and must be less than 20 characters"
-		),
 	body("address.country")
 		.trim()
 		.isLength({ min: 1, max: 100 })
@@ -116,11 +110,6 @@ const updateProfileValidation = [
 		.trim()
 		.isLength({ min: 1, max: 100 })
 		.withMessage("State/Province must be less than 100 characters"),
-	body("address.zipCode")
-		.optional()
-		.trim()
-		.isLength({ min: 1, max: 20 })
-		.withMessage("Postal code must be less than 20 characters"),
 	body("address.country")
 		.optional()
 		.trim()

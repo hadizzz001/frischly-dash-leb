@@ -72,12 +72,6 @@ const userSchema = new mongoose.Schema(
 				trim: true,
 				maxlength: [100, "State cannot be more than 100 characters"],
 			},
-			zipCode: {
-				type: String,
-				required: [true, "Please provide a zip/postal code"],
-				trim: true,
-				maxlength: [20, "Zip code cannot be more than 20 characters"],
-			},
 			country: {
 				type: String,
 				required: [true, "Please provide a country"],

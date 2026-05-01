@@ -10,6 +10,8 @@ const sendEmail = require("../utils/sendEmail");
 const NotificationService = require("../services/notifications");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 // @desc    Get all orders with enhanced filtering options
 // @route   GET /api/orders
 // @access  Private
@@ -253,23 +255,13 @@ exports.getOrdersForRiders = async (req, res) => {
 			const rider = await Rider.findOne({ user: req.user.id });
 			console.log("Rider zones:", rider ? rider.zones : "No rider found");
 			if (rider && rider.zones && rider.zones.length > 0) {
-				// Get zip codes for the rider's zone names
-				const zones = await Zone.find({
-					zoneName: { $in: rider.zones },
-					isActive: true,
-				});
-				const zipCodes = zones.map((zone) => zone.zipCode);
-				console.log("Rider zone zip codes:", zipCodes);
-
-				if (zipCodes.length > 0) {
-					filter["customer.address.zipCode"] = { $in: zipCodes };
-				} else {
-					// If no valid zones found, return no orders
-					filter["customer.address.zipCode"] = null;
-				}
+				const zoneNames = rider.zones.map(
+					(zoneName) => new RegExp(`^${escapeRegex(zoneName)}$`, "i")
+				);
+				filter["customer.address.city"] = { $in: zoneNames };
 			} else {
 				// If rider has no zones assigned, return no orders
-				filter["customer.address.zipCode"] = null;
+				filter["customer.address.city"] = null;
 			}
 		}
 
@@ -533,13 +525,10 @@ exports.createOrder = async (req, res) => {
 		// Create order
 		// Calculate delivery charge based on customer's zone
 		let delivery = 0;
-		console.log("Calculating delivery fee. ZipCode:", orderAddress?.zipCode);
-		if (orderAddress && orderAddress.zipCode) {
+		console.log("Calculating delivery fee. City:", orderAddress?.city);
+		if (orderAddress && orderAddress.city) {
 			try {
-				const zone = await Zone.findOne({
-					zipCode: orderAddress.zipCode,
-					isActive: true,
-				});
+				const zone = await Zone.findByName(orderAddress.city);
 				if (zone && zone.deliveryFee) {
 					delivery = zone.deliveryFee;
 					console.log("Zone found. Delivery fee:", delivery);
@@ -1680,12 +1669,11 @@ exports.updateOrderStatus = async (req, res) => {
 			if (order.assignedRider && !order.assignedRider.equals(rider._id)) {
 				// If order has an assigned rider and it's not this rider, check zone permissions
 				if (rider.zones && rider.zones.length > 0) {
-					const orderZone = order.customer?.address?.zipCode;
+					const orderZone = order.customer?.address?.city;
 					if (orderZone) {
-						const zones = await Zone.find({
-							zoneName: { $in: rider.zones },
-							zipCode: orderZone,
-						});
+						const zones = rider.zones.filter(
+							(zoneName) => zoneName.toLowerCase() === orderZone.toLowerCase()
+						);
 
 						if (zones.length === 0) {
 							return res.status(403).json({

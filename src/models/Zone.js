@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const zoneSchema = new mongoose.Schema(
 	{
 		zoneName: {
@@ -8,19 +10,6 @@ const zoneSchema = new mongoose.Schema(
 			trim: true,
 			maxlength: [100, "Zone name cannot exceed 100 characters"],
 			unique: true,
-		},
-		zipCode: {
-			type: String,
-			required: [true, "Zip code is required"],
-			trim: true,
-			maxlength: [20, "Zip code cannot exceed 20 characters"],
-			validate: {
-				validator: function (v) {
-					// Basic zip code validation (supports US and international formats)
-					return /^[0-9A-Za-z\s\-]{3,20}$/.test(v);
-				},
-				message: "Please provide a valid zip code",
-			},
 		},
 		distance: {
 			type: Number,
@@ -99,7 +88,6 @@ const zoneSchema = new mongoose.Schema(
 
 // Index for better query performance
 zoneSchema.index({ zoneName: 1 });
-zoneSchema.index({ zipCode: 1 });
 zoneSchema.index({ isActive: 1 });
 zoneSchema.index({ priority: -1 });
 
@@ -117,9 +105,12 @@ zoneSchema.virtual("deliveryInfo").get(function () {
 	};
 });
 
-// Static method to find zones by zip code
-zoneSchema.statics.findByZipCode = function (zipCode) {
-	return this.findOne({ zipCode: zipCode, isActive: true });
+// Static method to find active zones by name
+zoneSchema.statics.findByName = function (zoneName) {
+	return this.findOne({
+		zoneName: { $regex: `^${escapeRegex(zoneName)}$`, $options: "i" },
+		isActive: true,
+	});
 };
 
 // Static method to find active zones
@@ -135,14 +126,6 @@ zoneSchema.methods.calculateDeliveryFee = function (baseRate = 1) {
 	// Calculate based on distance if no fixed fee is set
 	return Math.max(baseRate, this.distance * 0.5);
 };
-
-// Pre-save middleware to ensure zip code is uppercase
-zoneSchema.pre("save", function (next) {
-	if (this.zipCode) {
-		this.zipCode = this.zipCode.toUpperCase();
-	}
-	next();
-});
 
 // Pre-save middleware to set updatedBy field
 zoneSchema.pre("save", function (next) {

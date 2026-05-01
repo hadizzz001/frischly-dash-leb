@@ -31,6 +31,7 @@
 		"send-bulk-email": "node scripts/send-bulk-email.js",
 		"send-notification-campaign": "node scripts/send-notification-campaign.js",
 		"send-test-notification": "node scripts/send-test-notification.js",
+		"remove-postal-codes": "node scripts/remove-postal-codes.js",
 		"build": "echo Build complete - static files ready",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},

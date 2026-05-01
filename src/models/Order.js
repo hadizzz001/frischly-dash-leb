@@ -50,7 +50,6 @@ const orderSchema = new mongoose.Schema(
 				street: String,
 				city: String,
 				state: String,
-				zipCode: String,
 				country: String,
 			},
 		},

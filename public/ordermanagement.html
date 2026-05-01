@@ -1488,15 +1488,14 @@
 
 					// Format full address
 					let fullAddress = "N/A";
-					let zipCode = "";
+					let city = "";
 					if (customerAddress) {
 						if (typeof customerAddress === "object") {
 							const street = customerAddress.street || "";
-							const city = customerAddress.city || "";
+							city = customerAddress.city || "";
 							const state = customerAddress.state || "";
-							zipCode = customerAddress.zipCode || "";
 							const country = customerAddress.country || "";
-							fullAddress = [street, city, state, zipCode, country]
+							fullAddress = [street, city, state, country]
 								.filter(Boolean)
 								.join(", ");
 						} else {
@@ -1507,10 +1506,10 @@
 					// Fetch zone information
 					let zoneInfo = null;
 					let ridersInfo = [];
-					if (zipCode) {
+					if (city) {
 						try {
 							const zoneResponse = await fetch(
-								`${API_BASE_URL}/zones/zipcode/${zipCode}`,
+								`${API_BASE_URL}/zones?search=${encodeURIComponent(city)}&isActive=true&limit=1`,
 								{
 									method: "GET",
 									headers: {
@@ -1522,7 +1521,7 @@
 
 							if (zoneResponse.ok) {
 								const zoneResult = await zoneResponse.json();
-								zoneInfo = zoneResult.data;
+								zoneInfo = Array.isArray(zoneResult.data) ? zoneResult.data[0] : null;
 
 								// Fetch available riders for this zone
 								if (zoneInfo && zoneInfo.zoneName) {

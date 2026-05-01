@@ -1096,15 +1096,6 @@
 						</div>
 						<div class="form-row">
 							<div class="form-group">
-								<label for="zipCode">ZIP Code:</label>
-								<input
-									type="text"
-									id="zipCode"
-									name="zipCode"
-									placeholder="Enter ZIP code"
-								/>
-							</div>
-							<div class="form-group">
 								<label for="country">Country:</label>
 								<input
 									type="text"
@@ -1679,10 +1670,10 @@
 					}
 
 					const userData = await userResponse.json();
-					const zipCode = userData.data?.user?.address?.zipCode;
+					const city = userData.data?.user?.address?.city;
 
-					if (!zipCode) {
-						return 2.0; // Default delivery fee if no zip code
+					if (!city) {
+						return 2.0; // Default delivery fee if no city
 					}
 
 					// Calculate delivery fee
@@ -1694,7 +1685,7 @@
 								"Content-Type": "application/json",
 							},
 							body: JSON.stringify({
-								zipCode: zipCode,
+								city,
 								baseRate: 0,
 							}),
 						}
@@ -1923,15 +1914,13 @@
 					const street = document.getElementById("street").value.trim();
 					const city = document.getElementById("city").value.trim();
 					const state = document.getElementById("state").value.trim();
-					const zipCode = document.getElementById("zipCode").value.trim();
 					const country = document.getElementById("country").value.trim();
 
-					if (street || city || state || zipCode || country) {
+					if (street || city || state || country) {
 						deliveryAddress = {
 							street: street || undefined,
 							city: city || undefined,
 							state: state || undefined,
-							zipCode: zipCode || undefined,
 							country: country || undefined,
 						};
 					}

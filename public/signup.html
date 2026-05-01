@@ -335,7 +335,7 @@
 								id="city"
 								name="city"
 								required
-								placeholder="New York"
+								placeholder="Berlin"
 							/>
 						</div>
 						<div class="form-group">
@@ -345,15 +345,8 @@
 								id="state"
 								name="state"
 								required
-								placeholder="NY"
+								placeholder="Berlin"
 							/>
-						</div>
-						<div class="form-group">
-							<label for="zipCode">Zip/Postal Code</label>
-							<select id="zipCode" name="zipCode" required>
-								<option value="">Select Zip Code</option>
-								<!-- Zip codes will be loaded dynamically -->
-							</select>
 						</div>
 						<div class="form-group">
 							<label for="country">Country</label>
@@ -361,7 +354,7 @@
 								type="text"
 								id="country"
 								name="country"
-								value="USA"
+								value="Germany"
 								required
 							/>
 						</div>
@@ -409,47 +402,6 @@
 				}
 			}
 
-			// Load zip codes from active zones
-			async function loadZipCodes() {
-				const zipCodeSelect = document.getElementById("zipCode");
-				if (!zipCodeSelect) return;
-
-				try {
-					const response = await fetch(`${API_BASE_URL}/zones?isActive=true`);
-					const data = await response.json();
-
-					if (data.success && data.data) {
-						// Clear existing options except the first one
-						zipCodeSelect.innerHTML =
-							'<option value="">Select Zip Code</option>';
-
-						// Add zip codes from active zones
-						data.data.forEach((zone) => {
-							const option = document.createElement("option");
-							option.value = zone.zipCode;
-							option.textContent = `${zone.zipCode} - ${zone.zoneName}`;
-							zipCodeSelect.appendChild(option);
-						});
-					} else {
-						console.error("Failed to load zip codes:", data.message);
-						// Fallback to text input if API fails
-						const container = zipCodeSelect.parentElement;
-						container.innerHTML = `
-							<label for="zipCode">Zip/Postal Code</label>
-							<input type="text" id="zipCode" name="zipCode" required placeholder="10001" style="width: 100%; padding: 12px; border: 2px solid #ffc300; border-radius: 8px; font-size: 14px; background: #ffffff; color: #000000;" />
-						`;
-					}
-				} catch (error) {
-					console.error("Error loading zip codes:", error);
-					// Fallback to text input if API fails
-					const container = zipCodeSelect.parentElement;
-					container.innerHTML = `
-						<label for="zipCode">Zip/Postal Code</label>
-						<input type="text" id="zipCode" name="zipCode" required placeholder="10001" style="width: 100%; padding: 12px; border: 2px solid #ffc300; border-radius: 8px; font-size: 14px; background: #ffffff; color: #000000;" />
-					`;
-				}
-			}
-
 			// Sign out function for users who are already logged in - Define globally first
 			function signOut() {
 				localStorage.removeItem("authToken");
@@ -494,11 +446,6 @@
 				`;
 			}
 
-			// Load zip codes when page loads
-			document.addEventListener("DOMContentLoaded", function () {
-				loadZipCodes();
-			});
-
 			// Sign Up Form Handler
 			document
 				.getElementById("signup-form")
@@ -517,7 +464,6 @@
 							street: formData.get("street"),
 							city: formData.get("city"),
 							state: formData.get("state"),
-							zipCode: formData.get("zipCode"),
 							country: formData.get("country"),
 						},
 					};
@@ -528,7 +474,6 @@
 						"street",
 						"city",
 						"state",
-						"zipCode",
 						"country",
 					];
 

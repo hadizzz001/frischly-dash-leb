@@ -1,6 +1,8 @@
 const Zone = require("../models/Zone");
 const mongoose = require("mongoose");
 
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 // @desc    Get all zones
 // @route   GET /api/zones
 // @access  Public
@@ -13,7 +15,6 @@ exports.getZones = async (req, res) => {
 			sortBy = "priority",
 			sortOrder = "desc",
 			search,
-			zipCode,
 		} = req.query;
 
 		const pageNum = parseInt(page);
@@ -28,16 +29,10 @@ exports.getZones = async (req, res) => {
 			filter.isActive = isActive === "true";
 		}
 
-		// Handle zip code filter
-		if (zipCode) {
-			filter.zipCode = zipCode.toUpperCase();
-		}
-
 		// Search functionality
 		if (search) {
 			filter.$or = [
 				{ zoneName: { $regex: search, $options: "i" } },
-				{ zipCode: { $regex: search, $options: "i" } },
 				{ description: { $regex: search, $options: "i" } },
 			];
 		}
@@ -113,34 +108,6 @@ exports.getZone = async (req, res) => {
 	}
 };
 
-// @desc    Get zone by zip code
-// @route   GET /api/zones/zipcode/:zipCode
-// @access  Public
-exports.getZoneByZipCode = async (req, res) => {
-	try {
-		const { zipCode } = req.params;
-		const zone = await Zone.findByZipCode(zipCode);
-
-		if (!zone) {
-			return res.status(404).json({
-				success: false,
-				error: "No active zone found for this zip code",
-			});
-		}
-
-		res.status(200).json({
-			success: true,
-			data: zone,
-		});
-	} catch (error) {
-		console.error("Error fetching zone by zip code:", error);
-		res.status(500).json({
-			success: false,
-			error: "Server error while fetching zone",
-		});
-	}
-};
-
 // // @desc    Get active zones
 // // @route   GET /api/zones/active
 // // @access  Public
@@ -169,7 +136,6 @@ exports.createZone = async (req, res) => {
 	try {
 		const {
 			zoneName,
-			zipCode,
 			distance,
 			distanceUnit,
 			description,
@@ -181,31 +147,27 @@ exports.createZone = async (req, res) => {
 		} = req.body;
 
 		// Validate required fields
-		if (!zoneName || !zipCode || distance === undefined) {
+		if (!zoneName || distance === undefined) {
 			return res.status(400).json({
 				success: false,
-				error: "Zone name, zip code, and distance are required",
+				error: "Zone name and distance are required",
 			});
 		}
 
-		// Check if zone with same name or zip code already exists
+		// Check if zone with same name already exists
 		const existingZone = await Zone.findOne({
-			$or: [{ zoneName }, { zipCode: zipCode.toUpperCase() }],
+			zoneName: { $regex: `^${escapeRegex(zoneName)}$`, $options: "i" },
 		});
 
 		if (existingZone) {
 			return res.status(400).json({
 				success: false,
-				error:
-					existingZone.zoneName === zoneName
-						? "Zone with this name already exists"
-						: "Zone with this zip code already exists",
+				error: "Zone with this name already exists",
 			});
 		}
 
 		const zoneData = {
 			zoneName,
-			zipCode: zipCode.toUpperCase(),
 			distance: parseFloat(distance),
 			distanceUnit: distanceUnit || "km",
 			description,
@@ -263,7 +225,6 @@ exports.updateZone = async (req, res) => {
 	try {
 		const {
 			zoneName,
-			zipCode,
 			distance,
 			distanceUnit,
 			description,
@@ -284,34 +245,18 @@ exports.updateZone = async (req, res) => {
 			});
 		}
 
-		// Check for duplicate zone name or zip code (excluding current zone)
-		if (zoneName || zipCode) {
-			const duplicateCheck = {};
-			if (zoneName && zoneName !== zone.zoneName) {
-				duplicateCheck.zoneName = zoneName;
-			}
-			if (zipCode && zipCode.toUpperCase() !== zone.zipCode) {
-				duplicateCheck.zipCode = zipCode.toUpperCase();
-			}
+		// Check for duplicate zone name (excluding current zone)
+		if (zoneName && zoneName !== zone.zoneName) {
+			const existingZone = await Zone.findOne({
+				_id: { $ne: req.params.id },
+				zoneName: { $regex: `^${escapeRegex(zoneName)}$`, $options: "i" },
+			});
 
-			if (Object.keys(duplicateCheck).length > 0) {
-				const existingZone = await Zone.findOne({
-					$and: [
-						{ _id: { $ne: req.params.id } },
-						{
-							$or: Object.entries(duplicateCheck).map(([key, value]) => ({
-								[key]: value,
-							})),
-						},
-					],
+			if (existingZone) {
+				return res.status(400).json({
+					success: false,
+					error: "Zone with this name already exists",
 				});
-
-				if (existingZone) {
-					return res.status(400).json({
-						success: false,
-						error: "Zone with this name or zip code already exists",
-					});
-				}
 			}
 		}
 
@@ -321,7 +266,6 @@ exports.updateZone = async (req, res) => {
 		};
 
 		if (zoneName !== undefined) updateData.zoneName = zoneName;
-		if (zipCode !== undefined) updateData.zipCode = zipCode.toUpperCase();
 		if (distance !== undefined) updateData.distance = parseFloat(distance);
 		if (distanceUnit !== undefined) updateData.distanceUnit = distanceUnit;
 		if (description !== undefined) updateData.description = description;
@@ -561,26 +505,26 @@ exports.getZoneStats = async (req, res) => {
 	}
 };
 
-// @desc    Calculate delivery fee for zip code
+// @desc    Calculate delivery fee for zone/city
 // @route   POST /api/zones/calculate-delivery
 // @access  Public
 exports.calculateDeliveryFee = async (req, res) => {
 	try {
-		const { zipCode } = req.body;
+		const zoneName = req.body.zoneName || req.body.city;
 
-		if (!zipCode) {
+		if (!zoneName) {
 			return res.status(400).json({
 				success: false,
-				error: "Zip code is required",
+				error: "Zone name or city is required",
 			});
 		}
 
-		const zone = await Zone.findByZipCode(zipCode);
+		const zone = await Zone.findByName(zoneName);
 
 		if (!zone) {
 			return res.status(404).json({
 				success: false,
-				error: "No delivery zone found for this zip code",
+				error: "No delivery zone found for this city",
 			});
 		}
 
