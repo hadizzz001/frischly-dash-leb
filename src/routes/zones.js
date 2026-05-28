@@ -13,15 +13,17 @@ const {
 } = require("../controllers/zoneController");
 
 // Import middleware
-const { protect, authorize } = require("../middleware/auth");
+const { protect, authorize, optionalProtect } = require("../middleware/auth");
 
 const router = express.Router();
 
-// Public routes
-router.get("/", getZones);
+// Public-ish routes: respond based on caller. Anonymous requests see only
+// global zones; market tokens see only their market's zones; admin/manager
+// see every zone.
+router.get("/", optionalProtect, getZones);
 //router.get("/active", getActiveZones);
 router.post("/calculate-delivery", calculateDeliveryFee);
-router.get("/:id", getZone);
+router.get("/:id", optionalProtect, getZone);
 
 // Protected routes (require authentication)
 router.get(
@@ -30,19 +32,34 @@ router.get(
 	authorize("admin", "manager"),
 	getZoneStats
 );
-router.post("/", protect, authorize("admin", "manager", "staff"), createZone);
-router.put("/:id", protect, authorize("admin", "manager", "staff"), updateZone);
+router.post(
+	"/",
+	protect,
+	authorize("admin", "manager", "staff", "market", "market_manager", "market_staff"),
+	createZone
+);
+router.put(
+	"/:id",
+	protect,
+	authorize("admin", "manager", "staff", "market", "market_manager", "market_staff"),
+	updateZone
+);
 router.patch(
 	"/:id/status",
 	protect,
-	authorize("admin", "manager", "staff"),
+	authorize("admin", "manager", "staff", "market", "market_manager", "market_staff"),
 	updateZoneStatus
 );
-router.delete("/:id", protect, authorize("admin"), deleteZone);
+router.delete(
+	"/:id",
+	protect,
+	authorize("admin", "market", "market_manager"),
+	deleteZone
+);
 router.delete(
 	"/:id/permanent",
 	protect,
-	authorize("admin"),
+	authorize("admin", "market", "market_manager"),
 	permanentDeleteZone
 );
 

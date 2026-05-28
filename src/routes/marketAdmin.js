@@ -26,6 +26,9 @@ router.patch("/staff/:id/password", c.resetStaffPassword);
 router.delete("/staff/:id", c.deleteStaff);
 router.get("/rider-users", c.listRiderUsers);
 
+// Market drivers (Rider documents scoped to this market) — live location list
+router.get("/drivers", c.listMarketDrivers);
+
 // Categories
 router.get("/categories", c.categories.list);
 router.post(

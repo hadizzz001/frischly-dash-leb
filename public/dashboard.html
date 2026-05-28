@@ -205,6 +205,7 @@
 				/>
 				<h2>FRISCHLY Admin</h2>
 				<p>Management Dashboard</p>
+				<span id="sidebar-role-badge" class="sidebar-role-badge" style="display:none;"></span>
 			</div>
 			<ul class="sidebar-menu">
 				<li class="menu-item">
@@ -1466,13 +1467,14 @@
 											<th>Est. Time</th>
 											<th>Status</th>
 											<th>Created</th>
+											<th>Created By</th>
 											<th>Actions</th>
 										</tr>
 									</thead>
 									<tbody id="zones-table-body">
 										<tr>
 											<td
-												colspan="8"
+												colspan="9"
 												style="text-align: center; padding: 40px; color: #666"
 											>
 												No zones found. Click "Add Zone" to create one.
@@ -3292,6 +3294,7 @@
 
 						// Store current user and check admin access
 						currentUser = user;
+						updateSidebarRoleBadge(user.role);
 						checkAdminAccess(user);
 
 						// Show dashboard content
@@ -3579,6 +3582,26 @@
 			let allProducts = [];
 			let allCategories = [];
 			let allSubcategories = [];
+
+			// Pretty role labels for the sidebar badge.
+			const ROLE_LABELS = {
+				admin: "Admin",
+				manager: "Manager",
+				staff: "Staff",
+				rider: "Rider",
+				customer: "Customer",
+				market: "Market Owner",
+				market_manager: "Market Manager",
+				market_staff: "Market Staff",
+				market_driver: "Market Driver",
+			};
+			function updateSidebarRoleBadge(role) {
+				const el = document.getElementById("sidebar-role-badge");
+				if (!el || !role) return;
+				el.textContent = ROLE_LABELS[role] || String(role).toUpperCase();
+				el.className = "sidebar-role-badge role-" + role;
+				el.style.display = "";
+			}
 
 			// Check if user has management access and show/hide user management section
 			function checkAdminAccess(user) {
@@ -7476,6 +7499,39 @@
 
 			function displayRiders(riders) {
 				console.log("displayRiders called with:", riders); // Debug log
+				// Diagnostic: separate market riders vs normal riders to compare fields
+				if (Array.isArray(riders)) {
+					const marketRiders = riders.filter((r) => !!r.market);
+					const normalRiders = riders.filter((r) => !r.market);
+					console.group(
+						"%c[Rider Diagnostics]",
+						"color:#ffc300;font-weight:bold;"
+					);
+					console.log(
+						`Total: ${riders.length} | Market riders: ${marketRiders.length} | Normal riders: ${normalRiders.length}`
+					);
+					if (normalRiders.length) {
+						console.log("Sample NORMAL rider:", normalRiders[0]);
+						console.log("Normal rider keys:", Object.keys(normalRiders[0]));
+					}
+					if (marketRiders.length) {
+						console.log("Sample MARKET rider:", marketRiders[0]);
+						console.log("Market rider keys:", Object.keys(marketRiders[0]));
+					}
+					if (normalRiders.length && marketRiders.length) {
+						const normalKeys = new Set(Object.keys(normalRiders[0]));
+						const marketKeys = new Set(Object.keys(marketRiders[0]));
+						const missingOnMarket = [...normalKeys].filter(
+							(k) => !marketKeys.has(k)
+						);
+						const extraOnMarket = [...marketKeys].filter(
+							(k) => !normalKeys.has(k)
+						);
+						console.log("Keys missing on MARKET rider:", missingOnMarket);
+						console.log("Extra keys on MARKET rider:", extraOnMarket);
+					}
+					console.groupEnd();
+				}
 				const tableBody = document.getElementById("riders-table-body");
 				const countDisplay = document.getElementById("riders-count-display");
 
@@ -7499,13 +7555,13 @@
 						// Handle user information - API returns userInfo from aggregation
 						const userName = rider.userInfo
 							? rider.userInfo.name
-							: rider.user?.name || "N/A";
+							: (rider.user?.name || rider.name || "N/A");
 						const userEmail = rider.userInfo
 							? rider.userInfo.email
-							: rider.user?.email || "N/A";
+							: (rider.user?.email || rider.email || "N/A");
 						const userPhone = rider.userInfo
 							? rider.userInfo.phoneNumber
-							: rider.user?.phoneNumber || "N/A";
+							: (rider.user?.phoneNumber || rider.phoneNumber || "N/A");
 
 						// Handle completion rate
 						const completionRate = rider.completionRate
@@ -7537,14 +7593,25 @@
 								zoneTooltip = `All zones: ${rider.zones.join(", ")}`;
 							}
 						} else if (rider.zone) {
-							// Legacy single zone format
+							// Legacy single zone format or MarketRider zone string
 							zoneDisplay =
 								typeof rider.zone === "string"
 									? rider.zone
 									: rider.zone?.zoneName || "No Zone";
 						}
 
-						const statusBadge = getStatusBadge(rider.status);
+						let effectiveStatus = rider.status;
+						if (!effectiveStatus) {
+							effectiveStatus = !rider.isActive
+								? "offline"
+								: rider.isAvailable
+								? "available"
+								: "busy";
+						}
+						const statusBadge = getStatusBadge(effectiveStatus);
+						const isMarketRider = !!rider.market;
+						const vehiclePlate = rider.vehicleNumber || rider.vehiclePlate || "N/A";
+						const marketName = rider.marketInfo?.name || (isMarketRider ? "Market" : null);
 
 						return `
 							<tr>
@@ -7556,6 +7623,15 @@
 										<div>
 											<div style="font-weight: 500;">${userName}</div>
 											<div style="font-size: 12px; color: #666;">ID: ${rider._id.slice(-6)}</div>
+											${
+												marketName
+													? `<div style="font-size: 11px; color: #1976d2; margin-top: 2px;">
+														<i class="fas fa-store" style="font-size:10px;"></i> ${escapeHtml(marketName)}
+													</div>`
+													: `<div style="font-size: 11px; color: #888; margin-top: 2px;">
+														<i class="fas fa-globe" style="font-size:10px;"></i> Global
+													</div>`
+											}
 										</div>
 									</div>
 								</td>
@@ -7578,7 +7654,7 @@
 								</td>
 								<td>
 									<code style="background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-size: 12px;">
-										${rider.vehicleNumber || "N/A"}
+										${vehiclePlate}
 									</code>
 								</td>
 								<td>${statusBadge}</td>
@@ -7596,6 +7672,7 @@
 										}')" title="View Details">
 											👁️
 										</button>
+										${isMarketRider ? `<span style="color:#9aa4b2;font-size:12px;margin-left:6px;">Market rider — view only</span>` : `
 										<button class="btn-icon" onclick="editRider('${rider._id}')" title="Edit Rider">
 											✏️
 										</button>
@@ -7613,6 +7690,7 @@
 										}')" title="Delete Rider">
 											🗑️
 										</button>
+										`}
 									</div>
 								</td>
 							</tr>
@@ -7724,7 +7802,9 @@
 
 				tbody.innerHTML = zones
 					.map(
-						(zone, index) => `
+						(zone, index) => {
+							const isMarketZone = !!zone.market;
+							return `
 					<tr>
 						<td>${index + 1}</td>
 						<td>
@@ -7748,7 +7828,17 @@
 						</td>
 						<td>${new Date(zone.createdAt).toLocaleDateString()}</td>
 						<td>
+							${
+								zone.market && zone.market.name
+									? '<span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#fff3cd;color:#856404;font-size:0.85em;font-weight:600;">🏪 ' +
+									  zone.market.name +
+									  '</span>'
+									: '<span style="color:#999;">—</span>'
+							}
+						</td>
+						<td>
 							<div class="table-actions">
+								${isMarketZone ? `<span style="color:#9aa4b2;font-size:12px;">Market zone — view only</span>` : `
 								<button class="btn-icon" onclick="editZone('${zone._id}')" title="Edit">
 									✏️
 								</button>
@@ -7762,10 +7852,12 @@
 						}')" title="Delete">
 									🗑️
 								</button>
+								`}
 							</div>
 						</td>
 					</tr>
-				`
+				`;
+						}
 					)
 					.join("");
 			}
@@ -10857,8 +10949,10 @@
 							<select id="rider-vehicle" name="vehicleType" required>
 								<option value="">-- Select Vehicle --</option>
 								<option value="bike">Bike</option>
+								<option value="scooter">Scooter</option>
 								<option value="motorbike">Motorbike</option>
 								<option value="car">Car</option>
+								<option value="van">Van</option>
 								<option value="bicycle">Bicycle</option>
 							</select>
 						</div>
@@ -12150,10 +12244,10 @@
 						// Handle user information - API returns userInfo from aggregation
 						const userName = rider.userInfo
 							? rider.userInfo.name
-							: rider.user?.name || "N/A";
+							: (rider.user?.name || rider.name || "N/A");
 						const userEmail = rider.userInfo
 							? rider.userInfo.email
-							: rider.user?.email || "N/A";
+							: (rider.user?.email || rider.email || "N/A");
 
 						// Handle rating - it can be a number (from aggregation) or object (from direct query)
 						let rating = 0;
@@ -12177,12 +12271,24 @@
 								zoneTooltip = `All zones: ${rider.zones.join(", ")}`;
 							}
 						} else if (rider.zone) {
-							// Legacy single zone format
+							// Legacy single zone format or MarketRider zone string
 							zoneDisplay =
 								typeof rider.zone === "string"
 									? rider.zone
 									: rider.zone?.zoneName || "No Zone";
 						}
+
+						let effectiveStatus = rider.status;
+						if (!effectiveStatus) {
+							effectiveStatus = !rider.isActive
+								? "offline"
+								: rider.isAvailable
+								? "available"
+								: "busy";
+						}
+
+						const isMarketRider = !!rider.market;
+						const vehiclePlate = rider.vehicleNumber || rider.vehiclePlate || "N/A";
 
 						return `
 					<tr>
@@ -12200,7 +12306,7 @@
 						<td>
 							<div style="color: #333;">${escapeHtml(userEmail)}</div>
 							<div style="font-size: 12px; color: #666;">
-								${escapeHtml(rider.userInfo?.phoneNumber || rider.user?.phoneNumber || "N/A")}
+								${escapeHtml(rider.userInfo?.phoneNumber || rider.user?.phoneNumber || rider.phoneNumber || "N/A")}
 							</div>
 						</td>
 						<td>
@@ -12222,12 +12328,12 @@
 						</td>
 						<td>
 							<code style="background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-size: 12px;">
-								${escapeHtml(rider.vehicleNumber || "N/A")}
+								${escapeHtml(vehiclePlate)}
 							</code>
 						</td>
 						<td>
-							<span class="status-badge ${getStatusClass(rider.status)}">
-								${formatStatus(rider.status)}
+							<span class="status-badge ${getStatusClass(effectiveStatus)}">
+								${formatStatus(effectiveStatus)}
 							</span>
 						</td>
 						<td>
@@ -12246,9 +12352,6 @@
 								}')" title="View Details">
 									👁️
 								</button>
-								<button class="btn-icon" onclick="editRider('${rider._id}')" title="Edit Rider">
-									✏️
-								</button>
 								${
 									rider.currentLocation
 										? `<button class="btn-icon" onclick="viewRiderLocation('${rider._id}')" title="View Location">
@@ -12258,6 +12361,10 @@
 										📍
 									</button>`
 								}
+								${isMarketRider ? `<span style="color:#9aa4b2;font-size:12px;margin-left:6px;">Market rider — view only</span>` : `
+								<button class="btn-icon" onclick="editRider('${rider._id}')" title="Edit Rider">
+									✏️
+								</button>
 								<button class="btn-icon ${
 									rider.status === "available" ? "btn-danger" : ""
 								}" onclick="toggleRiderStatus('${rider._id}', '${
@@ -12272,6 +12379,7 @@
 								}')" title="Delete Rider">
 									🗑️
 								</button>
+								`}
 							</div>
 						</td>
 					</tr>

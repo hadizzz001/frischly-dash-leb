@@ -3,6 +3,64 @@ const mongoose = require("mongoose");
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+// Returns the tenant scope filter for the current requester.
+// - Market token / market_* staff → { market: <theirMarketId> }
+// - Admin / manager → no filter (they see *all* zones, including each market's)
+// - Anonymous / other staff → only global zones (market === null)
+function tenantZoneFilter(req) {
+	if (req && req.market && req.market._id) {
+		return { market: req.market._id };
+	}
+	if (req && req.user) {
+		if (
+			["market_staff", "market_manager", "market_driver"].includes(
+				req.user.role
+			)
+		) {
+			const mid = req.user.marketId || req.user.market;
+			if (mid) return { market: mid };
+		}
+		// Main admin / manager see every zone (global + every market's)
+		if (["admin", "manager"].includes(req.user.role)) {
+			return {};
+		}
+	}
+	// Public / staff / rider → only global zones
+	return { market: null };
+}
+
+function tenantMarketId(req) {
+	if (req && req.market && req.market._id) return req.market._id;
+	if (req && req.user) {
+		if (
+			["market", "market_staff", "market_manager", "market_driver"].includes(
+				req.user.role
+			)
+		) {
+			return req.user.marketId || req.user.market || null;
+		}
+	}
+	return null;
+}
+
+// Strict scope used for writes (create/update/delete). Each side only mutates
+// their own zones: a market touches its own (market === marketId), an admin
+// touches only the global ones (market === null).
+function tenantZoneWriteFilter(req) {
+	if (req && req.market && req.market._id) {
+		return { market: req.market._id };
+	}
+	if (
+		req &&
+		req.user &&
+		["market_staff", "market_manager", "market_driver"].includes(req.user.role)
+	) {
+		const mid = req.user.marketId || req.user.market;
+		if (mid) return { market: mid };
+	}
+	return { market: null };
+}
+
 // @desc    Get all zones
 // @route   GET /api/zones
 // @access  Public
@@ -21,8 +79,8 @@ exports.getZones = async (req, res) => {
 		const limitNum = parseInt(limit);
 		const skip = (pageNum - 1) * limitNum;
 
-		// Build filter object
-		const filter = {};
+		// Build filter object (tenant-scoped)
+		const filter = { ...tenantZoneFilter(req) };
 
 		// Handle isActive filter
 		if (isActive !== "all") {
@@ -45,6 +103,7 @@ exports.getZones = async (req, res) => {
 		const zones = await Zone.find(filter)
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
+			.populate("market", "name username")
 			.sort(sortObj)
 			.skip(skip)
 			.limit(limitNum);
@@ -80,7 +139,8 @@ exports.getZone = async (req, res) => {
 	try {
 		const zone = await Zone.findById(req.params.id)
 			.populate("createdBy", "name email")
-			.populate("updatedBy", "name email");
+			.populate("updatedBy", "name email")
+			.populate("market", "name username");
 
 		if (!zone) {
 			return res.status(404).json({
@@ -154,8 +214,10 @@ exports.createZone = async (req, res) => {
 			});
 		}
 
-		// Check if zone with same name already exists
+		// Check if zone with same name already exists *within the same tenant*
+		const tenantId = tenantMarketId(req);
 		const existingZone = await Zone.findOne({
+			market: tenantId,
 			zoneName: { $regex: `^${escapeRegex(zoneName)}$`, $options: "i" },
 		});
 
@@ -176,8 +238,12 @@ exports.createZone = async (req, res) => {
 			priority: priority || 1,
 			coordinates,
 			boundaries,
-			createdBy: req.user.id,
+			market: tenantId,
 		};
+		// Only attach createdBy when the requester is a real User (not a market token).
+		if (req.user && !req.user.isMarket && req.user.id) {
+			zoneData.createdBy = req.user.id;
+		}
 
 		const zone = await Zone.create(zoneData);
 
@@ -236,7 +302,10 @@ exports.updateZone = async (req, res) => {
 			isActive,
 		} = req.body;
 
-		let zone = await Zone.findById(req.params.id);
+		let zone = await Zone.findOne({
+			_id: req.params.id,
+			...tenantZoneWriteFilter(req),
+		});
 
 		if (!zone) {
 			return res.status(404).json({
@@ -245,10 +314,11 @@ exports.updateZone = async (req, res) => {
 			});
 		}
 
-		// Check for duplicate zone name (excluding current zone)
+		// Check for duplicate zone name within the same tenant (excluding current zone)
 		if (zoneName && zoneName !== zone.zoneName) {
 			const existingZone = await Zone.findOne({
 				_id: { $ne: req.params.id },
+				market: zone.market,
 				zoneName: { $regex: `^${escapeRegex(zoneName)}$`, $options: "i" },
 			});
 
@@ -261,9 +331,10 @@ exports.updateZone = async (req, res) => {
 		}
 
 		// Update fields
-		const updateData = {
-			updatedBy: req.user.id,
-		};
+		const updateData = {};
+		if (req.user && !req.user.isMarket && req.user.id) {
+			updateData.updatedBy = req.user.id;
+		}
 
 		if (zoneName !== undefined) updateData.zoneName = zoneName;
 		if (distance !== undefined) updateData.distance = parseFloat(distance);
@@ -328,12 +399,13 @@ exports.updateZoneStatus = async (req, res) => {
 			});
 		}
 
-		const zone = await Zone.findByIdAndUpdate(
-			req.params.id,
-			{
-				isActive,
-				updatedBy: req.user.id,
-			},
+		const patch = { isActive };
+		if (req.user && !req.user.isMarket && req.user.id) {
+			patch.updatedBy = req.user.id;
+		}
+		const zone = await Zone.findOneAndUpdate(
+			{ _id: req.params.id, ...tenantZoneWriteFilter(req) },
+			patch,
 			{ new: true, runValidators: true }
 		);
 
@@ -371,12 +443,13 @@ exports.updateZoneStatus = async (req, res) => {
 // @access  Private (Admin)
 exports.deleteZone = async (req, res) => {
 	try {
-		const zone = await Zone.findByIdAndUpdate(
-			req.params.id,
-			{
-				isActive: false,
-				updatedBy: req.user.id,
-			},
+		const patch = { isActive: false };
+		if (req.user && !req.user.isMarket && req.user.id) {
+			patch.updatedBy = req.user.id;
+		}
+		const zone = await Zone.findOneAndUpdate(
+			{ _id: req.params.id, ...tenantZoneWriteFilter(req) },
+			patch,
 			{ new: true }
 		);
 
@@ -414,7 +487,10 @@ exports.deleteZone = async (req, res) => {
 // @access  Private (Admin)
 exports.permanentDeleteZone = async (req, res) => {
 	try {
-		const zone = await Zone.findByIdAndDelete(req.params.id);
+		const zone = await Zone.findOneAndDelete({
+			_id: req.params.id,
+			...tenantZoneWriteFilter(req),
+		});
 
 		if (!zone) {
 			return res.status(404).json({

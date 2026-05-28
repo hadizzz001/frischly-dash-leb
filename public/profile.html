@@ -233,7 +233,7 @@
 					</div>
 
 					<div class="profile-section" id="rider-location-section" style="display:none;">
-						<h3>🛰️ Live Location (Riders)</h3>
+						<h3>🛰️ Live Location</h3>
 						<div class="profile-item">
 							<span class="profile-label">Status:</span>
 							<span class="profile-value" id="gps-status" style="color:#888;">
@@ -725,8 +725,8 @@
 						roleBadge.textContent = user.role.toUpperCase();
 						roleBadge.className = `role-badge ${user.role}`;
 
-						// Show the rider live-location section + try auto-start
-						if (user.role === "rider") {
+						// Show the live-location section for riders and market drivers.
+						if (user.role === "rider" || user.role === "market_driver") {
 							const sec = document.getElementById(
 								"rider-location-section"
 							);

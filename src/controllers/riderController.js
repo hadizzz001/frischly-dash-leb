@@ -122,6 +122,7 @@ exports.getRiders = async (req, res) => {
 						lastActiveAt: 1,
 						currentLocation: 1,
 						createdAt: 1,
+						market: 1,
 						"userInfo.name": 1,
 						"userInfo.email": 1,
 						"userInfo.phoneNumber": 1,
@@ -141,6 +142,61 @@ exports.getRiders = async (req, res) => {
 
 		const riders = await ridersQuery;
 
+		// Populate market info (name) so admin can see which market each rider belongs to
+		const Market = require("../models/Market");
+		const marketIds = [
+			...new Set(
+				riders
+					.map((r) => (r.market ? r.market.toString() : null))
+					.filter(Boolean)
+			),
+		];
+		let marketsById = {};
+		if (marketIds.length) {
+			const markets = await Market.find({ _id: { $in: marketIds } })
+				.select("_id name slug")
+				.lean();
+			marketsById = markets.reduce((acc, m) => {
+				acc[m._id.toString()] = m;
+				return acc;
+			}, {});
+		}
+		const enrichedRiders = riders.map((r) => {
+			const obj = typeof r.toObject === "function" ? r.toObject() : { ...r };
+			if (obj.market) {
+				const m = marketsById[obj.market.toString()];
+				obj.marketInfo = m
+					? { _id: m._id, name: m.name, slug: m.slug }
+					: { _id: obj.market, name: "Unknown Market" };
+			} else {
+				obj.marketInfo = null;
+			}
+			return obj;
+		});
+
+		// Diagnostic logging: compare market riders vs normal riders payloads
+		try {
+			const marketRiders = enrichedRiders.filter((r) => !!r.market);
+			const normalRiders = enrichedRiders.filter((r) => !r.market);
+			console.log(
+				`[getRiders] Returning ${enrichedRiders.length} riders | market=${marketRiders.length} | normal=${normalRiders.length}`
+			);
+			if (normalRiders[0]) {
+				console.log(
+					"[getRiders] Sample NORMAL rider:",
+					JSON.stringify(normalRiders[0], null, 2)
+				);
+			}
+			if (marketRiders[0]) {
+				console.log(
+					"[getRiders] Sample MARKET rider:",
+					JSON.stringify(marketRiders[0], null, 2)
+				);
+			}
+		} catch (logErr) {
+			console.warn("[getRiders] diagnostic log failed:", logErr.message);
+		}
+
 		// Get total count for pagination
 		const totalRiders = await Rider.countDocuments(filter);
 		const totalPages = Math.ceil(totalRiders / limitNum);
@@ -148,7 +204,7 @@ exports.getRiders = async (req, res) => {
 		res.json({
 			success: true,
 			data: {
-				riders,
+				riders: enrichedRiders,
 				pagination: {
 					currentPage: pageNum,
 					totalPages,
@@ -157,7 +213,7 @@ exports.getRiders = async (req, res) => {
 					hasPrev: pageNum > 1,
 				},
 			},
-			message: `Successfully retrieved ${riders.length} riders`,
+			message: `Successfully retrieved ${enrichedRiders.length} riders`,
 		});
 	} catch (error) {
 		console.error("Error getting riders:", error);
@@ -338,6 +394,20 @@ exports.updateRider = async (req, res) => {
 			});
 		}
 
+		// Main admin / manager have view-only access to market-owned riders.
+		// Only the market itself (or its market_* staff via marketAdmin routes)
+		// can modify a rider that belongs to a market.
+		if (
+			rider.market &&
+			(req.user.role === "admin" || req.user.role === "manager")
+		) {
+			return res.status(403).json({
+				success: false,
+				message:
+					"This rider belongs to a market. Main admins have view-only access.",
+			});
+		}
+
 		// Check authorization
 		if (
 			req.user.role !== "admin" &&
@@ -425,6 +495,18 @@ exports.updateRiderStatus = async (req, res) => {
 			return res.status(404).json({
 				success: false,
 				message: "Rider not found",
+			});
+		}
+
+		// Main admin / manager have view-only access to market-owned riders.
+		if (
+			rider.market &&
+			(req.user.role === "admin" || req.user.role === "manager")
+		) {
+			return res.status(403).json({
+				success: false,
+				message:
+					"This rider belongs to a market. Main admins have view-only access.",
 			});
 		}
 
@@ -670,6 +752,18 @@ exports.deleteRider = async (req, res) => {
 			return res.status(404).json({
 				success: false,
 				message: "Rider not found",
+			});
+		}
+
+		// Main admin / manager have view-only access to market-owned riders.
+		if (
+			rider.market &&
+			(req.user.role === "admin" || req.user.role === "manager")
+		) {
+			return res.status(403).json({
+				success: false,
+				message:
+					"This rider belongs to a market. Main admins have view-only access.",
 			});
 		}
 

@@ -13,7 +13,7 @@ const marketRiderSchema = new mongoose.Schema(
 		email: { type: String, trim: true, lowercase: true },
 		vehicleType: {
 			type: String,
-			enum: ["bike", "scooter", "car", "van", "other"],
+			enum: ["bike", "scooter", "motorbike", "car", "van", "bicycle", "other"],
 			default: "scooter",
 		},
 		vehiclePlate: { type: String, trim: true, maxlength: 30 },

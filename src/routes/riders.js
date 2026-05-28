@@ -30,28 +30,28 @@ router.get(
 
 router.get("/", protect, authorize("admin", "manager"), getRiders);
 
-router.get("/:id", protect, authorize("admin", "manager", "rider"), getRider);
+router.get("/:id", protect, authorize("admin", "manager", "rider", "market_driver"), getRider);
 
 router.post("/", protect, authorize("admin", "manager"), createRider);
 
 router.put(
 	"/:id",
 	protect,
-	authorize("admin", "manager", "rider"),
+	authorize("admin", "manager", "rider", "market_driver"),
 	updateRider
 );
 
 router.patch(
 	"/:id/status",
 	protect,
-	authorize("admin", "manager", "rider"),
+	authorize("admin", "manager", "rider", "market_driver"),
 	updateRiderStatus
 );
 
 router.patch(
 	"/location",
 	protect,
-	authorize("admin", "manager", "rider"),
+	authorize("admin", "manager", "rider", "market_driver"),
 	updateRiderLocation
 );
 

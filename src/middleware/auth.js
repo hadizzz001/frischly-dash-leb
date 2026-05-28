@@ -104,4 +104,48 @@ const authorize = (...roles) => {
 	};
 };
 
-module.exports = { protect, authorize };
+// Like `protect` but never fails on missing/invalid token. If the request
+// carries a valid token, `req.user` (and `req.market` for market tokens) is
+// populated. Otherwise the request continues as an anonymous request.
+// Useful for endpoints whose response depends on who's calling but which must
+// still work for the public.
+const optionalProtect = async (req, res, next) => {
+	try {
+		let token;
+		if (
+			req.headers.authorization &&
+			req.headers.authorization.startsWith("Bearer")
+		) {
+			token = req.headers.authorization.split(" ")[1];
+		}
+		if (!token) return next();
+
+		const decoded = verifyToken(token);
+		if (!decoded) return next();
+
+		if (decoded.isMarket) {
+			const market = await Market.findById(decoded.id);
+			if (market && market.isActive) {
+				req.market = market;
+				req.user = {
+					id: market._id,
+					_id: market._id,
+					name: market.name,
+					email: market.email || `${market.username}@market.local`,
+					role: "market",
+					marketId: market._id,
+					isMarket: true,
+				};
+			}
+			return next();
+		}
+		const user = await User.findById(decoded.id).select("-password");
+		if (user && user.isActive) req.user = user;
+		return next();
+	} catch (e) {
+		// Swallow any token error and continue anonymously
+		return next();
+	}
+};
+
+module.exports = { protect, authorize, optionalProtect };

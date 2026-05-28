@@ -9,7 +9,6 @@ const zoneSchema = new mongoose.Schema(
 			required: [true, "Zone name is required"],
 			trim: true,
 			maxlength: [100, "Zone name cannot exceed 100 characters"],
-			unique: true,
 		},
 		distance: {
 			type: Number,
@@ -72,11 +71,19 @@ const zoneSchema = new mongoose.Schema(
 		createdBy: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "User",
-			required: true,
+			required: false,
 		},
 		updatedBy: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "User",
+		},
+		// Optional tenant link. When null, the zone is global (admin-owned).
+		// When set, it belongs to a specific market and is only visible to that market.
+		market: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Market",
+			default: null,
+			index: true,
 		},
 	},
 	{
@@ -87,7 +94,7 @@ const zoneSchema = new mongoose.Schema(
 );
 
 // Index for better query performance
-zoneSchema.index({ zoneName: 1 });
+zoneSchema.index({ market: 1, zoneName: 1 }, { unique: true });
 zoneSchema.index({ isActive: 1 });
 zoneSchema.index({ priority: -1 });
 

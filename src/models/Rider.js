@@ -8,6 +8,14 @@ const riderSchema = new mongoose.Schema(
 			required: [true, "User reference is required"],
 			unique: true,
 		},
+		// Optional tenant link: when set, this rider belongs to a specific market
+		// (the user is a `market_driver`). When null, this is a global/admin rider.
+		market: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Market",
+			default: null,
+			index: true,
+		},
 		// Rider specific details
 		zones: [
 			{
@@ -40,7 +48,7 @@ const riderSchema = new mongoose.Schema(
 		},
 		vehicleType: {
 			type: String,
-			enum: ["bike", "motorbike", "car", "bicycle"],
+			enum: ["bike", "scooter", "motorbike", "car", "van", "bicycle", "other"],
 			required: [true, "Vehicle type is required"],
 		},
 		vehicleNumber: {
@@ -322,6 +330,7 @@ riderSchema.statics.getRidersWithStats = function (filter = {}) {
 				lastActiveAt: 1,
 				currentLocation: 1,
 				createdAt: 1,
+				market: 1,
 				"userInfo.name": 1,
 				"userInfo.email": 1,
 				"userInfo.phoneNumber": 1,

@@ -139,6 +139,19 @@ const normalizeShelfPayload = (body) => ({
 });
 
 const normalizeVehicleType = (vehicleType) => {
+	if (!vehicleType) return "scooter";
+	const key = String(vehicleType).trim().toLowerCase();
+	const map = {
+		bicycle: "bicycle",
+		bike: "bike",
+		motorbike: "motorbike",
+		scooter: "scooter",
+		car: "car",
+		van: "van",
+		other: "other",
+	};
+	return map[key] || "other";
+};
 
 const buildDateFilter = ({ timeRange, dateFrom, dateTo } = {}) => {
 	const dateFilter = {};
@@ -186,19 +199,6 @@ const paginationMeta = (page, limit, totalProducts) => {
 		limit,
 	};
 };
-	if (!vehicleType) return vehicleType;
-	const key = String(vehicleType).trim().toLowerCase();
-	const map = {
-		bicycle: "bike",
-		bike: "bike",
-		motorbike: "scooter",
-		scooter: "scooter",
-		car: "car",
-		van: "van",
-		other: "other",
-	};
-	return map[key] || "other";
-};
 
 const serializeAnnouncement = (item) => {
 	const announcement = item && item.toObject ? item.toObject() : { ...(item || {}) };
@@ -222,9 +222,12 @@ const normalizeRiderPayload = async (body) => {
 	};
 
 	if (body.userId && (!data.name || !data.phoneNumber || !data.email)) {
-		const user = await User.findOne({ _id: body.userId, role: "rider" }).select(
-			"name phoneNumber email",
-		);
+		// Market drivers have role 'market_driver'; admin riders have role 'rider'.
+		// Accept either so the rider record gets its name/phone/email auto-filled.
+		const user = await User.findOne({
+			_id: body.userId,
+			role: { $in: ["rider", "market_driver"] },
+		}).select("name phoneNumber email");
 		if (user) {
 			data.name = firstDefined(data.name, user.name);
 			data.phoneNumber = firstDefined(data.phoneNumber, user.phoneNumber);
@@ -243,7 +246,10 @@ exports.getDashboard = async (req, res) => {
 			await Promise.all([
 				Product.countDocuments({ market: marketId, isActive: true }),
 				Order.countDocuments({ market: marketId }),
-				MarketRider.countDocuments({ market: marketId, isActive: true }),
+				require("../models/Rider").countDocuments({
+					market: marketId,
+					isActive: true,
+				}),
 				User.countDocuments({
 					role: "customer",
 					// Customers are global; show count of customers who placed an order at this market
@@ -317,6 +323,14 @@ exports.listStaff = async (req, res) => {
 			market: req.marketId,
 			role: { $in: MARKET_USER_ROLES },
 		};
+		// Optional role filter: ?role=market_driver
+		if (req.query.role) {
+			const roles = String(req.query.role)
+				.split(",")
+				.map((r) => r.trim())
+				.filter((r) => MARKET_USER_ROLES.includes(r));
+			if (roles.length) filter.role = { $in: roles };
+		}
 		if (search) {
 			filter.$or = [
 				{ name: new RegExp(search, "i") },
@@ -341,7 +355,7 @@ exports.listStaff = async (req, res) => {
 
 exports.createStaff = async (req, res) => {
 	try {
-		const { name, email, phoneNumber, password, address, role } = req.body;
+		const { name, email, phoneNumber, password, address, role, zones, vehicleType, vehicleNumber } = req.body;
 		if (!name || !email || !phoneNumber || !password) {
 			return fail(res, 400, "name, email, phoneNumber and password are required");
 		}
@@ -359,6 +373,40 @@ exports.createStaff = async (req, res) => {
 			},
 			emailConfirmed: true,
 		});
+
+		// Market drivers are real Riders scoped to a market — auto-create the
+		// Rider profile so the existing rider endpoints (location, status, list,
+		// etc.) work out of the box.
+		if (safeRole === "market_driver") {
+			try {
+				const Rider = require("../models/Rider");
+				await Rider.create({
+					user: user._id,
+					market: req.marketId,
+					zones:
+						Array.isArray(zones) && zones.length ? zones : ["Default"],
+					vehicleType: vehicleType || "motorbike",
+					vehicleNumber: vehicleNumber || undefined,
+					status: "available",
+					isActive: true,
+					isVerified: true,
+				});
+			} catch (riderErr) {
+				console.error(
+					"[market-admin] Failed to auto-create Rider for market_driver:",
+					riderErr,
+				);
+				// Roll back the user so we don't leave a driver without a Rider doc.
+				await User.deleteOne({ _id: user._id });
+				return fail(
+					res,
+					400,
+					"Failed to create driver profile: " +
+						(riderErr.message || "unknown error"),
+				);
+			}
+		}
+
 		const safe = user.toObject();
 		delete safe.password;
 		created(res, safe, "Staff created");
@@ -422,6 +470,15 @@ exports.deleteStaff = async (req, res) => {
 			market: req.marketId,
 		});
 		if (!user) return fail(res, 404, "Staff not found");
+		// If the deleted user was a market_driver, also delete the linked Rider doc.
+		if (user.role === "market_driver") {
+			try {
+				const Rider = require("../models/Rider");
+				await Rider.deleteOne({ user: user._id });
+			} catch (e) {
+				console.error("[market-admin] Failed to delete Rider for driver:", e);
+			}
+		}
 		ok(res, { id: user._id }, "Staff deleted");
 	} catch (err) {
 		handleErr(res, err);
@@ -430,10 +487,49 @@ exports.deleteStaff = async (req, res) => {
 
 exports.listRiderUsers = async (req, res) => {
 	try {
-		const users = await User.find({ role: "rider", isActive: true })
-			.select("name email phoneNumber role isActive")
+		// Market-scoped: only return this market's own drivers.
+		// In the market world, a "rider" is a User with role 'market_driver'
+		// that belongs to req.marketId.
+		const Rider = require("../models/Rider");
+		const users = await User.find({
+			market: req.marketId,
+			role: "market_driver",
+			isActive: true,
+		})
+			.select("name email phoneNumber role isActive market")
 			.sort({ name: 1 });
+
+		// By default we return ALL of this market's drivers (most market_driver
+		// users already have an auto-created Rider doc, so filtering linked ones
+		// out would leave the dropdown empty). Pass ?excludeLinked=true to hide
+		// drivers that are already linked to a Rider document.
+		if (req.query.excludeLinked === "true") {
+			const linkedUserIds = await Rider.find({
+				user: { $in: users.map((u) => u._id) },
+			}).distinct("user");
+			const linkedSet = new Set(linkedUserIds.map((id) => String(id)));
+			return ok(res, users.filter((u) => !linkedSet.has(String(u._id))));
+		}
 		ok(res, users);
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+// ───────────────────────── market drivers (live location) ─────────────────────────
+// Market drivers are real Rider documents scoped to a market.
+// A market_driver User has a Rider doc (Rider.market = market, Rider.user = user)
+// and pushes its GPS via the standard PATCH /api/riders/location endpoint.
+exports.listMarketDrivers = async (req, res) => {
+	try {
+		const Rider = require("../models/Rider");
+		const riders = await Rider.find({
+			market: req.marketId,
+			isActive: true,
+		})
+			.populate("user", "name email phoneNumber address isActive role")
+			.sort({ createdAt: -1 });
+		ok(res, riders);
 	} catch (err) {
 		handleErr(res, err);
 	}
@@ -1297,44 +1393,250 @@ exports.getAllCategoryProductCounts = async (req, res) => {
 };
 
 // ───────────────────────── riders ─────────────────────────
-exports.riders = crud(
-	MarketRider,
-	[
-		"name",
-		"phoneNumber",
-		"email",
-		"vehicleType",
-		"vehiclePlate",
-		"zone",
-		"isActive",
-		"isAvailable",
-		"notes",
-	],
-	{
-		searchFields: ["name", "phoneNumber", "vehiclePlate", "zone"],
-		normalize: normalizeRiderPayload,
+// IMPORTANT: market riders are stored in the global `Rider` collection
+// (with `market` set to req.marketId) — NOT in a separate MarketRider
+// collection. This guarantees a single source of truth so the main admin
+// rider page and the market admin rider page show exactly the same record
+// with all fields (zones, vehicleNumber, status, etc.).
+const Rider = require("../models/Rider");
+
+// Build a frontend-friendly rider object that works for both the market
+// admin table renderer and the main admin table renderer.
+const serializeRider = (rider) => {
+	if (!rider) return rider;
+	const obj = typeof rider.toObject === "function" ? rider.toObject() : { ...rider };
+	const user = obj.user && typeof obj.user === "object" ? obj.user : null;
+	if (user) {
+		obj.userInfo = {
+			name: user.name,
+			email: user.email,
+			phoneNumber: user.phoneNumber,
+		};
+		obj.name = user.name;
+		obj.email = user.email;
+		obj.phoneNumber = user.phoneNumber;
+	}
+	// Convenience aliases used by some frontends
+	if (obj.vehicleNumber !== undefined) obj.vehiclePlate = obj.vehicleNumber;
+	if (Array.isArray(obj.zones) && obj.zones.length) obj.zone = obj.zones[0];
+	return obj;
+};
+
+exports.riders = {
+	list: async (req, res) => {
+		try {
+			const { page, limit, skip } = paginate(req.query);
+			const search = (req.query.search || "").trim();
+			const filter = { market: req.marketId };
+			if (req.query.isActive && req.query.isActive !== "all") {
+				filter.isActive = req.query.isActive === "true";
+			}
+			if (req.query.status) filter.status = req.query.status;
+			if (req.query.vehicleType) filter.vehicleType = req.query.vehicleType;
+			if (req.query.zone) filter.zones = req.query.zone;
+
+			let q = Rider.find(filter)
+				.populate("user", "name email phoneNumber")
+				.sort({ createdAt: -1 })
+				.skip(skip)
+				.limit(limit);
+
+			let [items, total] = await Promise.all([
+				q.exec(),
+				Rider.countDocuments(filter),
+			]);
+
+			let data = items.map(serializeRider);
+			if (search) {
+				const re = new RegExp(escapeRegex(search), "i");
+				data = data.filter(
+					(r) =>
+						re.test(r.name || "") ||
+						re.test(r.email || "") ||
+						re.test(r.phoneNumber || "") ||
+						re.test(r.vehicleNumber || "") ||
+						(Array.isArray(r.zones) && r.zones.some((z) => re.test(z))),
+				);
+			}
+
+			res.json({
+				success: true,
+				message: "OK",
+				data,
+				meta: { total, page, limit },
+			});
+		} catch (err) {
+			handleErr(res, err);
+		}
 	},
-);
+
+	get: async (req, res) => {
+		try {
+			const rider = await Rider.findOne({
+				_id: req.params.id,
+				market: req.marketId,
+			}).populate("user", "name email phoneNumber");
+			if (!rider) return fail(res, 404, "Rider not found");
+			ok(res, serializeRider(rider));
+		} catch (err) {
+			handleErr(res, err);
+		}
+	},
+
+	create: async (req, res) => {
+		try {
+			const body = req.body || {};
+			const userId = body.userId || body.user;
+			if (!userId) {
+				return fail(
+					res,
+					400,
+					"userId is required — pick an existing market driver user",
+				);
+			}
+
+			// Make sure the user exists and belongs to this market with the right role.
+			const user = await User.findOne({
+				_id: userId,
+				market: req.marketId,
+				role: { $in: ["market_driver", "rider"] },
+			}).select("_id name email phoneNumber role");
+			if (!user) {
+				return fail(
+					res,
+					400,
+					"Selected user is not a market driver of this market",
+				);
+			}
+
+			// Find-or-update: never create a duplicate Rider for the same user.
+			const existing = await Rider.findOne({ user: user._id });
+
+			const zones =
+				Array.isArray(body.zones) && body.zones.length
+					? body.zones
+					: body.zone
+						? [body.zone]
+						: undefined;
+
+			const patch = {
+				market: req.marketId,
+				...(body.vehicleType !== undefined && {
+					vehicleType: body.vehicleType,
+				}),
+				...((body.vehicleNumber !== undefined ||
+					body.vehiclePlate !== undefined) && {
+					vehicleNumber: body.vehicleNumber || body.vehiclePlate,
+				}),
+				...(zones !== undefined && { zones }),
+				...(body.status !== undefined && { status: body.status }),
+				...(body.isActive !== undefined && { isActive: body.isActive }),
+				...(body.isVerified !== undefined && { isVerified: body.isVerified }),
+				...(body.workingHours !== undefined && {
+					workingHours: body.workingHours,
+				}),
+			};
+
+			let rider;
+			if (existing) {
+				Object.assign(existing, patch);
+				await existing.save();
+				rider = existing;
+			} else {
+				rider = await Rider.create({
+					user: user._id,
+					zones: zones && zones.length ? zones : ["Default"],
+					vehicleType: patch.vehicleType || "motorbike",
+					vehicleNumber: patch.vehicleNumber,
+					status: patch.status || "available",
+					isActive: patch.isActive !== false,
+					isVerified: patch.isVerified !== false,
+					market: req.marketId,
+					workingHours: patch.workingHours,
+				});
+			}
+
+			await rider.populate("user", "name email phoneNumber");
+			created(res, serializeRider(rider), existing ? "Rider updated" : "Rider created");
+		} catch (err) {
+			handleErr(res, err);
+		}
+	},
+
+	update: async (req, res) => {
+		try {
+			const body = req.body || {};
+			const zones =
+				Array.isArray(body.zones) && body.zones.length
+					? body.zones
+					: body.zone
+						? [body.zone]
+						: undefined;
+			const patch = {
+				...(body.vehicleType !== undefined && {
+					vehicleType: body.vehicleType,
+				}),
+				...((body.vehicleNumber !== undefined ||
+					body.vehiclePlate !== undefined) && {
+					vehicleNumber: body.vehicleNumber || body.vehiclePlate,
+				}),
+				...(zones !== undefined && { zones }),
+				...(body.status !== undefined && { status: body.status }),
+				...(body.isActive !== undefined && { isActive: body.isActive }),
+				...(body.isVerified !== undefined && { isVerified: body.isVerified }),
+				...(body.workingHours !== undefined && {
+					workingHours: body.workingHours,
+				}),
+			};
+
+			const rider = await Rider.findOneAndUpdate(
+				{ _id: req.params.id, market: req.marketId },
+				patch,
+				{ new: true, runValidators: true },
+			).populate("user", "name email phoneNumber");
+			if (!rider) return fail(res, 404, "Rider not found");
+			ok(res, serializeRider(rider), "Rider updated");
+		} catch (err) {
+			handleErr(res, err);
+		}
+	},
+
+	remove: async (req, res) => {
+		try {
+			const rider = await Rider.findOneAndDelete({
+				_id: req.params.id,
+				market: req.marketId,
+			});
+			if (!rider) return fail(res, 404, "Rider not found");
+			ok(res, { id: rider._id }, "Deleted");
+		} catch (err) {
+			handleErr(res, err);
+		}
+	},
+};
 
 exports.updateRiderStatus = async (req, res) => {
 	try {
 		const { status } = req.body;
 		if (!status) return fail(res, 400, "status is required");
-		const statusMap = {
-			available: { isActive: true, isAvailable: true },
-			offline: { isAvailable: false },
-			inactive: { isActive: false, isAvailable: false },
+		// Map UI status values to Rider model fields.
+		const statusUpdate = {
+			available: { status: "available", isActive: true },
+			busy: { status: "busy", isActive: true },
+			offline: { status: "offline" },
+			"on-break": { status: "on-break" },
+			inactive: { status: "offline", isActive: false },
 		};
-		const update = statusMap[status];
+		const update = statusUpdate[status];
 		if (!update) return fail(res, 400, "Invalid rider status");
 
-		const rider = await MarketRider.findOneAndUpdate(
+		const rider = await Rider.findOneAndUpdate(
 			{ _id: req.params.id, market: req.marketId },
 			update,
 			{ new: true, runValidators: true },
-		);
+		).populate("user", "name email phoneNumber");
 		if (!rider) return fail(res, 404, "Rider not found");
-		ok(res, rider, "Rider status updated");
+		ok(res, serializeRider(rider), "Rider status updated");
 	} catch (err) {
 		handleErr(res, err);
 	}

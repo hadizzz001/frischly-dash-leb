@@ -205,6 +205,7 @@
 				/>
 				<h2>FRISCHLY Admin</h2>
 				<p>Market Dashboard</p>
+				<span id="sidebar-role-badge" class="sidebar-role-badge" style="display:none;"></span>
 			</div>
 			<ul class="sidebar-menu">
 				<li class="menu-item">
@@ -1371,8 +1372,8 @@
 							<button class="btn btn-secondary" onclick="refreshRiders()">
 								🔄 Refresh
 							</button>
-							<button class="btn btn-info" onclick="window.location.href='riderslocation.html'" style="background-color: #17a2b8; color: white;">
-								📍 Locations
+							<button class="btn btn-info" onclick="window.location.href='market-driverslocation.html'" style="background-color: #17a2b8; color: white;">
+								📍 Drivers Locations
 							</button>
 						</div>
 
@@ -2731,7 +2732,10 @@
 				if (/^\/api\/riders\/stats\b/.test(u)) return M + "/__noop_rider_stats";
 				if (/^\/api\/riders\b/.test(u))
 					return M + "/riders" + u.slice("/api/riders".length);
-				if (/^\/api\/zones\b/.test(u)) return M + "/__noop_zones" + u.slice("/api/zones".length);
+				// Zones are global — pass through unchanged so the market dashboard can
+				// list and create its own zones via the standard /api/zones endpoints
+				// (controller is now tenant-scoped by the requester's market).
+				if (/^\/api\/zones\b/.test(u)) return orig;
 				if (/^\/api\/shelves\b/.test(u)) return M + "/shelves" + u.slice("/api/shelves".length);
 				if (/^\/api\/waste\/stats\b/.test(u)) return M + "/waste/summary";
 				if (/^\/api\/waste\/product\b/.test(u)) return M + "/__noop_waste_product";
@@ -3610,6 +3614,7 @@
 
 						// Store current user and check admin access
 						currentUser = user;
+						updateSidebarRoleBadge(user.role);
 						checkAdminAccess(user);
 
 						// Show dashboard content
@@ -3897,6 +3902,26 @@
 			let allProducts = [];
 			let allCategories = [];
 			let allSubcategories = [];
+
+			// Pretty role labels for the sidebar badge.
+			const ROLE_LABELS = {
+				admin: "Admin",
+				manager: "Manager",
+				staff: "Staff",
+				rider: "Rider",
+				customer: "Customer",
+				market: "Market Owner",
+				market_manager: "Market Manager",
+				market_staff: "Market Staff",
+				market_driver: "Market Driver",
+			};
+			function updateSidebarRoleBadge(role) {
+				const el = document.getElementById("sidebar-role-badge");
+				if (!el || !role) return;
+				el.textContent = ROLE_LABELS[role] || String(role).toUpperCase();
+				el.className = "sidebar-role-badge role-" + role;
+				el.style.display = "";
+			}
 
 			// Check if user has management access and show/hide user management section
 			function checkAdminAccess(user) {
@@ -7694,10 +7719,15 @@
 					if (response.ok) {
 						const data = await response.json();
 						console.log("Riders API Response:", data); // Debug log
-						displayRiders(data.data.riders);
+						const riders = data?.data?.riders || [];
+						displayRiders(riders);
+						const total =
+							data?.data?.pagination?.totalRiders ??
+							data?.data?.total ??
+							riders.length;
 						document.getElementById(
 							"riders-count-display"
-						).textContent = `${data.data.pagination.totalRiders} riders`;
+						).textContent = `${total} riders`;
 					} else if (response.status === 401) {
 						showMessage("Please log in first", "error");
 						setTimeout(() => {
@@ -7735,16 +7765,26 @@
 
 				tableBody.innerHTML = riders
 					.map((rider) => {
+						// Market context returns MarketRider docs which store the
+						// driver's identity directly on the doc (name/phoneNumber/email)
+						// instead of via a populated `user` ref like global Rider docs.
+						// Detect that shape and adapt the renderer.
+						const isMarketRider =
+							rider &&
+							!rider.userInfo &&
+							!rider.user &&
+							(rider.name !== undefined || rider.phoneNumber !== undefined);
+
 						// Handle user information - API returns userInfo from aggregation
 						const userName = rider.userInfo
 							? rider.userInfo.name
-							: rider.user?.name || "N/A";
+							: rider.user?.name || rider.name || "N/A";
 						const userEmail = rider.userInfo
 							? rider.userInfo.email
-							: rider.user?.email || "N/A";
+							: rider.user?.email || rider.email || "N/A";
 						const userPhone = rider.userInfo
 							? rider.userInfo.phoneNumber
-							: rider.user?.phoneNumber || "N/A";
+							: rider.user?.phoneNumber || rider.phoneNumber || "N/A";
 
 						// Handle completion rate
 						const completionRate = rider.completionRate
@@ -7776,14 +7816,29 @@
 								zoneTooltip = `All zones: ${rider.zones.join(", ")}`;
 							}
 						} else if (rider.zone) {
-							// Legacy single zone format
+							// Legacy single zone format / MarketRider single-string zone
 							zoneDisplay =
 								typeof rider.zone === "string"
 									? rider.zone
 									: rider.zone?.zoneName || "No Zone";
 						}
 
-						const statusBadge = getStatusBadge(rider.status);
+						// MarketRider exposes isActive/isAvailable instead of a status
+						// string. Map them so the same status badge component works.
+						let effectiveStatus = rider.status;
+						if (!effectiveStatus && isMarketRider) {
+							effectiveStatus = !rider.isActive
+								? "offline"
+								: rider.isAvailable
+								? "available"
+								: "busy";
+						}
+						const statusBadge = getStatusBadge(effectiveStatus);
+
+						// MarketRider stores the plate as `vehiclePlate`, admin Rider as
+						// `vehicleNumber`. Show whichever is present.
+						const vehiclePlate =
+							rider.vehicleNumber || rider.vehiclePlate || "N/A";
 
 						return `
 							<tr>
@@ -7817,7 +7872,7 @@
 								</td>
 								<td>
 									<code style="background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-size: 12px;">
-										${rider.vehicleNumber || "N/A"}
+										${vehiclePlate}
 									</code>
 								</td>
 								<td>${statusBadge}</td>
@@ -9374,6 +9429,23 @@
 						const data = await response.json();
 						const rider = data.data;
 
+						// Adapt MarketRider shape (no `user` ref, direct fields) to the
+						// admin-Rider shape this details view was built for.
+						const u = rider.user || {
+							name: rider.name,
+							email: rider.email,
+							phoneNumber: rider.phoneNumber,
+						};
+						const displayStatus =
+							rider.status ||
+							(!rider.isActive
+								? "inactive"
+								: rider.isAvailable
+								? "available"
+								: "offline");
+						const displayLicense =
+							rider.licenseNumber || rider.vehiclePlate || rider.vehicleNumber || "Not provided";
+
 						// Build styled details view
 						let detailsHtml = `
 							<div style="background: #fff; padding: 32px 28px; border-radius: 14px; box-shadow: 0 4px 24px rgba(0,0,0,0.10); max-width: 600px; margin: 24px auto; font-family: 'Segoe UI',sans-serif;">
@@ -9381,7 +9453,7 @@
 									<div style="font-size: 38px;">🏍️</div>
 									<div>
 										<h2 style="margin: 0 0 4px 0; color: #222; font-size: 2rem; font-weight: 700;">${
-											rider.user.name
+											u.name || "Unknown"
 										}</h2>
 										<div style="font-size: 14px; color: #888;">Rider ID: <span style="color: #333;">${
 											rider._id
@@ -9390,10 +9462,10 @@
 								</div>
 								<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; margin-bottom: 24px;">
 									<div><strong>📧 Email:</strong><br><span style="color: #555;">${
-										rider.user.email
+										u.email || "Not provided"
 									}</span></div>
 									<div><strong>📞 Phone:</strong><br><span style="color: #555;">${
-										rider.user.phoneNumber || "Not provided"
+										u.phoneNumber || "Not provided"
 									}</span></div>
 									<div><strong>🏢 Zones:</strong><br><span style="color: #555;">${
 										Array.isArray(rider.zones)
@@ -9401,12 +9473,10 @@
 											: rider.zone || "No zones assigned"
 									}</span></div>
 									<div><strong>🚗 Vehicle:</strong><br><span style="color: #555;">${
-										rider.vehicleType
+										rider.vehicleType || "—"
 									}</span></div>
-									<div><strong>📄 License:</strong><br><span style="color: #555;">${
-										rider.licenseNumber || "Not provided"
-									}</span></div>
-									<div><strong>📊 Status:</strong><br>${getStatusBadge(rider.status)}</div>
+									<div><strong>📄 License:</strong><br><span style="color: #555;">${displayLicense}</span></div>
+									<div><strong>📊 Status:</strong><br>${getStatusBadge(displayStatus)}</div>
 								</div>
 								<div style="display: flex; gap: 18px; justify-content: space-between; margin-bottom: 20px;">
 									<div style="flex:1; text-align: center; background: #f8f9fa; border-radius: 8px; padding: 14px 0;">
@@ -11094,8 +11164,10 @@
 							<select id="rider-vehicle" name="vehicleType" required>
 								<option value="">-- Select Vehicle --</option>
 								<option value="bike">Bike</option>
+								<option value="scooter">Scooter</option>
 								<option value="motorbike">Motorbike</option>
 								<option value="car">Car</option>
+								<option value="van">Van</option>
 								<option value="bicycle">Bicycle</option>
 							</select>
 						</div>
@@ -12384,13 +12456,25 @@
 
 				tableBody.innerHTML = riders
 					.map((rider) => {
+						// MarketRider docs store the driver's identity directly on the
+						// document (name/phoneNumber/email/vehiclePlate) instead of via
+						// a populated `user` ref like global admin Rider docs.
+						const isMarketRider =
+							rider &&
+							!rider.userInfo &&
+							!rider.user &&
+							(rider.name !== undefined || rider.phoneNumber !== undefined);
+
 						// Handle user information - API returns userInfo from aggregation
 						const userName = rider.userInfo
 							? rider.userInfo.name
-							: rider.user?.name || "N/A";
+							: rider.user?.name || rider.name || "N/A";
 						const userEmail = rider.userInfo
 							? rider.userInfo.email
-							: rider.user?.email || "N/A";
+							: rider.user?.email || rider.email || "N/A";
+						const userPhone = rider.userInfo
+							? rider.userInfo.phoneNumber
+							: rider.user?.phoneNumber || rider.phoneNumber || "N/A";
 
 						// Handle rating - it can be a number (from aggregation) or object (from direct query)
 						let rating = 0;
@@ -12414,12 +12498,27 @@
 								zoneTooltip = `All zones: ${rider.zones.join(", ")}`;
 							}
 						} else if (rider.zone) {
-							// Legacy single zone format
+							// Legacy single zone format / MarketRider single-string zone
 							zoneDisplay =
 								typeof rider.zone === "string"
 									? rider.zone
 									: rider.zone?.zoneName || "No Zone";
 						}
+
+						// MarketRider exposes isActive/isAvailable instead of a status
+						// string. Map them so the same status badge component works.
+						let effectiveStatus = rider.status;
+						if (!effectiveStatus && isMarketRider) {
+							effectiveStatus = !rider.isActive
+								? "offline"
+								: rider.isAvailable
+								? "available"
+								: "busy";
+						}
+
+						// MarketRider stores plate as `vehiclePlate`, admin Rider as `vehicleNumber`.
+						const vehiclePlate =
+							rider.vehicleNumber || rider.vehiclePlate || "N/A";
 
 						return `
 					<tr>
@@ -12437,7 +12536,7 @@
 						<td>
 							<div style="color: #333;">${escapeHtml(userEmail)}</div>
 							<div style="font-size: 12px; color: #666;">
-								${escapeHtml(rider.userInfo?.phoneNumber || rider.user?.phoneNumber || "N/A")}
+								${escapeHtml(userPhone)}
 							</div>
 						</td>
 						<td>
@@ -12459,12 +12558,12 @@
 						</td>
 						<td>
 							<code style="background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-size: 12px;">
-								${escapeHtml(rider.vehicleNumber || "N/A")}
+								${escapeHtml(vehiclePlate)}
 							</code>
 						</td>
 						<td>
-							<span class="status-badge ${getStatusClass(rider.status)}">
-								${formatStatus(rider.status)}
+							<span class="status-badge ${getStatusClass(effectiveStatus)}">
+								${formatStatus(effectiveStatus)}
 							</span>
 						</td>
 						<td>
@@ -12496,13 +12595,13 @@
 									</button>`
 								}
 								<button class="btn-icon ${
-									rider.status === "available" ? "btn-danger" : ""
+									effectiveStatus === "available" ? "btn-danger" : ""
 								}" onclick="toggleRiderStatus('${rider._id}', '${
-							rider.status
+							effectiveStatus
 						}')" title="${
-							rider.status === "available" ? "Deactivate" : "Activate"
+							effectiveStatus === "available" ? "Deactivate" : "Activate"
 						}">
-									${rider.status === "available" ? "⏸️" : "▶️"}
+									${effectiveStatus === "available" ? "⏸️" : "▶️"}
 								</button>
 								<button class="btn-icon btn-danger" onclick="deleteRider('${
 									rider._id
@@ -12671,6 +12770,11 @@
 						userDropdown.remove(1);
 					}
 
+					// In market context this URL is rewritten by the fetch override
+					// (see rewritePath) to /api/market-admin/rider-users which is
+					// tenant-scoped server-side: it returns ONLY this market's own
+					// drivers (User docs with role 'market_driver' belonging to
+					// req.marketId), so each market only sees its own drivers.
 					const response = await fetch(
 						`${API_BASE_URL}/auth/users?includeRoles=rider`,
 						{
@@ -12686,11 +12790,20 @@
 
 					const data = await response.json();
 					console.log("Users API response:", data); // Debug log
-					const allUsers = data.data && data.data.users ? data.data.users : [];
+					// The market-admin/rider-users endpoint returns { success, data: [users] }
+					// while the global /auth/users endpoint returns { data: { users: [...] } }.
+					// Support both shapes.
+					const allUsers = Array.isArray(data.data)
+						? data.data
+						: data.data && data.data.users
+						? data.data.users
+						: [];
 
-					// For editing, include all users (not just riders) to ensure current rider's user is available
+					// Accept both 'rider' (admin context) and 'market_driver'
+					// (market context) — the backend is tenant-scoped so cross-market
+					// users will never reach this point.
 					const availableUsers = allUsers.filter(
-						(user) => user.role === "rider"
+						(user) => user.role === "rider" || user.role === "market_driver"
 					);
 
 					console.log(
@@ -12940,6 +13053,28 @@
 						throw new Error("Rider data not found in response");
 					}
 
+					// In market context the rider is a MarketRider doc whose driver
+					// identity is stored directly on the doc (no `user` ref). Adapt
+					// MarketRider fields to the modal's admin-Rider expectations so
+					// the same edit form works for both shapes.
+					const isMarketRider =
+						!rider.user && (rider.name !== undefined || rider.phoneNumber !== undefined);
+					if (isMarketRider) {
+						rider.vehicleNumber = rider.vehicleNumber || rider.vehiclePlate || "";
+						rider.zones = Array.isArray(rider.zones)
+							? rider.zones
+							: rider.zone
+							? [rider.zone]
+							: [];
+						if (!rider.status) {
+							rider.status = !rider.isActive
+								? "inactive"
+								: rider.isAvailable
+								? "available"
+								: "offline";
+						}
+					}
+
 					// Populate the modal with rider data
 					const modalTitle = document.getElementById("rider-modal-title");
 					const form = document.getElementById("rider-form");
@@ -13000,6 +13135,14 @@
 					if (rider.user && rider.user._id && userField) {
 						userField.value = rider.user._id;
 						//userField.disabled = false;
+					} else if (isMarketRider && userField && rider.email) {
+						// MarketRider has no user ref. Try to match by email against the
+						// dropdown (which lists this market's market_driver users).
+						const data = window.riderUserData || {};
+						const match = Object.values(data).find(
+							(u) => u && u.email && u.email.toLowerCase() === String(rider.email).toLowerCase(),
+						);
+						if (match) userField.value = match._id;
 					}
 
 					// Load zones checkboxes and select the rider's zones

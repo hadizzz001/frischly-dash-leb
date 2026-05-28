@@ -59,6 +59,29 @@ body {
 	opacity: 0.9;
 }
 
+/* Role badge under the dashboard title */
+.sidebar-role-badge {
+	display: inline-block;
+	margin-top: 10px;
+	padding: 4px 12px;
+	border-radius: 999px;
+	background: rgba(0, 0, 0, 0.78);
+	color: #ffc300;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.6px;
+	text-transform: uppercase;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+.sidebar-role-badge.role-admin { background: #d32f2f; color: #fff; }
+.sidebar-role-badge.role-manager { background: #1976d2; color: #fff; }
+.sidebar-role-badge.role-staff { background: #455a64; color: #fff; }
+.sidebar-role-badge.role-rider { background: #2e7d32; color: #fff; }
+.sidebar-role-badge.role-market { background: #ef6c00; color: #fff; }
+.sidebar-role-badge.role-market_manager { background: #5e35b1; color: #fff; }
+.sidebar-role-badge.role-market_staff { background: #00838f; color: #fff; }
+.sidebar-role-badge.role-market_driver { background: #00695c; color: #fff; }
+
 .sidebar-menu {
 	padding: 0;
 	list-style: none;
