@@ -461,7 +461,7 @@
 				</div>
 				<div class="stat-card">
 					<div class="icon">💰</div>
-					<div class="value" id="earnings">€0</div>
+					<div class="value" id="earnings">$0</div>
 					<div class="label">Today's Earnings</div>
 				</div>
 			</div>
@@ -486,6 +486,10 @@
 					<button class="btn btn-success" onclick="logout()">
 						<i class="fas fa-sign-out-alt"></i> Logout
 					</button>
+				</div>
+
+				<div id="gps-status" style="margin: 10px 0; font-size: 0.95em; color: #888;">
+					🟡 Waiting for GPS permission…
 				</div>
 
 				<div class="table-container">
@@ -583,6 +587,8 @@
 							}
 							currentRider = user;
 							updateWelcomeMessage(user);
+							// Auto-start GPS tracking so admin can see live location.
+							startAutoLocationTracking();
 						} else {
 							window.location.href = "signin.html";
 						}
@@ -782,7 +788,7 @@
 						<td><strong>${order.orderNumber}</strong></td>
 						<td>${customerName}</td>
 						<td>${itemCount} item${itemCount !== 1 ? "s" : ""}</td>
-						<td>€${totalAmount.toFixed(2)}</td>
+						<td>$${totalAmount.toFixed(2)}</td>
 						<td><span class="status-badge status-${status
 							.toLowerCase()
 							.replace(" ", "-")}">${status}</span></td>
@@ -837,7 +843,7 @@
 
 				document.getElementById(
 					"earnings"
-				).textContent = `€${todaysEarnings.toFixed(2)}`;
+				).textContent = `$${todaysEarnings.toFixed(2)}`;
 			}
 
 			// Pick up an order
@@ -946,7 +952,7 @@
 								<p><strong>Status:</strong> <span class="status-badge status-${order.status
 									.toLowerCase()
 									.replace(" ", "-")}">${order.status}</span></p>
-								<p><strong>Total:</strong> €${order.total?.toFixed(2) || "0.00"}</p>
+								<p><strong>Total:</strong> $${order.total?.toFixed(2) || "0.00"}</p>
 								<p><strong>Order Date:</strong> ${new Date(
 									order.createdAt
 								).toLocaleString()}</p>
@@ -959,7 +965,7 @@
 										order.items
 											?.map(
 												(item) => `
-										<li>${item.productName} (x${item.quantity}) - €${
+										<li>${item.productName} (x${item.quantity}) - $${
 													item.totalPrice?.toFixed(2) || "0.00"
 												}</li>
 									`
@@ -975,8 +981,7 @@
 								<div class="delivery-address">
 									<h4>Delivery Address:</h4>
 									<p>${order.customer.address.street}</p>
-									<p>${order.customer.address.city}, ${order.customer.address.state}</p>
-									<p>${order.customer.address.country}</p>
+									<p>${order.customer.address.city}</p>
 								</div>
 							`
 									: ""
@@ -1061,6 +1066,117 @@
 				setTimeout(() => {
 					window.location.href = "signin.html";
 				}, 1500);
+			}
+
+			// Automatically push the rider's GPS location to the server.
+			// This triggers the browser permission prompt right after login
+			// and keeps the live map on the admin dashboard up to date.
+			let __locWatchId = null;
+			let __lastPushAt = 0;
+			let __lastPushed = { lat: null, lng: null };
+
+			function __haversineMeters(a, b) {
+				if (a.lat == null || b.lat == null) return Infinity;
+				const toRad = (d) => (d * Math.PI) / 180;
+				const R = 6371000;
+				const dLat = toRad(b.lat - a.lat);
+				const dLng = toRad(b.lng - a.lng);
+				const h =
+					Math.sin(dLat / 2) ** 2 +
+					Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+				return 2 * R * Math.asin(Math.sqrt(h));
+			}
+
+			async function __pushLocation(latitude, longitude, silent = true) {
+				try {
+					const response = await fetch(`${API_BASE_URL}/riders/location`, {
+						method: "PATCH",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({ latitude, longitude }),
+					});
+					if (response.ok) {
+						__lastPushAt = Date.now();
+						__lastPushed = { lat: latitude, lng: longitude };
+						const dot = document.getElementById("gps-status");
+						if (dot) {
+							dot.textContent = `\uD83D\uDFE2 Live location active (${latitude.toFixed(
+								4
+							)}, ${longitude.toFixed(4)})`;
+							dot.style.color = "#28a745";
+						}
+						if (!silent) showMessage("Location updated successfully!", "success");
+					} else if (!silent) {
+						const errorData = await response.json().catch(() => ({}));
+						showMessage(errorData.message || "Failed to update location", "error");
+					}
+				} catch (e) {
+					console.error("Push location error:", e);
+					if (!silent) showMessage("Error updating location.", "error");
+				}
+			}
+
+			function startAutoLocationTracking() {
+				if (!("geolocation" in navigator)) {
+					showMessage("Geolocation is not supported by this browser.", "error");
+					return;
+				}
+				// Some browsers (Chrome) only allow geolocation on secure origins.
+				// http://localhost is treated as secure; LAN IPs (e.g. 192.168.x.x)
+				// are NOT, so the permission prompt is silently denied there.
+				const isSecure =
+					window.isSecureContext ||
+					location.protocol === "https:" ||
+					location.hostname === "localhost" ||
+					location.hostname === "127.0.0.1";
+				if (!isSecure) {
+					showMessage(
+						"Live location only works on HTTPS or http://localhost. Open this page on localhost or enable HTTPS.",
+						"error"
+					);
+					return;
+				}
+
+				if (__locWatchId !== null) return; // already running
+
+				// Immediate one-shot to trigger the permission prompt right away.
+				navigator.geolocation.getCurrentPosition(
+					(pos) => __pushLocation(pos.coords.latitude, pos.coords.longitude, true),
+					(err) => console.warn("Initial geolocation failed:", err.message),
+					{ enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+				);
+
+				__locWatchId = navigator.geolocation.watchPosition(
+					(pos) => {
+						const { latitude, longitude } = pos.coords;
+						const now = Date.now();
+						const movedM = __haversineMeters(__lastPushed, {
+							lat: latitude,
+							lng: longitude,
+						});
+						// Push if moved >20m OR every 30s.
+						if (movedM > 20 || now - __lastPushAt > 30000) {
+							__pushLocation(latitude, longitude, true);
+						}
+					},
+					(err) => {
+						const dot = document.getElementById("gps-status");
+						let msg = "\uD83D\uDD34 GPS unavailable";
+						if (err.code === 1)
+							msg =
+								"\uD83D\uDD34 Location permission denied \u2014 enable it in browser settings";
+						else if (err.code === 2) msg = "\uD83D\uDD34 Position unavailable";
+						else if (err.code === 3) msg = "\uD83D\uDD34 GPS request timed out";
+						if (dot) {
+							dot.textContent = msg;
+							dot.style.color = "#dc3545";
+						}
+						console.warn("watchPosition error:", err);
+					},
+					{ enableHighAccuracy: true, maximumAge: 10000, timeout: 30000 }
+				);
 			}
 
 			// Update rider location

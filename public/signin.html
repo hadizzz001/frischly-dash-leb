@@ -182,13 +182,13 @@
 
 			<form id="signin-form">
 				<div class="form-group">
-					<label for="email">Email Address</label>
+					<label for="email">Email or Market Username</label>
 					<input
-						type="email"
+						type="text"
 						id="email"
 						name="email"
 						required
-						placeholder="Enter your email"
+						placeholder="Enter your email or market username"
 					/>
 				</div>
 
@@ -270,6 +270,7 @@
 
 			// Check if user is already logged in
 			const currentToken = localStorage.getItem("authToken");
+			
 			if (currentToken) {
 				// Fetch user info to determine role-based redirect
 				fetch(`${API_BASE_URL}/auth/me`, {
@@ -402,6 +403,13 @@
 							showMessage("Login successful! Redirecting...", "success");
 							localStorage.setItem("authToken", result.data.token);
 							localStorage.setItem("refreshToken", result.data.refreshToken);
+							if (result.data.user && result.data.user.role === "market") {
+								localStorage.setItem("marketToken", result.data.token);
+								localStorage.setItem(
+									"marketData",
+									JSON.stringify(result.data.market || result.data.user)
+								);
+							}
 
 							// Role-based redirect
 							let redirectUrl = result.data.redirectUrl || "profile.html";
@@ -423,6 +431,11 @@
 									result.data.user.role === "manager")
 							) {
 								redirectUrl = "dashboard.html";
+							} else if (
+								result.data.user &&
+								result.data.user.role === "market"
+							) {
+								redirectUrl = "/market";
 							}
 							setTimeout(() => {
 								window.location.href = redirectUrl;

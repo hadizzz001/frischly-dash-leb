@@ -84,6 +84,7 @@
 			.map-container {
 				flex: 1;
 				width: 100%;
+				min-height: 220px;
 				background: #eee;
 				display: flex;
 				align-items: center;
@@ -91,11 +92,9 @@
 				position: relative;
 			}
 			.map-container iframe {
-				position: absolute;
-				top: 0;
-				left: 0;
 				width: 100%;
 				height: 100%;
+				border: 0;
 			}
 			.rider-info {
 				padding: 10px 15px;
@@ -223,73 +222,177 @@
 			function displayRiders(riders) {
 				const grid = document.getElementById("riders-grid");
 				document.getElementById("loading").style.display = "none";
-				grid.innerHTML = "";
 
-				if (riders.length === 0) {
+				if (!riders || riders.length === 0) {
 					grid.innerHTML =
 						'<p style="text-align: center; grid-column: 1/-1;">No riders found.</p>';
 					return;
 				}
 
+				const seen = new Set();
+
 				riders.forEach((rider) => {
-					const card = document.createElement("div");
-					card.className = "rider-card";
-
+					seen.add(rider._id);
 					const statusClass = `status-${rider.status || "offline"}`;
-					const hasLocation =
-						rider.currentLocation &&
-						rider.currentLocation.latitude &&
-						rider.currentLocation.longitude;
+					const name =
+						(rider.userInfo && rider.userInfo.name) ||
+						(rider.user && rider.user.name) ||
+						"Unknown Rider";
+					const phone =
+						(rider.userInfo && rider.userInfo.phoneNumber) ||
+						(rider.user && rider.user.phoneNumber) ||
+						"N/A";
 
-					let mapContent = "";
-					if (hasLocation) {
-						const lat = rider.currentLocation.latitude;
-						const lng = rider.currentLocation.longitude;
-						mapContent = `
-                        <iframe
-                            width="100%"
-                            height="100%"
-                            style="border:0"
-                            loading="lazy"
-                            allowfullscreen
-                            src="https://maps.google.com/maps?q=${lat},${lng}&t=&z=14&ie=UTF8&iwloc=B&output=embed">
-                        </iframe>
-                    `;
+					let card = document.getElementById(`rider-card-${rider._id}`);
+					if (!card) {
+						card = document.createElement("div");
+						card.className = "rider-card";
+						card.id = `rider-card-${rider._id}`;
+						card.innerHTML = `
+							<div class="rider-header">
+								<span class="rider-name">${name}</span>
+								<span class="rider-status ${statusClass}">${rider.status || "Unknown"}</span>
+							</div>
+							<div class="map-container" id="map-${rider._id}">
+								<div class="no-location">🟡 Locating…</div>
+							</div>
+							<div class="rider-info">
+								<span>🚗 ${rider.vehicleType || "N/A"}</span>
+								<span>📞 ${phone}</span>
+							</div>
+						`;
+						grid.appendChild(card);
 					} else {
-						mapContent =
-							'<div class="no-location">Location data not available</div>';
+						card.querySelector(".rider-name").textContent = name;
+						const st = card.querySelector(".rider-status");
+						st.textContent = rider.status || "Unknown";
+						st.className = `rider-status ${statusClass}`;
 					}
 
-					card.innerHTML = `
-                    <div class="rider-header">
-                        <span class="rider-name">${
-													rider.userInfo
-														? rider.userInfo.name
-														: rider.user
-														? rider.user.name
-														: "Unknown Rider"
-												}</span>
-                        <span class="rider-status ${statusClass}">${
-						rider.status || "Unknown"
-					}</span>
-                    </div>
-                    <div class="map-container">
-                        ${mapContent}
-                    </div>
-                    <div class="rider-info">
-                        <span>🚗 ${rider.vehicleType || "N/A"}</span>
-                        <span>📞 ${
-													rider.userInfo
-														? rider.userInfo.phoneNumber
-														: rider.user
-														? rider.user.phoneNumber
-														: "N/A"
-												}</span>
-                    </div>
-                `;
-
-					grid.appendChild(card);
+					resolveRiderLocation(rider).then((coords) => {
+						const container = document.getElementById(`map-${rider._id}`);
+						if (!container) return;
+						if (!coords) {
+							container.innerHTML =
+								'<div class="no-location">Location data not available</div>';
+							return;
+						}
+						renderOsmEmbed(container, coords, name);
+					});
 				});
+
+				// Remove cards for riders no longer present
+				Array.from(grid.querySelectorAll(".rider-card")).forEach((c) => {
+					const id = c.id.replace("rider-card-", "");
+					if (!seen.has(id)) c.remove();
+				});
+			}
+
+			// ----- Geocoding (Nominatim) with localStorage cache -----
+			const __GEO_CACHE_KEY = "frischly_geo_cache_v1";
+			function __getGeoCache() {
+				try {
+					return JSON.parse(localStorage.getItem(__GEO_CACHE_KEY) || "{}");
+				} catch {
+					return {};
+				}
+			}
+			function __setGeoCache(c) {
+				try {
+					localStorage.setItem(__GEO_CACHE_KEY, JSON.stringify(c));
+				} catch {}
+			}
+			async function geocodeAddress(q) {
+				if (!q) return null;
+				const key = q.toLowerCase().trim();
+				const cache = __getGeoCache();
+				if (cache[key]) return cache[key];
+				try {
+					const r = await fetch(
+						`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(
+							q
+						)}`,
+						{ headers: { Accept: "application/json" } }
+					);
+					const arr = await r.json();
+					if (Array.isArray(arr) && arr.length) {
+						const hit = {
+							lat: parseFloat(arr[0].lat),
+							lng: parseFloat(arr[0].lon),
+						};
+						cache[key] = hit;
+						__setGeoCache(cache);
+						return hit;
+					}
+				} catch (e) {
+					console.warn("Geocode failed:", e);
+				}
+				return null;
+			}
+
+			async function resolveRiderLocation(rider) {
+				if (
+					rider.currentLocation &&
+					isFinite(rider.currentLocation.latitude) &&
+					isFinite(rider.currentLocation.longitude)
+				) {
+					return {
+						lat: rider.currentLocation.latitude,
+						lng: rider.currentLocation.longitude,
+						source: "live",
+					};
+				}
+				const u = rider.userInfo || rider.user || {};
+				const addr = u.address || rider.address || {};
+				const full = [
+					addr.street,
+					addr.city,
+					addr.region,
+					addr.country || "Lebanon",
+				]
+					.filter(Boolean)
+					.join(", ");
+				if (full) {
+					const hit = await geocodeAddress(full);
+					if (hit) return { ...hit, source: "address" };
+				}
+				if (addr.city) {
+					const hit = await geocodeAddress(addr.city + ", Lebanon");
+					if (hit) return { ...hit, source: "city" };
+				}
+				if (Array.isArray(rider.zones) && rider.zones.length) {
+					const hit = await geocodeAddress(rider.zones[0] + ", Lebanon");
+					if (hit) return { ...hit, source: "zone" };
+				}
+				return null;
+			}
+
+			// ----- Open-in-new-tab button (no inline embed) -----
+			function renderOsmEmbed(container, coords, name) {
+				const { lat, lng } = coords;
+				const url = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=15/${lat}/${lng}`;
+				const sourceLabel =
+					coords.source === "live"
+						? "🟢 Live"
+						: coords.source === "address"
+						? "📍 Last known address"
+						: coords.source === "city"
+						? "🏙️ City"
+						: "📍 Service zone";
+
+				container.innerHTML = `
+					<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;text-align:center;">
+						<div style="font-size:2.2em;">🗺️</div>
+						<div style="font-weight:600;color:#333;">${sourceLabel}</div>
+						<div style="font-size:0.85em;color:#666;font-family:monospace;">
+							${lat.toFixed(5)}, ${lng.toFixed(5)}
+						</div>
+						<a href="${url}" target="_blank" rel="noopener"
+							style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:#007bff;color:#fff;border-radius:6px;text-decoration:none;font-weight:500;font-size:0.95em;">
+							🌍 Open Map in New Tab
+						</a>
+					</div>
+				`;
 			}
 
 			// Load initially

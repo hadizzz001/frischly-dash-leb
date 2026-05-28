@@ -24,6 +24,9 @@ const settingRoutes = require("./src/routes/settings");
 const promoCodeRoutes = require("./src/routes/promoCodes");
 const notificationRoutes = require("./src/routes/notifications");
 const announcementRoutes = require("./src/routes/announcements");
+const marketRoutes = require("./src/routes/markets");
+const marketAdminRoutes = require("./src/routes/marketAdmin");
+const kitchenRoutes = require("./src/routes/kitchens");
 
 // Controllers
 const { cancelOrder } = require("./src/controllers/orderController");
@@ -260,14 +263,21 @@ app.use(
 
 // Rate limiting - Enabled in both development and production with different limits
 const limiter = rateLimit({
-	windowMs: isDevelopment ? 15 * 60 * 1000 : 20 * 60 * 1000, // 15 minutes in dev, 20 in prod
-	max: isDevelopment ? 1000 : 3000, // limit each IP to 1000 requests per windowMs in dev, 3000 in prod
+	windowMs: isDevelopment ? 5 * 60 * 1000 : 20 * 60 * 1000, // 5 minutes in dev, 20 in prod
+	max: isDevelopment ? 20000 : 3000, // very high in dev so dashboards don't get blocked
 	message: {
 		success: false,
 		message: "Too many requests from this IP, please try again later.",
 	},
-	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+	standardHeaders: true,
+	legacyHeaders: false,
+	// Don't count preflight or static asset requests against the limit
+	skip: (req) => {
+		if (req.method === "OPTIONS") return true;
+		const url = req.originalUrl || req.url || "";
+		if (!url.startsWith("/api")) return true;
+		return false;
+	},
 });
 
 app.use(limiter);
@@ -306,6 +316,9 @@ app.use("/api/settings", settingRoutes);
 app.use("/api/promocodes", promoCodeRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/announcements", announcementRoutes);
+app.use("/api/markets", marketRoutes);
+app.use("/api/market-admin", marketAdminRoutes);
+app.use("/api/kitchens", kitchenRoutes);
 
 // Route for customer shop page
 app.get("/shop", (req, res) => {
@@ -361,6 +374,36 @@ app.get("/payment/success", (req, res) => {
 // Route for shop1 page - redirect to frischlyshop.com
 app.get("/shop1", (req, res) => {
 	res.redirect("https://frischlyshop.com");
+});
+
+// Route for market admin dashboard page (login)
+app.get("/market", (req, res) => {
+	res.sendFile(__dirname + "/public/market.html");
+});
+
+// Route for the full market-admin dashboard (after login)
+app.get("/market-dashboard", (req, res) => {
+	res.sendFile(__dirname + "/public/market-dashboard.html");
+});
+
+// Route for admin's markets management page
+app.get("/markets", (req, res) => {
+	res.sendFile(__dirname + "/public/markets.html");
+});
+
+// Admin: manage a single market (details + tabs)
+app.get("/market-manage", (req, res) => {
+	res.sendFile(__dirname + "/public/market-manage.html");
+});
+
+// Admin: view a market's products (read-only)
+app.get("/market-products", (req, res) => {
+	res.sendFile(__dirname + "/public/market-products.html");
+});
+
+// Admin: view a market's orders (read-only)
+app.get("/market-orders", (req, res) => {
+	res.sendFile(__dirname + "/public/market-orders.html");
 });
 
 // Health check route

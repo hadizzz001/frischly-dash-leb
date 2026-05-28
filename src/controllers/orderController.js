@@ -134,6 +134,19 @@ exports.getOrders = async (req, res) => {
 			filter["customer.email"] = req.user.email;
 		}
 
+		// Market admins only see orders from their market
+		if (req.user.role === "market") {
+			filter.market = req.user.marketId;
+		} else if (req.query.market) {
+			// Admin/manager/staff can filter by market via query param
+			const m = req.query.market;
+			if (m === "none" || m === "null") {
+				filter.market = null;
+			} else if (mongoose.Types.ObjectId.isValid(m)) {
+				filter.market = m;
+			}
+		}
+
 		// Search functionality
 		if (search) {
 			filter.$or = [
@@ -152,9 +165,10 @@ exports.getOrders = async (req, res) => {
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
 			.populate("assignedRider", "name email phone")
+			.populate("market", "name username location logo")
 			.populate(
 				"items.product",
-				"name barcode shelfNumber price discount tax bottlerefund picture",
+				"name barcode shelfNumber price discount tax bottlerefund picture market",
 			)
 			.sort(sortOptions)
 			.skip(skip)
@@ -333,9 +347,10 @@ exports.getOrder = async (req, res) => {
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
 			.populate("assignedRider", "name email phone")
+			.populate("market", "name username location logo")
 			.populate(
 				"items.product",
-				"name barcode shelfNumber price discount tax bottlerefund picture",
+				"name barcode shelfNumber price discount tax bottlerefund picture market",
 			);
 
 		if (!order) {
@@ -367,6 +382,19 @@ exports.getOrder = async (req, res) => {
 		if (
 			req.user.role === "customer" &&
 			order.customer.email !== req.user.email
+		) {
+			return res.status(403).json({
+				success: false,
+				message: "You are not authorized to view this order",
+			});
+		}
+
+		// Market admins can only view their own market's orders
+		if (
+			req.user.role === "market" &&
+			(!order.market ||
+				String(order.market._id || order.market) !==
+					String(req.user.marketId))
 		) {
 			return res.status(403).json({
 				success: false,
@@ -611,7 +639,7 @@ exports.createOrder = async (req, res) => {
 			console.log("Order total below minimum:", settings.minimumOrderValue);
 			return res.status(400).json({
 				success: false,
-				message: `Minimum order value is €${settings.minimumOrderValue}`,
+				message: `Minimum order value is $${settings.minimumOrderValue}`,
 			});
 		}
 
@@ -625,6 +653,19 @@ exports.createOrder = async (req, res) => {
 			"Initial payment status:",
 			initialPaymentStatus,
 		);
+
+		// Derive market from items. If all items belong to the same market the
+		// order is associated with that market; mixed/main-store orders have
+		// market=null. Items are populated above, so item.product is the doc.
+		let orderMarket = null;
+		const marketIds = new Set(
+			processedItems
+				.map((it) => (it.product && it.product.market ? String(it.product.market) : null))
+				.filter(Boolean),
+		);
+		if (marketIds.size === 1) {
+			orderMarket = [...marketIds][0];
+		}
 
 		const order = new Order({
 			customer: {
@@ -646,6 +687,7 @@ exports.createOrder = async (req, res) => {
 			paymentStatus: initialPaymentStatus,
 			createdBy: req.user.id,
 			promoCode: promoCodeDoc ? promoCodeDoc._id : null,
+			market: orderMarket,
 		});
 
 		console.log("Saving order...");
@@ -688,7 +730,7 @@ exports.createOrder = async (req, res) => {
 			try {
 				const lineItems = populatedOrder.items.map((item) => ({
 					price_data: {
-						currency: "eur",
+						currency: "usd",
 						product_data: {
 							name: item.product.name,
 						},
@@ -700,7 +742,7 @@ exports.createOrder = async (req, res) => {
 				if (populatedOrder.delivery > 0) {
 					lineItems.push({
 						price_data: {
-							currency: "eur",
+							currency: "usd",
 							product_data: {
 								name: "Delivery Fee",
 							},
@@ -713,7 +755,7 @@ exports.createOrder = async (req, res) => {
 				if (populatedOrder.fees > 0) {
 					lineItems.push({
 						price_data: {
-							currency: "eur",
+							currency: "usd",
 							product_data: {
 								name: "Processing Fee",
 							},
@@ -754,7 +796,7 @@ exports.createOrder = async (req, res) => {
 					} else {
 						// Cash discount
 						couponParams.amount_off = Math.round(populatedOrder.discount * 100);
-						couponParams.currency = "eur";
+						couponParams.currency = "usd";
 					}
 
 					const coupon = await stripe.coupons.create(couponParams);
@@ -823,10 +865,10 @@ exports.createOrder = async (req, res) => {
 									<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${
 										item.quantity
 									}</td>
-									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">€${item.totalPrice.toFixed(
+									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${item.totalPrice.toFixed(
 										2,
 									)}</td>
-									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">€${
+									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${
 										item.totalPrice.toFixed(2) * item.quantity
 									}</td>
 								</tr>
@@ -837,12 +879,12 @@ exports.createOrder = async (req, res) => {
 					</table>
 					
 					<h3>Order Summary</h3>
-					<p><strong>Subtotal:</strong> €${populatedOrder.subtotal.toFixed(2)}</p>
-					<p><strong>Delivery Fee:</strong> €${populatedOrder.delivery.toFixed(2)}</p>
-					<p><strong>Processing Fee:</strong> €${(populatedOrder.fees || 0).toFixed(
+					<p><strong>Subtotal:</strong> $${populatedOrder.subtotal.toFixed(2)}</p>
+					<p><strong>Delivery Fee:</strong> $${populatedOrder.delivery.toFixed(2)}</p>
+					<p><strong>Processing Fee:</strong> $${(populatedOrder.fees || 0).toFixed(
 						2,
 					)}</p>
-					<p><strong>Total:</strong> €${populatedOrder.total.toFixed(2)}</p>
+					<p><strong>Total:</strong> $${populatedOrder.total.toFixed(2)}</p>
 					
 					${
 						populatedOrder.notes
@@ -891,10 +933,10 @@ exports.createOrder = async (req, res) => {
 									<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${
 										item.quantity
 									}</td>
-									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">€${item.totalPrice.toFixed(
+									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${item.totalPrice.toFixed(
 										2,
 									)}</td>
-									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">€${
+									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${
 										item.totalPrice.toFixed(2) * item.quantity
 									}</td>
 								</tr>
@@ -905,12 +947,12 @@ exports.createOrder = async (req, res) => {
 					</table>
 					
 					<h3>Order Summary</h3>
-					<p><strong>Zwischensumme:</strong> €${populatedOrder.subtotal.toFixed(2)}</p>
-					<p><strong>Delivery Fee:</strong> €${populatedOrder.delivery.toFixed(2)}</p>
-					<p><strong>Processing Fee:</strong> €${(populatedOrder.fees || 0).toFixed(
+					<p><strong>Zwischensumme:</strong> $${populatedOrder.subtotal.toFixed(2)}</p>
+					<p><strong>Delivery Fee:</strong> $${populatedOrder.delivery.toFixed(2)}</p>
+					<p><strong>Processing Fee:</strong> $${(populatedOrder.fees || 0).toFixed(
 						2,
 					)}</p>
-					<p><strong>Gesamt:</strong> €${populatedOrder.total.toFixed(2)}</p>
+					<p><strong>Gesamt:</strong> $${populatedOrder.total.toFixed(2)}</p>
 					
 					${
 						populatedOrder.notes
@@ -1066,13 +1108,13 @@ exports.updateOrder = async (req, res) => {
 					promoCodeHtml = `
 						<div style="background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-left: 4px solid #28a745; border-radius: 4px;">
 							<h3 style="color: #28a745; margin-top: 0;">Congratulations! 🎉</h3>
-							<p>Since your order was over €100, you have won a special promo code for your next purchase!</p>
+							<p>Since your order was over $100, you have won a special promo code for your next purchase!</p>
 							<p>We will send you the code in a separate email shortly.</p>
 							
 							<hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;">
 							
 							<h3 style="color: #28a745; margin-top: 0;">Congratulations! 🎉</h3>
-							<p>Because your order was over €100, you have won a special voucher code for your next purchase!</p>
+							<p>Because your order was over $100, you have won a special voucher code for your next purchase!</p>
 							<p>We will send you the code shortly in a separate email.</p>
 						</div>
 					`;
@@ -1284,7 +1326,7 @@ exports.cancelOrder = async (req, res) => {
 			});
 		}
 		console.log(
-			`✅ Step 3: Order found - Status: ${order.status}, Payment: ${order.paymentStatus}, Total: €${order.total}`,
+			`✅ Step 3: Order found - Status: ${order.status}, Payment: ${order.paymentStatus}, Total: $${order.total}`,
 		);
 
 		// Step 4: Check if order is already cancelled
@@ -1349,14 +1391,14 @@ exports.cancelOrder = async (req, res) => {
 							reason: "requested_by_customer",
 						});
 						console.log(
-							`✅ Refund processed successfully: €${refundValue.toFixed(2)}`,
+							`✅ Refund processed successfully: $${refundValue.toFixed(2)}`,
 						);
 						order.paymentStatus = "refunded";
 						order.status = "cancelled";
 						// Send refund email
 						try {
 							const emailSubject = `Refund Processed - Order #${order._id}`;
-							const refundAmountEur = refundValue.toFixed(2);
+							const refundAmountUsd = refundValue.toFixed(2);
 							const emailHtml = `
 								<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
 									<h2 style="color: #333; text-align: center;">Refund Processed</h2>
@@ -1366,9 +1408,9 @@ exports.cancelOrder = async (req, res) => {
 									} has been cancelled and a refund has been processed.</p>
 									
 									<h3>Refund Details</h3>
-									<p><strong>Refund Amount:</strong> €${refundAmountEur}</p>
-									<p><strong>Original Order Total:</strong> €${order.total.toFixed(2)}</p>
-									<p><strong>Processing Fees (Non-refundable):</strong> €${(
+									<p><strong>Refund Amount:</strong> $${refundAmountUsd}</p>
+									<p><strong>Original Order Total:</strong> $${order.total.toFixed(2)}</p>
+									<p><strong>Processing Fees (Non-refundable):</strong> $${(
 										order.fees || 0
 									).toFixed(2)}</p>
 									
@@ -1388,9 +1430,9 @@ exports.cancelOrder = async (req, res) => {
 									} has been cancelled and a refund has been initiated.</p>
 									
 									<h3>Refund Details</h3>
-									<p><strong>Refund Amount:</strong> €${refundAmountEur}</p>
-									<p><strong>Original Order Total:</strong> €${order.total.toFixed(2)}</p>
-									<p><strong>Processing Fees (non-refundable):</strong> €${(
+									<p><strong>Refund Amount:</strong> $${refundAmountUsd}</p>
+									<p><strong>Original Order Total:</strong> $${order.total.toFixed(2)}</p>
+									<p><strong>Processing Fees (non-refundable):</strong> $${(
 										order.fees || 0
 									).toFixed(2)}</p>
 									
@@ -1633,6 +1675,18 @@ exports.updateOrderStatus = async (req, res) => {
 			});
 		}
 
+		// Market admin scoping: can only update orders for their own market
+		if (
+			req.user.role === "market" &&
+			(!order.market ||
+				String(order.market) !== String(req.user.marketId))
+		) {
+			return res.status(403).json({
+				success: false,
+				message: "Not authorized to update this order",
+			});
+		}
+
 		// Role-based status update permissions
 		const userRole = req.user.role;
 
@@ -1642,6 +1696,12 @@ exports.updateOrderStatus = async (req, res) => {
 			manager: validStatuses, // Manager can update to any status
 			staff: validStatuses, // Staff can update to any status
 			rider: ["ready for pickup", "OnTheWay", "delivered"], // Riders can only update delivery-related statuses
+			market: [
+				"confirmed",
+				"processing",
+				"ready for pickup",
+				"cancelled",
+			], // Market admins manage their own pipeline up to ready-for-pickup
 		};
 
 		const allowedStatuses = statusPermissions[userRole] || [];
@@ -1749,13 +1809,13 @@ exports.updateOrderStatus = async (req, res) => {
 					promoCodeHtml = `
 						<div style="background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-left: 4px solid #28a745; border-radius: 4px;">
 							<h3 style="color: #28a745; margin-top: 0;">Congratulations! 🎉</h3>
-							<p>Since your order was over €100, you have won a special promo code for your next purchase!</p>
+							<p>Since your order was over $100, you have won a special promo code for your next purchase!</p>
 							<p>We will send you the code in a separate email shortly.</p>
 							
 							<hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;">
 							
 							<h3 style="color: #28a745; margin-top: 0;">Congratulations! 🎉</h3>
-							<p>Because your order was over €100, you have won a special voucher code for your next purchase!</p>
+							<p>Because your order was over $100, you have won a special voucher code for your next purchase!</p>
 							<p>We will send you the code shortly in a separate email.</p>
 						</div>
 					`;

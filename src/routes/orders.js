@@ -54,7 +54,7 @@ router.get(
 router.get(
 	"/",
 	protect,
-	authorize("admin", "manager", "staff", "customer", "rider"),
+	authorize("admin", "manager", "staff", "customer", "rider", "market"),
 	getOrders
 );
 router.get(
@@ -66,7 +66,7 @@ router.get(
 router.get(
 	"/:id",
 	protect,
-	authorize("admin", "manager", "staff", "customer", "rider"),
+	authorize("admin", "manager", "staff", "customer", "rider", "market"),
 	getOrder
 );
 router.post(
@@ -90,7 +90,7 @@ router.patch(
 router.patch(
 	"/:id/status",
 	protect,
-	authorize("admin", "manager", "staff", "rider"),
+	authorize("admin", "manager", "staff", "rider", "market"),
 	updateOrderStatus
 );
 router.patch(

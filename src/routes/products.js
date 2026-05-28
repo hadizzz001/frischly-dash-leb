@@ -48,37 +48,37 @@ router.get("/:id", getProduct);
 router.post(
 	"/",
 	protect,
-	authorize("admin", "manager"),
+	authorize("admin", "manager", "market"),
 	uploadMiddleware,
 	createProduct
 );
 router.post(
 	"/upload-image",
 	protect,
-	authorize("admin", "manager"),
+	authorize("admin", "manager", "market"),
 	uploadMiddleware,
 	uploadImage
 );
 router.put(
 	"/:id",
 	protect,
-	authorize("admin", "manager", "staff"),
+	authorize("admin", "manager", "staff", "market"),
 	uploadMiddleware,
 	updateProduct
 );
 router.patch(
 	"/:id/stock",
 	protect,
-	authorize("admin", "manager", "staff"),
+	authorize("admin", "manager", "staff", "market"),
 	updateProductStock
 );
 router.patch(
 	"/:id/shelf",
 	protect,
-	authorize("admin", "manager", "staff"),
+	authorize("admin", "manager", "staff", "market"),
 	updateProductShelfNumber
 );
-router.delete("/:id", protect, authorize("admin"), deleteProduct);
+router.delete("/:id", protect, authorize("admin", "market"), deleteProduct);
 router.delete(
 	"/:id/permanent",
 	protect,

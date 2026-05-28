@@ -1292,7 +1292,7 @@
 						<td><strong>${order.orderNumber}</strong></td>
 						<td>${customerName}</td>
 						<td>${itemCount} item${itemCount !== 1 ? "s" : ""}</td>
-						<td>€${totalAmount.toFixed(2)}</td>
+						<td>$${totalAmount.toFixed(2)}</td>
 						<td><span class="status-badge status-${status}">${status}</span></td>
 						<td>${shelfNumber}</td>
 						<td>${txid}</td>
@@ -1493,9 +1493,7 @@
 						if (typeof customerAddress === "object") {
 							const street = customerAddress.street || "";
 							city = customerAddress.city || "";
-							const state = customerAddress.state || "";
-							const country = customerAddress.country || "";
-							fullAddress = [street, city, state, country]
+							fullAddress = [street, city]
 								.filter(Boolean)
 								.join(", ");
 						} else {
@@ -1564,8 +1562,8 @@
 							? `${zoneInfo.distance} ${zoneInfo.distanceUnit || "km"}`
 							: "N/A";
 						const deliveryFee = zoneInfo.deliveryFee
-							? `€${zoneInfo.deliveryFee.toFixed(2)}`
-							: "€0.00";
+							? `$${zoneInfo.deliveryFee.toFixed(2)}`
+							: "$0.00";
 						const estimatedTime = zoneInfo.estimatedDeliveryTime
 							? `${zoneInfo.estimatedDeliveryTime} min`
 							: "N/A";
@@ -1625,11 +1623,11 @@
 							<td>${item.product?.name || "N/A"}</td>
 							<td>${item.product?.shelfNumber || "N/A"}</td>
 							<td>${item.quantity}</td>
-							<td>€${item.product.price?.toFixed(2) || "0.00"}</td>
+							<td>$${item.product.price?.toFixed(2) || "0.00"}</td>
 							<td>${item.product?.tax || 0}%</td>
 							<td>${item.product?.discount || 0}%</td>
-							<td>€${item.product?.bottlerefund?.toFixed(2) || "0.00"}</td>
-							<td>€${(item.totalPrice || 0).toFixed(2)}</td>
+							<td>$${item.product?.bottlerefund?.toFixed(2) || "0.00"}</td>
+							<td>$${(item.totalPrice || 0).toFixed(2)}</td>
 						</tr>
 					`
 							)
@@ -1654,7 +1652,7 @@
 							<h4>📦 Order Information</h4>
 							<p><strong>Status:</strong> <span class="status-badge status-${status}">${status}</span></p>
 							<p><strong>Order Date:</strong> ${orderDate}</p>
-							<p><strong>Total Amount:</strong> €${order.total?.toFixed(2) || "0.00"}</p>
+							<p><strong>Total Amount:</strong> $${order.total?.toFixed(2) || "0.00"}</p>
 							<p><strong>Items Count:</strong> ${order.items?.length || 0}</p>
 						</div>
 
@@ -1918,7 +1916,7 @@
 						<div>
 							<strong>Order Date:</strong> ${orderDate}<br>
 							<strong>Total Items:</strong> ${order.items?.length || 0}<br>
-							<strong>Total Amount:</strong> €${order.total?.toFixed(2) || "0.00"}
+							<strong>Total Amount:</strong> $${order.total?.toFixed(2) || "0.00"}
 						</div>
 					</div>
 				`;

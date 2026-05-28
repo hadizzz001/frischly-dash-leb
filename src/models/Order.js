@@ -49,8 +49,6 @@ const orderSchema = new mongoose.Schema(
 			address: {
 				street: String,
 				city: String,
-				state: String,
-				country: String,
 			},
 		},
 		items: {
@@ -199,6 +197,14 @@ const orderSchema = new mongoose.Schema(
 		promoCode: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "PromoCode",
+		},
+		// Market this order was placed from (derived from items).
+		// Null/undefined means main store order.
+		market: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Market",
+			default: null,
+			index: true,
 		},
 	},
 	{

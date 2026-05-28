@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Dashboard - FRISCHLY Server</title>
+		<title>Market Dashboard - FRISCHLY</title>
 
 		<!-- Leaflet (free OpenStreetMap renderer) -->
 		<link
@@ -204,7 +204,7 @@
 					class="sidebar-logo"
 				/>
 				<h2>FRISCHLY Admin</h2>
-				<p>Management Dashboard</p>
+				<p>Market Dashboard</p>
 			</div>
 			<ul class="sidebar-menu">
 				<li class="menu-item">
@@ -225,8 +225,9 @@
 						<span class="menu-text">Products</span>
 					</a>
 				</li>
-				<li class="menu-item" id="markets-menu-item" style="display: none;">
-					<a href="/markets" id="menu-markets">
+				<!-- Market Management removed for market-admin -->
+				<li class="menu-item" id="markets-menu-item" style="display: none !important;">
+					<a href="#" id="menu-markets" onclick="return false;">
 						<span class="menu-icon">🏪</span>
 						<span class="menu-text">Market Management</span>
 					</a>
@@ -887,8 +888,8 @@
 										<th>Stock</th>
 										<th>Sort Order</th>
 										<th>Status</th>
-										<th>Market</th>
-										<th>Address</th>
+										<th>In Ads</th>
+										<th>+18</th>
 										<th>Actions</th>
 									</tr>
 								</thead>
@@ -2200,7 +2201,7 @@
 				<form id="kitchen-form" onsubmit="event.preventDefault(); saveKitchen();" style="padding:4px 0;">
 					<input type="hidden" id="kitchen-id" />
 
-					<!-- Basic info card -->
+					<!-- Basic info -->
 					<div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:18px;">
 						<div class="form-group" style="margin:0;">
 							<label for="kitchen-name" style="font-weight:600;font-size:13px;color:#374151;">Kitchen name</label>
@@ -2648,23 +2649,339 @@
 		<script src="js/lebanese-cities.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 
+		<!-- ───── Market-admin fetch shim ─────
+		     Rewrites /api/admin/* and /api/<global>/* paths used by the
+		     regular admin dashboard onto the tenant-scoped /api/market-admin/*
+		     endpoints. Adapts response shapes so the unchanged admin UI
+		     (cloned verbatim from dashboard.html) still works. -->
 		<script>
-			let currentToken = localStorage.getItem("authToken");
-			let currentRefreshToken = localStorage.getItem("refreshToken");
+		(function () {
+			const M = "/api/market-admin";
+
+			// Split an absolute or relative URL into [origin, pathAndQuery].
+			// Also normalises so the path always starts with "/api/...".
+			function splitUrl(u) {
+				if (typeof u !== "string") return ["", u];
+				try {
+					if (/^https?:\/\//i.test(u)) {
+						const parsed = new URL(u);
+						return [parsed.origin, parsed.pathname + parsed.search + parsed.hash];
+					}
+				} catch (_) {}
+				return ["", u];
+			}
+
+			function rewriteUrl(u) {
+				if (typeof u !== "string") return u;
+				const [origin, pathFull] = splitUrl(u);
+				const rewritten = rewritePath(pathFull);
+				if (rewritten === pathFull) return u; // unchanged
+				return origin + rewritten;
+			}
+
+			function rewritePath(u) {
+				const orig = u;
+				// Admin-only system endpoints → noop
+				if (/^\/api\/admin\/(backup|maintenance|system-info)/.test(u)) {
+					return M + "/__noop_admin" + u.replace(/^\/api\/admin/, "");
+				}
+				if (/^\/api\/admin\/settings\b/.test(u)) {
+					return M + "/settings" + u.slice("/api/admin/settings".length);
+				}
+				// Auth endpoints
+				if (/^\/api\/auth\/me\b/.test(u)) {
+					return M + "/me" + u.slice("/api/auth/me".length);
+				}
+				if (/^\/api\/auth\/profile\b/.test(u)) {
+					return M + "/profile" + u.slice("/api/auth/profile".length);
+				}
+				if (/^\/api\/auth\/change-password\b/.test(u)) {
+					return M + "/profile/password" + u.slice("/api/auth/change-password".length);
+				}
+				if (/^\/api\/auth\/refresh\b/.test(u)) {
+					return M + "/__noop_refresh";
+				}
+				if (/^\/api\/auth\/customers\b/.test(u)) {
+					return M + "/__noop_customers" + u.slice("/api/auth/customers".length);
+				}
+				if (/^\/api\/auth\/users\b/.test(u) && /[?&]includeRoles=rider\b/.test(u)) {
+					return M + "/rider-users";
+				}
+				if (/^\/api\/auth\/users\b/.test(u)) {
+					return M + "/staff" + u.slice("/api/auth/users".length);
+				}
+				// Domain endpoints
+				if (/^\/api\/products\/count\b/.test(u)) return M + "/__noop_count_products";
+				if (/^\/api\/products\b/.test(u))
+					return M + "/products" + u.slice("/api/products".length);
+				if (/^\/api\/categories\b/.test(u))
+					return M + "/categories" + u.slice("/api/categories".length);
+				if (/^\/api\/subcategories\b/.test(u)) {
+					// The global subcategories endpoint accepts ?parent=<categoryId>,
+					// but the tenant-scoped market-admin endpoint expects ?category=<id>.
+					// Translate so subcategory dropdowns filter by selected category.
+					let tail = u.slice("/api/subcategories".length);
+					tail = tail.replace(/([?&])parent=/g, "$1category=");
+					return M + "/subcategories" + tail;
+				}
+				if (/^\/api\/orders\/count\b/.test(u)) return M + "/__noop_count_orders";
+				if (/^\/api\/orders\/stats\b/.test(u)) return M + "/__noop_order_stats";
+				if (/^\/api\/orders\b/.test(u))
+					return M + "/orders" + u.slice("/api/orders".length);
+				if (/^\/api\/riders\/stats\b/.test(u)) return M + "/__noop_rider_stats";
+				if (/^\/api\/riders\b/.test(u))
+					return M + "/riders" + u.slice("/api/riders".length);
+				if (/^\/api\/zones\b/.test(u)) return M + "/__noop_zones" + u.slice("/api/zones".length);
+				if (/^\/api\/shelves\b/.test(u)) return M + "/shelves" + u.slice("/api/shelves".length);
+				if (/^\/api\/waste\/stats\b/.test(u)) return M + "/waste/summary";
+				if (/^\/api\/waste\/product\b/.test(u)) return M + "/__noop_waste_product";
+				if (/^\/api\/waste\b/.test(u))
+					return M + "/waste" + u.slice("/api/waste".length);
+				if (/^\/api\/promocodes\b/.test(u))
+					return M + "/promocodes" + u.slice("/api/promocodes".length);
+				if (/^\/api\/announcements\b/.test(u))
+					return M + "/announcements" + u.slice("/api/announcements".length);
+				if (/^\/api\/notifications\/send\/all\b/.test(u))
+					return M + "/__noop_notify_all";
+				if (/^\/api\/notifications\b/.test(u))
+					return M + "/__noop_notifications" + u.slice("/api/notifications".length);
+				return orig;
+			}
+
+			function emptyJson(extra) {
+				const body = Object.assign(
+					{ success: true, message: "Not available for market admin", data: [], count: 0, total: 0 },
+					extra || {}
+				);
+				return new Response(JSON.stringify(body), {
+					status: 200,
+					headers: { "Content-Type": "application/json" },
+				});
+			}
+
+			function isNoopUrl(u) {
+				return /\/__noop_/.test(u);
+			}
+
+			// Adapt response bodies so the admin-shaped UI keeps working
+			async function adaptResponse(rewrittenUrl, response) {
+				if (!response || !response.ok) return response;
+				const ct = response.headers.get("content-type") || "";
+				if (!ct.includes("application/json")) return response;
+				let body;
+				try {
+					body = await response.clone().json();
+				} catch (_) {
+					return response;
+				}
+				let out = body;
+
+				const wrap = (obj) =>
+					new Response(JSON.stringify(obj), {
+						status: response.status,
+						headers: { "Content-Type": "application/json" },
+					});
+
+				// Staff list (was /api/auth/users) → admin expects data.data.users
+				if (/\/api\/market-admin\/staff(\?|$|\/?$)/.test(rewrittenUrl) && Array.isArray(body.data)) {
+					const total = (body.meta && body.meta.total) || body.data.length;
+					const page = (body.meta && body.meta.page) || 1;
+					const limit = (body.meta && body.meta.limit) || total || 20;
+					out = {
+						success: true,
+						data: {
+							users: body.data,
+							total,
+							page,
+							limit,
+							totalPages: Math.max(1, Math.ceil(total / Math.max(1, limit))),
+						},
+					};
+					return wrap(out);
+				}
+
+				// Rider-user dropdown → same users envelope expected by rider modal
+				if (/\/api\/market-admin\/rider-users(\?|$|\/?$)/.test(rewrittenUrl) && Array.isArray(body.data)) {
+					out = { success: true, data: { users: body.data, total: body.data.length } };
+					return wrap(out);
+				}
+
+				// Products list → this market dashboard reads data.data as a plain array
+				if (/\/api\/market-admin\/products(\?|$|\/?$)/.test(rewrittenUrl) && Array.isArray(body.data)) {
+					const total = (body.meta && body.meta.total) || body.data.length;
+					const page = (body.meta && body.meta.page) || 1;
+					const limit = (body.meta && body.meta.limit) || total || 25;
+					out = {
+						success: true,
+						data: body.data,
+						pagination: {
+							totalProducts: total,
+							total,
+							page,
+							currentPage: page,
+							limit,
+							totalPages: Math.max(1, Math.ceil(total / Math.max(1, limit))),
+						},
+						meta: body.meta,
+					};
+					return wrap(out);
+				}
+
+				// Orders list → admin expects data.data.orders
+				if (/\/api\/market-admin\/orders(\?|$|\/?$)/.test(rewrittenUrl) && Array.isArray(body.data)) {
+					const total = (body.meta && body.meta.total) || body.data.length;
+					const page = (body.meta && body.meta.page) || 1;
+					const limit = (body.meta && body.meta.limit) || total || 10;
+					out = {
+						success: true,
+						data: {
+							orders: body.data,
+							total,
+							page,
+							limit,
+							totalPages: Math.max(1, Math.ceil(total / Math.max(1, limit))),
+						},
+					};
+					return wrap(out);
+				}
+
+				// Riders list → admin expects data.data.riders or data.data
+				if (/\/api\/market-admin\/riders(\?|$|\/?$)/.test(rewrittenUrl) && Array.isArray(body.data)) {
+					out = {
+						success: true,
+						data: { riders: body.data, total: (body.meta && body.meta.total) || body.data.length },
+					};
+					return wrap(out);
+				}
+
+				// Categories / subcategories → market-dashboard consumers read
+				// `data.data` as a plain array, so do NOT wrap them.
+				// (Intentionally no adapter here.)
+
+				// Promo codes / announcements lists
+				if (/\/api\/market-admin\/promocodes(\?|$|\/?$)/.test(rewrittenUrl) && Array.isArray(body.data)) {
+					out = { success: true, data: { promoCodes: body.data, promocodes: body.data, total: body.data.length } };
+					return wrap(out);
+				}
+				if (/\/api\/market-admin\/announcements(\?|$|\/?$)/.test(rewrittenUrl) && Array.isArray(body.data)) {
+					out = { success: true, data: { announcements: body.data, total: body.data.length } };
+					return wrap(out);
+				}
+
+				// Waste list
+				if (/\/api\/market-admin\/waste(\?|$|\/?$)/.test(rewrittenUrl) && Array.isArray(body.data)) {
+					const total = (body.meta && body.meta.total) || body.data.length;
+					const page = (body.meta && body.meta.page) || 1;
+					const limit = (body.meta && body.meta.limit) || total || 20;
+					out = {
+						success: true,
+						data: {
+							waste: body.data,
+							records: body.data,
+							total,
+							page,
+							limit,
+							totalPages: Math.max(1, Math.ceil(total / Math.max(1, limit))),
+						},
+					};
+					return wrap(out);
+				}
+
+				// /me → expose the user object expected by /auth/me consumers
+				if (/\/api\/market-admin\/me(\?|$)/.test(rewrittenUrl) && body.data) {
+					const m = body.data.market || {};
+					const u = body.data.user || {};
+					out = {
+						success: true,
+						data: {
+							user: {
+								_id: u.id || m._id,
+								id: u.id || m._id,
+								name: u.name || m.name,
+								email: u.email || m.email,
+								role: body.data.role || "market",
+								market: m,
+								phoneNumber: m.phoneNumber || "",
+								address: {
+									street: (m.location && m.location.street) || "",
+									city: (m.location && m.location.city) || "",
+								},
+								isActive: true,
+								createdAt: m.createdAt,
+								lastLogin: m.lastLogin,
+							},
+						},
+					};
+					return wrap(out);
+				}
+
+				// Profile (Market doc) → match auth/profile shape used by admin
+				if (/\/api\/market-admin\/profile(\?|$)/.test(rewrittenUrl) && body.data) {
+					out = { success: true, data: { user: body.data, market: body.data } };
+					return wrap(out);
+				}
+
+				return response;
+			}
+
+			const origFetch = window.fetch.bind(window);
+			window.fetch = async function (input, init) {
+				let url = typeof input === "string" ? input : (input && input.url) || "";
+				const newUrl = rewriteUrl(url);
+				if (isNoopUrl(newUrl)) {
+					// Return a benign empty success — matches every shape the admin code falls back to.
+					return emptyJson({
+						data: { users: [], products: [], orders: [], riders: [], zones: [], shelves: [], categories: [], subcategories: [], stats: {}, settings: {}, total: 0 },
+					});
+				}
+				let response;
+				if (typeof input === "string") {
+					response = await origFetch(newUrl, init);
+				} else if (newUrl !== url) {
+					response = await origFetch(new Request(newUrl, input), init);
+				} else {
+					response = await origFetch(input, init);
+				}
+				// Auto-redirect on auth failure
+				if (response && response.status === 401) {
+					try {
+						localStorage.removeItem("marketToken");
+						localStorage.removeItem("marketData");
+					} catch (_) {}
+					if (!/\/market(\?|$|\/)/.test(window.location.pathname)) {
+						window.location.href = "/market";
+					}
+				}
+				return adaptResponse(newUrl, response);
+			};
+
+			// Boot-time auth gate — must happen before the rest of the script runs.
+			try {
+				const t = localStorage.getItem("marketToken");
+				if (!t) {
+					window.location.href = "/market";
+				}
+			} catch (_) {}
+		})();
+		</script>
+
+		<script>
+			let currentToken = localStorage.getItem("marketToken");
+			let currentRefreshToken = null /* market: no refresh */;
 
 			// Token management functions
 			function updateTokens(token, refreshToken) {
 				currentToken = token;
 				currentRefreshToken = refreshToken;
-				localStorage.setItem("authToken", token);
-				localStorage.setItem("refreshToken", refreshToken);
+				localStorage.setItem("marketToken", token);
+				localStorage.setItem("marketRefreshToken_unused", refreshToken);
 			}
 
 			function clearTokens() {
 				currentToken = null;
 				currentRefreshToken = null;
-				localStorage.removeItem("authToken");
-				localStorage.removeItem("refreshToken");
+				localStorage.removeItem("marketToken");
+				localStorage.removeItem("marketData");
 			}
 
 			// Auto refresh token function
@@ -2672,7 +2989,7 @@
 				if (!currentRefreshToken) {
 					console.log("No refresh token available");
 					clearTokens();
-					window.location.href = "signin.html";
+					window.location.href = "/market";
 					return null;
 				}
 
@@ -2693,13 +3010,13 @@
 					} else {
 						console.log("Refresh token expired or invalid");
 						clearTokens();
-						window.location.href = "signin.html";
+						window.location.href = "/market";
 						return null;
 					}
 				} catch (error) {
 					console.error("Error refreshing token:", error);
 					clearTokens();
-					window.location.href = "signin.html";
+					window.location.href = "/market";
 					return null;
 				}
 			}
@@ -3100,11 +3417,11 @@
 				if (currentRefreshToken) {
 					refreshAuthToken().then((newToken) => {
 						if (!newToken) {
-							window.location.href = "signin.html";
+							window.location.href = "/market";
 						}
 					});
 				} else {
-					window.location.href = "signin.html";
+					window.location.href = "/market";
 				}
 			}
 
@@ -3250,14 +3567,14 @@
 						const user = data.data.user;
 
 						// Check if user has required role for dashboard access
-						const allowedRoles = ["manager", "admin", "rider", "staff"];
+						const allowedRoles = ["manager", "admin", "rider", "staff", "market", "market_staff"];
 						if (!allowedRoles.includes(user.role)) {
 							showMessage(
 								"Access denied. Dashboard access is restricted to managers and administrators only.",
 								"error"
 							);
 							setTimeout(() => {
-								window.location.href = "signin.html";
+								window.location.href = "/market";
 							}, 3000);
 							return;
 						}
@@ -3275,9 +3592,10 @@
 							user.role.toUpperCase();
 
 						// Update address
-						const addressText = [user.address.street, user.address.city]
+						const addr = user.address || {};
+						const addressText = [addr.street, addr.city]
 							.filter(Boolean)
-							.join(", ");
+							.join(", ") || "—";
 						document.getElementById("user-address").textContent = addressText;
 
 						// Update stats
@@ -3569,7 +3887,7 @@
 				clearTokens();
 				showMessage("Signed out successfully. Redirecting...", "success");
 				setTimeout(() => {
-					window.location.href = "signin.html";
+					window.location.href = "/market";
 				}, 1500);
 			}
 
@@ -3667,10 +3985,6 @@
 
 				tbody.innerHTML = "";
 
-				// Hide market-tied users from the main admin staff page —
-				// they are managed inside the market dashboard.
-				users = (users || []).filter((u) => !u.market);
-
 				if (!users || users.length === 0) {
 					tbody.innerHTML = `
 						<tr>
@@ -3714,20 +4028,6 @@
 							? formatDate(user.createdAt)
 							: "N/A";
 
-						const managerBlocked =
-							currentUser &&
-							currentUser.role === "manager" &&
-							userRole === "admin";
-						const isMarketUser = !!user.market;
-						const actionsHtml = managerBlocked
-							? '<span style="color:#9aa4b2;font-size:12px;">No access</span>'
-							: isMarketUser
-							? '<span style="color:#9aa4b2;font-size:12px;">Market user — view only</span>'
-							: `
-								<button class="action-btn edit" onclick="editUser('${user._id}')">Edit</button>
-								<button class="action-btn delete" onclick="deleteUser('${user._id}', '${userName.replace(/'/g, "\\'")}')">Delete</button>
-							`;
-
 						row.innerHTML = `
 							<td>${userName}</td>
 							<td>${userEmail}</td>
@@ -3737,7 +4037,12 @@
 							}">${userStatus}</span></td>
 							<td>${createdDate}</td>
 							<td>
-								<div class="action-buttons">${actionsHtml}</div>
+								<div class="action-buttons">
+									<button class="action-btn edit" onclick="editUser('${user._id}')">Edit</button>
+									<button class="action-btn delete" onclick="deleteUser('${
+										user._id
+									}', '${userName.replace(/'/g, "\\'")}')">Delete</button>
+								</div>
 							</td>
 						`;
 						tbody.appendChild(row);
@@ -3765,6 +4070,41 @@
 			}
 
 			// Show add user modal
+			// === Lock user-address city to the market's city ===
+			function getMarketCity() {
+				if (!currentUser) return "";
+				return (
+					(currentUser.location && currentUser.location.city) ||
+					(currentUser.address && currentUser.address.city) ||
+					currentUser.city ||
+					""
+				);
+			}
+
+			function lockUserCityToMarket() {
+				const cityField = document.getElementById("user-edit-city");
+				if (!cityField) return;
+				const marketCity = getMarketCity();
+				if (!marketCity) return;
+
+				if (cityField.tagName === "SELECT") {
+					// Replace options with just the market city so it is the only choice.
+					cityField.innerHTML =
+						'<option value="' +
+						marketCity.replace(/"/g, "&quot;") +
+						'" selected>' +
+						marketCity +
+						"</option>";
+				}
+				cityField.value = marketCity;
+				// Visually + functionally lock without using disabled (so FormData still includes it).
+				cityField.style.pointerEvents = "none";
+				cityField.style.background = "#f3f4f6";
+				cityField.style.cursor = "not-allowed";
+				cityField.setAttribute("tabindex", "-1");
+				cityField.title = "City is fixed to your market's city: " + marketCity;
+			}
+
 			function showAddUserModal() {
 				try {
 					const modalTitle = document.getElementById("user-edit-modal-title");
@@ -3800,8 +4140,8 @@
 					passwordGroup.style.display = "block";
 					userPassword.setAttribute("required", "required");
 
-					applyManagerRoleOptionRestrictions();
 					userModal.style.display = "block";
+					lockUserCityToMarket();
 				} catch (error) {
 					console.error("Error showing add user modal:", error);
 					showMessage("Error opening modal. Please try again.", "error");
@@ -3811,30 +4151,6 @@
 			// Edit user
 			async function editUser(userId) {
 				try {
-					const target = (allUsers || []).find(
-						(u) => String(u._id) === String(userId)
-					);
-
-					// Market-tied users are managed from the market dashboard.
-					if (target && target.market) {
-						showMessage(
-							"Market users are read-only here. Manage them from the market dashboard.",
-							"error"
-						);
-						return;
-					}
-
-					// Block managers from editing admin users
-					if (currentUser && currentUser.role === "manager") {
-						if (target && target.role === "admin") {
-							showMessage(
-								"Managers are not allowed to edit admin users.",
-								"error"
-							);
-							return;
-						}
-					}
-
 					// Show loading message
 					showMessage("Loading user data...", "info");
 
@@ -3934,6 +4250,7 @@
 
 					if (streetField) streetField.value = address.street || "";
 					if (cityField) cityField.value = address.city || "";
+					lockUserCityToMarket();
 					if (idField) idField.value = user._id || "";
 					if (nameField) nameField.value = user.name || "";
 					if (emailField) emailField.value = user.email || "";
@@ -3999,30 +4316,6 @@
 			}
 
 			async function deleteUser(userId, userName) {
-				const target = (allUsers || []).find(
-					(u) => String(u._id) === String(userId)
-				);
-
-				// Market-tied users are managed from the market dashboard.
-				if (target && target.market) {
-					showMessage(
-						"Market users are read-only here. Manage them from the market dashboard.",
-						"error"
-					);
-					return;
-				}
-
-				// Block managers from deleting admin users
-				if (currentUser && currentUser.role === "manager") {
-					if (target && target.role === "admin") {
-						showMessage(
-							"Managers are not allowed to delete admin users.",
-							"error"
-						);
-						return;
-					}
-				}
-
 				if (
 					!confirm(
 						`Are you sure you want to delete user "${userName}"? This action cannot be undone.`
@@ -4113,7 +4406,7 @@
 						isActive: formData.get("status") === "true",
 						address: {
 							street: formData.get("street"),
-							city: formData.get("city"),
+							city: getMarketCity() || formData.get("city"),
 						},
 					};
 
@@ -4246,7 +4539,8 @@
 						if (
 							currentUser &&
 							(currentUser.role === "admin" ||
-								currentUser.role === "manager")
+								currentUser.role === "manager" ||
+								currentUser.role === "market")
 						) {
 							// Default to staff tab, load staff data
 							showStaffTab("staff");
@@ -5245,7 +5539,7 @@
 						const errorData = await response.json();
 						console.error("Error fetching product count:", errorData);
 						if (countElement) {
-							countElement.textContent = "Error";
+							countElement.textContent = "0";
 						}
 					}
 				} catch (error) {
@@ -5254,7 +5548,7 @@
 						`product-count-${categoryId}`
 					);
 					if (countElement) {
-						countElement.textContent = "Error";
+						countElement.textContent = "0";
 					}
 				}
 			}
@@ -5324,26 +5618,26 @@
 						const errorData = await response.json().catch(() => ({}));
 						console.error("Error fetching bulk product counts:", errorData);
 
-						// Show error state for all categories
+						// Fall back to zero counts when the optional count endpoint fails
 						categories.forEach((category) => {
 							const countElement = document.getElementById(
 								`product-count-${category._id}`
 							);
 							if (countElement) {
-								countElement.textContent = "Error";
+								countElement.textContent = "0";
 							}
 						});
 					}
 				} catch (error) {
 					console.error("Error fetching bulk product counts:", error);
 
-					// Show error state for all categories
+					// Fall back to zero counts when the optional count endpoint fails
 					categories.forEach((category) => {
 						const countElement = document.getElementById(
 							`product-count-${category._id}`
 						);
 						if (countElement) {
-							countElement.textContent = "Error";
+							countElement.textContent = "0";
 						}
 					});
 				}
@@ -6003,46 +6297,34 @@
 							<td><span class="status-badge ${
 								product.isActive ? "active" : "inactive"
 							}">${status}</span></td>
-							<td>${
-								product.market && product.market.name
-									? product.market.name
-									: "—"
-							}</td>
-							<td>${
-								product.market &&
-								product.market.location &&
-								product.market.location.city
-									? product.market.location.city
-									: "—"
-							}</td>
+							<td><span class="status-badge ${product.inAds ? "active" : "inactive"}">${
+							product.inAds ? "Yes" : "No"
+						}</span></td>
+							<td><span class="status-badge ${product.is18Plus ? "active" : "inactive"}">${
+							product.is18Plus ? "Yes" : "No"
+						}</span></td>
 							<td>
 								<div class="action-buttons">
-									${
-										product.market
-											? `<span style="color:#9aa4b2;font-size:12px;">Market product — view only</span>`
-											: `
-								<button class="action-btn edit" onclick="editProduct('${
+									<button class="action-btn edit" onclick="editProduct('${
 										product._id
 									}')">Edit</button>
-								<button class="action-btn" style="background: #17a2b8; color: white;" onclick="updateStock('${
+									<button class="action-btn" style="background: #17a2b8; color: white;" onclick="updateStock('${
 										product._id
 									}')">Stock</button>
-								${
-									product.isActive
-										? `<button class="action-btn delete" onclick="deleteProduct('${
-												product._id
-										  }', '${productName.replace(
-												/'/g,
-												"\\'"
-										  )}')">Delete</button>`
-										: `<button class="action-btn" style="background: #dc3545; color: white;" onclick="permanentDeleteProduct('${
-												product._id
-										  }', '${productName.replace(
-												/'/g,
-												"\\'"
-										  )}')">Permanent Delete</button>`
-								}
-											`
+									${
+										product.isActive
+											? `<button class="action-btn delete" onclick="deleteProduct('${
+													product._id
+											  }', '${productName.replace(
+													/'/g,
+													"\\'"
+											  )}')">Delete</button>`
+											: `<button class="action-btn" style="background: #dc3545; color: white;" onclick="permanentDeleteProduct('${
+													product._id
+											  }', '${productName.replace(
+													/'/g,
+													"\\'"
+											  )}')">Permanent Delete</button>`
 									}
 								</div>
 							</td>
@@ -6286,47 +6568,6 @@
 				loadProducts(newPage, productsPageSize, currentFilters);
 			}
 
-			// === Manager role restrictions ===
-			function isManager() {
-				return !!(currentUser && currentUser.role === "manager");
-			}
-
-			function applyManagerProductFieldRestrictions() {
-				const lockedIds = [
-					"product-price",
-					"product-tax",
-					"product-bottlerefund",
-					"product-discount",
-				];
-				const locked = isManager();
-				lockedIds.forEach((id) => {
-					const el = document.getElementById(id);
-					if (!el) return;
-					el.disabled = locked;
-					el.readOnly = locked;
-					el.style.background = locked ? "#f3f4f6" : "";
-					el.style.cursor = locked ? "not-allowed" : "";
-					el.title = locked
-						? "Managers are not allowed to edit this field"
-						: "";
-				});
-			}
-
-			function applyManagerRoleOptionRestrictions() {
-				const select = document.getElementById("user-edit-role");
-				if (!select) return;
-				const adminOption = select.querySelector('option[value="admin"]');
-				if (!adminOption) return;
-				if (isManager()) {
-					adminOption.hidden = true;
-					adminOption.disabled = true;
-					if (select.value === "admin") select.value = "staff";
-				} else {
-					adminOption.hidden = false;
-					adminOption.disabled = false;
-				}
-			}
-
 			async function showAddProductModal() {
 				// Load categories and subcategories for the dropdowns
 				await loadCategoriesForProductForm();
@@ -6374,7 +6615,6 @@
 						"Final Price: $0.00";
 
 					productModal.style.display = "block";
-					applyManagerProductFieldRestrictions();
 
 					// Always start at the top of the modal so the user sees the first
 					// fields (Name, Barcode, ...) instead of where it was last scrolled.
@@ -6582,7 +6822,6 @@
 					elements.productTax.value = product.tax || 0;
 					elements.productBottlerefund.value = product.bottlerefund || 0;
 					elements.productDiscount.value = product.discount || 0;
-					applyManagerProductFieldRestrictions();
 					elements.productStock.value = product.stock || 0;
 					elements.productStatus.value = product.isActive ? "true" : "false";
 					elements.productInAds.checked = product.inAds || false;
@@ -7462,7 +7701,7 @@
 					} else if (response.status === 401) {
 						showMessage("Please log in first", "error");
 						setTimeout(() => {
-							window.location.href = "signin.html";
+							window.location.href = "/market";
 						}, 2000);
 					} else {
 						const errorData = await response.json();
@@ -8663,13 +8902,13 @@
 				document.getElementById("user-edit-street").value =
 					address.street || "";
 				document.getElementById("user-edit-city").value = address.city || "";
+				lockUserCityToMarket();
 
 				// Hide password field for editing existing user
 				document.getElementById("user-edit-password-group").style.display =
 					"none";
 
 				// Update modal title
-				applyManagerRoleOptionRestrictions();
 				document.getElementById("user-edit-modal-title").textContent =
 					"Edit Customer";
 
@@ -8730,7 +8969,7 @@
 				try {
 					const response = await fetch(`${API_BASE_URL}/zones?isActive=true`, {
 						headers: {
-							Authorization: `Bearer ${localStorage.getItem("token")}`,
+							Authorization: `Bearer ${localStorage.getItem("marketToken")}`,
 						},
 					});
 
@@ -9063,7 +9302,7 @@
 				const note = document.getElementById("rider-map-note");
 				if (!container || typeof L === "undefined") return;
 				const coords = await __resolveRiderCoords(rider);
-				const center = coords || { lat: 33.8938, lng: 35.5018 }; // Beirut fallback
+				const center = coords || { lat: 33.8938, lng: 35.5018 };
 				if (!window.__riderLeafletMap) {
 					window.__riderLeafletMap = L.map(container).setView(
 						[center.lat, center.lng],
@@ -9766,11 +10005,9 @@
 						<div class="form-group">
 							<label for="user-edit-role">Role *</label>
 							<select id="user-edit-role" name="role" required>
-								<option value="staff">Staff</option>
-								<option value="customer">Customer</option>
-								<option value="rider">Rider</option>
-								<option value="manager">Manager</option>
-								<option value="admin">Admin</option>
+								<option value="market_staff">Market Staff</option>
+								<option value="market_manager">Market Manager</option>
+								<option value="market_driver">Market Driver</option>
 							</select>
 						</div>
 
@@ -16521,14 +16758,12 @@
 				if (!Number.isFinite(raw)) raw = from + 1;
 				let to = Math.max(1, Math.min(kitchensData.length, raw)) - 1;
 				if (to === from) {
-					// value snapped back to its current position
 					inputEl.value = String(from + 1);
 					return;
 				}
 				const [moved] = kitchensData.splice(from, 1);
 				kitchensData.splice(to, 0, moved);
 				renderKitchens();
-				// Refocus the moved row's input so the user can keep typing.
 				setTimeout(() => {
 					const nextInput = document.querySelector(
 						`.kitchen-order-input[data-kitchen-id="${id}"]`
@@ -16724,7 +16959,6 @@
 					const result = await response.json();
 					kitchenProducts = Array.isArray(result.data) ? result.data : [];
 
-					// Keep currently-selected items even if they are no longer in stock / active.
 					const presentIds = new Set(kitchenProducts.map((p) => String(p._id)));
 					if (selectedKitchenItemIds.size) {
 						const editingKitchen = (() => {
@@ -16840,7 +17074,6 @@
 					return;
 				}
 
-				// Cap rendered rows to keep DOM light
 				const MAX_ROWS = 200;
 				const slice = items.slice(0, MAX_ROWS);
 
@@ -16973,7 +17206,6 @@
 				e.stopPropagation();
 				const dz = document.getElementById("kitchen-picture-dropzone");
 				if (!dz) return;
-				// Ignore leave when moving over child elements
 				if (e.relatedTarget && dz.contains(e.relatedTarget)) return;
 				dz.style.background = "#fafbfc";
 				dz.style.borderColor = "#d6dbe2";

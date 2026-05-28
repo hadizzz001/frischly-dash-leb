@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Market Admin — Freshly.lb</title>
+	<style>
+		:root { --brand: #f4bb26; --brand-dark: #d9a31f; --ink: #000000; --muted: #666666; --border: #f4bb26; }
+		* { margin: 0; padding: 0; box-sizing: border-box; }
+		body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #ffffff; min-height: 100vh; color: var(--ink); }
+		.login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: #ffffff; }
+		.login-card { background: #ffffff; padding: 40px; border-radius: 15px; box-shadow: 0 15px 35px rgba(244, 187, 38, 0.3); width: 100%; max-width: 400px; border: 3px solid var(--brand); }
+		.login-card h1 { color: var(--brand); margin-bottom: 10px; font-size: 28px; text-align: center; }
+		.login-card h2 { color: var(--brand); margin-bottom: 10px; font-size: 24px; text-align: center; }
+		.login-card p { margin: 0 0 20px; color: var(--ink); font-size: 16px; text-align: center; }
+		.form-row { margin-bottom: 12px; }
+		label { display: block; font-weight: 500; font-size: 14px; margin-bottom: 5px; color: var(--ink); }
+		input, select, textarea { padding: 12px; border: 2px solid var(--brand); border-radius: 8px; font-size: 14px; width: 100%; background: #ffffff; color: var(--ink); transition: border-color 0.3s ease; }
+		input:focus, select:focus, textarea:focus { outline: none; border-color: var(--ink); }
+		.btn { background: var(--brand); color: var(--ink); border: 2px solid var(--brand); padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease; }
+		.btn:hover { background: var(--brand-dark); border-color: var(--brand-dark); transform: translateY(-2px); }
+		.btn.secondary { background: #ffffff; color: var(--ink); border-color: var(--ink); }
+		.btn.danger { background: #dc2626; border-color: #dc2626; color: #ffffff; }
+		.btn.small { padding: 6px 10px; font-size: 13px; }
+		.btn.danger:hover { background: #b91c1c; border-color: #b91c1c; color: #ffffff; }
+		.btn.full { width: 100%; margin-top: 8px; }
+		.sidebar { width: 250px; background: #ffffff; box-shadow: 2px 0 10px rgba(244, 187, 38, 0.3); height: 100vh; position: fixed; left: 0; top: 0; z-index: 10; overflow-y: auto; }
+		.sidebar-header { background: var(--brand); color: var(--ink); padding: 22px 20px; text-align: center; }
+		.sidebar-logo { width: 56px; height: 56px; border-radius: 14px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
+		.sidebar-header h2 { font-size: 20px; margin-bottom: 6px; }
+		.brand-name { font-size: 14px; font-weight: 700; letter-spacing: .2px; margin-bottom: 8px; }
+		.market-info { color: var(--ink); opacity: 0.85; font-size: 13px; word-break: break-word; }
+		.sidebar-menu { padding: 0; list-style: none; }
+		.menu-item { border-bottom: 1px solid #f0f0f0; }
+		.menu-item a { display: flex; align-items: center; padding: 15px 20px; color: var(--ink); text-decoration: none; transition: all 0.3s ease; font-weight: 600; }
+		.menu-item a:hover, .menu-item.active a { background: var(--brand); color: var(--ink); border-right: 3px solid var(--ink); }
+		.menu-icon { margin-right: 12px; font-size: 18px; width: 20px; text-align: center; }
+		.main-content { margin-left: 250px; min-height: 100vh; padding: 32px 24px; }
+		.page-header { background: var(--brand); color: var(--ink); padding: 20px 24px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(244, 187, 38, 0.2); }
+		.page-header h1 { font-size: 24px; margin-bottom: 5px; }
+		.page-header p { font-size: 14px; opacity: 0.85; }
+		main { max-width: 1300px; margin: 0 auto; }
+		.toolbar { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+		.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+		.stat-card { background: #ffffff; padding: 20px; border-radius: 10px; border: 2px solid var(--brand); text-align: center; box-shadow: 0 2px 10px rgba(244, 187, 38, 0.1); }
+		.stat-card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; }
+		.stat-card .value { font-size: 28px; color: var(--brand); font-weight: 700; margin-top: 4px; }
+		table { width: 100%; background: #ffffff; border: 2px solid var(--brand); border-radius: 10px; overflow: hidden; border-collapse: collapse; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+		th, td { padding: 12px 14px; text-align: left; font-size: 14px; border-bottom: 1px solid var(--brand); }
+		th { background: var(--brand); font-weight: 600; color: var(--ink); }
+		tr:hover td { background: rgba(244, 187, 38, 0.08); }
+		.badge { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+		.badge.green { background: #d1fae5; color: #065f46; }
+		.badge.red { background: #fee2e2; color: #991b1b; }
+		.badge.amber { background: #fef3c7; color: #92400e; }
+		.badge.blue { background: #dbeafe; color: #1e40af; }
+		.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 50; }
+		.modal-overlay.show { display: flex; }
+		.modal { background: #ffffff; border: 3px solid var(--brand); border-radius: 15px; padding: 24px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; box-shadow: 0 15px 35px rgba(244, 187, 38, 0.3); }
+		.modal h2 { color: var(--brand); margin-bottom: 16px; }
+		.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+		.empty { text-align: center; padding: 40px; color: var(--muted); }
+		.toast { position: fixed; bottom: 20px; right: 20px; background: #111827; color: white; padding: 12px 20px; border-radius: 8px; opacity: 0; transition: opacity .25s; z-index: 100; }
+		.toast.show { opacity: 1; }
+		.toast.error { background: #dc2626; }
+		#dashboard { display: none; }
+		@media (max-width: 700px) { .sidebar { position: static; width: 100%; height: auto; } .main-content { margin-left: 0; padding: 16px; } .toolbar { align-items: stretch; flex-direction: column; } .row { grid-template-columns: 1fr; } table { display: block; overflow-x: auto; } }
+	</style>
+</head>
+<body>
+	<!-- Login screen -->
+	<div id="loginScreen" class="login-wrap">
+		<div class="login-card">
+			<h1>Freshly.lb</h1>
+			<h2>🏪 Market Sign In</h2>
+			<p>Enter the credentials provided by the Freshly.lb admin.</p>
+			<form onsubmit="event.preventDefault(); doLogin();">
+				<div class="form-row"><label>Username or Email</label><input id="loginUsername" required autocomplete="username" /></div>
+				<div class="form-row"><label>Password</label><input id="loginPassword" type="password" required autocomplete="current-password" /></div>
+				<button class="btn full" type="submit">Sign In</button>
+			</form>
+		</div>
+	</div>
+
+	<!-- Dashboard -->
+	<div id="dashboard">
+		<aside class="sidebar">
+			<div class="sidebar-header">
+				<img src="/icons/icon_128.png" alt="Freshly.lb Logo" class="sidebar-logo" />
+				<div class="brand-name">Freshly.lb</div>
+				<h2 id="mName">Market</h2>
+				<p class="market-info" id="mInfo"></p>
+			</div>
+			<ul class="sidebar-menu">
+				<li class="menu-item active" data-tab="products"><a href="#products" onclick="switchTab('products'); return false;"><span class="menu-icon">📦</span><span>Products</span></a></li>
+				<li class="menu-item" data-tab="orders"><a href="#orders" onclick="switchTab('orders'); return false;"><span class="menu-icon">🧾</span><span>Orders</span></a></li>
+				<li class="menu-item"><a href="#" onclick="logout(); return false;"><span class="menu-icon">🚪</span><span>Logout</span></a></li>
+			</ul>
+		</aside>
+
+		<div class="main-content">
+			<main>
+				<div class="page-header">
+					<h1 id="pageTitle">📦 Products</h1>
+					<p>Manage your market products and orders.</p>
+				</div>
+
+				<div class="stats" id="stats"></div>
+
+				<!-- Products tab -->
+				<section id="tab-products">
+					<div class="toolbar">
+						<input id="prodSearch" placeholder="Search products..." style="max-width:320px" />
+						<button class="btn" onclick="openProductModal()">+ Add Product</button>
+					</div>
+					<table>
+						<thead>
+							<tr>
+								<th>Name</th><th>Barcode</th><th>Shelf</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th>
+							</tr>
+						</thead>
+						<tbody id="pBody"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+					</table>
+				</section>
+
+				<!-- Orders tab -->
+				<section id="tab-orders" style="display:none">
+					<div class="toolbar">
+						<input id="orderSearch" placeholder="Search orders..." style="max-width:320px" />
+						<select id="statusFilter" style="max-width:200px">
+							<option value="">All statuses</option>
+							<option value="pending">Pending</option>
+							<option value="confirmed">Confirmed</option>
+							<option value="processing">Processing</option>
+							<option value="ready for pickup">Ready for pickup</option>
+							<option value="OnTheWay">On the way</option>
+							<option value="delivered">Delivered</option>
+							<option value="cancelled">Cancelled</option>
+						</select>
+					</div>
+					<table>
+						<thead>
+							<tr>
+								<th>Order #</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th><th>Actions</th>
+							</tr>
+						</thead>
+						<tbody id="oBody"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+					</table>
+				</section>
+			</main>
+		</div>
+	</div>
+
+	<!-- Product modal -->
+	<div class="modal-overlay" id="prodModal">
+		<div class="modal">
+			<h2 id="pModalTitle">Add Product</h2>
+			<form onsubmit="event.preventDefault(); submitProduct();">
+				<input type="hidden" id="p_id" />
+				<div class="form-row"><label>Name *</label><input id="p_name" required /></div>
+				<div class="row">
+					<div class="form-row"><label>Barcode *</label><input id="p_barcode" required /></div>
+					<div class="form-row"><label>Shelf Number *</label><input id="p_shelf" required /></div>
+				</div>
+				<div class="form-row"><label>Subcategory ID *</label><input id="p_subcat" required placeholder="MongoDB ObjectId of subcategory" /></div>
+				<div class="row">
+					<div class="form-row"><label>Price</label><input id="p_price" type="number" step="0.01" min="0" /></div>
+					<div class="form-row"><label>Stock</label><input id="p_stock" type="number" step="1" min="0" value="0" /></div>
+				</div>
+				<div class="row">
+					<div class="form-row"><label>Tax (%)</label><input id="p_tax" type="number" step="0.01" min="0" value="0" /></div>
+					<div class="form-row"><label>Discount (%)</label><input id="p_disc" type="number" step="0.01" min="0" value="0" /></div>
+				</div>
+				<div class="form-row"><label>Image URL</label><input id="p_pic" /></div>
+				<div class="form-row"><label>Description</label><textarea id="p_desc" rows="3"></textarea></div>
+				<div style="display:flex;justify-content:flex-end;gap:8px">
+					<button type="button" class="btn secondary" onclick="closeProductModal()">Cancel</button>
+					<button type="submit" class="btn">Save</button>
+				</div>
+			</form>
+		</div>
+	</div>
+
+	<div class="toast" id="toast"></div>
+
+	<script>
+		const API = (path) => `/api${path}`;
+		const STORAGE_KEY = 'marketToken';
+		const STORAGE_MARKET = 'marketData';
+		let mToken = localStorage.getItem(STORAGE_KEY);
+		let market = JSON.parse(localStorage.getItem(STORAGE_MARKET) || 'null');
+
+		function authHeaders() { return { 'Content-Type':'application/json', Authorization: `Bearer ${mToken}` }; }
+		function fmt(n) { return `$${Number(n||0).toFixed(2)}`; }
+		function escapeHtml(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+		function toast(msg, isErr) {
+			const t = document.getElementById('toast');
+			t.textContent = msg; t.classList.toggle('error', !!isErr); t.classList.add('show');
+			setTimeout(() => t.classList.remove('show'), 2500);
+		}
+
+		// --- Auth ---
+		async function doLogin() {
+			const identifier = document.getElementById('loginUsername').value.trim();
+			const password = document.getElementById('loginPassword').value;
+			try {
+				const r = await fetch(API('/markets/login'), {
+					method: 'POST', headers: { 'Content-Type':'application/json' },
+					body: JSON.stringify({ username: identifier, password }),
+				});
+				const j = await r.json();
+				if (!j.success) throw new Error(j.message);
+				mToken = j.data.token; market = j.data.market;
+				localStorage.setItem(STORAGE_KEY, mToken);
+				localStorage.setItem(STORAGE_MARKET, JSON.stringify(market));
+				location.href = '/market-dashboard';
+			} catch (e) { toast(e.message, true); }
+		}
+
+		function logout() {
+			localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(STORAGE_MARKET);
+			mToken = null; market = null;
+			location.href = '/';
+		}
+
+		function showDashboard() {
+			document.getElementById('loginScreen').style.display = 'none';
+			document.getElementById('dashboard').style.display = 'block';
+			document.getElementById('mName').textContent = market.name;
+			document.getElementById('mInfo').textContent = `@${market.username} · ${market.location?.city || ''}`;
+			loadStats(); loadProducts();
+		}
+
+		// --- Stats ---
+		async function loadStats() {
+			try {
+				const r = await fetch(API(`/markets/${market._id}/stats`), { headers: authHeaders() });
+				const j = await r.json();
+				if (!j.success) throw new Error(j.message);
+				const d = j.data;
+				document.getElementById('stats').innerHTML = `
+					<div class="stat-card"><div class="label">Total Items</div><div class="value">${d.totalItems}</div></div>
+					<div class="stat-card"><div class="label">Active Items</div><div class="value">${d.totalActiveItems}</div></div>
+					<div class="stat-card"><div class="label">Total Orders</div><div class="value">${d.totalOrders}</div></div>
+					<div class="stat-card"><div class="label">Total Sales</div><div class="value">${fmt(d.totalSales)}</div></div>
+					<div class="stat-card"><div class="label">Delivered Sales</div><div class="value">${fmt(d.deliveredSales)}</div></div>
+				`;
+			} catch (e) { /* ignore */ }
+		}
+
+		// --- Tabs ---
+		function switchTab(name) {
+			document.querySelectorAll('.menu-item[data-tab]').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+			document.getElementById('tab-products').style.display = name === 'products' ? 'block' : 'none';
+			document.getElementById('tab-orders').style.display = name === 'orders' ? 'block' : 'none';
+			document.getElementById('pageTitle').textContent = name === 'products' ? '📦 Products' : '🧾 Orders';
+			if (name === 'orders') loadOrders();
+		}
+
+		// --- Products ---
+		async function loadProducts() {
+			const search = document.getElementById('prodSearch').value.trim();
+			const url = API(`/products?market=${market._id}&isActive=all&limit=200${search?`&search=${encodeURIComponent(search)}`:''}`);
+			try {
+				const r = await fetch(url, { headers: authHeaders() });
+				const j = await r.json();
+				if (!j.success) throw new Error(j.message);
+				renderProducts(j.data || []);
+			} catch (e) { toast(e.message, true); }
+		}
+
+		function renderProducts(list) {
+			const tbody = document.getElementById('pBody');
+			if (!list.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">No products yet. Click “Add Product”.</td></tr>'; return; }
+			tbody.innerHTML = list.map(p => `
+				<tr>
+					<td><strong>${escapeHtml(p.name)}</strong></td>
+					<td><code>${escapeHtml(p.barcode)}</code></td>
+					<td>${escapeHtml(p.shelfNumber)}</td>
+					<td>${fmt(p.price)}</td>
+					<td>${p.stock}</td>
+					<td><span class="badge ${p.isActive ? 'green' : 'red'}">${p.isActive ? 'Active' : 'Inactive'}</span></td>
+					<td>
+						<button class="btn small" onclick='openProductModal(${JSON.stringify(JSON.stringify(p))})'>Edit</button>
+						<button class="btn small danger" onclick="deleteProduct('${p._id}')">Delete</button>
+					</td>
+				</tr>
+			`).join('');
+		}
+
+		function openProductModal(jsonStr) {
+			document.getElementById('pModalTitle').textContent = jsonStr ? 'Edit Product' : 'Add Product';
+			['p_id','p_name','p_barcode','p_shelf','p_subcat','p_price','p_stock','p_tax','p_disc','p_pic','p_desc'].forEach(id => document.getElementById(id).value = '');
+			if (jsonStr) {
+				const p = JSON.parse(jsonStr);
+				document.getElementById('p_id').value = p._id;
+				document.getElementById('p_name').value = p.name || '';
+				document.getElementById('p_barcode').value = p.barcode || '';
+				document.getElementById('p_shelf').value = p.shelfNumber || '';
+				document.getElementById('p_subcat').value = (p.subcategory && p.subcategory._id) || p.subcategory || '';
+				document.getElementById('p_price').value = p.price ?? '';
+				document.getElementById('p_stock').value = p.stock ?? 0;
+				document.getElementById('p_tax').value = p.tax ?? 0;
+				document.getElementById('p_disc').value = p.discount ?? 0;
+				document.getElementById('p_pic').value = p.picture || '';
+				document.getElementById('p_desc').value = p.description || '';
+			}
+			document.getElementById('prodModal').classList.add('show');
+		}
+		function closeProductModal() { document.getElementById('prodModal').classList.remove('show'); }
+
+		async function submitProduct() {
+			const id = document.getElementById('p_id').value;
+			const body = {
+				name: document.getElementById('p_name').value,
+				barcode: document.getElementById('p_barcode').value,
+				shelfNumber: document.getElementById('p_shelf').value,
+				subcategory: document.getElementById('p_subcat').value,
+				price: parseFloat(document.getElementById('p_price').value) || 0,
+				stock: parseInt(document.getElementById('p_stock').value) || 0,
+				tax: parseFloat(document.getElementById('p_tax').value) || 0,
+				discount: parseFloat(document.getElementById('p_disc').value) || 0,
+				picture: document.getElementById('p_pic').value || undefined,
+				description: document.getElementById('p_desc').value || undefined,
+			};
+			try {
+				const r = await fetch(id ? API(`/products/${id}`) : API('/products'), {
+					method: id ? 'PUT' : 'POST', headers: authHeaders(), body: JSON.stringify(body),
+				});
+				const j = await r.json();
+				if (!j.success) throw new Error(j.message);
+				toast(id ? 'Product updated' : 'Product created');
+				closeProductModal(); loadProducts(); loadStats();
+			} catch (e) { toast(e.message, true); }
+		}
+
+		async function deleteProduct(id) {
+			if (!confirm('Deactivate this product?')) return;
+			try {
+				const r = await fetch(API(`/products/${id}`), { method: 'DELETE', headers: authHeaders() });
+				const j = await r.json();
+				if (!j.success) throw new Error(j.message);
+				toast('Product deactivated'); loadProducts(); loadStats();
+			} catch (e) { toast(e.message, true); }
+		}
+
+		// --- Orders ---
+		async function loadOrders() {
+			const search = document.getElementById('orderSearch').value.trim();
+			const status = document.getElementById('statusFilter').value;
+			const params = new URLSearchParams({ limit: '100' });
+			if (search) params.set('search', search);
+			if (status) params.set('status', status);
+			try {
+				const r = await fetch(API(`/orders?${params}`), { headers: authHeaders() });
+				const j = await r.json();
+				if (!j.success) throw new Error(j.message);
+				renderOrders(j.data || []);
+			} catch (e) { toast(e.message, true); }
+		}
+
+		function statusBadge(s) {
+			const map = { pending:'amber', confirmed:'blue', processing:'blue', 'ready for pickup':'blue', OnTheWay:'amber', delivered:'green', cancelled:'red' };
+			return `<span class="badge ${map[s] || 'amber'}">${s}</span>`;
+		}
+
+		function renderOrders(list) {
+			const tbody = document.getElementById('oBody');
+			if (!list.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">No orders.</td></tr>'; return; }
+			tbody.innerHTML = list.map(o => `
+				<tr>
+					<td><strong>${escapeHtml(o.orderNumber)}</strong></td>
+					<td>${escapeHtml(o.customer?.name)}<div style="color:#6b7280;font-size:12px">${escapeHtml(o.customer?.email||'')}</div></td>
+					<td>${o.items?.length || 0}</td>
+					<td>${fmt(o.total)}</td>
+					<td>${statusBadge(o.status)}</td>
+					<td style="font-size:13px;color:#6b7280">${new Date(o.createdAt).toLocaleString()}</td>
+					<td>
+						<select onchange="updateOrderStatus('${o._id}', this.value)">
+							<option value="">Change…</option>
+							<option value="confirmed">Confirmed</option>
+							<option value="processing">Processing</option>
+							<option value="ready for pickup">Ready for pickup</option>
+							<option value="cancelled">Cancelled</option>
+						</select>
+					</td>
+				</tr>
+			`).join('');
+		}
+
+		async function updateOrderStatus(id, status) {
+			if (!status) return;
+			try {
+				const r = await fetch(API(`/orders/${id}/status`), { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ status }) });
+				const j = await r.json();
+				if (!j.success) throw new Error(j.message);
+				toast('Order status updated'); loadOrders();
+			} catch (e) { toast(e.message, true); }
+		}
+
+		// Search debounce
+		document.getElementById('prodSearch').addEventListener('input', () => { clearTimeout(window.__pd); window.__pd = setTimeout(loadProducts, 300); });
+		document.getElementById('orderSearch').addEventListener('input', () => { clearTimeout(window.__od); window.__od = setTimeout(loadOrders, 300); });
+		document.getElementById('statusFilter').addEventListener('change', loadOrders);
+
+		// Init
+		if (mToken && market) location.href = '/market-dashboard';
+	</script>
+</body>
+</html>

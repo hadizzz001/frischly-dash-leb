@@ -5,16 +5,19 @@ const shelfSchema = new mongoose.Schema(
 		shelfNumber: {
 			type: String,
 			required: [true, "Please provide a shelf number"],
-			unique: true,
 			trim: true,
 			uppercase: true,
 			maxlength: [50, "Shelf number cannot be more than 50 characters"],
 			minlength: [1, "Shelf number must be at least 1 character"],
 		},
+		market: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Market",
+			index: true,
+		},
 		barcode: {
 			type: String,
 			trim: true,
-			unique: true,
 			sparse: true,
 			maxlength: [100, "Barcode cannot be more than 100 characters"],
 		},
@@ -67,7 +70,11 @@ const shelfSchema = new mongoose.Schema(
 );
 
 // Indexes for better query performance
-shelfSchema.index({ shelfNumber: 1 }, { unique: true });
+shelfSchema.index({ market: 1, shelfNumber: 1 }, { unique: true });
+shelfSchema.index(
+	{ market: 1, barcode: 1 },
+	{ unique: true, sparse: true, partialFilterExpression: { barcode: { $type: "string" } } },
+);
 shelfSchema.index({ isActive: 1 });
 shelfSchema.index({ createdAt: -1 });
 

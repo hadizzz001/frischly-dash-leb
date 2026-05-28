@@ -66,18 +66,6 @@ const userSchema = new mongoose.Schema(
 				trim: true,
 				maxlength: [100, "City cannot be more than 100 characters"],
 			},
-			state: {
-				type: String,
-				required: [true, "Please provide a state/province"],
-				trim: true,
-				maxlength: [100, "State cannot be more than 100 characters"],
-			},
-			country: {
-				type: String,
-				required: [true, "Please provide a country"],
-				trim: true,
-				maxlength: [100, "Country cannot be more than 100 characters"],
-			},
 		},
 		creditCard: {
 			cardNumber: {
@@ -109,8 +97,26 @@ const userSchema = new mongoose.Schema(
 		},
 		role: {
 			type: String,
-			enum: ["customer", "rider", "staff", "user", "manager", "admin"],
+			enum: [
+				"customer",
+				"rider",
+				"staff",
+				"user",
+				"manager",
+				"admin",
+				"market_staff",
+				"market_manager",
+				"market_driver",
+			],
 			default: "customer",
+		},
+		// Tenant link for users that belong to a specific market (e.g. market_staff).
+		// Null for global users (admin, customer, etc.).
+		market: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Market",
+			default: null,
+			index: true,
 		},
 		isActive: {
 			type: Boolean,

@@ -57,18 +57,6 @@ const registerValidation = [
 		.withMessage(
 			"City is required and must be less than 100 characters"
 		),
-	body("address.state")
-		.trim()
-		.isLength({ min: 1, max: 100 })
-		.withMessage(
-			"State/Province is required and must be less than 100 characters"
-		),
-	body("address.country")
-		.trim()
-		.isLength({ min: 1, max: 100 })
-		.withMessage(
-			"Country is required and must be less than 100 characters"
-		),
 ];
 
 const loginValidation = [
@@ -76,6 +64,14 @@ const loginValidation = [
 		.isEmail()
 		.normalizeEmail()
 		.withMessage("Please provide a valid email address"),
+	body("password").notEmpty().withMessage("Password is required"),
+];
+
+const loginProfileValidation = [
+	body("email")
+		.trim()
+		.notEmpty()
+		.withMessage("Please provide an email address or market username"),
 	body("password").notEmpty().withMessage("Password is required"),
 ];
 
@@ -105,16 +101,6 @@ const updateProfileValidation = [
 		.trim()
 		.isLength({ min: 1, max: 100 })
 		.withMessage("City must be less than 100 characters"),
-	body("address.state")
-		.optional()
-		.trim()
-		.isLength({ min: 1, max: 100 })
-		.withMessage("State/Province must be less than 100 characters"),
-	body("address.country")
-		.optional()
-		.trim()
-		.isLength({ min: 1, max: 100 })
-		.withMessage("Country must be less than 100 characters"),
 	body("creditCard.cardNumber")
 		.optional()
 		.trim()
@@ -209,7 +195,7 @@ const resetPasswordValidation = [
 router.post("/register", registerValidation, register);
 router.get("/confirm/:token", confirmEmail);
 router.post("/login", loginValidation, login);
-router.post("/login-profile", loginValidation, loginProfile);
+router.post("/login-profile", loginProfileValidation, loginProfile);
 router.post("/refresh", refreshTokenValidation, refreshToken);
 router.post(
 	"/forgot-password",

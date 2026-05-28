@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const { validationResult } = require("express-validator");
 const User = require("../models/User");
+const Market = require("../models/Market");
 const {
 	generateToken,
 	generateRefreshToken,
@@ -8,6 +9,10 @@ const {
 } = require("../utils/jwt");
 const sendEmail = require("../utils/sendEmail");
 const { sanitizeEmail } = require("../utils/sanitize");
+const {
+	findDuplicateAccount,
+	duplicateAccountMessage,
+} = require("../utils/accountDuplicates");
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -19,7 +24,7 @@ const register = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: `Validierung fehlgeschlagen: ${errors
+				message: `Validation failed: ${errors
 					.array()
 					.map((e) => e.msg)
 					.join(", ")}`,
@@ -29,19 +34,18 @@ const register = async (req, res) => {
 
 		const { name, phoneNumber, email, password, address } = req.body;
 
-		// Check if user already exists
-		let user = await User.findOne({ email });
-		if (user) {
+		const duplicate = await findDuplicateAccount({ name, email });
+		if (duplicate) {
 			return res.status(400).json({
 				success: false,
-				message: "A user with this email already exists",
+				message: duplicateAccountMessage(duplicate),
 			});
 		}
 
 		const emailToken = crypto.randomBytes(32).toString("hex");
 		const emailTokenExpires = Date.now() + 24 * 60 * 60 * 1000;
 
-		user = await User.create({
+		const user = await User.create({
 			name,
 			phoneNumber,
 			email,
@@ -315,7 +319,7 @@ const login = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: `Validierung fehlgeschlagen: ${errors
+				message: `Validation failed: ${errors
 					.array()
 					.map((e) => e.msg)
 					.join(", ")}`,
@@ -459,7 +463,50 @@ const login = async (req, res) => {
 // @access  Private
 const getMe = async (req, res) => {
 	try {
+		// Handle market account tokens (req.user is a synthesized object,
+		// the real document lives in the Market collection on req.market)
+		if (req.user && req.user.isMarket) {
+			const market = req.market;
+			if (!market) {
+				return res.status(404).json({
+					success: false,
+					message: "Market not found",
+				});
+			}
+
+			return res.json({
+				success: true,
+				data: {
+					user: {
+						_id: market._id,
+						id: market._id,
+						name: market.name,
+						username: market.username,
+						email: market.email || `${market.username}@market.local`,
+						phoneNumber: market.phoneNumber || "",
+						role: "market",
+						address: {
+							city: market.location?.city || "",
+						},
+						logo: market.logo || "",
+						isActive: market.isActive,
+						lastLogin: market.lastLogin,
+						createdAt: market.createdAt,
+						isMarket: true,
+						marketId: market._id,
+					},
+				},
+			});
+		}
+
 		const user = await User.findById(req.user._id);
+
+		if (!user) {
+			return res.status(404).json({
+				success: false,
+				message: "User not found",
+			});
+		}
 
 		res.json({
 			success: true,
@@ -486,7 +533,7 @@ const updateProfile = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: `Validierung fehlgeschlagen: ${errors
+				message: `Validation failed: ${errors
 					.array()
 					.map((e) => e.msg)
 					.join(", ")}`,
@@ -508,7 +555,7 @@ const updateProfile = async (req, res) => {
 			if (existingUser) {
 				return res.status(400).json({
 					success: false,
-					message: "E-Mail ist bereits vergeben",
+					message: "Email is already in use",
 				});
 			}
 			fieldsToUpdate.email = email;
@@ -547,7 +594,7 @@ const changePassword = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: `Validierung fehlgeschlagen: ${errors
+				message: `Validation failed: ${errors
 					.array()
 					.map((e) => e.msg)
 					.join(", ")}`,
@@ -596,7 +643,7 @@ const loginProfile = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: `Validierung fehlgeschlagen: ${errors
+				message: `Validation failed: ${errors
 					.array()
 					.map((e) => e.msg)
 					.join(", ")}`,
@@ -605,24 +652,95 @@ const loginProfile = async (req, res) => {
 		}
 
 		const { email, password } = req.body;
-
-		// Sanitize email input to prevent NoSQL injection
-		const sanitizedEmail = sanitizeEmail(email);
-		if (!sanitizedEmail) {
+		const identifier = String(email || "").trim();
+		if (!identifier) {
 			return res.status(400).json({
 				success: false,
-				message: "Invalid email format",
+				message: "Email or username is required",
 			});
 		}
 
+		const sanitizedEmail = identifier.includes("@")
+			? sanitizeEmail(identifier)
+			: null;
+		const normalizedUsername = identifier.toLowerCase();
+
 		// Check for user and include password, loginAttempts, and lockUntil
-		const user = await User.findOne({ email: sanitizedEmail }).select(
-			"+password +loginAttempts +lockUntil"
-		);
+		const user = sanitizedEmail
+			? await User.findOne({ email: sanitizedEmail }).select(
+					"+password +loginAttempts +lockUntil"
+				)
+			: null;
 		if (!user) {
-			return res.status(401).json({
-				success: false,
-				message: "Invalid credentials",
+			const marketQuery = sanitizedEmail
+				? { $or: [{ username: normalizedUsername }, { email: sanitizedEmail }] }
+				: { username: normalizedUsername };
+			const market = await Market.findOne(marketQuery).select(
+				"+password +loginAttempts +lockUntil"
+			);
+
+			if (!market) {
+				return res.status(401).json({
+					success: false,
+					message: "Invalid credentials",
+				});
+			}
+
+			if (market.isLocked) {
+				return res.status(423).json({
+					success: false,
+					message:
+						"Account temporarily locked due to multiple failed login attempts. Try again later.",
+				});
+			}
+
+			if (!market.isActive) {
+				return res.status(401).json({
+					success: false,
+					message: "Market account is deactivated",
+				});
+			}
+
+			const marketPasswordMatches = await market.comparePassword(password);
+			if (!marketPasswordMatches) {
+				await market.incLoginAttempts();
+				return res.status(401).json({
+					success: false,
+					message: "Invalid credentials",
+				});
+			}
+
+			if (market.loginAttempts > 0 || market.lockUntil) {
+				await market.resetLoginAttempts();
+			}
+			market.lastLogin = new Date();
+			await market.save();
+
+			const token = generateToken({ id: market._id, isMarket: true });
+			const refreshToken = generateRefreshToken({
+				id: market._id,
+				isMarket: true,
+			});
+
+			return res.json({
+				success: true,
+				message: "Login successful",
+				data: {
+					user: {
+						id: market._id,
+						_id: market._id,
+						name: market.name,
+						username: market.username,
+						email: market.email || `${market.username}@market.local`,
+						role: "market",
+						marketId: market._id,
+						isMarket: true,
+					},
+					market: market.toSafeObject(),
+					token,
+					refreshToken,
+					redirectUrl: "/market",
+				},
 			});
 		}
 
@@ -810,7 +928,7 @@ const refreshToken = async (req, res) => {
 const getAllUsers = async (req, res) => {
 	try {
 		// Check if user has appropriate permissions
-		const allowedRoles = ["admin", "manager", "staff"];
+		const allowedRoles = ["admin", "manager", "staff", "market"];
 		if (!allowedRoles.includes(req.user.role)) {
 			return res.status(403).json({
 				success: false,
@@ -821,6 +939,11 @@ const getAllUsers = async (req, res) => {
 
 		// Build query object
 		const queryObj = {};
+
+		// Market admins can only see their own market's users
+		if (req.user.role === "market") {
+			queryObj.market = req.user.marketId;
+		}
 
 		// Advanced role filtering
 		if (req.query.role) {
@@ -864,11 +987,34 @@ const getAllUsers = async (req, res) => {
 // @access  Private (Admin only)
 const createUser = async (req, res) => {
 	try {
-		// Check if user is admin
-		if (req.user.role !== "admin") {
+		// Allow admin, manager and market admins to create users
+		if (
+			req.user.role !== "admin" &&
+			req.user.role !== "manager" &&
+			req.user.role !== "market"
+		) {
 			return res.status(403).json({
 				success: false,
 				message: "Access denied. Administrator permissions required.",
+			});
+		}
+
+		// Managers cannot create admin users
+		if (req.user.role === "manager" && req.body.role === "admin") {
+			return res.status(403).json({
+				success: false,
+				message: "Managers are not allowed to create admin users.",
+			});
+		}
+
+		// Market admins cannot create global admin / manager users
+		if (
+			req.user.role === "market" &&
+			["admin", "manager"].includes(req.body.role)
+		) {
+			return res.status(403).json({
+				success: false,
+				message: "Markets are not allowed to create admin/manager users.",
 			});
 		}
 
@@ -877,7 +1023,7 @@ const createUser = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: `Validierung fehlgeschlagen: ${errors
+				message: `Validation failed: ${errors
 					.array()
 					.map((e) => e.msg)
 					.join(", ")}`,
@@ -887,12 +1033,11 @@ const createUser = async (req, res) => {
 
 		const { name, phoneNumber, email, password, address, role } = req.body;
 
-		// Check if user already exists
-		let existingUser = await User.findOne({ email });
-		if (existingUser) {
+		const duplicate = await findDuplicateAccount({ name, email });
+		if (duplicate) {
 			return res.status(400).json({
 				success: false,
-				message: "A user with this email already exists",
+				message: duplicateAccountMessage(duplicate),
 			});
 		}
 
@@ -904,6 +1049,7 @@ const createUser = async (req, res) => {
 			password,
 			address,
 			role: role || "user",
+			market: req.user.role === "market" ? req.user.marketId : undefined,
 			emailConfirmed: true,
 			emailConfirmedAt: new Date(),
 		});
@@ -929,11 +1075,34 @@ const createUser = async (req, res) => {
 // @access  Private (Admin only)
 const updateUser = async (req, res) => {
 	try {
-		// Check if user is admin
-		if (req.user.role !== "admin") {
+		// Allow admin, manager and market admins to update users
+		if (
+			req.user.role !== "admin" &&
+			req.user.role !== "manager" &&
+			req.user.role !== "market"
+		) {
 			return res.status(403).json({
 				success: false,
 				message: "Access denied. Administrator permissions required.",
+			});
+		}
+
+		// Managers cannot promote anyone to admin
+		if (req.user.role === "manager" && req.body.role === "admin") {
+			return res.status(403).json({
+				success: false,
+				message: "Managers are not allowed to assign the admin role.",
+			});
+		}
+
+		// Market admins cannot assign global admin / manager roles
+		if (
+			req.user.role === "market" &&
+			["admin", "manager"].includes(req.body.role)
+		) {
+			return res.status(403).json({
+				success: false,
+				message: "Markets are not allowed to assign admin/manager roles.",
 			});
 		}
 
@@ -949,18 +1118,43 @@ const updateUser = async (req, res) => {
 			});
 		}
 
-		// Check if email is already taken by another user
-		if (email && email !== user.email) {
-			const existingUser = await User.findOne({
-				email,
-				_id: { $ne: userId },
+		// Managers cannot modify admin users
+		if (req.user.role === "manager" && user.role === "admin") {
+			return res.status(403).json({
+				success: false,
+				message: "Managers are not allowed to edit admin users.",
 			});
-			if (existingUser) {
-				return res.status(400).json({
+		}
+
+		if (req.user.role === "market") {
+			// Market admins may only modify users belonging to their own market.
+			if (
+				!user.market ||
+				String(user.market) !== String(req.user.marketId)
+			) {
+				return res.status(403).json({
 					success: false,
-					message: "E-Mail ist bereits vergeben",
+					message: "Not authorized to edit this user.",
 				});
 			}
+		} else if (user.market) {
+			// Non-market roles cannot touch market-tied users.
+			return res.status(403).json({
+				success: false,
+				message:
+					"Market users are read-only here. Manage them from the market dashboard.",
+			});
+		}
+
+		const duplicate = await findDuplicateAccount(
+			{ name, email },
+			{ type: "user", id: userId },
+		);
+		if (duplicate) {
+			return res.status(400).json({
+				success: false,
+				message: duplicateAccountMessage(duplicate),
+			});
 		}
 
 		// Update fields
@@ -998,8 +1192,12 @@ const updateUser = async (req, res) => {
 // @access  Private (Admin only)
 const deleteUser = async (req, res) => {
 	try {
-		// Check if user is admin
-		if (req.user.role !== "admin") {
+		// Allow admin, manager and market admins to delete users
+		if (
+			req.user.role !== "admin" &&
+			req.user.role !== "manager" &&
+			req.user.role !== "market"
+		) {
 			return res.status(403).json({
 				success: false,
 				message: "Access denied. Administrator permissions required.",
@@ -1014,6 +1212,34 @@ const deleteUser = async (req, res) => {
 			return res.status(404).json({
 				success: false,
 				message: "User not found",
+			});
+		}
+
+		// Managers cannot delete admin users
+		if (req.user.role === "manager" && user.role === "admin") {
+			return res.status(403).json({
+				success: false,
+				message: "Managers are not allowed to delete admin users.",
+			});
+		}
+
+		if (req.user.role === "market") {
+			// Market admins may only delete users belonging to their own market.
+			if (
+				!user.market ||
+				String(user.market) !== String(req.user.marketId)
+			) {
+				return res.status(403).json({
+					success: false,
+					message: "Not authorized to delete this user.",
+				});
+			}
+		} else if (user.market) {
+			// Non-market roles cannot touch market-tied users.
+			return res.status(403).json({
+				success: false,
+				message:
+					"Market users are read-only here. Manage them from the market dashboard.",
 			});
 		}
 
@@ -1045,8 +1271,8 @@ const deleteUser = async (req, res) => {
 // @access  Private (Admin only)
 const getUserById = async (req, res) => {
 	try {
-		// Check if user is admin
-		if (req.user.role !== "admin") {
+		const allowedRoles = ["admin", "manager", "market"];
+		if (!allowedRoles.includes(req.user.role)) {
 			return res.status(403).json({
 				success: false,
 				message: "Not authorized to access this resource",
@@ -1059,6 +1285,17 @@ const getUserById = async (req, res) => {
 			return res.status(404).json({
 				success: false,
 				message: "User not found",
+			});
+		}
+
+		// Market admins can only fetch their own market's users
+		if (
+			req.user.role === "market" &&
+			(!user.market || String(user.market) !== String(req.user.marketId))
+		) {
+			return res.status(403).json({
+				success: false,
+				message: "Not authorized to access this user",
 			});
 		}
 
@@ -1153,7 +1390,7 @@ const requestPasswordReset = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: `Validierung fehlgeschlagen: ${errors
+				message: `Validation failed: ${errors
 					.array()
 					.map((e) => e.msg)
 					.join(", ")}`,
@@ -1261,7 +1498,7 @@ const resetPassword = async (req, res) => {
 		if (!errors.isEmpty()) {
 			return res.status(400).json({
 				success: false,
-				message: `Validierung fehlgeschlagen: ${errors
+				message: `Validation failed: ${errors
 					.array()
 					.map((e) => e.msg)
 					.join(", ")}`,

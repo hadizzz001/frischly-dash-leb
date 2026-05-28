@@ -330,33 +330,7 @@
 						</div>
 						<div class="form-group">
 							<label for="city">City</label>
-							<input
-								type="text"
-								id="city"
-								name="city"
-								required
-								placeholder="Berlin"
-							/>
-						</div>
-						<div class="form-group">
-							<label for="state">State/Province</label>
-							<input
-								type="text"
-								id="state"
-								name="state"
-								required
-								placeholder="Berlin"
-							/>
-						</div>
-						<div class="form-group">
-							<label for="country">Country</label>
-							<input
-								type="text"
-								id="country"
-								name="country"
-								value="Germany"
-								required
-							/>
+							<select id="city" name="city" required data-lebanese-city-select></select>
 						</div>
 					</div>
 				</div>
@@ -374,6 +348,7 @@
 
 		<!-- Global Config -->
 		<script src="js/config.js"></script>
+		<script src="js/lebanese-cities.js"></script>
 
 		<script>
 			// Define helper functions first
@@ -463,19 +438,12 @@
 						address: {
 							street: formData.get("street"),
 							city: formData.get("city"),
-							state: formData.get("state"),
-							country: formData.get("country"),
 						},
 					};
 
 					// Validate required fields
 					const requiredFields = ["name", "phoneNumber", "email", "password"];
-					const addressFields = [
-						"street",
-						"city",
-						"state",
-						"country",
-					];
+					const addressFields = ["street", "city"];
 
 					for (let field of requiredFields) {
 						if (!data[field] || data[field].trim() === "") {

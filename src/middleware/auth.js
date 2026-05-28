@@ -1,7 +1,8 @@
 const { verifyToken } = require("../utils/jwt");
 const User = require("../models/User");
+const Market = require("../models/Market");
 
-// Middleware to protect routes
+// Middleware to protect routes (supports both User and Market tokens)
 const protect = async (req, res, next) => {
 	try {
 		let token;
@@ -25,6 +26,36 @@ const protect = async (req, res, next) => {
 		try {
 			// Verify token
 			const decoded = verifyToken(token);
+
+			// Market admin token
+			if (decoded && decoded.isMarket) {
+				const market = await Market.findById(decoded.id);
+				if (!market) {
+					return res.status(401).json({
+						success: false,
+						message: "Not authorized, market not found",
+					});
+				}
+				if (!market.isActive) {
+					return res.status(401).json({
+						success: false,
+						message: "Market account is deactivated",
+					});
+				}
+
+				req.market = market;
+				// Provide a unified `req.user` shape so existing authorize() works
+				req.user = {
+					id: market._id,
+					_id: market._id,
+					name: market.name,
+					email: market.email || `${market.username}@market.local`,
+					role: "market",
+					marketId: market._id,
+					isMarket: true,
+				};
+				return next();
+			}
 
 			// Get user from token
 			const user = await User.findById(decoded.id).select("-password");

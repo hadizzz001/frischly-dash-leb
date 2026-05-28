@@ -96,6 +96,78 @@ const deleteFromCloudinary = (publicId) => {
 	});
 };
 
+// Helper: for products that belong to a Market, the `subcategory` ObjectId
+// points to the MarketSubcategory collection (not the global Subcategory),
+// so the default .populate() returns null and the UI shows "Uncategorized".
+// This helper backfills `subcategory` (and `subcategory.parentCategory`) for
+// such products by looking them up in MarketSubcategory / MarketCategory.
+const resolveMarketSubcategories = async (products) => {
+	if (!Array.isArray(products) || products.length === 0) return products;
+
+	const MarketSubcategory = require("../models/MarketSubcategory");
+	const MarketCategory = require("../models/MarketCategory");
+
+	// Treat as "needs resolving" any product that has a market but no usable
+	// populated subcategory.name. (When populate fails because the id lives in
+	// MarketSubcategory, lean() leaves the field as `null`, so we must re-read
+	// the raw subcategory id from the database.)
+	const needsResolve = products.filter(
+		(p) =>
+			p &&
+			p.market &&
+			(p.subcategory == null ||
+				(typeof p.subcategory === "object" && !p.subcategory.name)),
+	);
+	if (needsResolve.length === 0) return products;
+
+	// Re-read the raw `subcategory` ObjectId for these products.
+	const productIds = needsResolve.map((p) => p._id).filter(Boolean);
+	const rawRows = await Product.find({ _id: { $in: productIds } })
+		.select("_id subcategory")
+		.lean();
+	const rawMap = new Map(
+		rawRows.map((r) => [String(r._id), r.subcategory ? String(r.subcategory) : null]),
+	);
+
+	const subIds = [...new Set([...rawMap.values()].filter(Boolean))];
+	if (subIds.length === 0) return products;
+
+	const marketSubs = await MarketSubcategory.find({ _id: { $in: subIds } })
+		.populate({ path: "category", select: "name image icon", model: MarketCategory })
+		.lean();
+	const subMap = new Map(marketSubs.map((s) => [String(s._id), s]));
+
+	for (const product of needsResolve) {
+		const subId = rawMap.get(String(product._id));
+		if (!subId) continue;
+		const ms = subMap.get(subId);
+		if (!ms) continue;
+
+		const parentCategory = ms.category
+			? {
+					_id: ms.category._id,
+					name: ms.category.name,
+					icon: ms.category.icon,
+					color: ms.category.color,
+			  }
+			: null;
+
+		product.subcategory = {
+			_id: ms._id,
+			name: ms.name,
+			parentCategory,
+			sortorder: ms.sortOrder,
+		};
+
+		// Also surface the top-level category for UIs that read product.category.
+		if (parentCategory && !product.category) {
+			product.category = parentCategory;
+		}
+	}
+
+	return products;
+};
+
 // @desc    Get all products with filter options including discount
 // @route   GET /api/products
 // @access  Public
@@ -119,6 +191,7 @@ exports.getProducts = async (req, res) => {
 			stockLevel,
 			discount,
 			minDiscount,
+			market, // Filter by market id ("none" => main store only, "all" => all)
 		} = sanitizedQuery;
 
 		// Build filter object
@@ -128,6 +201,19 @@ exports.getProducts = async (req, res) => {
 		}
 		if (inAds !== undefined && inAds !== "all") {
 			filter.inAds = inAds === "true" || inAds === true;
+		}
+
+		// Market scoping
+		// - Market admins always see only their own products
+		// - Other roles can optionally filter by market via query param
+		if (req.user && req.user.role === "market") {
+			filter.market = req.user.marketId;
+		} else if (market !== undefined && market !== "all" && market !== "") {
+			if (market === "none" || market === "null") {
+				filter.market = null;
+			} else if (mongoose.Types.ObjectId.isValid(market)) {
+				filter.market = market;
+			}
 		}
 
 		// Handle category filtering (same as getProductsByCategory)
@@ -381,6 +467,7 @@ exports.getProducts = async (req, res) => {
 					},
 				})
 				.populate("createdBy", "name email")
+				.populate("market", "name username location logo")
 				.sort(sortObj)
 				.skip(skip)
 				.limit(limitNumber)
@@ -395,6 +482,10 @@ exports.getProducts = async (req, res) => {
 		const total = Array.isArray(totalResult)
 			? totalResult[0]?.total || 0
 			: totalResult;
+
+		// Backfill subcategory/category for market-owned products whose
+		// subcategory ObjectId lives in the MarketSubcategory collection.
+		await resolveMarketSubcategories(products);
 
 		// Calculate pagination info
 		const totalPages = Math.ceil(total / limitNumber);
@@ -447,7 +538,9 @@ exports.getProduct = async (req, res) => {
 					select: "name color icon",
 				},
 			})
-			.populate("createdBy", "name email");
+			.populate("createdBy", "name email")
+			.populate("market", "name username location logo")
+			.lean();
 
 		if (!product) {
 			return res.status(404).json({
@@ -455,6 +548,9 @@ exports.getProduct = async (req, res) => {
 				message: "Product not found",
 			});
 		}
+
+		// Backfill subcategory for market-owned products (see helper).
+		await resolveMarketSubcategories([product]);
 
 		res.json({
 			success: true,
@@ -586,6 +682,19 @@ exports.createProduct = async (req, res) => {
 			productData.createdBy = req.user.id;
 		}
 
+		// Market scoping:
+		// - market admins always create products under their own market
+		// - admin/manager can optionally pass a market id (or leave null for main store)
+		if (req.user && req.user.role === "market") {
+			productData.market = req.user.marketId;
+		} else if (productData.market) {
+			if (!mongoose.Types.ObjectId.isValid(productData.market)) {
+				delete productData.market;
+			}
+		} else {
+			productData.market = null;
+		}
+
 		const product = await Product.create(productData);
 
 		// Populate the created product
@@ -600,6 +709,7 @@ exports.createProduct = async (req, res) => {
 				},
 			},
 			{ path: "createdBy", select: "name email" },
+			{ path: "market", select: "name username location logo" },
 		]);
 
 		res.status(201).json({
@@ -614,7 +724,7 @@ exports.createProduct = async (req, res) => {
 		if (error.code === 11000 && error.keyPattern?.barcode) {
 			return res.status(400).json({
 				success: false,
-				message: "Ein Produkt mit diesem Barcode existiert bereits",
+				message: "A product with this barcode already exists",
 			});
 		}
 
@@ -646,6 +756,37 @@ exports.updateProduct = async (req, res) => {
 				success: false,
 				message: "Product not found",
 			});
+		}
+
+		// Market admins may only modify their own products and cannot reassign market
+		if (req.user && req.user.role === "market") {
+			if (
+				!product.market ||
+				String(product.market) !== String(req.user.marketId)
+			) {
+				return res.status(403).json({
+					success: false,
+					message: "Not authorized to update this product",
+				});
+			}
+			// Prevent changing the market on update
+			delete req.body.market;
+		} else if (product.market) {
+			// Non-market roles (admin, manager, staff) cannot edit products that
+			// belong to a market — those are managed inside the market dashboard.
+			return res.status(403).json({
+				success: false,
+				message:
+					"Market products are read-only here. Manage them from the market dashboard.",
+			});
+		}
+
+		// Managers are not allowed to modify pricing-related fields.
+		if (req.user && req.user.role === "manager") {
+			delete req.body.price;
+			delete req.body.tax;
+			delete req.body.bottlerefund;
+			delete req.body.discount;
 		}
 
 		const updateData = { ...req.body, updatedAt: new Date() };
@@ -685,7 +826,8 @@ exports.updateProduct = async (req, res) => {
 					select: "name color icon",
 				},
 			})
-			.populate("createdBy", "name email");
+			.populate("createdBy", "name email")
+			.populate("market", "name username location logo");
 
 		res.json({
 			success: true,
@@ -699,7 +841,7 @@ exports.updateProduct = async (req, res) => {
 		if (error.code === 11000 && error.keyPattern?.barcode) {
 			return res.status(400).json({
 				success: false,
-				message: "Ein Produkt mit diesem Barcode existiert bereits",
+				message: "A product with this barcode already exists",
 			});
 		}
 
@@ -742,6 +884,18 @@ exports.updateProductStock = async (req, res) => {
 			});
 		}
 
+		if (
+			req.user &&
+			req.user.role === "market" &&
+			(!product.market ||
+				String(product.market) !== String(req.user.marketId))
+		) {
+			return res.status(403).json({
+				success: false,
+				message: "Not authorized",
+			});
+		}
+
 		await product.updateStock(quantity, operation);
 
 		// Update last restocked date if adding stock
@@ -761,6 +915,7 @@ exports.updateProductStock = async (req, res) => {
 				},
 			},
 			{ path: "createdBy", select: "name email" },
+			{ path: "market", select: "name username location logo" },
 		]);
 
 		res.json({
@@ -809,6 +964,18 @@ exports.updateProductShelfNumber = async (req, res) => {
 			});
 		}
 
+		if (
+			req.user &&
+			req.user.role === "market" &&
+			(!product.market ||
+				String(product.market) !== String(req.user.marketId))
+		) {
+			return res.status(403).json({
+				success: false,
+				message: "Not authorized",
+			});
+		}
+
 		product.shelfNumber = shelfNumber.trim();
 		product.updatedAt = new Date();
 		await product.save();
@@ -824,6 +991,7 @@ exports.updateProductShelfNumber = async (req, res) => {
 				},
 			},
 			{ path: "createdBy", select: "name email" },
+			{ path: "market", select: "name username location logo" },
 		]);
 
 		res.json({
@@ -852,6 +1020,33 @@ exports.deleteProduct = async (req, res) => {
 			return res.status(400).json({
 				success: false,
 				message: "Invalid product ID",
+			});
+		}
+
+		const existing = await Product.findById(id);
+		if (!existing) {
+			return res.status(404).json({
+				success: false,
+				message: "Product not found",
+			});
+		}
+		if (
+			req.user &&
+			req.user.role === "market" &&
+			(!existing.market ||
+				String(existing.market) !== String(req.user.marketId))
+		) {
+			return res.status(403).json({
+				success: false,
+				message: "Not authorized",
+			});
+		}
+
+		if (req.user && req.user.role !== "market" && existing.market) {
+			return res.status(403).json({
+				success: false,
+				message:
+					"Market products are read-only here. Manage them from the market dashboard.",
 			});
 		}
 
@@ -903,6 +1098,14 @@ exports.permanentDeleteProduct = async (req, res) => {
 			return res.status(404).json({
 				success: false,
 				message: "Product not found",
+			});
+		}
+
+		if (req.user && req.user.role !== "market" && product.market) {
+			return res.status(403).json({
+				success: false,
+				message:
+					"Market products are read-only here. Manage them from the market dashboard.",
 			});
 		}
 

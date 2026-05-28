@@ -11,20 +11,21 @@ const productSchema = new mongoose.Schema(
 		barcode: {
 			type: String,
 			required: [true, "Please provide a barcode"],
-			unique: true,
 			trim: true,
+			set: (v) => (typeof v === "string" ? v.trim().toUpperCase() : v),
 			validate: {
 				validator: function (v) {
-					// Basic barcode validation - alphanumeric, 6-50 characters
-					return /^[A-Za-z0-9]{6,50}$/.test(v);
+					// Basic barcode validation - alphanumeric, 1-50 characters
+					return /^[A-Za-z0-9]{1,50}$/.test(v);
 				},
-				message: "Barcode must be 6-50 alphanumeric characters",
+				message: "Barcode must be 1-50 alphanumeric characters",
 			},
 		},
 		shelfNumber: {
 			type: String,
 			required: [true, "Please provide a shelf number"],
 			trim: true,
+			set: (v) => (typeof v === "string" ? v.trim().toUpperCase() : v),
 			maxlength: [20, "Shelf number cannot be more than 20 characters"],
 		},
 		description: {
@@ -186,6 +187,14 @@ const productSchema = new mongoose.Schema(
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "User",
 		},
+		// Optional reference to the Market that owns this product.
+		// If null/undefined the product belongs to the main store.
+		market: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Market",
+			default: null,
+			index: true,
+		},
 	},
 	{
 		timestamps: true,
@@ -193,7 +202,7 @@ const productSchema = new mongoose.Schema(
 );
 
 // Indexes for better query performance
-productSchema.index({ barcode: 1 }, { unique: true });
+productSchema.index({ market: 1, barcode: 1 }, { unique: true });
 productSchema.index({ shelfNumber: 1 });
 productSchema.index({ name: 1 });
 productSchema.index({ subcategory: 1 });

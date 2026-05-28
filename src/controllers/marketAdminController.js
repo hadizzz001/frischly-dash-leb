@@ -1,0 +1,1544 @@
+// All endpoints for the market-admin dashboard.
+// Tenant-scoped: every read and write is constrained to req.marketId.
+//
+// Sections:
+//   - dashboard / stats
+//   - staff (User docs with role 'market_staff' + market field)
+//   - categories (MarketCategory)
+//   - subcategories (MarketSubcategory)
+//   - products (shared Product collection, filtered by market)
+//   - orders (shared Order collection, filtered by market)
+//   - sales statistics
+//   - riders (MarketRider)
+//   - waste (MarketWaste)
+//   - promo codes (MarketPromoCode)
+//   - announcements (MarketAnnouncement)
+//   - settings (MarketSetting)
+//   - profile (Market doc)
+
+const bcrypt = require("bcryptjs");
+const mongoose = require("mongoose");
+
+const Market = require("../models/Market");
+const User = require("../models/User");
+const Product = require("../models/Product");
+const Order = require("../models/Order");
+
+const MarketCategory = require("../models/MarketCategory");
+const MarketSubcategory = require("../models/MarketSubcategory");
+const MarketRider = require("../models/MarketRider");
+const MarketWaste = require("../models/MarketWaste");
+const MarketPromoCode = require("../models/MarketPromoCode");
+const MarketAnnouncement = require("../models/MarketAnnouncement");
+const MarketSetting = require("../models/MarketSetting");
+const Shelf = require("../models/Shelf");
+
+const ok = (res, data, message = "OK") =>
+	res.json({ success: true, message, data });
+const created = (res, data, message = "Created") =>
+	res.status(201).json({ success: true, message, data });
+const fail = (res, code, message, errors) => {
+	const body = { success: false, message };
+	if (errors) body.errors = errors;
+	return res.status(code).json(body);
+};
+
+const handleErr = (res, err) => {
+	console.error("[market-admin]", err);
+	if (err && err.name === "ValidationError") {
+		return fail(
+			res,
+			400,
+			"Validation Error",
+			Object.values(err.errors).map((e) => e.message),
+		);
+	}
+	if (err && err.code === 11000) {
+		const keyValue = err.keyValue || {};
+		const field = keyValue.barcode
+			? "barcode"
+			: keyValue.name
+				? "name"
+				: keyValue.code
+					? "code"
+					: Object.keys(keyValue).find((key) => key !== "market") || "field";
+		return fail(res, 400, `${field} already exists`);
+	}
+	return fail(res, 500, err.message || "Server Error");
+};
+
+// ───────────────────────── helpers ─────────────────────────
+const tFilter = (req, extra = {}) => ({ market: req.marketId, ...extra });
+
+const paginate = (q) => {
+	const page = Math.max(parseInt(q.page) || 1, 1);
+	const limit = Math.min(Math.max(parseInt(q.limit) || 20, 1), 200);
+	return { page, limit, skip: (page - 1) * limit };
+};
+
+const firstDefined = (...values) =>
+	values.find((value) => value !== undefined && value !== null && value !== "");
+
+const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const normalizeSubcategoryPayload = (body) => ({
+	...body,
+	category: firstDefined(body.category, body.parentCategory),
+	sortOrder: firstDefined(body.sortOrder, body.sortorder),
+});
+
+const serializeSubcategory = (item) => {
+	const subcategory = item && item.toObject ? item.toObject() : { ...(item || {}) };
+	if (subcategory.category !== undefined) {
+		subcategory.parentCategory = subcategory.category;
+	}
+	if (subcategory.sortOrder !== undefined) {
+		subcategory.sortorder = subcategory.sortOrder;
+	}
+	return subcategory;
+};
+
+const normalizePromoCodePayload = (body) => ({
+	...body,
+	minOrderTotal: firstDefined(
+		body.minOrderTotal,
+		body.triggerCondition && body.triggerCondition.minOrderTotal,
+	),
+});
+
+const normalizeAnnouncementPayload = (body) => ({
+	...body,
+	message: firstDefined(body.message, body.description),
+});
+
+const normalizeWasteReason = (reason) => {
+	if (!reason) return reason;
+	const key = String(reason).trim().toLowerCase();
+	const map = {
+		expired: "expired",
+		damaged: "damaged",
+		"quality issues": "spoiled",
+		spoiled: "spoiled",
+		stolen: "stolen",
+		other: "other",
+	};
+	return map[key] || "other";
+};
+
+const normalizeWastePayload = (body) => ({
+	...body,
+	productName: firstDefined(body.productName, body.name, body.barcode),
+	reason: normalizeWasteReason(body.reason),
+});
+
+const normalizeShelfPayload = (body) => ({
+	...body,
+	barcode: body.barcode && String(body.barcode).trim() ? body.barcode : undefined,
+	capacity: Math.max(parseInt(body.capacity) || 0, 0),
+	currentLoad: Math.max(parseInt(body.currentLoad) || 0, 0),
+});
+
+const normalizeVehicleType = (vehicleType) => {
+
+const buildDateFilter = ({ timeRange, dateFrom, dateTo } = {}) => {
+	const dateFilter = {};
+	const now = new Date();
+
+	if (timeRange === "week") {
+		const weekAgo = new Date(now);
+		weekAgo.setDate(weekAgo.getDate() - 7);
+		return { $gte: weekAgo, $lte: now };
+	}
+	if (timeRange === "month") {
+		const monthAgo = new Date(now);
+		monthAgo.setMonth(monthAgo.getMonth() - 1);
+		return { $gte: monthAgo, $lte: now };
+	}
+	if (timeRange === "year") {
+		const yearAgo = new Date(now);
+		yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+		return { $gte: yearAgo, $lte: now };
+	}
+
+	if (dateFrom) {
+		const fromDate = new Date(dateFrom);
+		if (!Number.isNaN(fromDate.getTime())) dateFilter.$gte = fromDate;
+	}
+	if (dateTo) {
+		const toDate = new Date(dateTo);
+		if (!Number.isNaN(toDate.getTime())) {
+			toDate.setHours(23, 59, 59, 999);
+			dateFilter.$lte = toDate;
+		}
+	}
+
+	return dateFilter;
+};
+
+const paginationMeta = (page, limit, totalProducts) => {
+	const totalPages = Math.max(1, Math.ceil(totalProducts / Math.max(1, limit)));
+	return {
+		currentPage: page,
+		totalPages,
+		totalProducts,
+		hasNextPage: page < totalPages,
+		hasPrevPage: page > 1,
+		limit,
+	};
+};
+	if (!vehicleType) return vehicleType;
+	const key = String(vehicleType).trim().toLowerCase();
+	const map = {
+		bicycle: "bike",
+		bike: "bike",
+		motorbike: "scooter",
+		scooter: "scooter",
+		car: "car",
+		van: "van",
+		other: "other",
+	};
+	return map[key] || "other";
+};
+
+const serializeAnnouncement = (item) => {
+	const announcement = item && item.toObject ? item.toObject() : { ...(item || {}) };
+	if (announcement.message !== undefined) {
+		announcement.description = announcement.message;
+	}
+	return announcement;
+};
+
+const normalizeRiderPayload = async (body) => {
+	const data = {
+		...body,
+		vehicleType: normalizeVehicleType(body.vehicleType),
+		vehiclePlate: firstDefined(body.vehiclePlate, body.vehicleNumber, body.licenseNumber),
+		zone: firstDefined(
+			body.zone,
+			Array.isArray(body.zones) ? body.zones[0] : body.zones,
+		),
+		isActive: firstDefined(body.isActive, body.status && body.status !== "inactive"),
+		isAvailable: firstDefined(body.isAvailable, body.status === "available"),
+	};
+
+	if (body.userId && (!data.name || !data.phoneNumber || !data.email)) {
+		const user = await User.findOne({ _id: body.userId, role: "rider" }).select(
+			"name phoneNumber email",
+		);
+		if (user) {
+			data.name = firstDefined(data.name, user.name);
+			data.phoneNumber = firstDefined(data.phoneNumber, user.phoneNumber);
+			data.email = firstDefined(data.email, user.email);
+		}
+	}
+
+	return data;
+};
+
+// ───────────────────────── dashboard ─────────────────────────
+exports.getDashboard = async (req, res) => {
+	try {
+		const marketId = req.marketId;
+		const [activeProducts, totalOrders, activeRiders, customers] =
+			await Promise.all([
+				Product.countDocuments({ market: marketId, isActive: true }),
+				Order.countDocuments({ market: marketId }),
+				MarketRider.countDocuments({ market: marketId, isActive: true }),
+				User.countDocuments({
+					role: "customer",
+					// Customers are global; show count of customers who placed an order at this market
+				}),
+			]);
+
+		// Customers who actually ordered from this market
+		const distinctCustomers = await Order.distinct("customer", {
+			market: marketId,
+		});
+
+		const salesAgg = await Order.aggregate([
+			{ $match: { market: new mongoose.Types.ObjectId(marketId) } },
+			{
+				$group: {
+					_id: null,
+					totalSales: { $sum: { $ifNull: ["$total", 0] } },
+					deliveredSales: {
+						$sum: {
+							$cond: [
+								{ $eq: ["$status", "delivered"] },
+								{ $ifNull: ["$total", 0] },
+								0,
+							],
+						},
+					},
+				},
+			},
+		]);
+
+		ok(res, {
+			totalCustomers: distinctCustomers.length,
+			totalProducts: activeProducts,
+			totalOrders,
+			totalRiders: activeRiders,
+			totalSales: salesAgg[0]?.totalSales || 0,
+			deliveredSales: salesAgg[0]?.deliveredSales || 0,
+		});
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+// ───────────────────────── staff (User-based) ─────────────────────────
+// Staff are User documents with role='market_staff' and market=req.marketId
+const MARKET_USER_ROLES = [
+	"market_staff",
+	"market_manager",
+	"market_driver",
+	"customer",
+];
+
+exports.getStaff = async (req, res) => {
+	try {
+		const user = await User.findOne({
+			_id: req.params.id,
+			market: req.marketId,
+		}).select("-password");
+		if (!user) return fail(res, 404, "Staff not found");
+		ok(res, user, "OK");
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.listStaff = async (req, res) => {
+	try {
+		const { page, limit, skip } = paginate(req.query);
+		const search = (req.query.search || "").trim();
+		const filter = {
+			market: req.marketId,
+			role: { $in: MARKET_USER_ROLES },
+		};
+		if (search) {
+			filter.$or = [
+				{ name: new RegExp(search, "i") },
+				{ email: new RegExp(search, "i") },
+				{ phoneNumber: new RegExp(search, "i") },
+			];
+		}
+		const [items, total] = await Promise.all([
+			User.find(filter)
+				.select("-password")
+				.sort({ createdAt: -1 })
+				.skip(skip)
+				.limit(limit),
+			User.countDocuments(filter),
+		]);
+		ok(res, items, "OK");
+		res.meta = { total, page, limit };
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.createStaff = async (req, res) => {
+	try {
+		const { name, email, phoneNumber, password, address, role } = req.body;
+		if (!name || !email || !phoneNumber || !password) {
+			return fail(res, 400, "name, email, phoneNumber and password are required");
+		}
+		const safeRole = MARKET_USER_ROLES.includes(role) ? role : "market_staff";
+		const user = await User.create({
+			name,
+			email,
+			phoneNumber,
+			password,
+			role: safeRole,
+			market: req.marketId,
+			address: address || {
+				street: "-",
+				city: "-",
+			},
+			emailConfirmed: true,
+		});
+		const safe = user.toObject();
+		delete safe.password;
+		created(res, safe, "Staff created");
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.updateStaff = async (req, res) => {
+	try {
+		const allowed = [
+			"name",
+			"email",
+			"phoneNumber",
+			"isActive",
+			"address",
+			"role",
+		];
+		const update = {};
+		allowed.forEach((k) => {
+			if (req.body[k] !== undefined) update[k] = req.body[k];
+		});
+		if (update.role && !MARKET_USER_ROLES.includes(update.role)) {
+			return fail(res, 400, "Invalid role for market user");
+		}
+		const user = await User.findOneAndUpdate(
+			{ _id: req.params.id, market: req.marketId },
+			update,
+			{ new: true, runValidators: true },
+		).select("-password");
+		if (!user) return fail(res, 404, "Staff not found");
+		ok(res, user, "Staff updated");
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.resetStaffPassword = async (req, res) => {
+	try {
+		const { password } = req.body;
+		if (!password || password.length < 6) {
+			return fail(res, 400, "Password must be at least 6 characters");
+		}
+		const user = await User.findOne({
+			_id: req.params.id,
+			market: req.marketId,
+		}).select("+password");
+		if (!user) return fail(res, 404, "Staff not found");
+		user.password = password;
+		await user.save();
+		ok(res, { id: user._id }, "Password updated");
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.deleteStaff = async (req, res) => {
+	try {
+		const user = await User.findOneAndDelete({
+			_id: req.params.id,
+			market: req.marketId,
+		});
+		if (!user) return fail(res, 404, "Staff not found");
+		ok(res, { id: user._id }, "Staff deleted");
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.listRiderUsers = async (req, res) => {
+	try {
+		const users = await User.find({ role: "rider", isActive: true })
+			.select("name email phoneNumber role isActive")
+			.sort({ name: 1 });
+		ok(res, users);
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+// ───────────────────────── generic CRUD factory ─────────────────────────
+const crud = (Model, allowedFields, opts = {}) => ({
+	list: async (req, res) => {
+		try {
+			const { page, limit, skip } = paginate(req.query);
+			const search = (req.query.search || "").trim();
+			const filter = tFilter(req);
+			if (req.query.isActive && req.query.isActive !== "all") {
+				filter.isActive = req.query.isActive === "true";
+			}
+			if (search && opts.searchFields) {
+				const safeSearch = escapeRegex(search);
+				filter.$or = opts.searchFields.map((f) => ({
+					[f]: new RegExp(safeSearch, "i"),
+				}));
+			}
+			// Reserved query params that should never be treated as filters
+			const reserved = new Set([
+				"page",
+				"limit",
+				"search",
+				"sortBy",
+				"sortOrder",
+				"isActive",
+			]);
+			Object.entries(req.query).forEach(([k, v]) => {
+				if (reserved.has(k)) return;
+				if (allowedFields.includes(k) && v !== "" && v !== undefined) {
+					filter[k] = v;
+				}
+			});
+
+			// Build sort: prefer explicit ?sortBy=&sortOrder= from the client,
+			// fall back to the controller's defaultSort.
+			let sort = opts.defaultSort || { createdAt: -1 };
+			if (req.query.sortBy) {
+				const dir =
+					String(req.query.sortOrder || "asc").toLowerCase() === "desc"
+						? -1
+						: 1;
+				sort = { [req.query.sortBy]: dir };
+			}
+
+			let q = Model.find(filter)
+				.sort(sort)
+				.skip(skip)
+				.limit(limit);
+			if (opts.populate) q = q.populate(opts.populate);
+			const [items, total] = await Promise.all([
+				q.exec(),
+				Model.countDocuments(filter),
+			]);
+			const data = opts.transform ? items.map(opts.transform) : items;
+			res.json({
+				success: true,
+				message: "OK",
+				data,
+				meta: { total, page, limit },
+			});
+		} catch (err) {
+			handleErr(res, err);
+		}
+	},
+	get: async (req, res) => {
+		try {
+			let q = Model.findOne({ _id: req.params.id, market: req.marketId });
+			if (opts.populate) q = q.populate(opts.populate);
+			const item = await q.exec();
+			if (!item) return fail(res, 404, "Not found");
+			ok(res, opts.transform ? opts.transform(item) : item);
+		} catch (err) {
+			handleErr(res, err);
+		}
+	},
+	create: async (req, res) => {
+		try {
+			const body = opts.normalize
+				? await opts.normalize(req.body || {}, req)
+				: req.body || {};
+			const data = { market: req.marketId };
+			allowedFields.forEach((f) => {
+				if (body[f] !== undefined) data[f] = body[f];
+			});
+			const item = await Model.create(data);
+			created(res, opts.transform ? opts.transform(item) : item);
+		} catch (err) {
+			handleErr(res, err);
+		}
+	},
+	update: async (req, res) => {
+		try {
+			const body = opts.normalize
+				? await opts.normalize(req.body || {}, req)
+				: req.body || {};
+			const data = {};
+			allowedFields.forEach((f) => {
+				if (body[f] !== undefined) data[f] = body[f];
+			});
+			const item = await Model.findOneAndUpdate(
+				{ _id: req.params.id, market: req.marketId },
+				data,
+				{ new: true, runValidators: true },
+			);
+			if (!item) return fail(res, 404, "Not found");
+			ok(res, opts.transform ? opts.transform(item) : item, "Updated");
+		} catch (err) {
+			handleErr(res, err);
+		}
+	},
+	remove: async (req, res) => {
+		try {
+			const item = await Model.findOneAndDelete({
+				_id: req.params.id,
+				market: req.marketId,
+			});
+			if (!item) return fail(res, 404, "Not found");
+			ok(res, { id: item._id }, "Deleted");
+		} catch (err) {
+			handleErr(res, err);
+		}
+	},
+});
+
+// ───────────────────────── categories ─────────────────────────
+exports.categories = crud(
+	MarketCategory,
+	["name", "description", "image", "icon", "sortOrder", "isActive"],
+	{ searchFields: ["name", "description"], defaultSort: { sortOrder: 1, name: 1 } },
+);
+
+// ───────────────────────── shelves ─────────────────────────
+exports.shelves = crud(
+	Shelf,
+	[
+		"shelfNumber",
+		"barcode",
+		"description",
+		"location",
+		"capacity",
+		"currentLoad",
+		"isActive",
+		"products",
+		"orders",
+	],
+	{
+		searchFields: ["shelfNumber", "barcode", "description", "location"],
+		defaultSort: { shelfNumber: 1 },
+		normalize: normalizeShelfPayload,
+	},
+);
+
+// ───────────────────────── subcategories ─────────────────────────
+exports.subcategories = crud(
+	MarketSubcategory,
+	[
+		"name",
+		"description",
+		"image",
+		"icon",
+		"sortOrder",
+		"isActive",
+		"category",
+	],
+	{
+		searchFields: ["name", "description"],
+		defaultSort: { sortOrder: 1, name: 1 },
+		populate: { path: "category", select: "name" },
+		normalize: normalizeSubcategoryPayload,
+		transform: serializeSubcategory,
+	},
+);
+
+// ───────────────────────── products (shared Product) ─────────────────────────
+exports.listProducts = async (req, res) => {
+	try {
+		const { page, limit, skip } = paginate(req.query);
+		const search = (req.query.search || "").trim();
+		const filter = { market: req.marketId };
+		if (req.query.isActive && req.query.isActive !== "all") {
+			filter.isActive = req.query.isActive === "true";
+		}
+		if (req.query.inAds && req.query.inAds !== "all") {
+			filter.inAds = req.query.inAds === "true";
+		}
+		if (req.query.subcategory && req.query.subcategory !== "all") {
+			filter.subcategory = req.query.subcategory;
+		}
+		if (req.query.priceRange && req.query.priceRange !== "all") {
+			if (req.query.priceRange.endsWith("+")) {
+				filter.price = { $gte: parseFloat(req.query.priceRange) || 0 };
+			} else {
+				const [min, max] = req.query.priceRange.split("-").map(Number);
+				if (!Number.isNaN(min) && !Number.isNaN(max)) {
+					filter.price = { $gte: min, $lte: max };
+				}
+			}
+		}
+		if (req.query.stockLevel && req.query.stockLevel !== "all") {
+			if (req.query.stockLevel === "out") filter.stock = { $lte: 0 };
+			else if (req.query.stockLevel === "low") filter.stock = { $gt: 0, $lte: 10 };
+			else if (req.query.stockLevel === "in") filter.stock = { $gt: 10 };
+		}
+		if (search) {
+			const safeSearch = escapeRegex(search);
+			filter.$or = [
+				{ name: new RegExp(safeSearch, "i") },
+				{ barcode: new RegExp(safeSearch, "i") },
+			];
+		}
+
+		const allowedSortFields = new Set([
+			"createdAt",
+			"name",
+			"price",
+			"stock",
+			"sortOrder",
+			"isActive",
+		]);
+		const sortBy = allowedSortFields.has(req.query.sortBy)
+			? req.query.sortBy
+			: "createdAt";
+		const sortOrder = String(req.query.sortOrder || "desc").toLowerCase() === "asc" ? 1 : -1;
+		const sort = { [sortBy]: sortOrder };
+
+		const [items, total] = await Promise.all([
+			Product.find(filter)
+				.sort(sort)
+				.skip(skip)
+				.limit(limit)
+				.lean(),
+			Product.countDocuments(filter),
+		]);
+		const subcategoryIds = items
+			.map((item) => item.subcategory)
+			.filter(Boolean)
+			.map((id) => String(id));
+		const marketSubcategories = await MarketSubcategory.find({
+			_id: { $in: subcategoryIds },
+			market: req.marketId,
+		})
+			.populate({ path: "category", select: "name image icon" })
+			.lean();
+		const subcategoryMap = new Map(
+			marketSubcategories.map((subcategory) => [String(subcategory._id), subcategory]),
+		);
+		const data = items.map((item) => {
+			const subcategory = subcategoryMap.get(String(item.subcategory));
+			return {
+				...item,
+				category: subcategory && subcategory.category ? subcategory.category : item.category,
+				subcategory: subcategory
+					? {
+						...subcategory,
+						parentCategory: subcategory.category,
+					}
+					: item.subcategory,
+			};
+		});
+		res.json({
+			success: true,
+			message: "OK",
+			data,
+			meta: { total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) },
+			pagination: {
+				totalProducts: total,
+				total,
+				page,
+				currentPage: page,
+				limit,
+				totalPages: Math.max(1, Math.ceil(total / limit)),
+			},
+		});
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.createProduct = async (req, res) => {
+	try {
+		const allowed = [
+			"name",
+			"barcode",
+			"shelfNumber",
+			"subcategory",
+			"price",
+			"stock",
+			"tax",
+			"bottlerefund",
+			"discount",
+			"picture",
+			"description",
+			"category",
+			"sortOrder",
+			"inAds",
+			"is18Plus",
+			"isActive",
+		];
+		const data = { market: req.marketId };
+		allowed.forEach((f) => {
+			if (req.body[f] !== undefined) data[f] = req.body[f];
+		});
+		const item = await Product.create(data);
+		created(res, item);
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.updateProduct = async (req, res) => {
+	try {
+		const allowed = [
+			"name",
+			"barcode",
+			"shelfNumber",
+			"subcategory",
+			"price",
+			"stock",
+			"tax",
+			"bottlerefund",
+			"discount",
+			"picture",
+			"description",
+			"category",
+			"sortOrder",
+			"inAds",
+			"is18Plus",
+			"isActive",
+		];
+		const data = {};
+		allowed.forEach((f) => {
+			if (req.body[f] !== undefined) data[f] = req.body[f];
+		});
+		const item = await Product.findOneAndUpdate(
+			{ _id: req.params.id, market: req.marketId },
+			data,
+			{ new: true, runValidators: true },
+		);
+		if (!item) return fail(res, 404, "Product not found");
+		ok(res, item, "Updated");
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.deleteProduct = async (req, res) => {
+	try {
+		const item = await Product.findOneAndUpdate(
+			{ _id: req.params.id, market: req.marketId },
+			{ isActive: false },
+			{ new: true },
+		);
+		if (!item) return fail(res, 404, "Product not found");
+		ok(res, { id: item._id }, "Deactivated");
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.updateProductStock = async (req, res) => {
+	try {
+		const { quantity, operation = "set" } = req.body;
+		if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+			return fail(res, 400, "Invalid product ID");
+		}
+		if (typeof quantity !== "number" || quantity < 0) {
+			return fail(res, 400, "Quantity must be a non-negative number");
+		}
+		if (!["set", "add", "subtract"].includes(operation)) {
+			return fail(res, 400, "Invalid stock operation");
+		}
+
+		const product = await Product.findOne({
+			_id: req.params.id,
+			market: req.marketId,
+		});
+		if (!product) return fail(res, 404, "Product not found");
+
+		await product.updateStock(quantity, operation);
+		if (operation === "add" || operation === "set") {
+			product.lastRestocked = new Date();
+			await product.save();
+		}
+
+		ok(res, product, "Product stock updated successfully");
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.updateProductShelfNumber = async (req, res) => {
+	try {
+		const { shelfNumber } = req.body;
+		if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+			return fail(res, 400, "Invalid product ID");
+		}
+		if (!shelfNumber || typeof shelfNumber !== "string") {
+			return fail(res, 400, "Shelf number is required and must be a string");
+		}
+
+		const product = await Product.findOneAndUpdate(
+			{ _id: req.params.id, market: req.marketId },
+			{ shelfNumber: shelfNumber.trim(), updatedAt: new Date() },
+			{ new: true, runValidators: true },
+		);
+		if (!product) return fail(res, 404, "Product not found");
+
+		ok(res, product, "Product shelf number updated successfully");
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.permanentDeleteProduct = async (req, res) => {
+	try {
+		if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+			return fail(res, 400, "Invalid product ID");
+		}
+		const item = await Product.findOneAndDelete({
+			_id: req.params.id,
+			market: req.marketId,
+		});
+		if (!item) return fail(res, 404, "Product not found");
+		ok(res, { id: item._id }, "Product permanently deleted");
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+// ───────────────────────── orders (shared Order) ─────────────────────────
+exports.listOrders = async (req, res) => {
+	try {
+		const { page, limit, skip } = paginate(req.query);
+		const search = (req.query.search || "").trim();
+		const filter = { market: req.marketId };
+		if (req.query.status) filter.status = req.query.status;
+		if (search) {
+			filter.$or = [
+				{ orderNumber: new RegExp(search, "i") },
+				{ "customer.name": new RegExp(search, "i") },
+				{ "customer.email": new RegExp(search, "i") },
+			];
+		}
+		const [items, total] = await Promise.all([
+			Order.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+			Order.countDocuments(filter),
+		]);
+		res.json({
+			success: true,
+			message: "OK",
+			data: items,
+			meta: { total, page, limit },
+		});
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.updateOrderStatus = async (req, res) => {
+	try {
+		const { status } = req.body;
+		if (!status) return fail(res, 400, "status is required");
+		const order = await Order.findOneAndUpdate(
+			{ _id: req.params.id, market: req.marketId },
+			{ status },
+			{ new: true },
+		);
+		if (!order) return fail(res, 404, "Order not found");
+		ok(res, order, "Status updated");
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.cancelOrder = async (req, res) => {
+	try {
+		if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+			return fail(res, 400, "Invalid order ID");
+		}
+		const order = await Order.findOne({ _id: req.params.id, market: req.marketId });
+		if (!order) return fail(res, 404, "Order not found");
+		if (order.status === "cancelled") return fail(res, 400, "Order is already cancelled");
+		if (order.status === "delivered") return fail(res, 400, "Delivered order cannot be cancelled");
+
+		for (const item of order.items || []) {
+			if (item.product && item.quantity) {
+				await Product.findOneAndUpdate(
+					{ _id: item.product, market: req.marketId },
+					{ $inc: { stock: item.quantity } },
+				);
+			}
+		}
+
+		const reason = firstDefined(req.body.reason, req.body.notes);
+		order.status = "cancelled";
+		order.paymentStatus = "cancelled";
+		order.notes = reason
+			? `${order.notes || ""}\nCancellation reason: ${reason}`.trim()
+			: order.notes;
+		order.updatedBy = req.user && req.user._id;
+		await order.save();
+
+		ok(res, order, "Order cancelled successfully");
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.getCustomerOrderCounts = async (req, res) => {
+	try {
+		const orderCounts = await Order.aggregate([
+			{ $match: { market: new mongoose.Types.ObjectId(req.marketId), isActive: true } },
+			{ $group: { _id: "$customer.email", orderCount: { $sum: 1 } } },
+			{ $project: { email: "$_id", orderCount: 1, _id: 0 } },
+		]);
+		ok(res, orderCounts);
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.getProductSalesStats = async (req, res) => {
+	try {
+		const page = Math.max(parseInt(req.query.page) || 1, 1);
+		const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 200);
+		const skip = (page - 1) * limit;
+		const sortBy = req.query.sortBy || "totalQuantitySold";
+		const sortOrder = String(req.query.sortOrder || "desc").toLowerCase() === "asc" ? 1 : -1;
+		const dateFilter = buildDateFilter(req.query);
+		const matchStage = {
+			market: new mongoose.Types.ObjectId(req.marketId),
+			isActive: true,
+			status: "delivered",
+		};
+		if (Object.keys(dateFilter).length > 0) matchStage.createdAt = dateFilter;
+
+		const pipeline = [
+			{ $match: matchStage },
+			{ $unwind: "$items" },
+			{
+				$lookup: {
+					from: "products",
+					localField: "items.product",
+					foreignField: "_id",
+					as: "productDetails",
+				},
+			},
+			{ $unwind: { path: "$productDetails", preserveNullAndEmptyArrays: true } },
+			{
+				$group: {
+					_id: "$items.product",
+					productName: { $first: "$productDetails.name" },
+					productBarcode: { $first: "$productDetails.barcode" },
+					productPrice: { $first: "$productDetails.price" },
+					productIsActive: { $first: "$productDetails.isActive" },
+					totalQuantitySold: { $sum: "$items.quantity" },
+					totalRevenue: { $sum: "$items.totalPrice" },
+					orderCount: { $sum: 1 },
+					averageQuantityPerOrder: { $avg: "$items.quantity" },
+					firstSaleDate: { $min: "$createdAt" },
+					lastSaleDate: { $max: "$createdAt" },
+				},
+			},
+			{
+				$project: {
+					productName: { $ifNull: ["$productName", "Unknown Product"] },
+					productBarcode: { $ifNull: ["$productBarcode", "N/A"] },
+					productPrice: 1,
+					productIsActive: 1,
+					totalQuantitySold: 1,
+					totalRevenue: { $round: ["$totalRevenue", 2] },
+					orderCount: 1,
+					averageQuantityPerOrder: { $round: ["$averageQuantityPerOrder", 2] },
+					firstSaleDate: 1,
+					lastSaleDate: 1,
+				},
+			},
+			{ $sort: { [sortBy]: sortOrder } },
+		];
+
+		const countResult = await Order.aggregate([...pipeline, { $count: "total" }]);
+		const totalProducts = countResult[0] ? countResult[0].total : 0;
+		const data = await Order.aggregate([...pipeline, { $skip: skip }, { $limit: limit }]);
+		const summaryResult = await Order.aggregate([
+			{ $match: matchStage },
+			{ $unwind: "$items" },
+			{
+				$group: {
+					_id: null,
+					totalRevenue: { $sum: "$items.totalPrice" },
+					totalQuantitySold: { $sum: "$items.quantity" },
+					totalOrders: { $addToSet: "$_id" },
+					uniqueProducts: { $addToSet: "$items.product" },
+				},
+			},
+			{
+				$project: {
+					_id: 0,
+					totalRevenue: { $round: ["$totalRevenue", 2] },
+					totalQuantitySold: 1,
+					totalOrders: { $size: "$totalOrders" },
+					uniqueProducts: { $size: "$uniqueProducts" },
+				},
+			},
+		]);
+
+		res.json({
+			success: true,
+			data,
+			summary: summaryResult[0] || {
+				totalRevenue: 0,
+				totalQuantitySold: 0,
+				totalOrders: 0,
+				uniqueProducts: 0,
+			},
+			pagination: paginationMeta(page, limit, totalProducts),
+			filters: {
+				timeRange: req.query.timeRange || "custom",
+				dateFrom: dateFilter.$gte || null,
+				dateTo: dateFilter.$lte || null,
+			},
+		});
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.getUnsoldProducts = async (req, res) => {
+	try {
+		const page = Math.max(parseInt(req.query.page) || 1, 1);
+		const limit = Math.min(Math.max(parseInt(req.query.limit) || 25, 1), 200);
+		const skip = (page - 1) * limit;
+		const dateFilter = buildDateFilter(req.query);
+		const marketId = new mongoose.Types.ObjectId(req.marketId);
+		const matchStage = { market: marketId, isActive: true, status: "delivered" };
+		if (Object.keys(dateFilter).length > 0) matchStage.createdAt = dateFilter;
+
+		const soldProducts = await Order.aggregate([
+			{ $match: matchStage },
+			{ $unwind: "$items" },
+			{ $group: { _id: "$items.product" } },
+		]);
+		const soldProductIds = soldProducts.map((item) => item._id).filter(Boolean);
+		const filter = { market: req.marketId, isActive: true };
+		if (soldProductIds.length > 0) filter._id = { $nin: soldProductIds };
+
+		const [totalProducts, products] = await Promise.all([
+			Product.countDocuments(filter),
+			Product.find(filter)
+				.select("name barcode stock price isActive createdAt subcategory category")
+				.sort({ stock: -1, name: 1 })
+				.skip(skip)
+				.limit(limit)
+				.lean(),
+		]);
+		const subcategoryIds = products.map((product) => product.subcategory).filter(Boolean);
+		const subcategories = await MarketSubcategory.find({
+			_id: { $in: subcategoryIds },
+			market: req.marketId,
+		})
+			.populate({ path: "category", select: "name" })
+			.lean();
+		const subcategoryMap = new Map(
+			subcategories.map((subcategory) => [String(subcategory._id), subcategory]),
+		);
+		const data = products.map((product) => {
+			const subcategory = subcategoryMap.get(String(product.subcategory));
+			return {
+				...product,
+				categoryName:
+					subcategory && subcategory.category ? subcategory.category.name : "N/A",
+			};
+		});
+
+		res.json({
+			success: true,
+			data,
+			pagination: paginationMeta(page, limit, totalProducts),
+			filters: {
+				timeRange: req.query.timeRange || "custom",
+				dateFrom: dateFilter.$gte || null,
+				dateTo: dateFilter.$lte || null,
+			},
+		});
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+// ───────────────────────── sales statistics ─────────────────────────
+exports.getStatistics = async (req, res) => {
+	try {
+		const marketId = new mongoose.Types.ObjectId(req.marketId);
+		const range = req.query.range || "30d";
+		const since = new Date();
+		if (range === "7d") since.setDate(since.getDate() - 7);
+		else if (range === "90d") since.setDate(since.getDate() - 90);
+		else if (range === "365d") since.setDate(since.getDate() - 365);
+		else since.setDate(since.getDate() - 30);
+
+		const [overall, byDay, byStatus, topProducts] = await Promise.all([
+			Order.aggregate([
+				{ $match: { market: marketId, createdAt: { $gte: since } } },
+				{
+					$group: {
+						_id: null,
+						orders: { $sum: 1 },
+						revenue: { $sum: { $ifNull: ["$total", 0] } },
+						avg: { $avg: { $ifNull: ["$total", 0] } },
+					},
+				},
+			]),
+			Order.aggregate([
+				{ $match: { market: marketId, createdAt: { $gte: since } } },
+				{
+					$group: {
+						_id: {
+							$dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+						},
+						orders: { $sum: 1 },
+						revenue: { $sum: { $ifNull: ["$total", 0] } },
+					},
+				},
+				{ $sort: { _id: 1 } },
+			]),
+			Order.aggregate([
+				{ $match: { market: marketId, createdAt: { $gte: since } } },
+				{ $group: { _id: "$status", count: { $sum: 1 } } },
+			]),
+			Order.aggregate([
+				{ $match: { market: marketId, createdAt: { $gte: since } } },
+				{ $unwind: { path: "$items", preserveNullAndEmptyArrays: false } },
+				{
+					$group: {
+						_id: "$items.product",
+						name: { $first: "$items.name" },
+						quantity: { $sum: { $ifNull: ["$items.quantity", 0] } },
+						revenue: {
+							$sum: {
+								$multiply: [
+									{ $ifNull: ["$items.quantity", 0] },
+									{ $ifNull: ["$items.price", 0] },
+								],
+							},
+						},
+					},
+				},
+				{ $sort: { revenue: -1 } },
+				{ $limit: 10 },
+			]),
+		]);
+
+		ok(res, {
+			range,
+			overall: overall[0] || { orders: 0, revenue: 0, avg: 0 },
+			byDay,
+			byStatus,
+			topProducts,
+		});
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.getCategoryProductCount = async (req, res) => {
+	try {
+		const category = await MarketCategory.findOne({
+			_id: req.params.id,
+			market: req.marketId,
+		});
+		if (!category) return fail(res, 404, "Category not found");
+
+		const subcategoryIds = await MarketSubcategory.find({
+			market: req.marketId,
+			category: category._id,
+			isActive: true,
+		}).distinct("_id");
+
+		const productCount = await Product.countDocuments({
+			market: req.marketId,
+			subcategory: { $in: subcategoryIds },
+			isActive: true,
+		});
+
+		ok(res, {
+			categoryId: category._id,
+			categoryName: category.name,
+			productCount,
+		});
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.getAllCategoryProductCounts = async (req, res) => {
+	try {
+		const counts = await MarketCategory.aggregate([
+			{ $match: { market: req.marketId, isActive: true } },
+			{
+				$lookup: {
+					from: "marketsubcategories",
+					let: { categoryId: "$_id", marketId: "$market" },
+					pipeline: [
+						{
+							$match: {
+								$expr: {
+									$and: [
+										{ $eq: ["$category", "$$categoryId"] },
+										{ $eq: ["$market", "$$marketId"] },
+										{ $eq: ["$isActive", true] },
+									],
+								},
+							},
+						},
+						{ $project: { _id: 1 } },
+					],
+					as: "subcategories",
+				},
+			},
+			{
+				$lookup: {
+					from: "products",
+					let: { subcategoryIds: "$subcategories._id", marketId: "$market" },
+					pipeline: [
+						{
+							$match: {
+								$expr: {
+									$and: [
+										{ $eq: ["$market", "$$marketId"] },
+										{ $in: ["$subcategory", "$$subcategoryIds"] },
+										{ $eq: ["$isActive", true] },
+									],
+								},
+							},
+						},
+						{ $count: "count" },
+					],
+					as: "productCountResult",
+				},
+			},
+			{
+				$project: {
+					categoryId: "$_id",
+					categoryName: "$name",
+					productCount: {
+						$ifNull: [{ $arrayElemAt: ["$productCountResult.count", 0] }, 0],
+					},
+				},
+			},
+			{ $sort: { categoryName: 1 } },
+		]);
+
+		ok(res, counts);
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+// ───────────────────────── riders ─────────────────────────
+exports.riders = crud(
+	MarketRider,
+	[
+		"name",
+		"phoneNumber",
+		"email",
+		"vehicleType",
+		"vehiclePlate",
+		"zone",
+		"isActive",
+		"isAvailable",
+		"notes",
+	],
+	{
+		searchFields: ["name", "phoneNumber", "vehiclePlate", "zone"],
+		normalize: normalizeRiderPayload,
+	},
+);
+
+exports.updateRiderStatus = async (req, res) => {
+	try {
+		const { status } = req.body;
+		if (!status) return fail(res, 400, "status is required");
+		const statusMap = {
+			available: { isActive: true, isAvailable: true },
+			offline: { isAvailable: false },
+			inactive: { isActive: false, isAvailable: false },
+		};
+		const update = statusMap[status];
+		if (!update) return fail(res, 400, "Invalid rider status");
+
+		const rider = await MarketRider.findOneAndUpdate(
+			{ _id: req.params.id, market: req.marketId },
+			update,
+			{ new: true, runValidators: true },
+		);
+		if (!rider) return fail(res, 404, "Rider not found");
+		ok(res, rider, "Rider status updated");
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+// ───────────────────────── waste ─────────────────────────
+exports.waste = crud(
+	MarketWaste,
+	[
+		"productName",
+		"barcode",
+		"quantity",
+		"unit",
+		"reason",
+		"costValue",
+		"notes",
+		"recordedAt",
+	],
+	{
+		searchFields: ["productName", "barcode"],
+		defaultSort: { recordedAt: -1 },
+		normalize: normalizeWastePayload,
+	},
+);
+
+exports.getWasteSummary = async (req, res) => {
+	try {
+		const marketId = new mongoose.Types.ObjectId(req.marketId);
+		const summary = await MarketWaste.aggregate([
+			{ $match: { market: marketId } },
+			{
+				$group: {
+					_id: "$reason",
+					quantity: { $sum: "$quantity" },
+					cost: { $sum: "$costValue" },
+					count: { $sum: 1 },
+				},
+			},
+		]);
+		const total = summary.reduce(
+			(acc, r) => {
+				acc.quantity += r.quantity;
+				acc.cost += r.cost;
+				acc.count += r.count;
+				return acc;
+			},
+			{ quantity: 0, cost: 0, count: 0 },
+		);
+		ok(res, { summary, total });
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+// ───────────────────────── promo codes ─────────────────────────
+exports.promoCodes = crud(
+	MarketPromoCode,
+	[
+		"code",
+		"description",
+		"discountType",
+		"discountValue",
+		"minOrderTotal",
+		"usageLimit",
+		"startsAt",
+		"expiresAt",
+		"isActive",
+	],
+	{ searchFields: ["code", "description"], normalize: normalizePromoCodePayload },
+);
+
+// ───────────────────────── announcements ─────────────────────────
+exports.announcements = crud(
+	MarketAnnouncement,
+	[
+		"title",
+		"message",
+		"audience",
+		"image",
+		"startsAt",
+		"expiresAt",
+		"isActive",
+	],
+	{
+		searchFields: ["title", "message"],
+		defaultSort: { startsAt: -1 },
+		normalize: normalizeAnnouncementPayload,
+		transform: serializeAnnouncement,
+	},
+);
+
+// ───────────────────────── settings ─────────────────────────
+exports.getSettings = async (req, res) => {
+	try {
+		let s = await MarketSetting.findOne({ market: req.marketId });
+		if (!s) {
+			s = await MarketSetting.create({ market: req.marketId });
+		}
+		ok(res, s);
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.updateSettings = async (req, res) => {
+	try {
+		const allowed = [
+			"businessHours",
+			"deliveryFee",
+			"minOrderAmount",
+			"freeDeliveryThreshold",
+			"taxRate",
+			"currency",
+			"acceptingOrders",
+			"notes",
+			"extras",
+		];
+		const data = {};
+		allowed.forEach((f) => {
+			if (req.body[f] !== undefined) data[f] = req.body[f];
+		});
+		const s = await MarketSetting.findOneAndUpdate(
+			{ market: req.marketId },
+			data,
+			{ new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true },
+		);
+		ok(res, s, "Settings updated");
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+// ───────────────────────── profile (Market doc) ─────────────────────────
+exports.getProfile = async (req, res) => {
+	try {
+		const market = await Market.findById(req.marketId);
+		if (!market) return fail(res, 404, "Market not found");
+		ok(res, market.toSafeObject());
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.updateProfile = async (req, res) => {
+	try {
+		// Owner-only fields. Staff cannot edit profile.
+		if (!req.isMarketOwner) {
+			return fail(res, 403, "Only the market owner can update the profile");
+		}
+		const allowed = ["name", "email", "phoneNumber", "location", "logo"];
+		const data = {};
+		allowed.forEach((f) => {
+			if (req.body[f] !== undefined) data[f] = req.body[f];
+		});
+		const market = await Market.findByIdAndUpdate(req.marketId, data, {
+			new: true,
+			runValidators: true,
+		});
+		if (!market) return fail(res, 404, "Market not found");
+		ok(res, market.toSafeObject(), "Profile updated");
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+exports.changeProfilePassword = async (req, res) => {
+	try {
+		if (!req.isMarketOwner) {
+			return fail(res, 403, "Only the market owner can change password");
+		}
+		const { currentPassword, newPassword } = req.body;
+		if (!currentPassword || !newPassword || newPassword.length < 6) {
+			return fail(res, 400, "currentPassword and newPassword (min 6) required");
+		}
+		const market = await Market.findById(req.marketId).select("+password");
+		if (!market) return fail(res, 404, "Market not found");
+		const isMatch = await market.comparePassword(currentPassword);
+		if (!isMatch) return fail(res, 400, "Current password is incorrect");
+		market.password = newPassword;
+		await market.save();
+		ok(res, { id: market._id }, "Password changed");
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+// ───────────────────────── /me convenience ─────────────────────────
+exports.me = async (req, res) => {
+	try {
+		const market = await Market.findById(req.marketId);
+		if (!market) return fail(res, 404, "Market not found");
+		ok(res, {
+			market: market.toSafeObject(),
+			role: req.isMarketOwner ? "market" : "market_staff",
+			user: req.isMarketOwner
+				? null
+				: {
+						id: req.user.id,
+						name: req.user.name,
+						email: req.user.email,
+						role: req.user.role,
+					},
+		});
+	} catch (err) {
+		handleErr(res, err);
+	}
+};

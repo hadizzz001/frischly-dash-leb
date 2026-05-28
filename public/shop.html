@@ -1014,7 +1014,7 @@
 				</div>
 				<div class="cart-total">
 					<span>Total:</span>
-					<span id="cart-total">€0.00</span>
+					<span id="cart-total">$0.00</span>
 				</div>
 				<div class="payment-method-section">
 					<span class="payment-method-label">Payment Method:</span>
@@ -1077,32 +1077,7 @@
 						<div class="form-row">
 							<div class="form-group">
 								<label for="city">City:</label>
-								<input
-									type="text"
-									id="city"
-									name="city"
-									placeholder="Enter city"
-								/>
-							</div>
-							<div class="form-group">
-								<label for="state">State:</label>
-								<input
-									type="text"
-									id="state"
-									name="state"
-									placeholder="Enter state"
-								/>
-							</div>
-						</div>
-						<div class="form-row">
-							<div class="form-group">
-								<label for="country">Country:</label>
-								<input
-									type="text"
-									id="country"
-									name="country"
-									placeholder="Enter country"
-								/>
+								<select id="city" name="city" data-lebanese-city-select></select>
 							</div>
 						</div>
 					</div>
@@ -1115,6 +1090,7 @@
 
 		<!-- Global Config -->
 		<script src="js/config.js"></script>
+		<script src="js/lebanese-cities.js"></script>
 
 		<script>
 			// Check system status on load
@@ -1374,7 +1350,7 @@
 								</div>
 								<div class="product-info">
 									<div class="product-name">${product.name}</div>
-									<div class="product-price">€${finalPrice.toFixed(2)}</div>
+									<div class="product-price">$${finalPrice.toFixed(2)}</div>
 									<div class="product-description">${
 										product.description || "No description available."
 									}</div>
@@ -1733,7 +1709,7 @@
 				}
 
 				// Update delivery fee display
-				cartDelivery.textContent = `€${deliveryFee.toFixed(2)}`;
+				cartDelivery.textContent = `$${deliveryFee.toFixed(2)}`;
 				cartDeliveryContainer.style.display = cart.length > 0 ? "flex" : "none";
 
 				// Update cart items
@@ -1759,7 +1735,7 @@
 							</div>
 							<div class="cart-item-info">
 								<div class="cart-item-name">${item.name}</div>
-								<div class="cart-item-price">€${item.price.toFixed(2)}</div>
+								<div class="cart-item-price">$${item.price.toFixed(2)}</div>
 							</div>
 							<div class="cart-item-controls">
 								<button onclick="updateQuantity('${item.id}', ${
@@ -1781,7 +1757,7 @@
 
 				// Update total
 				const finalTotal = totalPrice + deliveryFee;
-				cartTotal.textContent = `€${finalTotal.toFixed(2)}`;
+				cartTotal.textContent = `$${finalTotal.toFixed(2)}`;
 
 				// Update checkout button
 				checkoutBtn.disabled = cart.length === 0;
@@ -1913,15 +1889,11 @@
 					let deliveryAddress = null;
 					const street = document.getElementById("street").value.trim();
 					const city = document.getElementById("city").value.trim();
-					const state = document.getElementById("state").value.trim();
-					const country = document.getElementById("country").value.trim();
 
-					if (street || city || state || country) {
+					if (street || city) {
 						deliveryAddress = {
 							street: street || undefined,
 							city: city || undefined,
-							state: state || undefined,
-							country: country || undefined,
 						};
 					}
 
@@ -1987,7 +1959,7 @@
 							<p style="margin-bottom: 10px;"><strong>Order ID:</strong> ${
 								order.orderNumber || order._id
 							}</p>
-							<p style="margin-bottom: 10px;"><strong>Total Amount:</strong> €${orderTotal}</p>
+							<p style="margin-bottom: 10px;"><strong>Total Amount:</strong> $${orderTotal}</p>
 							<p style="margin-bottom: 10px;"><strong>Items:</strong> ${
 								order.items.length
 							}</p>

@@ -1617,6 +1617,11 @@ body {
 	color: white;
 }
 
+.action-btn.view {
+	background: #6b7280;
+	color: white;
+}
+
 .action-btn.delete {
 	background: #dc3545;
 	color: white;

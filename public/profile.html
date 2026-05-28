@@ -232,6 +232,35 @@
 						</div>
 					</div>
 
+					<div class="profile-section" id="rider-location-section" style="display:none;">
+						<h3>🛰️ Live Location (Riders)</h3>
+						<div class="profile-item">
+							<span class="profile-label">Status:</span>
+							<span class="profile-value" id="gps-status" style="color:#888;">
+								🟡 Not started — click the button to enable
+							</span>
+						</div>
+						<div class="profile-item">
+							<span class="profile-label">Last update:</span>
+							<span class="profile-value" id="gps-last-update">—</span>
+						</div>
+						<div style="margin-top:10px;">
+							<button
+								type="button"
+								id="enable-location-btn"
+								onclick="enableRiderLiveLocation()"
+								class="btn"
+								style="background:#28a745;color:#fff;"
+							>
+								<span id="enable-location-label">📍 Enable Live Location</span>
+							</button>
+							<small style="display:block;margin-top:8px;color:#666;">
+								Required so the admin/market can see you on the live map.
+								Works only on <code>http://localhost</code> or HTTPS.
+							</small>
+						</div>
+					</div>
+
 					<div class="profile-section">
 						<h3>Address Information</h3>
 						<div class="profile-item">
@@ -279,6 +308,7 @@
 
 		<!-- Global Config -->
 		<script src="js/config.js"></script>
+		<script src="js/lebanese-cities.js"></script>
 
 		<script>
 			let currentToken = localStorage.getItem("authToken");
@@ -396,12 +426,10 @@
 				const currentAddress =
 					document.getElementById("user-address").textContent;
 
-				// Parse address components (assuming format: "street, city, state, country")
+				// Parse address components (format: "street, city")
 				const addressParts = currentAddress.split(", ");
 				const street = addressParts[0] || "";
 				const city = addressParts[1] || "";
-				const state = addressParts[2] || "";
-				const country = addressParts[3] || "";
 
 				profileContent.innerHTML = `
 					<div style="text-align: center; padding: 20px;">
@@ -430,18 +458,10 @@
 							</div>
 							<div style="margin-bottom: 15px; text-align: left;">
 								<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">City:</label>
-								<input type="text" id="edit-city" value="${city}" 
+								<select id="edit-city" data-lebanese-city-select
 									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
-							</div>
-							<div style="margin-bottom: 15px; text-align: left;">
-								<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">State:</label>
-								<input type="text" id="edit-state" value="${state || ""}" 
-									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
-							</div>
-							<div style="margin-bottom: 20px; text-align: left;">
-								<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Country:</label>
-								<input type="text" id="edit-country" value="${country}" 
-									style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px;">
+									${renderLebaneseCityOptions(city)}
+								</select>
 							</div>
 							<div style="margin-bottom: 15px; text-align: left;">
 								<label style="display: block; margin-bottom: 5px; font-weight: 600; color: #555;">Cardholder Name:</label>
@@ -509,8 +529,6 @@
 				const phoneNumber = document.getElementById("edit-phone").value.trim();
 				const street = document.getElementById("edit-street").value.trim();
 				const city = document.getElementById("edit-city").value.trim();
-				const state = document.getElementById("edit-state").value.trim();
-				const country = document.getElementById("edit-country").value.trim();
 
 				// Credit card information
 				const cardholderName = document
@@ -530,7 +548,7 @@
 					return;
 				}
 
-				if (!street || !city || !country) {
+				if (!street || !city) {
 					showMessage("All address fields are required", "error");
 					return;
 				}
@@ -553,8 +571,6 @@
 						address: {
 							street,
 							city,
-							state,
-							country,
 						},
 					};
 
@@ -709,8 +725,20 @@
 						roleBadge.textContent = user.role.toUpperCase();
 						roleBadge.className = `role-badge ${user.role}`;
 
+						// Show the rider live-location section + try auto-start
+						if (user.role === "rider") {
+							const sec = document.getElementById(
+								"rider-location-section"
+							);
+							if (sec) sec.style.display = "";
+							// Try silent auto-start; if blocked, the button still works.
+							setTimeout(() => tryAutoStartLocation(), 300);
+						}
+
 						// Update address
-						const addressText = `${user.address.street}, ${user.address.city}, ${user.address.state}, ${user.address.country}`;
+						const addressText = [user.address.street, user.address.city]
+							.filter(Boolean)
+							.join(", ");
 						document.getElementById("user-address").textContent = addressText;
 
 						// Update account info
@@ -735,6 +763,198 @@
 
 			// Load profile when page loads
 			document.addEventListener("DOMContentLoaded", loadUserProfile);
+
+			// ===== Rider live location tracking =====
+			let __locWatchId = null;
+			let __lastPushAt = 0;
+			let __lastPushed = { lat: null, lng: null };
+
+			function __setStatus(text, color) {
+				const el = document.getElementById("gps-status");
+				if (el) {
+					el.textContent = text;
+					el.style.color = color || "#888";
+				}
+			}
+			function __setLastUpdate(lat, lng) {
+				const el = document.getElementById("gps-last-update");
+				if (el)
+					el.textContent = `${lat.toFixed(5)}, ${lng.toFixed(
+						5
+					)} — ${new Date().toLocaleTimeString()}`;
+			}
+			function __haversineMeters(a, b) {
+				if (a.lat == null || b.lat == null) return Infinity;
+				const toRad = (d) => (d * Math.PI) / 180;
+				const R = 6371000;
+				const dLat = toRad(b.lat - a.lat);
+				const dLng = toRad(b.lng - a.lng);
+				const h =
+					Math.sin(dLat / 2) ** 2 +
+					Math.cos(toRad(a.lat)) *
+						Math.cos(toRad(b.lat)) *
+						Math.sin(dLng / 2) ** 2;
+				return 2 * R * Math.asin(Math.sqrt(h));
+			}
+			async function __pushLocation(latitude, longitude) {
+				try {
+					const r = await fetch(`${API_BASE_URL}/riders/location`, {
+						method: "PATCH",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({ latitude, longitude }),
+					});
+					if (r.ok) {
+						__lastPushAt = Date.now();
+						__lastPushed = { lat: latitude, lng: longitude };
+						__setStatus("🟢 Live location active", "#28a745");
+						__setLastUpdate(latitude, longitude);
+					} else {
+						const j = await r.json().catch(() => ({}));
+						__setStatus(
+							`🔴 Server rejected location: ${j.message || r.status}`,
+							"#dc3545"
+						);
+					}
+				} catch (e) {
+					console.error(e);
+					__setStatus("🔴 Network error pushing location", "#dc3545");
+				}
+			}
+			function __isSecureForGeo() {
+				return (
+					window.isSecureContext ||
+					location.protocol === "https:" ||
+					location.hostname === "localhost" ||
+					location.hostname === "127.0.0.1"
+				);
+			}
+			function __startWatch() {
+				if (__locWatchId !== null) return;
+				__locWatchId = navigator.geolocation.watchPosition(
+					(pos) => {
+						const { latitude, longitude } = pos.coords;
+						const now = Date.now();
+						const moved = __haversineMeters(__lastPushed, {
+							lat: latitude,
+							lng: longitude,
+						});
+						if (moved > 20 || now - __lastPushAt > 30000) {
+							__pushLocation(latitude, longitude);
+						}
+					},
+					(err) => {
+						let msg = "🔴 GPS unavailable";
+						if (err.code === 1)
+							msg =
+								"🔴 Permission denied — open the padlock icon in the address bar and set Location to Allow, then click the button again";
+						else if (err.code === 2) msg = "🔴 Position unavailable";
+						else if (err.code === 3) msg = "🔴 GPS timed out";
+						__setStatus(msg, "#dc3545");
+						console.warn("watchPosition error:", err);
+					},
+					{ enableHighAccuracy: true, maximumAge: 10000, timeout: 30000 }
+				);
+			}
+
+			// Called automatically after profile loads.
+			// On some browsers, the permission prompt won't appear without a
+			// user gesture — in that case we simply wait for the button click.
+			function tryAutoStartLocation() {
+				if (!("geolocation" in navigator)) {
+					__setStatus("🔴 Geolocation not supported", "#dc3545");
+					return;
+				}
+				if (!__isSecureForGeo()) {
+					__setStatus(
+						"🔴 Use http://localhost or HTTPS (LAN IPs are blocked by browsers)",
+						"#dc3545"
+					);
+					return;
+				}
+				// Check permission first to give the user a helpful message.
+				if (navigator.permissions && navigator.permissions.query) {
+					navigator.permissions
+						.query({ name: "geolocation" })
+						.then((p) => {
+							if (p.state === "granted") {
+								__setStatus("🟡 Locating…", "#b08900");
+								navigator.geolocation.getCurrentPosition(
+									(pos) =>
+										__pushLocation(
+											pos.coords.latitude,
+											pos.coords.longitude
+										),
+									(e) => console.warn(e),
+									{ enableHighAccuracy: true, timeout: 15000 }
+								);
+								__startWatch();
+							} else if (p.state === "prompt") {
+								__setStatus(
+									"🟡 Click the green button below to allow location",
+									"#b08900"
+								);
+							} else {
+								__setStatus(
+									"🔴 Location blocked in browser settings — click the padlock icon → Site settings → Location → Allow",
+									"#dc3545"
+								);
+							}
+						})
+						.catch(() => {
+							__setStatus(
+								"🟡 Click the green button to enable location",
+								"#b08900"
+							);
+						});
+				} else {
+					__setStatus(
+						"🟡 Click the green button to enable location",
+						"#b08900"
+					);
+				}
+			}
+
+			// Triggered from the button click — this guarantees a user gesture
+			// so Chrome WILL show the permission popup (unless it was permanently
+			// blocked for the site).
+			function enableRiderLiveLocation() {
+				if (!("geolocation" in navigator)) {
+					alert("Geolocation is not supported by this browser.");
+					return;
+				}
+				if (!__isSecureForGeo()) {
+					alert(
+						"Geolocation only works on http://localhost or HTTPS. " +
+							"Open this page on localhost (not on a LAN IP like 192.168.x.x)."
+					);
+					return;
+				}
+				__setStatus("🟡 Requesting permission…", "#b08900");
+				navigator.geolocation.getCurrentPosition(
+					(pos) => {
+						__pushLocation(pos.coords.latitude, pos.coords.longitude);
+						__startWatch();
+						const lbl = document.getElementById("enable-location-label");
+						if (lbl) lbl.textContent = "✓ Tracking active";
+					},
+					(err) => {
+						let msg = "Unable to get your location.";
+						if (err.code === 1)
+							msg =
+								"Location permission was denied.\n\n" +
+								"To fix: click the 🔒 padlock icon next to the URL → Site settings → Location → Allow → reload the page.";
+						else if (err.code === 2)
+							msg = "Position unavailable. Check device GPS / Wi-Fi.";
+						else if (err.code === 3) msg = "Location request timed out.";
+						__setStatus("🔴 " + msg.split("\n")[0], "#dc3545");
+						alert(msg);
+					},
+					{ enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+				);
+			}
 		</script>
 	</body>
 </html>
