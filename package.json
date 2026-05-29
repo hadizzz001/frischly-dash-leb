@@ -46,6 +46,7 @@
 	"author": "",
 	"license": "MIT",
 	"dependencies": {
+		"archiver": "^7.0.1",
 		"axios": "^1.12.1",
 		"bcryptjs": "^2.4.3",
 		"cloudinary": "^2.7.0",

@@ -287,6 +287,12 @@
 						<span class="menu-text">Profile</span>
 					</a>
 				</li>
+				<li class="menu-item" id="backup-menu-item">
+					<a href="#" onclick="downloadBackup(event)" id="menu-backup">
+						<span class="menu-icon">💾</span>
+						<span class="menu-text">Backup</span>
+					</a>
+				</li>
 				<li class="menu-item">
 					<a href="#" onclick="logout()">
 						<span class="menu-icon">🚪</span>
@@ -3894,6 +3900,47 @@
 				setTimeout(() => {
 					window.location.href = "/market";
 				}, 1500);
+			}
+
+			// Download a full database backup as a ZIP file (non-driver roles only).
+			async function downloadBackup(ev) {
+				if (ev && ev.preventDefault) ev.preventDefault();
+				try {
+					if (currentUser && (currentUser.role === "rider" || currentUser.role === "market_driver")) {
+						showMessage("Drivers are not allowed to download backups", "error");
+						return;
+					}
+					showMessage("Preparing backup... this may take a moment.", "info");
+					const response = await authenticatedFetch(`${API_BASE_URL}/backup`, {
+						method: "GET",
+					});
+					if (!response.ok) {
+						let msg = "Failed to download backup";
+						try {
+							const data = await response.json();
+							if (data && data.message) msg = data.message;
+						} catch (_) {}
+						showMessage(msg, "error");
+						return;
+					}
+					const blob = await response.blob();
+					const disposition = response.headers.get("Content-Disposition") || "";
+					let fileName = "frischly-backup.zip";
+					const m = /filename=\"?([^\";]+)\"?/i.exec(disposition);
+					if (m && m[1]) fileName = m[1];
+					const url = window.URL.createObjectURL(blob);
+					const a = document.createElement("a");
+					a.href = url;
+					a.download = fileName;
+					document.body.appendChild(a);
+					a.click();
+					a.remove();
+					setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+					showMessage("Backup downloaded successfully", "success");
+				} catch (err) {
+					console.error("Backup download error:", err);
+					showMessage("Error downloading backup: " + (err.message || err), "error");
+				}
 			}
 
 			// User Management Functions
