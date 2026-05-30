@@ -192,6 +192,7 @@ exports.getProducts = async (req, res) => {
 			discount,
 			minDiscount,
 			market, // Filter by market id ("none" => main store only, "all" => all)
+			city, // Restrict market-owned products to this city (main store always shown)
 		} = sanitizedQuery;
 
 		// Build filter object
@@ -216,6 +217,21 @@ exports.getProducts = async (req, res) => {
 				// aggregate() pipelines (aggregation does not auto-cast).
 				filter.market = new mongoose.Types.ObjectId(market);
 			}
+		} else if (city && String(city).trim() !== "") {
+			// City scoping: show main-store products (no market) plus products
+			// from markets located in this city. Other cities are excluded.
+			const Market = require("../models/Market");
+			const escapedCity = String(city)
+				.trim()
+				.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+			const cityMarkets = await Market.find({
+				"location.city": new RegExp(`^${escapedCity}$`, "i"),
+			})
+				.select("_id")
+				.lean();
+			const cityMarketIds = cityMarkets.map((m) => m._id);
+			// $in with null also matches documents where market is missing.
+			filter.market = { $in: [...cityMarketIds, null] };
 		}
 
 		// Handle category filtering (same as getProductsByCategory)
@@ -1539,6 +1555,8 @@ exports.getProductsWithDiscount = async (req, res) => {
 			stockLevel,
 			inAds,
 			minDiscount = 0,
+			market,
+			city,
 		} = req.query;
 
 		// Build base filter - products with discount > minDiscount or inAds true
@@ -1611,6 +1629,27 @@ exports.getProductsWithDiscount = async (req, res) => {
 				baseFilter.$or[0].stock = stockFilter;
 				baseFilter.$or[1].stock = stockFilter;
 			}
+		}
+
+		// Market / city scoping for discounted products
+		if (market && market !== "all" && market !== "") {
+			if (market === "none" || market === "null") {
+				baseFilter.market = null;
+			} else if (mongoose.Types.ObjectId.isValid(market)) {
+				baseFilter.market = new mongoose.Types.ObjectId(market);
+			}
+		} else if (city && String(city).trim() !== "") {
+			const Market = require("../models/Market");
+			const escapedCity = String(city)
+				.trim()
+				.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+			const cityMarkets = await Market.find({
+				"location.city": new RegExp(`^${escapedCity}$`, "i"),
+			})
+				.select("_id")
+				.lean();
+			const cityMarketIds = cityMarkets.map((m) => m._id);
+			baseFilter.market = { $in: [...cityMarketIds, null] };
 		}
 
 		// Calculate pagination

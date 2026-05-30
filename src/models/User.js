@@ -66,6 +66,17 @@ const userSchema = new mongoose.Schema(
 				trim: true,
 				maxlength: [100, "City cannot be more than 100 characters"],
 			},
+			state: {
+				type: String,
+				trim: true,
+				maxlength: [100, "State cannot be more than 100 characters"],
+			},
+			country: {
+				type: String,
+				trim: true,
+				default: "LB",
+				maxlength: [100, "Country cannot be more than 100 characters"],
+			},
 		},
 		creditCard: {
 			cardNumber: {
