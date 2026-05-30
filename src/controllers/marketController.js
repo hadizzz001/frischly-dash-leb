@@ -714,7 +714,15 @@ exports.uploadLogoMiddleware = upload.single("logo");
 // Public: list active markets (id, name, logo, location) for the mobile app
 exports.getPublicMarkets = async (req, res) => {
 	try {
-		const markets = await Market.find({ isActive: true })
+		// Optional ?city= filter: only markets located in that city.
+		const filter = { isActive: true };
+		const city = (req.query.city || "").trim();
+		if (city) {
+			const escaped = city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+			filter["location.city"] = new RegExp(`^${escaped}$`, "i");
+		}
+
+		const markets = await Market.find(filter)
 			.select("name username logo location")
 			.sort({ name: 1 });
 
@@ -729,5 +737,68 @@ success: false,
 message: "Error fetching markets",
 error: error.message,
 });
+	}
+};
+
+// Public: list active products that belong to a specific market (mobile app)
+exports.getMarketProducts = async (req, res) => {
+	try {
+		const { id } = req.params;
+		if (!mongoose.Types.ObjectId.isValid(id)) {
+			return res.status(400).json({
+				success: false,
+				message: "Invalid market id",
+			});
+		}
+
+		const market = await Market.findOne({ _id: id, isActive: true }).select(
+			"name username logo location"
+		);
+		if (!market) {
+			return res.status(404).json({
+				success: false,
+				message: "Market not found",
+			});
+		}
+
+		const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+		const limit = Math.min(
+			Math.max(parseInt(req.query.limit, 10) || 12, 1),
+			100
+		);
+		const skip = (page - 1) * limit;
+
+		const filter = { market: id, isActive: true };
+
+		const [products, total] = await Promise.all([
+			Product.find(filter)
+				.populate("category", "name")
+				.populate("subcategory", "name")
+				.populate("market", "name username location logo")
+				.sort({ sortOrder: 1, name: 1 })
+				.skip(skip)
+				.limit(limit),
+			Product.countDocuments(filter),
+		]);
+
+		res.json({
+			success: true,
+			market,
+			data: products,
+			pagination: {
+				page,
+				limit,
+				total,
+				totalPages: Math.ceil(total / limit),
+				hasNextPage: page * limit < total,
+			},
+		});
+	} catch (error) {
+		console.error("Get market products error:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error fetching market products",
+			error: error.message,
+		});
 	}
 };

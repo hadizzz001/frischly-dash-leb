@@ -11,6 +11,7 @@ const {
 	getMarketStats,
 	uploadLogoMiddleware,
 	getPublicMarkets,
+	getMarketProducts,
 } = require("../controllers/marketController");
 
 const { protect, authorize } = require("../middleware/auth");
@@ -22,6 +23,9 @@ router.post("/login", marketLogin);
 
 // Public route: list active markets for the mobile app
 router.get("/public", getPublicMarkets);
+
+// Public route: list active products for a specific market
+router.get("/:id/products", getMarketProducts);
 
 // Market admin self-profile
 router.get("/me/profile", protect, authorize("market"), getMyMarket);
