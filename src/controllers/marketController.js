@@ -710,3 +710,24 @@ exports.getMarketStats = async (req, res) => {
 };
 
 exports.uploadLogoMiddleware = upload.single("logo");
+
+// Public: list active markets (id, name, logo, location) for the mobile app
+exports.getPublicMarkets = async (req, res) => {
+	try {
+		const markets = await Market.find({ isActive: true })
+			.select("name username logo location")
+			.sort({ name: 1 });
+
+		res.json({
+success: true,
+data: markets,
+});
+	} catch (error) {
+		console.error("Get public markets error:", error);
+		res.status(500).json({
+success: false,
+message: "Error fetching markets",
+error: error.message,
+});
+	}
+};

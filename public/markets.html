@@ -20,7 +20,7 @@
 		.menu-icon { margin-right: 12px; font-size: 18px; width: 20px; text-align: center; }
 		.menu-text { flex: 1; }
 		.main-content { margin-left: 250px; min-height: 100vh; padding: 40px 20px 20px; }
-		.container { max-width: 1200px; margin: 0 auto; background: #ffffff; border-radius: 15px; box-shadow: 0 15px 35px rgba(244, 187, 38, 0.2); overflow: hidden; }
+		.container { max-width: 1400px; margin: 0 auto; background: #ffffff; border-radius: 15px; box-shadow: 0 15px 35px rgba(244, 187, 38, 0.2); overflow: hidden; }
 		.page-header { background: var(--brand); color: var(--ink); padding: 20px 30px; margin: 0 0 30px; box-shadow: 0 2px 10px rgba(244, 187, 38, 0.3); }
 		.brand-name { font-size: 14px; font-weight: 700; letter-spacing: .2px; margin-bottom: 6px; }
 		h1 { margin: 0 0 5px; color: var(--ink); font-size: 24px; }
@@ -31,14 +31,24 @@
 		.btn.secondary { background: #ffffff; color: var(--ink); border-color: var(--ink); }
 		.btn.danger { background: #dc2626; border-color: #dc2626; color: #ffffff; }
 		.btn.danger:hover { background: #b91c1c; border-color: #b91c1c; color: #ffffff; }
-		.btn.small { padding: 6px 10px; font-size: 13px; }
+		.btn.small { padding: 5px 10px; font-size: 12px; border-width: 1px; border-radius: 6px; font-weight: 600; }
+		.btn.small:hover { transform: none; }
 		input, select, textarea { padding: 12px; border: 2px solid var(--brand); border-radius: 8px; font-size: 14px; width: 100%; background: #ffffff; color: var(--ink); transition: border-color 0.3s ease; }
 		input:focus, select:focus, textarea:focus { outline: none; border-color: var(--ink); }
-		#tableWrap { margin: 0 30px 30px; }
-		table { width: 100%; background: #ffffff; border: 2px solid var(--brand); border-radius: 10px; overflow: hidden; border-collapse: collapse; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
-		th, td { padding: 12px 14px; text-align: left; font-size: 14px; border-bottom: 1px solid var(--brand); }
-		th { background: var(--brand); font-weight: 600; color: var(--ink); }
-		tr:hover td { background: rgba(244, 187, 38, 0.08); }
+		#tableWrap { margin: 0 30px 30px; overflow-x: auto; border-radius: 10px; }
+		table { width: 100%; min-width: 1080px; background: #ffffff; border: 2px solid var(--brand); border-radius: 10px; overflow: hidden; border-collapse: collapse; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+		th, td { padding: 12px 14px; text-align: left; font-size: 14px; border-bottom: 1px solid #f1e5b7; vertical-align: middle; }
+		th { background: var(--brand); font-weight: 700; color: var(--ink); white-space: nowrap; position: sticky; top: 0; }
+		tbody tr:nth-child(even) td { background: #fffaf0; }
+		tbody tr:hover td { background: rgba(244, 187, 38, 0.18); }
+		td.col-logo { width: 64px; }
+		td.col-name { min-width: 180px; }
+		td.col-username { min-width: 140px; }
+		td.col-num { text-align: right; white-space: nowrap; }
+		td.col-actions { white-space: nowrap; width: 1%; }
+		.action-group { display: inline-flex; gap: 6px; flex-wrap: nowrap; }
+		.market-name { font-weight: 700; }
+		.market-username { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; background: #fff7df; padding: 3px 8px; border-radius: 6px; display: inline-block; border: 1px solid #f4dc7e; }
 		.badge { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
 		.badge.active { background: #d1fae5; color: #065f46; }
 		.badge.inactive { background: #fee2e2; color: #991b1b; }
@@ -95,7 +105,7 @@
 
 			<div class="toolbar">
 				<input id="searchInput" placeholder="Search by name, username, city..." style="max-width:380px" />
-				<div style="color:#7a8493;font-size:13px;">View only — markets cannot be created or edited from this page.</div>
+				<button class="btn" onclick="openCreate()">+ Add Market</button>
 			</div>
 
 			<div id="tableWrap">
@@ -105,10 +115,10 @@
 							<th>Logo</th>
 							<th>Name</th>
 							<th>Username</th>
-							<th>Location</th>
-							<th>Items</th>
-							<th>Total Sales</th>
-							<th>Orders</th>
+							<th>City</th>
+							<th style="text-align:right">Items</th>
+							<th style="text-align:right">Total Sales</th>
+							<th style="text-align:right">Orders</th>
 							<th>Status</th>
 							<th>Actions</th>
 						</tr>
@@ -295,21 +305,52 @@
 		function renderMarkets(list) {
 			const tbody = document.getElementById('tbody');
 			if (!list.length) { tbody.innerHTML = '<tr><td colspan="9" class="empty">No markets yet.</td></tr>'; return; }
-			tbody.innerHTML = list.map(m => `
+			window.__marketsById = {};
+			tbody.innerHTML = list.map(m => {
+				window.__marketsById[m._id] = m;
+				const archiveBtn = m.isActive
+					? `<button class="btn small danger" onclick="archiveMarket('${m._id}')">Archive</button>`
+					: `<button class="btn small" onclick="activateMarket('${m._id}')">Activate</button>`;
+				return `
 				<tr>
-					<td>${m.logo ? `<img src="${escapeHtml(m.logo)}" alt="${escapeHtml(m.name)} logo" class="logo-cell" />` : '<span class="logo-placeholder">🏪</span>'}</td>
-					<td><strong>${escapeHtml(m.name)}</strong></td>
-					<td><code>${escapeHtml(m.username)}</code></td>
-					<td>${escapeHtml(m.location?.city || '-')}</td>
-					<td>${m.totalItems ?? 0}</td>
-					<td>${fmt(m.totalSales)}</td>
-					<td>${m.totalOrders ?? 0}</td>
+					<td class="col-logo">${m.logo ? `<img src="${escapeHtml(m.logo)}" alt="${escapeHtml(m.name)} logo" class="logo-cell" />` : '<span class="logo-placeholder">🏪</span>'}</td>
+					<td class="col-name"><span class="market-name">${escapeHtml(m.name)}</span></td>
+					<td class="col-username"><span class="market-username">${escapeHtml(m.username)}</span></td>
+					<td>${escapeHtml(m.location?.city || '—')}</td>
+					<td class="col-num">${m.totalItems ?? 0}</td>
+					<td class="col-num">${fmt(m.totalSales)}</td>
+					<td class="col-num">${m.totalOrders ?? 0}</td>
 					<td><span class="badge ${m.isActive ? 'active' : 'inactive'}">${m.isActive ? 'Active' : 'Inactive'}</span></td>
-					<td>
-						<button class="btn small secondary" onclick="manageMarket('${m._id}')">Manage</button>
+					<td class="col-actions">
+						<div class="action-group">
+							<button class="btn small secondary" onclick="viewMarket('${m._id}')">View</button>
+							<button class="btn small" onclick="editMarket('${m._id}')">Edit</button>
+							${archiveBtn}
+						</div>
 					</td>
 				</tr>
-			`).join('');
+			`;
+			}).join('');
+		}
+
+		function viewMarket(id) {
+			location.href = `/market-manage?id=${encodeURIComponent(id)}`;
+		}
+
+		function editMarket(id) {
+			const m = window.__marketsById ? window.__marketsById[id] : null;
+			if (!m) { toast('Market not found', true); return; }
+			openEdit(JSON.stringify(m));
+		}
+
+		async function archiveMarket(id) {
+			if (!confirm('Archive this market? It will be deactivated along with all of its products. You can reactivate it later — it will not be permanently deleted.')) return;
+			try {
+				const r = await authenticatedFetch(API(`/markets/${id}`), { method: 'DELETE' });
+				const j = await r.json();
+				if (!j.success) throw new Error(j.message);
+				toast('Market archived'); loadMarkets();
+			} catch (e) { toast(e.message, true); }
 		}
 
 		function escapeHtml(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -400,41 +441,19 @@
 			} catch (e) { toast(e.message, true); }
 		}
 
-		async function deactivateMarket(id) {
-			if (!confirm('Deactivate this market? Products from this market will also be deactivated.')) return;
-			try {
-				const r = await authenticatedFetch(API(`/markets/${id}`), { method: 'DELETE' });
-				const j = await r.json();
-				if (!j.success) throw new Error(j.message);
-				toast('Market deactivated'); loadMarkets();
-			} catch (e) { toast(e.message, true); }
-		}
-
 		async function activateMarket(id) {
-			if (!confirm('Activate this market?')) return;
+			if (!confirm('Reactivate this market?')) return;
 			try {
+				const body = new FormData();
+				body.append('isActive', 'true');
 				const r = await authenticatedFetch(API(`/markets/${id}`), {
 					method: 'PUT',
-					body: JSON.stringify({ isActive: true }),
+					body,
 				});
 				const j = await r.json();
 				if (!j.success) throw new Error(j.message);
 				toast('Market activated'); loadMarkets();
 			} catch (e) { toast(e.message, true); }
-		}
-
-		async function permanentlyDeleteMarket(id) {
-			if (!confirm('Permanently delete this inactive market? This cannot be undone.')) return;
-			try {
-				const r = await authenticatedFetch(API(`/markets/${id}/permanent`), { method: 'DELETE' });
-				const j = await r.json();
-				if (!j.success) throw new Error(j.message);
-				toast('Market deleted'); loadMarkets();
-			} catch (e) { toast(e.message, true); }
-		}
-
-		function manageMarket(id) {
-			location.href = `/market-manage?id=${encodeURIComponent(id)}`;
 		}
 
 		document.getElementById('searchInput').addEventListener('input', () => {

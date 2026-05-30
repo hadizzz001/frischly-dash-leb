@@ -10,6 +10,7 @@ const {
 	getMyMarket,
 	getMarketStats,
 	uploadLogoMiddleware,
+	getPublicMarkets,
 } = require("../controllers/marketController");
 
 const { protect, authorize } = require("../middleware/auth");
@@ -19,14 +20,17 @@ const router = express.Router();
 // Public route: market admin login
 router.post("/login", marketLogin);
 
+// Public route: list active markets for the mobile app
+router.get("/public", getPublicMarkets);
+
 // Market admin self-profile
 router.get("/me/profile", protect, authorize("market"), getMyMarket);
 
 // Admin-only management routes
-// NOTE: market create / update / delete are intentionally disabled — markets
-// are read-only from the main admin dashboard. Markets sign in through
-// `/market` and manage their own profile via that flow.
-// router.post("/", protect, authorize("admin"), uploadLogoMiddleware, createMarket);
+// NOTE: permanently deleting markets is intentionally disabled. Main admins
+// can create, edit, view and archive (soft-delete / reactivate) markets.
+// Markets sign in through `/market` and manage their own profile via that flow.
+router.post("/", protect, authorize("admin"), uploadLogoMiddleware, createMarket);
 router.get("/", protect, authorize("admin"), getMarkets);
 
 // Stats: admin or the market itself
@@ -44,17 +48,18 @@ router.get(
 	getMarket,
 );
 
-// Only the market itself can update its profile.
+// Admin can edit any market; market admins can edit their own profile.
 router.put(
 	"/:id",
 	protect,
-	authorize("market"),
+	authorize("admin", "market"),
 	uploadLogoMiddleware,
 	updateMarket,
 );
 
-// Deletes disabled for admin too.
+// Admin can archive (soft-delete / deactivate) a market. Permanent delete
+// is intentionally disabled — markets must never be permanently removed.
+router.delete("/:id", protect, authorize("admin"), deleteMarket);
 // router.delete("/:id/permanent", protect, authorize("admin"), permanentDeleteMarket);
-// router.delete("/:id", protect, authorize("admin"), deleteMarket);
 
 module.exports = router;
