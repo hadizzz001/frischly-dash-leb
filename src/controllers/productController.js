@@ -212,7 +212,9 @@ exports.getProducts = async (req, res) => {
 			if (market === "none" || market === "null") {
 				filter.market = null;
 			} else if (mongoose.Types.ObjectId.isValid(market)) {
-				filter.market = market;
+				// Cast to ObjectId so it matches in both find() and
+				// aggregate() pipelines (aggregation does not auto-cast).
+				filter.market = new mongoose.Types.ObjectId(market);
 			}
 		}
 
