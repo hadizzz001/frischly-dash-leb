@@ -8,8 +8,18 @@ const marketPromoCodeSchema = new mongoose.Schema(
 			required: true,
 			index: true,
 		},
+		companyName: { type: String, trim: true },
 		code: { type: String, required: true, trim: true, uppercase: true },
 		description: { type: String, trim: true, maxlength: 500 },
+		// true = the market's own promo code, false = a one-time/partner code.
+		// The dashboard splits promos into two tabs based on this flag, so it
+		// must be stored explicitly (defaulting to own-company).
+		isFromOwnCompany: { type: Boolean, default: true },
+		triggerCondition: {
+			minOrderTotal: { type: Number, default: null },
+		},
+		emailSubject: { type: String, default: null },
+		emailMessage: { type: String, default: null },
 		discountType: {
 			type: String,
 			enum: ["percentage", "cash"],

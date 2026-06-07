@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Dashboard - FRISCHLY Server</title>
+		<title>Dashboard - Freshly Server</title>
 
 		<!-- Leaflet (free OpenStreetMap renderer) -->
 		<link
@@ -61,7 +61,7 @@
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
-		<meta name="apple-mobile-web-app-title" content="FRISCHLY Dashboard" />
+		<meta name="apple-mobile-web-app-title" content="Freshly Dashboard" />
 
 		<!-- Stylesheet -->
 		<link rel="stylesheet" href="css/dashboard.css" />
@@ -200,12 +200,13 @@
 			<div class="sidebar-header">
 				<img
 					src="/icons/icon_128.png"
-					alt="FRISCHLY Logo"
+					alt="Freshly Logo"
 					class="sidebar-logo"
 				/>
-				<h2>FRISCHLY Admin</h2>
+				<h2>Freshly Admin</h2>
 				<p>Management Dashboard</p>
 				<span id="sidebar-role-badge" class="sidebar-role-badge" style="display:none;"></span>
+				<span id="sidebar-user-name" class="sidebar-user-name" style="display:none;"></span>
 			</div>
 			<ul class="sidebar-menu">
 				<li class="menu-item">
@@ -3431,6 +3432,7 @@
 
 						// Update currentUser with new data
 						currentUser = data.data.user;
+						updateSidebarRoleBadge(currentUser.role);
 
 						// Update the UI with new data
 						document.getElementById("user-name").textContent = currentUser.name;
@@ -3644,10 +3646,18 @@
 			};
 			function updateSidebarRoleBadge(role) {
 				const el = document.getElementById("sidebar-role-badge");
-				if (!el || !role) return;
-				el.textContent = ROLE_LABELS[role] || String(role).toUpperCase();
-				el.className = "sidebar-role-badge role-" + role;
-				el.style.display = "";
+				if (el && role) {
+					el.textContent = ROLE_LABELS[role] || String(role).toUpperCase();
+					el.className = "sidebar-role-badge role-" + role;
+					el.style.display = "";
+				}
+				// Show the logged-in account's name under the role badge
+				const nameEl = document.getElementById("sidebar-user-name");
+				if (nameEl) {
+					const name = currentUser && currentUser.name ? currentUser.name : "";
+					nameEl.textContent = name;
+					nameEl.style.display = name ? "" : "none";
+				}
 			}
 
 			// Check if user has management access and show/hide user management section
@@ -12149,10 +12159,10 @@
 					</head>
 					<body>
 						<div class="header">
-							<h1>FRISCHLY</h1>
+							<h1>Freshly</h1>
 							<h2>Order Invoice</h2>
 							<div style="margin-top: 10px; font-size: 14px; text-align: center;">
-								<p><strong>Frischly GmbH</strong></p>
+								<p><strong>Freshly GmbH</strong></p>
 								<p>Boschstr.13a, Syke 28857</p>
 								<p><strong>Tax number:</strong> 46/220/04290</p>
 							</div>
@@ -12205,7 +12215,7 @@
 						</div>
 						
 						<div class="footer">
-							<p>Thank you for choosing FRISCHLY!</p>
+							<p>Thank you for choosing Freshly!</p>
 							<p>Generated on ${new Date().toLocaleString()}</p>
 						</div>
 					</body>

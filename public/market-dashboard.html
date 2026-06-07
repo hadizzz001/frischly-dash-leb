@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Market Dashboard - FRISCHLY</title>
+		<title>Market Dashboard - Freshly</title>
 
 		<!-- Leaflet (free OpenStreetMap renderer) -->
 		<link
@@ -61,7 +61,7 @@
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
-		<meta name="apple-mobile-web-app-title" content="FRISCHLY Dashboard" />
+		<meta name="apple-mobile-web-app-title" content="Freshly Dashboard" />
 
 		<!-- Stylesheet -->
 		<link rel="stylesheet" href="css/dashboard.css" />
@@ -200,12 +200,13 @@
 			<div class="sidebar-header">
 				<img
 					src="/icons/icon_128.png"
-					alt="FRISCHLY Logo"
+					alt="Freshly Logo"
 					class="sidebar-logo"
 				/>
-				<h2>FRISCHLY Admin</h2>
+				<h2>Freshly Admin</h2>
 				<p>Market Dashboard</p>
 				<span id="sidebar-role-badge" class="sidebar-role-badge" style="display:none;"></span>
+				<span id="sidebar-user-name" class="sidebar-user-name" style="display:none;"></span>
 			</div>
 			<ul class="sidebar-menu">
 				<li class="menu-item">
@@ -2454,7 +2455,7 @@
 
 						<div class="form-group">
 							<label for="edit-street">Street Address</label>
-							<input type="text" id="edit-street" name="street" required />
+							<input type="text" id="edit-street" name="street" />
 						</div>
 						<div class="form-row">
 							<div class="form-group half">
@@ -2731,7 +2732,8 @@
 					tail = tail.replace(/([?&])parent=/g, "$1category=");
 					return M + "/subcategories" + tail;
 				}
-				if (/^\/api\/orders\/count\b/.test(u)) return M + "/__noop_count_orders";
+				if (/^\/api\/orders\/count\b/.test(u))
+					return M + "/orders/count" + u.slice("/api/orders/count".length);
 				if (/^\/api\/orders\/stats\b/.test(u)) return M + "/__noop_order_stats";
 				if (/^\/api\/orders\b/.test(u))
 					return M + "/orders" + u.slice("/api/orders".length);
@@ -2744,7 +2746,8 @@
 				if (/^\/api\/zones\b/.test(u)) return orig;
 				if (/^\/api\/shelves\b/.test(u)) return M + "/shelves" + u.slice("/api/shelves".length);
 				if (/^\/api\/waste\/stats\b/.test(u)) return M + "/waste/summary";
-				if (/^\/api\/waste\/product\b/.test(u)) return M + "/__noop_waste_product";
+				if (/^\/api\/waste\/product\b/.test(u))
+					return M + "/waste/product" + u.slice("/api/waste/product".length);
 				if (/^\/api\/waste\b/.test(u))
 					return M + "/waste" + u.slice("/api/waste".length);
 				if (/^\/api\/promocodes\b/.test(u))
@@ -2771,6 +2774,30 @@
 
 			function isNoopUrl(u) {
 				return /\/__noop_/.test(u);
+			}
+
+			// Adapt outgoing request bodies where the admin UI shape differs from the
+			// market-admin endpoint. Currently only the profile update: the admin UI
+			// sends { address: { street, city } } but the Market document stores the
+			// address under `location`, so translate it so the city/street persist.
+			function adaptRequestInit(rewrittenUrl, init) {
+				if (!init || init.body == null || typeof init.body !== "string") return init;
+				if (!/\/api\/market-admin\/profile(\?|$)/.test(rewrittenUrl)) return init;
+				let parsed;
+				try {
+					parsed = JSON.parse(init.body);
+				} catch (_) {
+					return init;
+				}
+				if (parsed && parsed.address && parsed.location === undefined) {
+					parsed.location = {
+						street: parsed.address.street || "",
+						city: parsed.address.city || "",
+					};
+					delete parsed.address;
+					return Object.assign({}, init, { body: JSON.stringify(parsed) });
+				}
+				return init;
 			}
 
 			// Adapt response bodies so the admin-shaped UI keeps working
@@ -2837,20 +2864,29 @@
 					return wrap(out);
 				}
 
-				// Orders list → admin expects data.data.orders
+				// Orders list → market dashboard reads `data` as a plain array plus
+				// a top-level `pagination` object (same shape as the real /api/orders
+				// endpoint). Do NOT nest under data.orders, otherwise displayOrders()
+				// receives an object and orders.forEach throws "is not a function".
 				if (/\/api\/market-admin\/orders(\?|$|\/?$)/.test(rewrittenUrl) && Array.isArray(body.data)) {
 					const total = (body.meta && body.meta.total) || body.data.length;
 					const page = (body.meta && body.meta.page) || 1;
 					const limit = (body.meta && body.meta.limit) || total || 10;
+					const totalPages = Math.max(1, Math.ceil(total / Math.max(1, limit)));
 					out = {
 						success: true,
-						data: {
-							orders: body.data,
+						data: body.data,
+						pagination: {
+							currentPage: page,
+							totalPages,
+							totalOrders: total,
 							total,
 							page,
 							limit,
-							totalPages: Math.max(1, Math.ceil(total / Math.max(1, limit))),
+							hasNextPage: page < totalPages,
+							hasPrevPage: page > 1,
 						},
+						meta: body.meta,
 					};
 					return wrap(out);
 				}
@@ -2868,31 +2904,39 @@
 				// `data.data` as a plain array, so do NOT wrap them.
 				// (Intentionally no adapter here.)
 
-				// Promo codes / announcements lists
+				// Promo codes list → the market dashboard reads `data` as a plain
+				// array (loadPromoCodes calls result.data.filter), so do NOT nest it
+				// under data.promoCodes or .filter throws "is not a function".
 				if (/\/api\/market-admin\/promocodes(\?|$|\/?$)/.test(rewrittenUrl) && Array.isArray(body.data)) {
-					out = { success: true, data: { promoCodes: body.data, promocodes: body.data, total: body.data.length } };
+					out = { success: true, data: body.data, meta: body.meta };
 					return wrap(out);
 				}
+				// Announcements list → same: loadAnnouncements reads result.data as
+				// a plain array (result.data.forEach), so keep it as an array.
 				if (/\/api\/market-admin\/announcements(\?|$|\/?$)/.test(rewrittenUrl) && Array.isArray(body.data)) {
-					out = { success: true, data: { announcements: body.data, total: body.data.length } };
+					out = { success: true, data: body.data, meta: body.meta };
 					return wrap(out);
 				}
 
-				// Waste list
+				// Waste list → updateWasteTable reads `data` as a plain array plus a
+				// top-level `pagination` object. Do NOT nest under data.waste, or
+				// data.data.forEach throws "is not a function".
 				if (/\/api\/market-admin\/waste(\?|$|\/?$)/.test(rewrittenUrl) && Array.isArray(body.data)) {
 					const total = (body.meta && body.meta.total) || body.data.length;
 					const page = (body.meta && body.meta.page) || 1;
 					const limit = (body.meta && body.meta.limit) || total || 20;
+					const totalPages = Math.max(1, Math.ceil(total / Math.max(1, limit)));
 					out = {
 						success: true,
-						data: {
-							waste: body.data,
-							records: body.data,
-							total,
+						data: body.data,
+						pagination: {
 							page,
+							currentPage: page,
+							totalPages,
+							total,
 							limit,
-							totalPages: Math.max(1, Math.ceil(total / Math.max(1, limit))),
 						},
+						meta: body.meta,
 					};
 					return wrap(out);
 				}
@@ -2925,9 +2969,23 @@
 					return wrap(out);
 				}
 
-				// Profile (Market doc) → match auth/profile shape used by admin
+				// Profile (Market doc) → match auth/profile shape used by admin.
+				// The admin UI reads user.address.{street,city}, but markets store the
+				// address under location, so expose an `address` derived from `location`
+				// (same as the /me adapter). Without this the frontend throws a
+				// TypeError reading currentUser.address.street after a profile update.
 				if (/\/api\/market-admin\/profile(\?|$)/.test(rewrittenUrl) && body.data) {
-					out = { success: true, data: { user: body.data, market: body.data } };
+					const m = body.data;
+					const user = Object.assign({}, m, {
+						role: "market",
+						market: m,
+						phoneNumber: m.phoneNumber || "",
+						address: {
+							street: (m.location && m.location.street) || "",
+							city: (m.location && m.location.city) || "",
+						},
+					});
+					out = { success: true, data: { user, market: m } };
 					return wrap(out);
 				}
 
@@ -2946,7 +3004,7 @@
 				}
 				let response;
 				if (typeof input === "string") {
-					response = await origFetch(newUrl, init);
+					response = await origFetch(newUrl, adaptRequestInit(newUrl, init));
 				} else if (newUrl !== url) {
 					response = await origFetch(new Request(newUrl, input), init);
 				} else {
@@ -3684,14 +3742,9 @@
 				const street = document.getElementById("edit-street").value.trim();
 				const city = document.getElementById("edit-city").value.trim();
 
-				// Basic validation
-				if (
-					!fullName ||
-					!email ||
-					!phoneNumber ||
-					!street ||
-					!city
-				) {
+				// Basic validation. Street is optional (markets may only have a city),
+				// so it is intentionally not part of the required check.
+				if (!fullName || !email || !phoneNumber || !city) {
 					showMessage(
 						translations[currentLanguage]["error"] || "Error",
 						"error"
@@ -3710,8 +3763,9 @@
 					return;
 				}
 
-				// Phone validation (basic)
-				const phoneRegex = /^[\+]?[0-9\s\-\(\)]{10,}$/;
+				// Phone validation — kept in sync with the server's rule so the UI
+				// never rejects a number the backend would accept.
+				const phoneRegex = /^[+]?[0-9][0-9\s().-]{5,20}$/;
 				if (!phoneRegex.test(phoneNumber)) {
 					showMessage(
 						translations[currentLanguage]["invalid-phone"] ||
@@ -3749,15 +3803,38 @@
 					if (response.ok) {
 						const data = await response.json();
 
-						// Update currentUser with new data
-						currentUser = data.data.user;
+						// The market endpoint may return the updated record under
+						// data.user, data.market, or directly as data — support all.
+						const updated =
+							(data.data && (data.data.user || data.data.market)) ||
+							data.data ||
+							{};
+						currentUser = Object.assign({}, currentUser, updated);
+
+						// Markets store the address under `location`; make sure
+						// currentUser.address always exists so the UI never throws.
+						if (!currentUser.address) {
+							currentUser.address = {
+								street:
+									(currentUser.location &&
+										currentUser.location.street) ||
+									street,
+								city:
+									(currentUser.location &&
+										currentUser.location.city) ||
+									city,
+							};
+						}
+
+						updateSidebarRoleBadge(currentUser.role);
 
 						// Update the UI with new data
-						document.getElementById("user-name").textContent = currentUser.name;
+						document.getElementById("user-name").textContent =
+							currentUser.name || fullName;
 						document.getElementById("user-email").textContent =
-							currentUser.email;
+							currentUser.email || email;
 						document.getElementById("user-phone").textContent =
-							currentUser.phoneNumber;
+							currentUser.phoneNumber || phoneNumber;
 
 						// Update address display
 						const addressText = [
@@ -3770,7 +3847,7 @@
 
 						// Update welcome message
 						document.getElementById("welcome-user-name").textContent =
-							currentUser.name;
+							currentUser.name || fullName;
 
 						// Close modal and show success message
 						closeEditProfileModal();
@@ -3780,13 +3857,22 @@
 							"success"
 						);
 					} else {
-						const errorData = await response.json();
-						throw new Error(errorData.message || "Failed to update profile");
+						let serverMessage = "Failed to update profile";
+						try {
+							const errorData = await response.json();
+							serverMessage =
+								errorData.message ||
+								(Array.isArray(errorData.errors)
+									? errorData.errors.join(", ")
+									: serverMessage);
+						} catch (_) {}
+						throw new Error(serverMessage);
 					}
 				} catch (error) {
 					console.error("Profile update error:", error);
 					showMessage(
-						translations[currentLanguage]["profile-update-error"] ||
+						error.message ||
+							translations[currentLanguage]["profile-update-error"] ||
 							"Error updating profile",
 						"error"
 					);
@@ -3964,10 +4050,18 @@
 			};
 			function updateSidebarRoleBadge(role) {
 				const el = document.getElementById("sidebar-role-badge");
-				if (!el || !role) return;
-				el.textContent = ROLE_LABELS[role] || String(role).toUpperCase();
-				el.className = "sidebar-role-badge role-" + role;
-				el.style.display = "";
+				if (el && role) {
+					el.textContent = ROLE_LABELS[role] || String(role).toUpperCase();
+					el.className = "sidebar-role-badge role-" + role;
+					el.style.display = "";
+				}
+				// Show the logged-in account's name under the role badge
+				const nameEl = document.getElementById("sidebar-user-name");
+				if (nameEl) {
+					const name = currentUser && currentUser.name ? currentUser.name : "";
+					nameEl.textContent = name;
+					nameEl.style.display = name ? "" : "none";
+				}
 			}
 
 			// Check if user has management access and show/hide user management section
@@ -12364,10 +12458,10 @@
 					</head>
 					<body>
 						<div class="header">
-							<h1>FRISCHLY</h1>
+							<h1>Freshly</h1>
 							<h2>Order Invoice</h2>
 							<div style="margin-top: 10px; font-size: 14px; text-align: center;">
-								<p><strong>Frischly GmbH</strong></p>
+								<p><strong>Freshly GmbH</strong></p>
 								<p>Boschstr.13a, Syke 28857</p>
 								<p><strong>Tax number:</strong> 46/220/04290</p>
 							</div>
@@ -12420,7 +12514,7 @@
 						</div>
 						
 						<div class="footer">
-							<p>Thank you for choosing FRISCHLY!</p>
+							<p>Thank you for choosing Freshly!</p>
 							<p>Generated on ${new Date().toLocaleString()}</p>
 						</div>
 					</body>

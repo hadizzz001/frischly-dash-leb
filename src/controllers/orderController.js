@@ -1057,6 +1057,18 @@ exports.updateOrder = async (req, res) => {
 			});
 		}
 
+		// Market admins can only modify their own market's orders
+		if (
+			req.user.role === "market" &&
+			(!order.market ||
+				String(order.market) !== String(req.user.marketId))
+		) {
+			return res.status(403).json({
+				success: false,
+				message: "You are not authorized to modify this order",
+			});
+		}
+
 		// Check if order can be modified
 		if (order.status === "cancelled") {
 			return res.status(400).json({

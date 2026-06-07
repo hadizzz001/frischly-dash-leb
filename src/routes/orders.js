@@ -78,7 +78,7 @@ router.post(
 router.put(
 	"/:id",
 	protect,
-	authorize("admin", "manager", "staff", "rider"),
+	authorize("admin", "manager", "staff", "rider", "market"),
 	updateOrder
 );
 router.patch(

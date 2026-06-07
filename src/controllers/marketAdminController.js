@@ -992,6 +992,93 @@ exports.listOrders = async (req, res) => {
 	}
 };
 
+// Lightweight market-scoped order count used by the dashboard's live-update
+// polling. Returns { success, count } to mirror the global /api/orders/count.
+exports.ordersCount = async (req, res) => {
+	try {
+		const count = await Order.countDocuments({ market: req.marketId });
+		res.json({ success: true, count, total: count });
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+// Get a single order (market-scoped) — used by the dashboard "View" action.
+exports.getOrder = async (req, res) => {
+	try {
+		if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+			return fail(res, 400, "Invalid order ID");
+		}
+		const order = await Order.findOne({
+			_id: req.params.id,
+			market: req.marketId,
+		})
+			.populate("createdBy", "name email")
+			.populate("updatedBy", "name email")
+			.populate("assignedRider", "name email phone")
+			.populate("market", "name username location logo")
+			.populate(
+				"items.product",
+				"name barcode shelfNumber price discount tax bottlerefund picture market",
+			);
+		if (!order) return fail(res, 404, "Order not found");
+		ok(res, order);
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+// Update limited fields on an order (market-scoped) — used by the dashboard
+// "Payed" action which sends { paymentStatus: "paidondelivery" }.
+exports.updateOrder = async (req, res) => {
+	try {
+		if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+			return fail(res, 400, "Invalid order ID");
+		}
+		const allowed = [
+			"status",
+			"paymentStatus",
+			"deliveryTime",
+			"notes",
+			"assignedRider",
+		];
+		const update = {};
+		for (const key of allowed) {
+			if (req.body[key] !== undefined) update[key] = req.body[key];
+		}
+		if (req.user && req.user.id) update.updatedBy = req.user.id;
+		const order = await Order.findOneAndUpdate(
+			{ _id: req.params.id, market: req.marketId },
+			update,
+			{ new: true, runValidators: true },
+		);
+		if (!order) return fail(res, 404, "Order not found");
+		ok(res, order, "Order updated");
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+// Soft-delete an order (market-scoped) — used by the dashboard "Delete" action.
+exports.deleteOrder = async (req, res) => {
+	try {
+		if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+			return fail(res, 400, "Invalid order ID");
+		}
+		const update = { isActive: false };
+		if (req.user && req.user.id) update.updatedBy = req.user.id;
+		const order = await Order.findOneAndUpdate(
+			{ _id: req.params.id, market: req.marketId },
+			update,
+			{ new: true },
+		);
+		if (!order) return fail(res, 404, "Order not found");
+		ok(res, order, "Order deleted successfully");
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
 exports.updateOrderStatus = async (req, res) => {
 	try {
 		const { status } = req.body;
@@ -1691,15 +1778,48 @@ exports.getWasteSummary = async (req, res) => {
 	}
 };
 
+// Look up a single product by barcode within the requester's market.
+// Used by the waste-management screen to auto-fill the product details
+// (name, price, category, stock) when a barcode is entered.
+exports.getWasteProductByBarcode = async (req, res) => {
+	try {
+		const barcode = String(req.params.barcode || "").trim();
+		if (!barcode) return fail(res, 400, "Barcode is required");
+		const product = await Product.findOne({
+			barcode,
+			market: req.marketId,
+			isActive: true,
+		})
+			.populate("category", "name")
+			.lean();
+		if (!product) {
+			return fail(res, 404, "Product not found with this barcode");
+		}
+		// Flatten the populated category to its display name so the UI can render
+		// it directly instead of an ObjectId / [object Object].
+		if (product.category && typeof product.category === "object") {
+			product.category = product.category.name || "";
+		}
+		ok(res, product);
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
 // ───────────────────────── promo codes ─────────────────────────
 exports.promoCodes = crud(
 	MarketPromoCode,
 	[
+		"companyName",
 		"code",
 		"description",
 		"discountType",
 		"discountValue",
+		"isFromOwnCompany",
+		"triggerCondition",
 		"minOrderTotal",
+		"emailSubject",
+		"emailMessage",
 		"usageLimit",
 		"startsAt",
 		"expiresAt",

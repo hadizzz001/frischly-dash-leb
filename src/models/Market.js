@@ -49,6 +49,7 @@ const marketSchema = new mongoose.Schema(
 			],
 		},
 		location: {
+			street: { type: String, trim: true },
 			city: { type: String, trim: true },
 		},
 		logo: {

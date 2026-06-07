@@ -258,6 +258,31 @@ exports.getMarkets = async (req, res) => {
 			Market.countDocuments(filter),
 		]);
 
+		// The totalSales/totalOrders fields on the Market document are denormalized
+		// and not kept in sync, so compute the real values from the Order collection
+		// for the markets on this page in a single aggregation.
+		const marketIds = markets.map((m) => m._id);
+		const statsAgg = marketIds.length
+			? await Order.aggregate([
+					{ $match: { market: { $in: marketIds }, isActive: true } },
+					{
+						$group: {
+							_id: "$market",
+							totalOrders: { $sum: 1 },
+							totalSales: { $sum: "$total" },
+						},
+					},
+				])
+			: [];
+		const statsByMarket = new Map(
+			statsAgg.map((s) => [String(s._id), s]),
+		);
+		markets.forEach((m) => {
+			const s = statsByMarket.get(String(m._id));
+			m.totalOrders = s ? s.totalOrders : 0;
+			m.totalSales = s ? s.totalSales : 0;
+		});
+
 		res.json({
 			success: true,
 			data: markets,

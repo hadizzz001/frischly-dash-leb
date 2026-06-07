@@ -82,6 +82,17 @@ body {
 .sidebar-role-badge.role-market_staff { background: #00838f; color: #fff; }
 .sidebar-role-badge.role-market_driver { background: #00695c; color: #fff; }
 
+/* Logged-in account name under the role badge */
+.sidebar-user-name {
+	display: block;
+	margin-top: 8px;
+	font-size: 13px;
+	font-weight: 600;
+	color: #000000;
+	opacity: 0.95;
+	word-break: break-word;
+}
+
 .sidebar-menu {
 	padding: 0;
 	list-style: none;

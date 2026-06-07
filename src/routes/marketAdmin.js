@@ -75,9 +75,13 @@ router.delete("/shelves/:id", c.shelves.remove);
 router.get("/orders/sales-stats", c.getProductSalesStats);
 router.get("/orders/unsold-products", c.getUnsoldProducts);
 router.get("/orders/customer-order-counts", c.getCustomerOrderCounts);
+router.get("/orders/count", c.ordersCount);
 router.get("/orders", c.listOrders);
+router.get("/orders/:id", c.getOrder);
+router.put("/orders/:id", c.updateOrder);
 router.patch("/orders/:id/status", c.updateOrderStatus);
 router.patch("/orders/:id/cancel", c.cancelOrder);
+router.delete("/orders/:id", c.deleteOrder);
 
 // Riders
 router.get("/riders", c.riders.list);
@@ -89,6 +93,7 @@ router.delete("/riders/:id", c.riders.remove);
 
 // Waste
 router.get("/waste/summary", c.getWasteSummary);
+router.get("/waste/product/:barcode", c.getWasteProductByBarcode);
 router.get("/waste", c.waste.list);
 router.get("/waste/:id", c.waste.get);
 router.post("/waste", c.waste.create);
