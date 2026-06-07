@@ -2,6 +2,7 @@ const Order = require("../models/Order");
 const Product = require("../models/Product");
 const Rider = require("../models/Rider");
 const PromoCode = require("../models/PromoCode");
+const MarketPromoCode = require("../models/MarketPromoCode");
 const mongoose = require("mongoose");
 const Zone = require("../models/Zone");
 const User = require("../models/User");
@@ -575,50 +576,130 @@ exports.createOrder = async (req, res) => {
 		//const fees = Math.round(processingFee * 100) / 100;
 		const fees = 0;
 
-		// Validate and calculate promo code discount
+// Derive the order's market from its items. If all items belong to
+		// the same market the order is associated with that market;
+		// mixed/main-store orders have market = null. (Used to scope promos.)
+		let orderMarket = null;
+		{
+			const marketIds = new Set(
+				processedItems
+					.map((it) =>
+						it.product && it.product.market
+							? String(it.product.market)
+							: null,
+					)
+					.filter(Boolean),
+			);
+			if (marketIds.size === 1) {
+				orderMarket = [...marketIds][0];
+			}
+		}
+
+		// Validate and calculate promo code discount. A market order can only
+		// use that market's promo codes; a main-store order can only use admin
+		// (own-company) promo codes.
 		let discount = 0;
 		let promoCodeDoc = null;
+		let marketPromoDoc = null;
 		if (promoCode) {
-			console.log("Validating promo code:", promoCode);
-			promoCodeDoc = await PromoCode.findById(promoCode);
 			console.log(
-				"Promo code lookup result:",
-				promoCodeDoc ? promoCodeDoc.code : "Not found",
+				"Validating promo code:",
+				promoCode,
+				"orderMarket:",
+				orderMarket,
 			);
-			if (
-				!promoCodeDoc ||
-				!promoCodeDoc.isActive ||
-				!promoCodeDoc.isFromOwnCompany
-			) {
-				console.log("Invalid promo code:", promoCode);
-				return res.status(400).json({
-					success: false,
-					message: "Invalid or inactive promo code",
-				});
-			}
-
-			// Calculate discount
 			const orderTotalBeforeDiscount = subtotal + delivery + fees;
-			if (promoCodeDoc.discountType === "percentage") {
-				discount =
-					(orderTotalBeforeDiscount * promoCodeDoc.discountValue) / 100;
-			} else if (promoCodeDoc.discountType === "cash") {
-				discount = promoCodeDoc.discountValue;
-				// Ensure discount doesn't exceed order total
-				if (discount > orderTotalBeforeDiscount) {
-					discount = orderTotalBeforeDiscount;
+
+			// Try an admin own-company promo first.
+			promoCodeDoc = await PromoCode.findById(promoCode);
+
+			if (promoCodeDoc) {
+				if (!promoCodeDoc.isActive || !promoCodeDoc.isFromOwnCompany) {
+					return res.status(400).json({
+						success: false,
+						message: "Invalid or inactive promo code",
+					});
+				}
+				// Admin promo codes only apply to main-store orders.
+				if (orderMarket) {
+					return res.status(400).json({
+						success: false,
+						message: "This promo code is not valid for this market",
+					});
+				}
+				if (promoCodeDoc.discountType === "percentage") {
+					discount =
+						(orderTotalBeforeDiscount * promoCodeDoc.discountValue) / 100;
+				} else if (promoCodeDoc.discountType === "cash") {
+					discount = promoCodeDoc.discountValue;
+					if (discount > orderTotalBeforeDiscount) {
+						discount = orderTotalBeforeDiscount;
+					}
+				}
+			} else {
+				// Otherwise try a market promo code.
+				marketPromoDoc = await MarketPromoCode.findById(promoCode);
+
+				if (!marketPromoDoc || !marketPromoDoc.isActive) {
+					return res.status(400).json({
+						success: false,
+						message: "Invalid or inactive promo code",
+					});
+				}
+				// Must belong to the same market the order is placed from.
+				if (
+					!orderMarket ||
+					String(marketPromoDoc.market) !== String(orderMarket)
+				) {
+					return res.status(400).json({
+						success: false,
+						message: "This promo code is not valid for this market",
+					});
+				}
+				const now = new Date();
+				if (marketPromoDoc.startsAt && now < marketPromoDoc.startsAt) {
+					return res.status(400).json({
+						success: false,
+						message: "This promo code is not active yet",
+					});
+				}
+				if (marketPromoDoc.expiresAt && now > marketPromoDoc.expiresAt) {
+					return res.status(400).json({
+						success: false,
+						message: "This promo code has expired",
+					});
+				}
+				if (
+					marketPromoDoc.usageLimit > 0 &&
+					marketPromoDoc.usageCount >= marketPromoDoc.usageLimit
+				) {
+					return res.status(400).json({
+						success: false,
+						message: "This promo code has reached its usage limit",
+					});
+				}
+				const minRequired =
+					marketPromoDoc.minOrderTotal ||
+					(marketPromoDoc.triggerCondition &&
+						marketPromoDoc.triggerCondition.minOrderTotal) ||
+					0;
+				if (minRequired && orderTotalBeforeDiscount < minRequired) {
+					return res.status(400).json({
+						success: false,
+						message: `Minimum order total for this promo code is ${minRequired}`,
+					});
+				}
+				if (marketPromoDoc.discountType === "percentage") {
+					discount =
+						(orderTotalBeforeDiscount * marketPromoDoc.discountValue) / 100;
+				} else if (marketPromoDoc.discountType === "cash") {
+					discount = marketPromoDoc.discountValue;
+					if (discount > orderTotalBeforeDiscount) {
+						discount = orderTotalBeforeDiscount;
+					}
 				}
 			}
-			console.log(
-				"Promo code applied. Code:",
-				promoCode,
-				"Discount:",
-				discount,
-				"Type:",
-				promoCodeDoc.discountType,
-				"Value:",
-				promoCodeDoc.discountValue,
-			);
+			console.log("Promo code discount applied:", discount);
 		}
 
 		const total = subtotal + delivery + fees - discount;
@@ -654,19 +735,6 @@ exports.createOrder = async (req, res) => {
 			initialPaymentStatus,
 		);
 
-		// Derive market from items. If all items belong to the same market the
-		// order is associated with that market; mixed/main-store orders have
-		// market=null. Items are populated above, so item.product is the doc.
-		let orderMarket = null;
-		const marketIds = new Set(
-			processedItems
-				.map((it) => (it.product && it.product.market ? String(it.product.market) : null))
-				.filter(Boolean),
-		);
-		if (marketIds.size === 1) {
-			orderMarket = [...marketIds][0];
-		}
-
 		const order = new Order({
 			customer: {
 				...dbCustomer.toObject(),
@@ -687,6 +755,7 @@ exports.createOrder = async (req, res) => {
 			paymentStatus: initialPaymentStatus,
 			createdBy: req.user.id,
 			promoCode: promoCodeDoc ? promoCodeDoc._id : null,
+			marketPromoCode: marketPromoDoc ? marketPromoDoc._id : null,
 			market: orderMarket,
 		});
 
@@ -702,6 +771,13 @@ exports.createOrder = async (req, res) => {
 			});
 		}
 		console.log("Stock updated.");
+
+		// Increment market promo code usage count if one was applied.
+		if (marketPromoDoc) {
+			await MarketPromoCode.findByIdAndUpdate(marketPromoDoc._id, {
+				$inc: { usageCount: 1 },
+			});
+		}
 
 		// Populate the created order
 
@@ -784,15 +860,16 @@ exports.createOrder = async (req, res) => {
 					customer_email: populatedOrder.customer.email,
 				};
 
-				// Apply promo code discount if present
-				if (populatedOrder.discount > 0 && promoCodeDoc) {
+				// Apply promo code discount if present (admin or market promo)
+				const appliedPromoDoc = promoCodeDoc || marketPromoDoc;
+				if (populatedOrder.discount > 0 && appliedPromoDoc) {
 					let couponParams = {
 						duration: "once",
 						name: "Promo Code Discount",
 					};
 
-					if (promoCodeDoc.discountType === "percentage") {
-						couponParams.percent_off = promoCodeDoc.discountValue;
+					if (appliedPromoDoc.discountType === "percentage") {
+						couponParams.percent_off = appliedPromoDoc.discountValue;
 					} else {
 						// Cash discount
 						couponParams.amount_off = Math.round(populatedOrder.discount * 100);
@@ -801,7 +878,7 @@ exports.createOrder = async (req, res) => {
 
 					const coupon = await stripe.coupons.create(couponParams);
 					sessionOptions.discounts = [{ coupon: coupon.id }];
-					console.log("Created Stripe coupon for discount:", coupon.id, "Type:", promoCodeDoc.discountType);
+					console.log("Created Stripe coupon for discount:", coupon.id, "Type:", appliedPromoDoc.discountType);
 				}
 
 				const session = await stripe.checkout.sessions.create(sessionOptions);

@@ -1,4 +1,5 @@
 const PromoCode = require("../models/PromoCode");
+const MarketPromoCode = require("../models/MarketPromoCode");
 const User = require("../models/User");
 const { t } = require("../utils/translations");
 
@@ -30,7 +31,7 @@ exports.getPublicPromoCodes = async (req, res) => {
 // @access  Private
 exports.validatePromoCode = async (req, res) => {
 	try {
-		const { code, orderTotal } = req.body;
+		const { code, orderTotal, market } = req.body;
 
 		if (!code) {
 			return res.status(400).json({
@@ -39,8 +40,97 @@ exports.validatePromoCode = async (req, res) => {
 			});
 		}
 
+		const upperCode = code.toUpperCase();
+		const total = Number(orderTotal) || 0;
+
+		// The cart can only contain items from a single source: one specific
+		// market, or the main admin store. Promo codes are scoped the same way:
+		//   - market provided        -> only that market's MarketPromoCode codes
+		//   - no market (main store) -> only admin own-company PromoCode codes
+		if (market) {
+			const marketPromo = await MarketPromoCode.findOne({
+				market,
+				code: upperCode,
+				isActive: true,
+			});
+
+			if (!marketPromo) {
+				return res.status(404).json({
+					success: false,
+					message: "Invalid or inactive promo code",
+				});
+			}
+
+			const now = new Date();
+			if (marketPromo.startsAt && now < marketPromo.startsAt) {
+				return res.status(400).json({
+					success: false,
+					message: "This promo code is not active yet",
+				});
+			}
+			if (marketPromo.expiresAt && now > marketPromo.expiresAt) {
+				return res.status(400).json({
+					success: false,
+					message: "This promo code has expired",
+				});
+			}
+
+			if (
+				marketPromo.usageLimit > 0 &&
+				marketPromo.usageCount >= marketPromo.usageLimit
+			) {
+				return res.status(400).json({
+					success: false,
+					message: "This promo code has reached its usage limit",
+				});
+			}
+
+			const minRequired =
+				marketPromo.minOrderTotal ||
+				(marketPromo.triggerCondition &&
+					marketPromo.triggerCondition.minOrderTotal) ||
+				0;
+			if (minRequired && total < minRequired) {
+				return res.status(400).json({
+					success: false,
+					message: `Minimum order total for this promo code is ${minRequired}`,
+				});
+			}
+
+			let discountAmount = 0;
+			if (marketPromo.discountType === "percentage") {
+				discountAmount = (total * marketPromo.discountValue) / 100;
+			} else if (marketPromo.discountType === "cash") {
+				discountAmount = marketPromo.discountValue;
+				if (discountAmount > total) discountAmount = total;
+			}
+
+			const finalTotal = total - discountAmount;
+
+			return res.status(200).json({
+				success: true,
+				data: {
+					promoCode: {
+						id: marketPromo._id,
+						code: marketPromo.code,
+						market: marketPromo.market,
+						companyName: marketPromo.companyName,
+						description: marketPromo.description,
+						discountType: marketPromo.discountType,
+						discountValue: marketPromo.discountValue,
+					},
+					isMarketPromo: true,
+					discountAmount: parseFloat(discountAmount.toFixed(2)),
+					originalTotal: total,
+					finalTotal: parseFloat(finalTotal.toFixed(2)),
+				},
+				message: t("promoCodeApplied", req),
+			});
+		}
+
+		// Main store cart -> admin own-company promo codes only.
 		const promoCode = await PromoCode.findOne({
-			code: code.toUpperCase(),
+			code: upperCode,
 			isActive: true,
 			isFromOwnCompany: true,
 		});
@@ -55,16 +145,16 @@ exports.validatePromoCode = async (req, res) => {
 		let discountAmount = 0;
 
 		if (promoCode.discountType === "percentage") {
-			discountAmount = (orderTotal * promoCode.discountValue) / 100;
+			discountAmount = (total * promoCode.discountValue) / 100;
 		} else if (promoCode.discountType === "cash") {
 			discountAmount = promoCode.discountValue;
 			// Ensure discount doesn't exceed order total
-			if (discountAmount > orderTotal) {
-				discountAmount = orderTotal;
+			if (discountAmount > total) {
+				discountAmount = total;
 			}
 		}
 
-		const finalTotal = orderTotal - discountAmount;
+		const finalTotal = total - discountAmount;
 
 		res.status(200).json({
 			success: true,
@@ -72,13 +162,15 @@ exports.validatePromoCode = async (req, res) => {
 				promoCode: {
 					id: promoCode._id,
 					code: promoCode.code,
+					market: null,
 					companyName: promoCode.companyName,
 					description: promoCode.description,
 					discountType: promoCode.discountType,
 					discountValue: promoCode.discountValue,
 				},
+				isMarketPromo: false,
 				discountAmount: parseFloat(discountAmount.toFixed(2)),
-				originalTotal: orderTotal,
+				originalTotal: total,
 				finalTotal: parseFloat(finalTotal.toFixed(2)),
 			},
 			message: t("promoCodeApplied", req),

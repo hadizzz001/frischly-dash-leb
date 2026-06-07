@@ -198,6 +198,11 @@ const orderSchema = new mongoose.Schema(
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "PromoCode",
 		},
+		// Market promo code applied (separate collection from admin promoCode).
+		marketPromoCode: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "MarketPromoCode",
+		},
 		// Market this order was placed from (derived from items).
 		// Null/undefined means main store order.
 		market: {
