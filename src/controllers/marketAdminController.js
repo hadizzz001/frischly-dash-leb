@@ -125,11 +125,45 @@ const normalizeWasteReason = (reason) => {
 	return map[key] || "other";
 };
 
-const normalizeWastePayload = (body) => ({
-	...body,
-	productName: firstDefined(body.productName, body.name, body.barcode),
-	reason: normalizeWasteReason(body.reason),
-});
+// Adjust a market product's stock by a signed delta (negative = consume,
+// positive = restock). Scoped to the market so a tenant can't touch another
+// market's inventory. No-ops quietly when the product can't be resolved.
+const adjustProductStock = async (productId, marketId, delta) => {
+	if (!productId || !delta) return;
+	if (!mongoose.Types.ObjectId.isValid(productId)) return;
+	const product = await Product.findOne({ _id: productId, market: marketId });
+	if (!product) return;
+	await product.updateStock(Math.abs(delta), delta < 0 ? "subtract" : "add");
+};
+
+const normalizeWastePayload = async (body, req) => {
+	const out = {
+		...body,
+		productName: firstDefined(body.productName, body.name, body.barcode),
+		reason: normalizeWasteReason(body.reason),
+	};
+	// Resolve the product this waste refers to (scoped to the market) so its
+	// stock can be decremented now and restored if the record is later deleted.
+	let product = null;
+	const pid = body.productId || body.product;
+	if (pid && mongoose.Types.ObjectId.isValid(pid)) {
+		product = await Product.findOne({ _id: pid, market: req.marketId });
+	}
+	if (!product && body.barcode) {
+		product = await Product.findOne({
+			barcode: String(body.barcode).trim(),
+			market: req.marketId,
+			isActive: true,
+		});
+	}
+	if (product) {
+		out.product = product._id;
+		if (!out.productName || out.productName === body.barcode) {
+			out.productName = product.name;
+		}
+	}
+	return out;
+};
 
 const normalizeShelfPayload = (body) => ({
 	...body,
@@ -619,6 +653,7 @@ const crud = (Model, allowedFields, opts = {}) => ({
 				if (body[f] !== undefined) data[f] = body[f];
 			});
 			const item = await Model.create(data);
+			if (opts.afterCreate) await opts.afterCreate(item, req, body);
 			created(res, opts.transform ? opts.transform(item) : item);
 		} catch (err) {
 			handleErr(res, err);
@@ -633,12 +668,18 @@ const crud = (Model, allowedFields, opts = {}) => ({
 			allowedFields.forEach((f) => {
 				if (body[f] !== undefined) data[f] = body[f];
 			});
+			// When a resource needs to react to changes (e.g. waste adjusting
+			// product stock), grab the pre-update document so the hook can diff.
+			const prev = opts.afterUpdate
+				? await Model.findOne({ _id: req.params.id, market: req.marketId })
+				: null;
 			const item = await Model.findOneAndUpdate(
 				{ _id: req.params.id, market: req.marketId },
 				data,
 				{ new: true, runValidators: true },
 			);
 			if (!item) return fail(res, 404, "Not found");
+			if (opts.afterUpdate) await opts.afterUpdate(item, req, prev, body);
 			ok(res, opts.transform ? opts.transform(item) : item, "Updated");
 		} catch (err) {
 			handleErr(res, err);
@@ -651,6 +692,7 @@ const crud = (Model, allowedFields, opts = {}) => ({
 				market: req.marketId,
 			});
 			if (!item) return fail(res, 404, "Not found");
+			if (opts.afterRemove) await opts.afterRemove(item, req);
 			ok(res, { id: item._id }, "Deleted");
 		} catch (err) {
 			handleErr(res, err);
@@ -1735,6 +1777,7 @@ exports.waste = crud(
 	[
 		"productName",
 		"barcode",
+		"product",
 		"quantity",
 		"unit",
 		"reason",
@@ -1746,6 +1789,22 @@ exports.waste = crud(
 		searchFields: ["productName", "barcode"],
 		defaultSort: { recordedAt: -1 },
 		normalize: normalizeWastePayload,
+		// Recording waste consumes stock; editing applies only the difference;
+		// deleting a record puts the quantity back (restock).
+		afterCreate: async (item, req) => {
+			await adjustProductStock(item.product, req.marketId, -item.quantity);
+		},
+		afterUpdate: async (item, req, prev) => {
+			// Undo the previous deduction first, then apply the new one. This
+			// correctly handles quantity changes and switching the product.
+			if (prev && prev.product) {
+				await adjustProductStock(prev.product, req.marketId, prev.quantity);
+			}
+			await adjustProductStock(item.product, req.marketId, -item.quantity);
+		},
+		afterRemove: async (item, req) => {
+			await adjustProductStock(item.product, req.marketId, item.quantity);
+		},
 	},
 );
 

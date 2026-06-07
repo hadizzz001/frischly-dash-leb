@@ -79,6 +79,85 @@ const sanitizeItems = (raw) => {
 	];
 };
 
+// Guard: market-owned kitchens are view-only for the main admin. They are
+// managed by the owning market on its own dashboard, so a non-market (admin)
+// caller may read them but must not edit or delete them. Market admins are
+// already restricted to their own kitchens by the scoped filters, so this
+// check is skipped for them. Returns true when the caller may proceed; when it
+// returns false a response has already been sent.
+const assertAdminMayModify = async (req, res, kitchenId) => {
+	if (req.user && req.user.role === "market") return true;
+	const owned = await Kitchen.findById(kitchenId).select("market").lean();
+	if (!owned) {
+		fail(res, 404, "Kitchen not found");
+		return false;
+	}
+	if (owned.market) {
+		fail(res, 403, "This kitchen belongs to a market and is view-only");
+		return false;
+	}
+	return true;
+};
+
+// @desc Public: list active kitchens for the storefront / mobile app.
+// Items are populated with the fields the cart needs (price/discount/tax/
+// bottlerefund/stock/is18Plus/market). Item.market is left as an ObjectId so
+// the app can detect each kitchen's source (market vs main store).
+// @route GET /api/kitchens/public
+// @access Public
+exports.getPublicKitchens = async (req, res) => {
+	try {
+		const filter = { isActive: true };
+		if (req.query.market !== undefined && req.query.market !== "all") {
+			if (req.query.market === "none" || req.query.market === "null") {
+				filter.market = null;
+			} else if (mongoose.Types.ObjectId.isValid(req.query.market)) {
+				filter.market = req.query.market;
+			}
+		}
+		const kitchens = await Kitchen.find(filter)
+			.populate({
+				path: "items",
+				select:
+					"name barcode price discount tax bottlerefund stock isActive is18Plus picture shelfNumber market",
+			})
+			.populate("market", "name username location logo")
+			.sort({ sortOrder: 1, createdAt: -1 })
+			.lean();
+		ok(res, kitchens);
+	} catch (err) {
+		console.error("getPublicKitchens:", err);
+		fail(res, 500, err.message || "Server Error");
+	}
+};
+
+// @desc Public: get a single active kitchen with its items (view-only).
+// @route GET /api/kitchens/public/:id
+// @access Public
+exports.getPublicKitchen = async (req, res) => {
+	try {
+		if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+			return fail(res, 400, "Invalid kitchen ID");
+		}
+		const kitchen = await Kitchen.findOne({
+			_id: req.params.id,
+			isActive: true,
+		})
+			.populate({
+				path: "items",
+				select:
+					"name barcode price discount tax bottlerefund stock isActive is18Plus picture shelfNumber market",
+			})
+			.populate("market", "name username location logo")
+			.lean();
+		if (!kitchen) return fail(res, 404, "Kitchen not found");
+		ok(res, kitchen);
+	} catch (err) {
+		console.error("getPublicKitchen:", err);
+		fail(res, 500, err.message || "Server Error");
+	}
+};
+
 // @desc Get all kitchens
 // @route GET /api/kitchens
 exports.getKitchens = async (req, res) => {
@@ -184,6 +263,9 @@ exports.updateKitchen = async (req, res) => {
 			return fail(res, 400, "Invalid kitchen ID");
 		}
 
+		// Main admin cannot edit a kitchen owned by a market (view-only).
+		if (!(await assertAdminMayModify(req, res, req.params.id))) return;
+
 		const update = {};
 		if (req.body && req.body.name !== undefined) {
 			update.name = String(req.body.name).trim();
@@ -244,6 +326,10 @@ exports.deleteKitchen = async (req, res) => {
 		if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
 			return fail(res, 400, "Invalid kitchen ID");
 		}
+
+		// Main admin cannot delete a kitchen owned by a market (view-only).
+		if (!(await assertAdminMayModify(req, res, req.params.id))) return;
+
 		const filter = { _id: req.params.id };
 		if (req.user && req.user.role === "market") {
 			filter.market = req.user.marketId;

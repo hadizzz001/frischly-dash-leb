@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Waste = require("../models/Waste");
 const Product = require("../models/Product");
 
@@ -15,7 +16,15 @@ exports.getProductByBarcode = async (req, res) => {
 			});
 		}
 
-		const product = await Product.findOne({ barcode, isActive: true });
+		// Only main-store products (market: null) are wasteable from the admin
+		// dashboard; market-owned items are handled on the market admin waste page.
+		// A `null` match also covers legacy products created before the field
+		// existed (Mongo treats missing fields as null in equality queries).
+		const product = await Product.findOne({
+			barcode,
+			isActive: true,
+			market: null,
+		});
 
 		if (!product) {
 			return res.status(404).json({
@@ -45,11 +54,22 @@ exports.createWaste = async (req, res) => {
 			req.body;
 
 		let productData = {};
-		let actualProductId = productId;
+		// Ignore an empty/invalid productId so Mongoose doesn't throw a CastError
+		// (which previously made "add waste" fail when no lookup had been done).
+		let actualProductId =
+			productId && mongoose.Types.ObjectId.isValid(productId)
+				? productId
+				: null;
 
-		// If barcode is provided but no productId, try to find product
-		if (barcode && !productId) {
-			const product = await Product.findOne({ barcode, isActive: true });
+		// If barcode is provided but no productId, try to find product.
+		// Scope to main-store products (market: null) so the admin can't record
+		// waste against a market-owned item that happens to share a barcode.
+		if (barcode && !actualProductId) {
+			const product = await Product.findOne({
+				barcode,
+				isActive: true,
+				market: null,
+			});
 			if (product) {
 				actualProductId = product._id;
 				productData.productName = product.name;
@@ -67,17 +87,16 @@ exports.createWaste = async (req, res) => {
 			recordedBy: req.user.id,
 		});
 
-		// If productId is found, update product stock
+		// If a product was resolved, subtract the wasted quantity from its stock.
+		// Only main-store products reach this point (the lookups above exclude
+		// market-owned items), so admin waste never alters a market's inventory.
 		if (actualProductId) {
 			const product = await Product.findById(actualProductId);
 			if (product) {
-				// Subtract the wasted quantity from stock
-				product.updateStock(quantity, "subtract");
+				await product.updateStock(quantity, "subtract");
 				console.log(
 					`Updated stock for product ${product.name} (${product.barcode}): -${quantity}`
 				);
-
-				//await product.save();
 			}
 		}
 
@@ -184,6 +203,14 @@ exports.updateWaste = async (req, res) => {
 	try {
 		const { productName, quantity, reason, notes } = req.body;
 
+		const existing = await Waste.findById(req.params.id);
+		if (!existing) {
+			return res.status(404).json({
+				success: false,
+				error: "Waste record not found",
+			});
+		}
+
 		// Only allow updating certain fields
 		const updateData = {};
 		if (productName) updateData.productName = productName;
@@ -196,11 +223,22 @@ exports.updateWaste = async (req, res) => {
 			runValidators: true,
 		});
 
-		if (!waste) {
-			return res.status(404).json({
-				success: false,
-				error: "Waste record not found",
-			});
+		// If the wasted quantity changed, adjust the product's stock by the
+		// difference (restock the old amount, consume the new amount) so editing a
+		// record keeps inventory accurate.
+		if (
+			quantity !== undefined &&
+			existing.productId &&
+			Number(quantity) !== Number(existing.quantity)
+		) {
+			const product = await Product.findById(existing.productId);
+			if (product) {
+				const delta = Number(existing.quantity) - Number(quantity);
+				await product.updateStock(
+					Math.abs(delta),
+					delta >= 0 ? "add" : "subtract"
+				);
+			}
 		}
 
 		res.status(200).json({
@@ -220,11 +258,7 @@ exports.updateWaste = async (req, res) => {
 // @access  Private (Admin)
 exports.deleteWaste = async (req, res) => {
 	try {
-		const waste = await Waste.findByIdAndUpdate(
-			req.params.id,
-			{ isActive: false },
-			{ new: true }
-		);
+		const waste = await Waste.findById(req.params.id);
 
 		if (!waste) {
 			return res.status(404).json({
@@ -232,6 +266,18 @@ exports.deleteWaste = async (req, res) => {
 				error: "Waste record not found",
 			});
 		}
+
+		// Restock the product (add the wasted quantity back). Guard on isActive so
+		// deleting an already-deleted record can't inflate stock twice.
+		if (waste.isActive && waste.productId) {
+			const product = await Product.findById(waste.productId);
+			if (product) {
+				await product.updateStock(waste.quantity, "add");
+			}
+		}
+
+		waste.isActive = false;
+		await waste.save();
 
 		res.status(200).json({
 			success: true,

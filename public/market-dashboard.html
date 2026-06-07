@@ -14755,10 +14755,11 @@
 				document.getElementById("waste-id").value = id;
 				document.getElementById("waste-barcode").value = waste.barcode || "";
 				
-				// Handle populated productId
-				const productId = waste.productId && typeof waste.productId === 'object' 
-					? waste.productId._id 
-					: waste.productId;
+				// Handle populated product reference (falls back to legacy productId)
+				const rawProduct = waste.product || waste.productId;
+				const productId = rawProduct && typeof rawProduct === 'object' 
+					? rawProduct._id 
+					: rawProduct;
 				document.getElementById("waste-product-id").value = productId || "";
 				
 				// Handle product name from populated object or direct field

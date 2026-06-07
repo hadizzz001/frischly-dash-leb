@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const { protect, authorize } = require("../middleware/auth");
 const {
+	getPublicKitchens,
+	getPublicKitchen,
 	getKitchens,
 	getKitchen,
 	createKitchen,
@@ -13,7 +15,11 @@ const {
 	reorderKitchens,
 } = require("../controllers/kitchenController");
 
-// All kitchen routes are admin-only (or market admins, via the same admin
+// Public storefront / mobile app routes (no auth). Active kitchens only.
+router.get("/public", getPublicKitchens);
+router.get("/public/:id", getPublicKitchen);
+
+// All routes below are admin-only (or market admins, via the same admin
 // dashboards). They never touch product stock.
 router.use(protect);
 router.use(authorize("admin", "market"));

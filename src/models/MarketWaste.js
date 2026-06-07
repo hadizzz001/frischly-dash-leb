@@ -10,6 +10,14 @@ const marketWasteSchema = new mongoose.Schema(
 		},
 		productName: { type: String, required: true, trim: true, maxlength: 200 },
 		barcode: { type: String, trim: true, maxlength: 100 },
+		// Reference to the specific product this waste was recorded against, so its
+		// stock can be decremented on create and restored on delete. Stored
+		// explicitly (rather than relying on barcode) to stay correct even when
+		// several products share the same barcode within one market.
+		product: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Product",
+		},
 		quantity: { type: Number, required: true, min: 0 },
 		unit: {
 			type: String,
