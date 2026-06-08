@@ -1073,11 +1073,11 @@ exports.createOrder = async (req, res) => {
 					}
 					
 					<p>If the order contains alcohol, the rider will need to check your identity at delivery</p>
-					<p>If you have any questions about your order, please contact us at info@frischlyshop.com .</p>
+					<p>If you have any questions about your order, please contact us at info@freshlylb.com .</p>
 					
-					<p>Thank you for choosing Frischly!</p>
+					<p>Thank you for choosing Freshly lb!</p>
 					
-					<p>Best regards,<br>The Frischly Team</p>
+					<p>Best regards,<br>The Freshly lb Team</p>
 					
 					<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
 					
@@ -1141,11 +1141,11 @@ exports.createOrder = async (req, res) => {
 					}
 					
 					<p>If the order contains alcohol, the rider must verify your identity upon delivery.</p>
-					<p>For questions about your order, please contact us at info@frischlyshop.com.</p>
+					<p>For questions about your order, please contact us at info@freshlylb.com.</p>
 					
-					<p>Thank you for choosing Frischly!</p>
+					<p>Thank you for choosing Freshly lb!</p>
 					
-					<p>Best regards,<br>The Frischly Team</p>
+					<p>Best regards,<br>The Freshly lb Team</p>
 					
 					<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
 					<p style="font-size: 12px; color: #666; text-align: center;">
@@ -1343,11 +1343,11 @@ exports.updateOrder = async (req, res) => {
 						
 						<p>We hope you enjoy your purchase!</p>
 						
-						<p>If you have any feedback or issues, please contact us at info@frischlyshop.com.</p>
+						<p>If you have any feedback or issues, please contact us at info@freshlylb.com.</p>
 						
-						<p>Thank you for choosing Frischly!</p>
+						<p>Thank you for choosing Freshly lb!</p>
 						
-						<p>Best regards,<br>The Frischly Team</p>
+						<p>Best regards,<br>The Freshly lb Team</p>
 						
 						<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
 						
@@ -1361,11 +1361,11 @@ exports.updateOrder = async (req, res) => {
 						
 						<p>Wir hoffen, Sie haben Freude an Ihrem Einkauf!</p>
 						
-						<p>If you have any questions or issues, please contact us at info@frischlyshop.com.</p>
+						<p>If you have any questions or issues, please contact us at info@freshlylb.com.</p>
 						
-						<p>Thank you for choosing Frischly!</p>
+						<p>Thank you for choosing Freshly lb!</p>
 						
-						<p>Best regards,<br>The Frischly Team</p>
+						<p>Best regards,<br>The Freshly lb Team</p>
 						
 						<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
 						<p style="font-size: 12px; color: #666; text-align: center;">
@@ -1626,9 +1626,9 @@ exports.cancelOrder = async (req, res) => {
 									<p>Please note that the refund amount does not include the processing fees as they are non-refundable.</p>
 									<p>The refund should appear on your statement within 5-10 business days.</p>
 									
-									<p>If you have any questions, please contact us at info@frischlyshop.com.</p>
+									<p>If you have any questions, please contact us at info@freshlylb.com.</p>
 									
-									<p>Best regards,<br>The Frischly Team</p>
+									<p>Best regards,<br>The Freshly lb Team</p>
 
 									<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
 									
@@ -1648,9 +1648,9 @@ exports.cancelOrder = async (req, res) => {
 									<p>Please note that the refund amount does not include processing fees, as these are non-refundable.</p>
 									<p>The refund should appear on your statement within 5-10 business days.</p>
 									
-									<p>For questions, please contact us at info@frischlyshop.com.</p>
+									<p>For questions, please contact us at info@freshlylb.com.</p>
 									
-									<p>Best regards,<br>The Frischly Team</p>
+									<p>Best regards,<br>The Freshly lb Team</p>
 								</div>
 							`;
 
@@ -2044,11 +2044,11 @@ exports.updateOrderStatus = async (req, res) => {
 						
 						<p>We hope you enjoy your purchase!</p>
 						
-						<p>If you have any feedback or issues, please contact us at info@frischlyshop.com.</p>
+						<p>If you have any feedback or issues, please contact us at info@freshlylb.com.</p>
 						
-						<p>Thank you for choosing Frischly!</p>
+						<p>Thank you for choosing Freshly lb!</p>
 						
-						<p>Best regards,<br>The Frischly Team</p>
+						<p>Best regards,<br>The Freshly lb Team</p>
 						
 						<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
 						
@@ -2062,11 +2062,11 @@ exports.updateOrderStatus = async (req, res) => {
 						
 						<p>Wir hoffen, Sie haben Freude an Ihrem Einkauf!</p>
 						
-						<p>If you have any questions or issues, please contact us at info@frischlyshop.com.</p>
+						<p>If you have any questions or issues, please contact us at info@freshlylb.com.</p>
 						
-						<p>Thank you for choosing Frischly!</p>
+						<p>Thank you for choosing Freshly lb!</p>
 						
-						<p>Best regards,<br>The Frischly Team</p>
+						<p>Best regards,<br>The Freshly lb Team</p>
 						
 						<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
 						<p style="font-size: 12px; color: #666; text-align: center;">

@@ -34,9 +34,7 @@ const sendEmail = async ({ to, subject, text, html }) => {
 	const mailOptions = {
 		from:
 			process.env.EMAIL_FROM ||
-			(process.env.EMAIL_USER
-				? `Frischly <${process.env.EMAIL_USER}>`
-				: undefined),
+			`Freshly lb <${process.env.EMAIL_USER || "info@freshlylb.com"}>`,
 		to,
 		subject,
 		text,

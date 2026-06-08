@@ -67,7 +67,7 @@ const register = async (req, res) => {
 		const confirmUrl = `${normalizedBaseUrl}/api/auth/confirm/${emailToken}`;
 
 		const emailSubject =
-			"Confirm your Frischly email";
+			"Confirm your Freshly lb email";
 		const emailText = `Hi ${
 			name || "there"
 		},\n\nPlease confirm your email by visiting the link below:\n${confirmUrl}\n\nIf you did not create an account, you can ignore this email.`;
@@ -147,7 +147,7 @@ const confirmEmail = async (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Confirmed - Frischly</title>
+    <title>Email Confirmed - Freshly lb</title>
     <style>
         * {
             margin: 0;
@@ -291,14 +291,14 @@ const confirmEmail = async (req, res) => {
     <div class="container">
         <div class="success-icon"></div>
         <h1>Email Confirmed!</h1>
-        <p class="subtitle">Your email has been successfully verified. You can now log in to your Frischly account and start shopping for fresh groceries.</p>
+        <p class="subtitle">Your email has been successfully verified. You can now log in to your Freshly lb account and start shopping for fresh groceries.</p>
         <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
         
         <h1>Email Confirmed!</h1>
-        <p class="subtitle">Your email has been successfully verified. You can now log in to your Frischly account and start shopping for fresh groceries.</p>
+        <p class="subtitle">Your email has been successfully verified. You can now log in to your Freshly lb account and start shopping for fresh groceries.</p>
         <button onclick="window.close()" class="login-btn">Close</button>
         <div class="footer">
-            <p>Willkommen bei Frischly!</p>
+            <p>Willkommen bei Freshly lb!</p>
         </div>
     </div>
 </body>
@@ -1452,9 +1452,9 @@ const requestPasswordReset = async (req, res) => {
 		const resetUrl = `${normalizedBaseUrl}/reset-password.html?token=${resetToken}`;
 
 		const emailSubject =
-			"Reset your Frischly password";
-		const emailText = `Hi ${user.name},\n\nYou requested a password reset for your Frischly account. Click the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this password reset, please ignore this email.`;
-		const emailHtml = `<!doctype html><html><body><p>Hi ${user.name},</p><p>You requested a password reset for your Frischly account. Click the button below to reset your password.</p><p><a href="${resetUrl}">Reset Password</a></p><p>This link will expire in 1 hour.</p><p>If you didn't request this password reset, please ignore this email.</p></body></html>`;
+			"Reset your Freshly lb password";
+		const emailText = `Hi ${user.name},\n\nYou requested a password reset for your Freshly lb account. Click the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this password reset, please ignore this email.`;
+		const emailHtml = `<!doctype html><html><body><p>Hi ${user.name},</p><p>You requested a password reset for your Freshly lb account. Click the button below to reset your password.</p><p><a href="${resetUrl}">Reset Password</a></p><p>This link will expire in 1 hour.</p><p>If you didn't request this password reset, please ignore this email.</p></body></html>`;
 
 		try {
 			await sendEmail({
