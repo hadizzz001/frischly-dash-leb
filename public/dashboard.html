@@ -189,6 +189,83 @@
 					padding: 4px 8px;
 				}
 			}
+
+			/* ===== Gold (Markets Management) theme for Sales Statistics ===== */
+			#statistics-section .stat-card {
+				background: #ffffff !important;
+				color: #000000 !important;
+				border: 2px solid #ffc300 !important;
+				box-shadow: 0 2px 10px rgba(255, 195, 0, 0.18) !important;
+			}
+			#statistics-section .stat-card .stat-icon,
+			#statistics-section .stat-card .stat-value,
+			#statistics-section .stat-card .stat-label {
+				color: #000000 !important;
+				opacity: 1 !important;
+			}
+			#statistics-section .filter-section {
+				border: 1px solid #ffe39a;
+			}
+			#statistics-section .filter-section select,
+			#statistics-section .filter-section input {
+				border: 1px solid #ffc300 !important;
+			}
+			#statistics-section .table-header {
+				background: #ffc300 !important;
+				color: #000000 !important;
+			}
+			#statistics-section .table-header h3,
+			#statistics-section .table-header span {
+				color: #000000 !important;
+			}
+			#statistics-section thead tr {
+				background: #ffc300 !important;
+			}
+			#statistics-section thead th {
+				background: #ffc300 !important;
+				color: #000000 !important;
+				border-bottom: 2px solid #000000 !important;
+			}
+			#statistics-section tbody td {
+				color: #000000 !important;
+			}
+			#statistics-section tbody td span[style*="linear-gradient"] {
+				background: #ffc300 !important;
+				color: #000000 !important;
+			}
+			#statistics-section tbody tr:nth-child(even) td {
+				background: #fffaf0;
+			}
+			#statistics-section tbody tr:hover td {
+				background: rgba(255, 195, 0, 0.18) !important;
+			}
+			#statistics-section tbody tr[style*="#eef3ff"],
+			#statistics-section tbody tr[style*="#f0fff4"],
+			#statistics-section tfoot tr {
+				background: #fffaf0 !important;
+			}
+			#statistics-section .stylish-table tbody td:first-child {
+				color: #000000 !important;
+			}
+			#statistics-section .stylish-table tbody td:first-child::before {
+				background: #ffc300 !important;
+			}
+			#statistics-section .stylish-table tbody td:nth-child(3) {
+				color: #000000 !important;
+				background: rgba(255, 195, 0, 0.18) !important;
+			}
+			#statistics-section .stylish-table tbody td:nth-child(4) {
+				color: #000000 !important;
+			}
+			#statistics-section .stylish-table tbody tr:hover {
+				background: rgba(255, 195, 0, 0.10) !important;
+			}
+			#statistics-section .btn-pagination.active,
+			#statistics-section .pagination-numbers .btn.active {
+				background: #ffc300 !important;
+				color: #000000 !important;
+				border-color: #ffc300 !important;
+			}
 		</style>
 	</head>
 	<body>
@@ -1232,6 +1309,64 @@
 							<button class="btn btn-secondary" onclick="exportSalesStatistics()" style="padding: 10px 20px; border-radius: 8px;">
 								📥 Export to Excel
 							</button>
+						</div>
+					</div>
+
+					<!-- Our Sales & Total Earnings -->
+					<div class="table-container" style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px;">
+						<div class="table-header" style="padding: 15px 20px; background: linear-gradient(135deg, #0b4fed 0%, #4002ea 100%); color: white;">
+							<h3 style="margin: 0;">💵 Our Sales &amp; Total Earnings (Selected Period)</h3>
+						</div>
+						<div class="table-responsive" style="overflow-x: auto;">
+							<table style="width: 100%; border-collapse: collapse;">
+								<tbody>
+									<tr>
+										<td style="padding: 16px 20px; border-bottom: 1px solid #eee; font-weight: 500;">Our Sales (Main Store, Delivered) — <span id="own-sales-orders" style="color:#888;">0 orders</span></td>
+										<td style="padding: 16px 20px; border-bottom: 1px solid #eee; text-align: right; font-weight: 700; color: #0b4fed; font-size: 1.05em;" id="own-sales-amount">$0.00</td>
+									</tr>
+									<tr>
+										<td style="padding: 16px 20px; border-bottom: 1px solid #eee; font-weight: 500;">Markets Commission (2%)</td>
+										<td style="padding: 16px 20px; border-bottom: 1px solid #eee; text-align: right; font-weight: 700; color: #e67e22; font-size: 1.05em;" id="own-commission-amount">+$0.00</td>
+									</tr>
+									<tr style="background: #eef3ff;">
+										<td style="padding: 16px 20px; font-weight: 800;">Total Earnings</td>
+										<td style="padding: 16px 20px; text-align: right; font-weight: 800; color: #11998e; font-size: 1.15em;" id="own-total-earnings">$0.00</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+
+					<!-- Markets Commission (2% of market sales) -->
+					<div class="table-container" style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px;">
+						<div class="table-header" style="padding: 15px 20px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; display: flex; justify-content: space-between; align-items: center;">
+							<h3 style="margin: 0;">💰 Markets Commission (2% of Market Sales)</h3>
+							<span id="market-commission-count" style="opacity: 0.9;">0 markets</span>
+						</div>
+						<div class="table-responsive" style="overflow-x: auto;">
+							<table class="users-table stylish-table" style="width: 100%; border-collapse: collapse;">
+								<thead>
+									<tr style="background: linear-gradient(135deg, #f8f9fa, #e9ecef);">
+										<th style="padding: 15px 20px; text-align: left; font-weight: 600; color: #333; border-bottom: 2px solid #11998e;">Market</th>
+										<th style="padding: 15px 20px; text-align: center; font-weight: 600; color: #333; border-bottom: 2px solid #11998e;">Delivered Orders</th>
+										<th style="padding: 15px 20px; text-align: right; font-weight: 600; color: #333; border-bottom: 2px solid #11998e;">Total Sales</th>
+										<th style="padding: 15px 20px; text-align: right; font-weight: 600; color: #333; border-bottom: 2px solid #11998e;">Commission (2%)</th>
+									</tr>
+								</thead>
+								<tbody id="market-commission-table-body">
+									<tr>
+										<td colspan="4" style="text-align: center; padding: 40px; color: #666;">Loading…</td>
+									</tr>
+								</tbody>
+								<tfoot>
+									<tr style="background: #f0fff4; font-weight: 800;">
+										<td style="padding: 15px 20px;">Total</td>
+										<td style="padding: 15px 20px; text-align: center;" id="market-commission-total-orders">0</td>
+										<td style="padding: 15px 20px; text-align: right; color: #11998e;" id="market-commission-total-sales">$0.00</td>
+										<td style="padding: 15px 20px; text-align: right; color: #e67e22;" id="market-commission-total">$0.00</td>
+									</tr>
+								</tfoot>
+							</table>
 						</div>
 					</div>
 
@@ -13354,6 +13489,9 @@
 					
 					// Also load unsold products for the same period
 					loadUnsoldProducts(1);
+
+					// Load per-market 2% commission breakdown for the same period
+					loadMarketCommission();
 					
 				} catch (error) {
 					console.error('Error loading sales statistics:', error);
@@ -13458,6 +13596,73 @@
 				document.getElementById('stats-total-quantity').textContent = summary.totalQuantitySold.toLocaleString();
 				document.getElementById('stats-total-orders').textContent = summary.totalOrders.toLocaleString();
 				document.getElementById('stats-unique-products').textContent = summary.uniqueProducts.toLocaleString();
+			}
+
+			// Load per-market sales totals + 2% platform commission (main admin earns
+			// 2% of every market's product sales). Uses the same time filter as the
+			// product sales statistics above.
+			async function loadMarketCommission() {
+				const tbody = document.getElementById('market-commission-table-body');
+				if (!tbody) return;
+				try {
+					const timeRange = document.getElementById('stats-time-range').value;
+					let url = `${API_BASE_URL}/orders/market-commission?`;
+					if (timeRange === 'custom') {
+						const dateFrom = document.getElementById('stats-date-from').value;
+						const dateTo = document.getElementById('stats-date-to').value;
+						if (dateFrom) url += `&dateFrom=${dateFrom}`;
+						if (dateTo) url += `&dateTo=${dateTo}`;
+					} else {
+						url += `&timeRange=${timeRange}`;
+					}
+					const response = await authenticatedFetch(url);
+					if (!response.ok) throw new Error('Failed to load market commission');
+					const result = await response.json();
+					renderMarketCommission(result.data || [], result.totals || {}, result.ownSales || {}, result.grandTotalEarnings || 0);
+				} catch (e) {
+					tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:30px;color:#e74c3c;">Failed to load market commission</td></tr>`;
+				}
+			}
+
+			function renderMarketCommission(rows, totals, ownSales, grandTotalEarnings) {
+				const tbody = document.getElementById('market-commission-table-body');
+				if (!tbody) return;
+				const fmt = (n) => `$${(Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+				const countEl = document.getElementById('market-commission-count');
+				if (countEl) countEl.textContent = `${totals.marketCount || rows.length || 0} market${(totals.marketCount || rows.length) === 1 ? '' : 's'}`;
+				if (!rows.length) {
+					tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:40px;color:#666;">No market sales in this period.</td></tr>`;
+				} else {
+					tbody.innerHTML = rows.map((r) => `
+						<tr>
+							<td style="padding:14px 20px;border-bottom:1px solid #f0f0f0;font-weight:600;">${r.marketName || 'Unknown Market'}</td>
+							<td style="padding:14px 20px;border-bottom:1px solid #f0f0f0;text-align:center;">${(r.orderCount || 0).toLocaleString()}</td>
+							<td style="padding:14px 20px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:600;color:#11998e;">${fmt(r.totalSales)}</td>
+							<td style="padding:14px 20px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:700;color:#e67e22;">${fmt(r.commission)}</td>
+						</tr>`).join('');
+				}
+				const totalOrdersEl = document.getElementById('market-commission-total-orders');
+				const totalSalesEl = document.getElementById('market-commission-total-sales');
+				const totalCommEl = document.getElementById('market-commission-total');
+				if (totalOrdersEl) totalOrdersEl.textContent = (totals.totalOrders || 0).toLocaleString();
+				if (totalSalesEl) totalSalesEl.textContent = fmt(totals.totalSales);
+				if (totalCommEl) totalCommEl.textContent = fmt(totals.totalCommission);
+
+				// Our Sales & Total Earnings (main-store sales + 2% market commission)
+				const own = ownSales || {};
+				const commission = (totals && totals.totalCommission) || 0;
+				const totalEarnings =
+					typeof grandTotalEarnings === 'number'
+						? grandTotalEarnings
+						: (Number(own.totalSales) || 0) + (Number(commission) || 0);
+				const ownOrdersEl = document.getElementById('own-sales-orders');
+				const ownAmountEl = document.getElementById('own-sales-amount');
+				const ownCommEl = document.getElementById('own-commission-amount');
+				const ownTotalEl = document.getElementById('own-total-earnings');
+				if (ownOrdersEl) ownOrdersEl.textContent = `${(own.totalOrders || 0).toLocaleString()} order${(own.totalOrders || 0) === 1 ? '' : 's'}`;
+				if (ownAmountEl) ownAmountEl.textContent = fmt(own.totalSales);
+				if (ownCommEl) ownCommEl.textContent = `+${fmt(commission)}`;
+				if (ownTotalEl) ownTotalEl.textContent = fmt(totalEarnings);
 			}
 
 			// Update pagination controls for sales statistics

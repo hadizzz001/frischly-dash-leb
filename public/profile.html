@@ -107,8 +107,8 @@
 			}
 
 			.btn {
-				background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-				color: white;
+				background: #ffc300;
+				color: #000000;
 				padding: 12px 24px;
 				border: none;
 				border-radius: 8px;
@@ -195,6 +195,31 @@
 					content: "";
 				}
 			}
+
+			/* ===== Gold (Markets Management) theme for driver deliveries ===== */
+			.profile-section h3 {
+				border-bottom-color: #ffc300 !important;
+			}
+			#my-deliveries-section table {
+				border: 2px solid #ffc300;
+				border-radius: 10px;
+				overflow: hidden;
+			}
+			#my-deliveries-section thead tr {
+				background: #ffc300 !important;
+			}
+			#my-deliveries-section thead th {
+				background: #ffc300 !important;
+				color: #000000 !important;
+				border-bottom: 2px solid #000000 !important;
+				font-weight: 700;
+			}
+			#my-deliveries-section tbody tr:nth-child(even) td {
+				background: #fffaf0;
+			}
+			#my-deliveries-section tbody tr:hover td {
+				background: rgba(255, 195, 0, 0.18);
+			}
 		</style>
 	</head>
 	<body>
@@ -271,7 +296,7 @@
 							<button
 								type="button"
 								class="btn"
-								style="background:#17a2b8;color:#fff;"
+								style="background:#ffc300;color:#000;"
 								onclick="loadMyDeliveries()"
 							>
 								🔄 Refresh

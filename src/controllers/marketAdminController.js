@@ -1292,7 +1292,9 @@ exports.getProductSalesStats = async (req, res) => {
 					productPrice: { $first: "$productDetails.price" },
 					productIsActive: { $first: "$productDetails.isActive" },
 					totalQuantitySold: { $sum: "$items.quantity" },
-					totalRevenue: { $sum: "$items.totalPrice" },
+					totalRevenue: {
+						$sum: { $multiply: ["$items.totalPrice", "$items.quantity"] },
+					},
 					orderCount: { $sum: 1 },
 					averageQuantityPerOrder: { $avg: "$items.quantity" },
 					firstSaleDate: { $min: "$createdAt" },
@@ -1325,7 +1327,9 @@ exports.getProductSalesStats = async (req, res) => {
 			{
 				$group: {
 					_id: null,
-					totalRevenue: { $sum: "$items.totalPrice" },
+					totalRevenue: {
+						$sum: { $multiply: ["$items.totalPrice", "$items.quantity"] },
+					},
 					totalQuantitySold: { $sum: "$items.quantity" },
 					totalOrders: { $addToSet: "$_id" },
 					uniqueProducts: { $addToSet: "$items.product" },

@@ -189,6 +189,83 @@
 					padding: 4px 8px;
 				}
 			}
+
+			/* ===== Gold (Markets Management) theme for Sales Statistics ===== */
+			#statistics-section .stat-card {
+				background: #ffffff !important;
+				color: #000000 !important;
+				border: 2px solid #ffc300 !important;
+				box-shadow: 0 2px 10px rgba(255, 195, 0, 0.18) !important;
+			}
+			#statistics-section .stat-card .stat-icon,
+			#statistics-section .stat-card .stat-value,
+			#statistics-section .stat-card .stat-label {
+				color: #000000 !important;
+				opacity: 1 !important;
+			}
+			#statistics-section .filter-section {
+				border: 1px solid #ffe39a;
+			}
+			#statistics-section .filter-section select,
+			#statistics-section .filter-section input {
+				border: 1px solid #ffc300 !important;
+			}
+			#statistics-section .table-header {
+				background: #ffc300 !important;
+				color: #000000 !important;
+			}
+			#statistics-section .table-header h3,
+			#statistics-section .table-header span {
+				color: #000000 !important;
+			}
+			#statistics-section thead tr {
+				background: #ffc300 !important;
+			}
+			#statistics-section thead th {
+				background: #ffc300 !important;
+				color: #000000 !important;
+				border-bottom: 2px solid #000000 !important;
+			}
+			#statistics-section tbody td {
+				color: #000000 !important;
+			}
+			#statistics-section tbody td span[style*="linear-gradient"] {
+				background: #ffc300 !important;
+				color: #000000 !important;
+			}
+			#statistics-section tbody tr:nth-child(even) td {
+				background: #fffaf0;
+			}
+			#statistics-section tbody tr:hover td {
+				background: rgba(255, 195, 0, 0.18) !important;
+			}
+			#statistics-section tbody tr[style*="#eef3ff"],
+			#statistics-section tbody tr[style*="#f0fff4"],
+			#statistics-section tfoot tr {
+				background: #fffaf0 !important;
+			}
+			#statistics-section .stylish-table tbody td:first-child {
+				color: #000000 !important;
+			}
+			#statistics-section .stylish-table tbody td:first-child::before {
+				background: #ffc300 !important;
+			}
+			#statistics-section .stylish-table tbody td:nth-child(3) {
+				color: #000000 !important;
+				background: rgba(255, 195, 0, 0.18) !important;
+			}
+			#statistics-section .stylish-table tbody td:nth-child(4) {
+				color: #000000 !important;
+			}
+			#statistics-section .stylish-table tbody tr:hover {
+				background: rgba(255, 195, 0, 0.10) !important;
+			}
+			#statistics-section .btn-pagination.active,
+			#statistics-section .pagination-numbers .btn.active {
+				background: #ffc300 !important;
+				color: #000000 !important;
+				border-color: #ffc300 !important;
+			}
 		</style>
 	</head>
 	<body>
@@ -1233,6 +1310,31 @@
 							<button class="btn btn-secondary" onclick="exportSalesStatistics()" style="padding: 10px 20px; border-radius: 8px;">
 								📥 Export to Excel
 							</button>
+						</div>
+					</div>
+
+					<!-- Total Amount / Commission Breakdown -->
+					<div class="table-container" style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px;">
+						<div class="table-header" style="padding: 15px 20px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white;">
+							<h3 style="margin: 0;">💰 Total Amount (Selected Period)</h3>
+						</div>
+						<div class="table-responsive" style="overflow-x: auto;">
+							<table style="width: 100%; border-collapse: collapse;">
+								<tbody>
+									<tr>
+										<td style="padding: 16px 20px; border-bottom: 1px solid #eee; font-weight: 500;">Gross Sales (Delivered Orders)</td>
+										<td style="padding: 16px 20px; border-bottom: 1px solid #eee; text-align: right; font-weight: 700; color: #11998e; font-size: 1.05em;" id="market-gross-sales">$0.00</td>
+									</tr>
+									<tr>
+										<td style="padding: 16px 20px; border-bottom: 1px solid #eee; font-weight: 500;">Main Admin Commission (2%)</td>
+										<td style="padding: 16px 20px; border-bottom: 1px solid #eee; text-align: right; font-weight: 700; color: #e74c3c; font-size: 1.05em;" id="market-commission-amount">-$0.00</td>
+									</tr>
+									<tr style="background: #f0fff4;">
+										<td style="padding: 16px 20px; font-weight: 800;">Net Earnings (You Keep)</td>
+										<td style="padding: 16px 20px; text-align: right; font-weight: 800; color: #0b4fed; font-size: 1.15em;" id="market-net-earnings">$0.00</td>
+									</tr>
+								</tbody>
+							</table>
 						</div>
 					</div>
 
@@ -13813,6 +13915,19 @@
 				document.getElementById('stats-total-quantity').textContent = summary.totalQuantitySold.toLocaleString();
 				document.getElementById('stats-total-orders').textContent = summary.totalOrders.toLocaleString();
 				document.getElementById('stats-unique-products').textContent = summary.uniqueProducts.toLocaleString();
+
+				// Total amount breakdown: 2% of gross product sales goes to the main admin.
+				const COMMISSION_RATE = 0.02;
+				const gross = Number(summary.totalRevenue) || 0;
+				const commission = gross * COMMISSION_RATE;
+				const net = gross - commission;
+				const fmt = (n) => `$${(Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+				const grossEl = document.getElementById('market-gross-sales');
+				const commEl = document.getElementById('market-commission-amount');
+				const netEl = document.getElementById('market-net-earnings');
+				if (grossEl) grossEl.textContent = fmt(gross);
+				if (commEl) commEl.textContent = `-${fmt(commission)}`;
+				if (netEl) netEl.textContent = fmt(net);
 			}
 
 			// Update pagination controls for sales statistics

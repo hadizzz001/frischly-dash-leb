@@ -2210,7 +2210,9 @@ exports.getProductSalesStats = async (req, res) => {
 					productPicture: { $first: "$productDetails.picture" },
 					productIsActive: { $first: "$productDetails.isActive" },
 					totalQuantitySold: { $sum: "$items.quantity" },
-					totalRevenue: { $sum: "$items.totalPrice" },
+					totalRevenue: {
+						$sum: { $multiply: ["$items.totalPrice", "$items.quantity"] },
+					},
 					orderCount: { $sum: 1 },
 					averageQuantityPerOrder: { $avg: "$items.quantity" },
 					firstSaleDate: { $min: "$createdAt" },
@@ -2264,7 +2266,9 @@ exports.getProductSalesStats = async (req, res) => {
 			{
 				$group: {
 					_id: null,
-					totalRevenue: { $sum: "$items.totalPrice" },
+					totalRevenue: {
+						$sum: { $multiply: ["$items.totalPrice", "$items.quantity"] },
+					},
 					totalQuantitySold: { $sum: "$items.quantity" },
 					totalOrders: { $addToSet: "$_id" },
 					uniqueProducts: { $addToSet: "$items.product" },
@@ -2312,6 +2316,171 @@ exports.getProductSalesStats = async (req, res) => {
 		res.status(500).json({
 			success: false,
 			message: "Error fetching product sales statistics",
+			error: error.message,
+		});
+	}
+};
+
+// @desc    Per-market sales totals + 2% platform commission for the main admin.
+//          The main admin earns 2% of every market's product sales (delivered
+//          orders). Returns a per-market breakdown plus grand totals, scoped to
+//          the same time period the Sales Statistics page is filtered by.
+// @route   GET /api/orders/market-commission
+// @access  Private (Admin, Manager)
+exports.getMarketCommissionStats = async (req, res) => {
+	try {
+		const { dateFrom, dateTo, timeRange } = req.query;
+		const COMMISSION_RATE = 0.02; // 2% to the main admin
+
+		// Build the same date filter used by getProductSalesStats.
+		let dateFilter = {};
+		const now = new Date();
+		if (timeRange === "week") {
+			const weekAgo = new Date(now);
+			weekAgo.setDate(weekAgo.getDate() - 7);
+			dateFilter = { $gte: weekAgo, $lte: now };
+		} else if (timeRange === "month") {
+			const monthAgo = new Date(now);
+			monthAgo.setMonth(monthAgo.getMonth() - 1);
+			dateFilter = { $gte: monthAgo, $lte: now };
+		} else if (timeRange === "year") {
+			const yearAgo = new Date(now);
+			yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+			dateFilter = { $gte: yearAgo, $lte: now };
+		} else if (dateFrom || dateTo) {
+			if (dateFrom) {
+				const fromDate = new Date(dateFrom);
+				if (!isNaN(fromDate.getTime())) dateFilter.$gte = fromDate;
+			}
+			if (dateTo) {
+				const toDate = new Date(dateTo);
+				if (!isNaN(toDate.getTime())) {
+					toDate.setHours(23, 59, 59, 999);
+					dateFilter.$lte = toDate;
+				}
+			}
+		}
+
+		// Only delivered orders that belong to a market (market != null).
+		const matchStage = {
+			isActive: true,
+			status: "delivered",
+			market: { $ne: null },
+		};
+		if (Object.keys(dateFilter).length > 0) {
+			matchStage.createdAt = dateFilter;
+		}
+
+		const pipeline = [
+			{ $match: matchStage },
+			{ $unwind: "$items" },
+			{
+				$group: {
+					_id: "$market",
+					totalSales: {
+						$sum: { $multiply: ["$items.totalPrice", "$items.quantity"] },
+					},
+					orderIds: { $addToSet: "$_id" },
+				},
+			},
+			{
+				$lookup: {
+					from: "markets",
+					localField: "_id",
+					foreignField: "_id",
+					as: "marketInfo",
+				},
+			},
+			{ $unwind: { path: "$marketInfo", preserveNullAndEmptyArrays: true } },
+			{
+				$project: {
+					_id: 0,
+					marketId: "$_id",
+					marketName: { $ifNull: ["$marketInfo.name", "Unknown Market"] },
+					orderCount: { $size: "$orderIds" },
+					totalSales: { $round: ["$totalSales", 2] },
+					commission: {
+						$round: [{ $multiply: ["$totalSales", COMMISSION_RATE] }, 2],
+					},
+				},
+			},
+			{ $sort: { totalSales: -1 } },
+		];
+
+		const data = await Order.aggregate(pipeline);
+
+		const totalSales = data.reduce((sum, m) => sum + (m.totalSales || 0), 0);
+		const totalCommission = data.reduce(
+			(sum, m) => sum + (m.commission || 0),
+			0,
+		);
+		const totalOrders = data.reduce((sum, m) => sum + (m.orderCount || 0), 0);
+
+		// Our own (main-store) sales: delivered orders that do NOT belong to a
+		// market (market is null/absent). These are the admin's own items.
+		const ownMatch = {
+			isActive: true,
+			status: "delivered",
+			$or: [{ market: null }, { market: { $exists: false } }],
+		};
+		if (Object.keys(dateFilter).length > 0) {
+			ownMatch.createdAt = dateFilter;
+		}
+		const ownAgg = await Order.aggregate([
+			{ $match: ownMatch },
+			{ $unwind: "$items" },
+			{
+				$group: {
+					_id: null,
+					totalSales: {
+						$sum: { $multiply: ["$items.totalPrice", "$items.quantity"] },
+					},
+					totalQuantitySold: { $sum: "$items.quantity" },
+					orderIds: { $addToSet: "$_id" },
+				},
+			},
+			{
+				$project: {
+					_id: 0,
+					totalSales: { $round: ["$totalSales", 2] },
+					totalQuantitySold: 1,
+					totalOrders: { $size: "$orderIds" },
+				},
+			},
+		]);
+		const ownSales = ownAgg[0] || {
+			totalSales: 0,
+			totalQuantitySold: 0,
+			totalOrders: 0,
+		};
+
+		// Main admin total earnings = own main-store sales + 2% market commission.
+		const grandTotalEarnings =
+			Math.round((ownSales.totalSales + totalCommission) * 100) / 100;
+
+		res.json({
+			success: true,
+			data,
+			totals: {
+				marketCount: data.length,
+				totalOrders,
+				totalSales: Math.round(totalSales * 100) / 100,
+				totalCommission: Math.round(totalCommission * 100) / 100,
+				commissionRate: COMMISSION_RATE,
+			},
+			ownSales,
+			grandTotalEarnings,
+			filters: {
+				timeRange: timeRange || "custom",
+				dateFrom: dateFilter.$gte || null,
+				dateTo: dateFilter.$lte || null,
+			},
+		});
+	} catch (error) {
+		console.error("Error fetching market commission statistics:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error fetching market commission statistics",
 			error: error.message,
 		});
 	}
