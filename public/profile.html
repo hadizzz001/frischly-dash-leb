@@ -261,6 +261,45 @@
 						</div>
 					</div>
 
+					<div class="profile-section" id="my-deliveries-section" style="display:none;">
+						<h3>📦 My Deliveries</h3>
+						<p style="color:#666;margin:-6px 0 14px;font-size:14px;">
+							Orders assigned to you. Tap
+							<strong>Mark Delivered</strong> once you drop one off.
+						</p>
+						<div style="margin-bottom:12px;">
+							<button
+								type="button"
+								class="btn"
+								style="background:#17a2b8;color:#fff;"
+								onclick="loadMyDeliveries()"
+							>
+								🔄 Refresh
+							</button>
+						</div>
+						<div style="overflow-x:auto;">
+							<table style="width:100%;border-collapse:collapse;font-size:14px;">
+								<thead>
+									<tr style="background:#f8f9fa;text-align:left;">
+										<th style="padding:10px;border-bottom:2px solid #eee;">Order #</th>
+										<th style="padding:10px;border-bottom:2px solid #eee;">Customer</th>
+										<th style="padding:10px;border-bottom:2px solid #eee;">Items</th>
+										<th style="padding:10px;border-bottom:2px solid #eee;">Total</th>
+										<th style="padding:10px;border-bottom:2px solid #eee;">Status</th>
+										<th style="padding:10px;border-bottom:2px solid #eee;">Action</th>
+									</tr>
+								</thead>
+								<tbody id="deliveries-table-body">
+									<tr>
+										<td colspan="6" style="padding:18px;text-align:center;color:#888;">
+											Loading…
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+
 					<div class="profile-section">
 						<h3>Address Information</h3>
 						<div class="profile-item">
@@ -733,6 +772,12 @@
 							if (sec) sec.style.display = "";
 							// Try silent auto-start; if blocked, the button still works.
 							setTimeout(() => tryAutoStartLocation(), 300);
+							// Show the driver's assigned orders right here on the profile.
+							const delSec = document.getElementById(
+								"my-deliveries-section"
+							);
+							if (delSec) delSec.style.display = "";
+							loadMyDeliveries();
 						}
 
 						// Update address
@@ -758,6 +803,95 @@
 				} catch (error) {
 					showMessage("Failed to load profile. Please try again.", "error");
 					showLoading(false);
+				}
+			}
+
+			// ───────── Driver deliveries (rider / market_driver) ─────────
+			// The backend automatically scopes /api/orders to the logged-in driver's
+			// own assigned orders, so we just ask for the ones still in progress.
+			async function loadMyDeliveries() {
+				const tbody = document.getElementById("deliveries-table-body");
+				if (!tbody) return;
+				tbody.innerHTML =
+					'<tr><td colspan="6" style="padding:18px;text-align:center;color:#888;">Loading…</td></tr>';
+				try {
+					const res = await fetch(
+						`${API_BASE_URL}/orders?status=${encodeURIComponent(
+							"OnTheWay,ready for pickup"
+						)}&limit=50`,
+						{
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+						}
+					);
+					if (!res.ok) {
+						tbody.innerHTML =
+							'<tr><td colspan="6" style="padding:18px;text-align:center;color:#c00;">Failed to load deliveries.</td></tr>';
+						return;
+					}
+					const data = await res.json();
+					renderDeliveries(data.data || []);
+				} catch (e) {
+					tbody.innerHTML =
+						'<tr><td colspan="6" style="padding:18px;text-align:center;color:#c00;">Error loading deliveries.</td></tr>';
+				}
+			}
+
+			function renderDeliveries(orders) {
+				const tbody = document.getElementById("deliveries-table-body");
+				if (!tbody) return;
+				if (!orders.length) {
+					tbody.innerHTML =
+						'<tr><td colspan="6" style="padding:18px;text-align:center;color:#888;">No orders assigned to you right now.</td></tr>';
+					return;
+				}
+				tbody.innerHTML = orders
+					.map((o) => {
+						const customer = (o.customer && o.customer.name) || "N/A";
+						const itemCount = (o.items && o.items.length) || 0;
+						const total = (o.total || 0).toFixed(2);
+						const status = o.status || "pending";
+						const action =
+							status === "OnTheWay"
+								? `<button class="btn" style="background:#28a745;color:#fff;padding:8px 12px;" onclick="markDelivered('${o._id}')">✓ Mark Delivered</button>`
+								: '<span style="color:#888;">—</span>';
+						return `
+							<tr>
+								<td style="padding:10px;border-bottom:1px solid #f0f0f0;"><strong>${o.orderNumber}</strong></td>
+								<td style="padding:10px;border-bottom:1px solid #f0f0f0;">${customer}</td>
+								<td style="padding:10px;border-bottom:1px solid #f0f0f0;">${itemCount} item${
+							itemCount !== 1 ? "s" : ""
+						}</td>
+								<td style="padding:10px;border-bottom:1px solid #f0f0f0;">$${total}</td>
+								<td style="padding:10px;border-bottom:1px solid #f0f0f0;">${status}</td>
+								<td style="padding:10px;border-bottom:1px solid #f0f0f0;">${action}</td>
+							</tr>`;
+					})
+					.join("");
+			}
+
+			async function markDelivered(orderId) {
+				if (!confirm("Mark this order as delivered?")) return;
+				try {
+					const res = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+						method: "PUT",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({ status: "delivered" }),
+					});
+					const result = await res.json().catch(() => ({}));
+					if (res.ok) {
+						showMessage("Order marked as delivered.", "success");
+						loadMyDeliveries();
+					} else {
+						showMessage(result.message || "Failed to update order.", "error");
+					}
+				} catch (e) {
+					showMessage("Error updating order.", "error");
 				}
 			}
 

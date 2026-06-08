@@ -135,17 +135,36 @@ exports.getOrders = async (req, res) => {
 			filter["customer.email"] = req.user.email;
 		}
 
+		// Riders / market drivers only ever see orders assigned to them. We resolve
+		// their Rider document (assignedRider references Rider, not User) and scope
+		// to it. If they have no Rider doc, return nothing.
+		if (req.user.role === "rider" || req.user.role === "market_driver") {
+			const myRider = await Rider.findOne({ user: req.user.id }).select("_id");
+			filter.assignedRider = myRider ? myRider._id : null;
+		}
+
 		// Market admins only see orders from their market
 		if (req.user.role === "market") {
 			filter.market = req.user.marketId;
-		} else if (req.query.market) {
-			// Admin/manager/staff can filter by market via query param
+		} else if (
+			req.query.market !== undefined &&
+			req.query.market !== "" &&
+			req.query.market !== "all"
+		) {
+			// Admin/manager/staff targeting a specific market via query param.
+			// The Market Management → Orders tab (market-orders.html) uses
+			// ?market=<id> to show a single market's orders.
 			const m = req.query.market;
 			if (m === "none" || m === "null") {
 				filter.market = null;
 			} else if (mongoose.Types.ObjectId.isValid(m)) {
 				filter.market = m;
 			}
+		} else if (["admin", "manager", "staff"].includes(req.user.role)) {
+			// Main Orders page: show ONLY main-store orders. Market orders are
+			// not listed here — they are managed per-market on the Market
+			// Management → Orders tab. Pass ?market=all to override.
+			filter.market = null;
 		}
 
 		// Search functionality
@@ -221,6 +240,90 @@ exports.getOrders = async (req, res) => {
 // @desc    Get all orders excluding pending, confirmed, and processing
 // @route   GET /api/orders/runningOrder
 // @access  Private
+// @desc    Get the live location of the rider assigned to an order
+// @route   GET /api/orders/:id/rider-location
+// @access  Private (order owner / admin / manager / staff / market / rider)
+exports.getOrderRiderLocation = async (req, res) => {
+	try {
+		const order = await Order.findById(req.params.id)
+			.select("customer assignedRider status market orderNumber")
+			.populate({
+				path: "assignedRider",
+				select: "currentLocation status vehicleType vehicleNumber zones user",
+				populate: { path: "user", select: "name phoneNumber address" },
+			});
+
+		if (!order) {
+			return res
+				.status(404)
+				.json({ success: false, message: "Order not found" });
+		}
+
+		// Authorization: the customer who owns the order, privileged staff,
+		// or the market that owns the order may view the rider location.
+		const role = req.user.role;
+		const isPrivileged = ["admin", "manager", "staff"].includes(role);
+		const isOwner =
+			!!order.customer &&
+			!!order.customer.email &&
+			!!req.user.email &&
+			order.customer.email.toLowerCase() === req.user.email.toLowerCase();
+		const isMarketOwner =
+			role === "market" &&
+			!!order.market &&
+			String(order.market) === String(req.user.marketId);
+		const isAssignedRider = role === "rider" || role === "market_driver";
+
+		if (!isPrivileged && !isOwner && !isMarketOwner && !isAssignedRider) {
+			return res
+				.status(403)
+				.json({ success: false, message: "Not authorized to view this order" });
+		}
+
+		if (!order.assignedRider) {
+			return res.json({
+				success: true,
+				data: { hasRider: false, hasLocation: false, orderStatus: order.status },
+			});
+		}
+
+		const rider = order.assignedRider;
+		const loc = rider.currentLocation || {};
+		const hasLocation =
+			typeof loc.latitude === "number" &&
+			typeof loc.longitude === "number";
+
+		return res.json({
+			success: true,
+			data: {
+				hasRider: true,
+				hasLocation,
+				latitude: hasLocation ? loc.latitude : null,
+				longitude: hasLocation ? loc.longitude : null,
+				lastUpdated: loc.lastUpdated || null,
+				riderStatus: rider.status || null,
+				orderStatus: order.status,
+				rider: {
+					name: (rider.user && rider.user.name) || null,
+					phone: (rider.user && rider.user.phoneNumber) || null,
+					vehicleType: rider.vehicleType || null,
+					vehicleNumber: rider.vehicleNumber || null,
+				},
+				// Fallback location hints (used when there is no live GPS yet) so
+				// the client can geocode an approximate position, exactly like the
+				// admin riderslocation dashboard does.
+				address: (rider.user && rider.user.address) || null,
+				zones: Array.isArray(rider.zones) ? rider.zones : [],
+			},
+		});
+	} catch (error) {
+		console.error("Error getting order rider location:", error);
+		return res
+			.status(500)
+			.json({ success: false, message: "Error getting rider location" });
+	}
+};
+
 exports.getOrdersForRiders = async (req, res) => {
 	try {
 		const {
@@ -1144,6 +1247,23 @@ exports.updateOrder = async (req, res) => {
 				success: false,
 				message: "You are not authorized to modify this order",
 			});
+		}
+
+		// Riders / market drivers may claim an unassigned order (pick up) or modify
+		// one already assigned to them (e.g. mark delivered), but never an order
+		// assigned to a different rider.
+		if (req.user.role === "rider" || req.user.role === "market_driver") {
+			const myRider = await Rider.findOne({ user: req.user.id }).select("_id");
+			const mine = myRider ? String(myRider._id) : null;
+			const assignedTo = order.assignedRider
+				? String(order.assignedRider)
+				: null;
+			if (!mine || (assignedTo && assignedTo !== mine)) {
+				return res.status(403).json({
+					success: false,
+					message: "You can only update orders assigned to you",
+				});
+			}
 		}
 
 		// Check if order can be modified

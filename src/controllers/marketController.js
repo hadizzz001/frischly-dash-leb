@@ -765,6 +765,59 @@ error: error.message,
 	}
 };
 
+// Public: list active categories for a specific market (mobile app)
+exports.getMarketCategories = async (req, res) => {
+	try {
+		const { id } = req.params;
+		if (!mongoose.Types.ObjectId.isValid(id)) {
+			return res.status(400).json({
+				success: false,
+				message: "Invalid market id",
+			});
+		}
+
+		const MarketCategory = require("../models/MarketCategory");
+		const MarketSubcategory = require("../models/MarketSubcategory");
+
+		const [categories, subcategories] = await Promise.all([
+			MarketCategory.find({ market: id, isActive: true })
+				.select("name image icon sortOrder")
+				.sort({ sortOrder: 1, name: 1 })
+				.lean(),
+			MarketSubcategory.find({ market: id, isActive: true })
+				.select("name category sortOrder")
+				.sort({ sortOrder: 1, name: 1 })
+				.lean(),
+		]);
+
+		// Group subcategories under their parent category so the mobile app
+		// can show each market's own categories AND subcategories.
+		const byCategory = new Map();
+		subcategories.forEach((sub) => {
+			const key = String(sub.category);
+			if (!byCategory.has(key)) byCategory.set(key, []);
+			byCategory.get(key).push({ _id: sub._id, name: sub.name });
+		});
+
+		const data = categories.map((cat) => ({
+			_id: cat._id,
+			name: cat.name,
+			image: cat.image,
+			icon: cat.icon,
+			subcategories: byCategory.get(String(cat._id)) || [],
+		}));
+
+		res.json({ success: true, data, subcategories });
+	} catch (error) {
+		console.error("Get market categories error:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error fetching market categories",
+			error: error.message,
+		});
+	}
+};
+
 // Public: list active products that belong to a specific market (mobile app)
 exports.getMarketProducts = async (req, res) => {
 	try {

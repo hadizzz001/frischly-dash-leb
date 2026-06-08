@@ -1000,7 +1000,7 @@
 						</button>
 						<button
 							class="btn btn-success"
-							onclick="window.location.href='/ordermanagement'"
+							onclick="window.location.href='/ordermanagement?ctx=market'"
 						>
 							📋 Staff Manage Orders
 						</button>
@@ -11197,6 +11197,9 @@
 					<h2>Order Details</h2>
 					<div class="order-number" id="modal-order-number"></div>
 					<div class="modal-actions">
+						<button id="modal-send-rider-btn" class="btn btn-primary" style="display:none;background:#6f42c1;color:#fff;">
+							<span class="icon">🚚</span> Send Rider
+						</button>
 						<button class="btn btn-primary print-btn" onclick="printOrderInvoice()">
 							<span class="icon">🖨️</span> Print Invoice
 						</button>
@@ -11862,6 +11865,115 @@
 				return colors[status] || "#6c757d";
 			}
 
+			// ===== Assign Driver → mark order On The Way =====
+			let assignOrderId = null;
+			let assignOrderNumber = null;
+
+			function ensureAssignDriverModal() {
+				if (document.getElementById("assign-driver-modal")) return;
+				const overlay = document.createElement("div");
+				overlay.id = "assign-driver-modal";
+				overlay.style.cssText =
+					"position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;z-index:3000;align-items:center;justify-content:center;padding:20px;";
+				overlay.innerHTML = `
+					<div style="background:#fff;max-width:460px;width:100%;border-radius:12px;padding:24px;box-shadow:0 10px 40px rgba(0,0,0,.2);">
+						<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+							<h3 style="margin:0;">🚚 Assign Driver</h3>
+							<span style="cursor:pointer;font-size:26px;color:#888;line-height:1;" onclick="closeAssignDriverModal()">&times;</span>
+						</div>
+						<p style="color:#666;font-size:14px;margin:0 0 14px;">Select a driver to deliver this order. It will be marked <strong>On The Way</strong>.</p>
+						<label style="display:block;font-weight:600;margin-bottom:6px;font-size:14px;">Driver</label>
+						<select id="assign-driver-select" style="width:100%;padding:10px;border:1px solid #ced4da;border-radius:8px;font-size:14px;"></select>
+						<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:22px;">
+							<button class="btn btn-secondary" onclick="closeAssignDriverModal()">Cancel</button>
+							<button class="btn btn-primary" onclick="confirmAssignDriver()">Assign &amp; Send</button>
+						</div>
+					</div>`;
+				document.body.appendChild(overlay);
+			}
+
+			async function openAssignDriverModal(orderId, orderNumber) {
+				assignOrderId = orderId;
+				assignOrderNumber = orderNumber;
+				ensureAssignDriverModal();
+				const modal = document.getElementById("assign-driver-modal");
+				const select = document.getElementById("assign-driver-select");
+				select.innerHTML = '<option value="">Loading drivers…</option>';
+				modal.style.display = "flex";
+				try {
+					// Market drivers are login-capable Rider docs scoped to this market.
+					const res = await fetch(`${API_BASE_URL}/market-admin/drivers`, {
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+					const data = await res.json();
+					const riders = Array.isArray(data.data) ? data.data : [];
+					if (!riders.length) {
+						select.innerHTML =
+							'<option value="">No drivers yet. Add a driver in the Staff/Drivers section first.</option>';
+						return;
+					}
+					select.innerHTML = riders
+						.map((r) => {
+							const name = (r.user && r.user.name) || r.name || "Driver";
+							const zones = Array.isArray(r.zones) ? r.zones.join(", ") : r.zone || "";
+							return `<option value="${r._id}">${name}${zones ? " — " + zones : ""} (${r.status || "available"})</option>`;
+						})
+						.join("");
+				} catch (e) {
+					select.innerHTML = '<option value="">Failed to load drivers</option>';
+				}
+			}
+
+			function closeAssignDriverModal() {
+				const modal = document.getElementById("assign-driver-modal");
+				if (modal) modal.style.display = "none";
+				assignOrderId = null;
+				assignOrderNumber = null;
+			}
+
+			async function confirmAssignDriver() {
+				const select = document.getElementById("assign-driver-select");
+				const riderId = select ? select.value : "";
+				if (!riderId) {
+					showMessage("Please select a driver", "error");
+					return;
+				}
+				try {
+					const res = await fetch(`${API_BASE_URL}/orders/${assignOrderId}`, {
+						method: "PUT",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							status: "OnTheWay",
+							assignedRider: riderId,
+							riderAssignedAt: new Date().toISOString(),
+						}),
+					});
+					const result = await res.json();
+					if (res.ok) {
+						showMessage(
+							`Order "${assignOrderNumber}" assigned and marked On The Way`,
+							"success"
+						);
+						closeAssignDriverModal();
+						loadOrdersWithFilters(
+							currentOrdersPage,
+							ordersPageSize,
+							currentOrderFilters
+						);
+					} else {
+						showMessage(result.message || "Failed to assign driver", "error");
+					}
+				} catch (e) {
+					showMessage("Error assigning driver: " + e.message, "error");
+				}
+			}
+
 			// Update pagination
 			function updateOrdersPagination(pagination) {
 				if (!pagination) return;
@@ -12337,6 +12449,21 @@
 				document.getElementById(
 					"modal-total"
 				).textContent = `$${order.total.toFixed(2)}`;
+
+				// Show "Send Rider" only when the order is ready for pickup
+				const sendRiderBtn = document.getElementById("modal-send-rider-btn");
+				if (sendRiderBtn) {
+					if (order.status === "ready for pickup") {
+						sendRiderBtn.style.display = "inline-flex";
+						sendRiderBtn.onclick = function () {
+							closeOrderDetails();
+							openAssignDriverModal(order._id, order.orderNumber);
+						};
+					} else {
+						sendRiderBtn.style.display = "none";
+						sendRiderBtn.onclick = null;
+					}
+				}
 
 				// Show the modal
 				document.getElementById("order-details-modal").style.display = "block";

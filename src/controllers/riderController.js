@@ -225,6 +225,36 @@ exports.getRiders = async (req, res) => {
 	}
 };
 
+// @desc    Get the Rider profile for the currently logged-in user
+// @route   GET /api/riders/me
+// @access  Private (Rider, Market Driver)
+exports.getMyRiderProfile = async (req, res) => {
+	try {
+		const rider = await Rider.findOne({ user: req.user.id }).populate(
+			"user",
+			"name email phoneNumber address isActive role",
+		);
+		if (!rider) {
+			return res.status(404).json({
+				success: false,
+				message: "No rider profile found for this account",
+			});
+		}
+		res.json({
+			success: true,
+			data: rider,
+			message: "Rider profile retrieved successfully",
+		});
+	} catch (error) {
+		console.error("Error getting my rider profile:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error fetching rider profile",
+			error: error.message,
+		});
+	}
+};
+
 // @desc    Get single rider by ID
 // @route   GET /api/riders/:id
 // @access  Private (Admin, Manager, Rider themselves)

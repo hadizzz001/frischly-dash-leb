@@ -415,7 +415,7 @@ const login = async (req, res) => {
 		}
 
 		// Check if user has required role for  access
-		const allowedRoles = ["manager", "admin", "customer", "rider", "staff"];
+		const allowedRoles = ["manager", "admin", "customer", "rider", "staff", "market_driver"];
 		if (!allowedRoles.includes(user.role)) {
 			return res.status(403).json({
 				success: false,
@@ -835,6 +835,8 @@ const loginProfile = async (req, res) => {
 				redirectUrl:
 					user.role === "manager" || user.role === "admin"
 						? "dashboard.html"
+						: user.role === "rider" || user.role === "market_driver"
+						? "/rider"
 						: "profile.html",
 			},
 		});

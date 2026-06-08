@@ -234,52 +234,112 @@ exports.getProducts = async (req, res) => {
 			filter.market = { $in: [...cityMarketIds, null] };
 		}
 
-		// Handle category filtering (same as getProductsByCategory)
+		// Handle category filtering. Market-owned products use the
+		// tenant-scoped MarketCategory / MarketSubcategory collections, so
+		// resolve those when a specific market is browsed; else use the main
+		// catalog (same behaviour as getProductsByCategory).
 		if (category) {
-			const Category = require("../models/Category");
-			let categoryDoc;
+			const isMarketScoped =
+				filter.market &&
+				!filter.market.$in &&
+				mongoose.Types.ObjectId.isValid(filter.market);
 
-			if (mongoose.Types.ObjectId.isValid(category)) {
-				categoryDoc = await Category.findById(category);
-			} else {
-				categoryDoc = await Category.findOne({
-					name: new RegExp(category, "i"),
+			if (isMarketScoped) {
+				const MarketCategory = require("../models/MarketCategory");
+				const MarketSubcategory = require("../models/MarketSubcategory");
+				let marketCategoryDoc;
+
+				if (mongoose.Types.ObjectId.isValid(category)) {
+					marketCategoryDoc = await MarketCategory.findOne({
+						_id: category,
+						market: filter.market,
+					});
+				} else {
+					marketCategoryDoc = await MarketCategory.findOne({
+						market: filter.market,
+						name: new RegExp(`^${category}$`, "i"),
+						isActive: true,
+					});
+				}
+
+				if (!marketCategoryDoc) {
+					return res.status(404).json({
+						success: false,
+						message: `Category "${category}" not found`,
+					});
+				}
+
+				const marketSubcategories = await MarketSubcategory.find({
+					market: filter.market,
+					category: marketCategoryDoc._id,
 					isActive: true,
-				});
+				}).select("_id");
+
+				if (marketSubcategories.length === 0) {
+					return res.json({
+						success: true,
+						data: [],
+						pagination: {
+							currentPage: parseInt(page),
+							totalPages: 0,
+							totalProducts: 0,
+							hasNextPage: false,
+							hasPrevPage: false,
+							limit: parseInt(limit),
+						},
+						message: `No subcategories found in category "${marketCategoryDoc.name}"`,
+					});
+				}
+
+				filter.subcategory = {
+					$in: marketSubcategories.map((sub) => sub._id),
+				};
+			} else {
+				const Category = require("../models/Category");
+				let categoryDoc;
+
+				if (mongoose.Types.ObjectId.isValid(category)) {
+					categoryDoc = await Category.findById(category);
+				} else {
+					categoryDoc = await Category.findOne({
+						name: new RegExp(category, "i"),
+						isActive: true,
+					});
+				}
+
+				if (!categoryDoc) {
+					return res.status(404).json({
+						success: false,
+						message: `Category "${category}" not found`,
+					});
+				}
+
+				// Find all subcategories in this category
+				const Subcategory = require("../models/Subcategory");
+				const subcategories = await Subcategory.find({
+					parentCategory: categoryDoc._id,
+					isActive: true,
+				}).select("_id");
+
+				if (subcategories.length === 0) {
+					return res.json({
+						success: true,
+						data: [],
+						pagination: {
+							currentPage: parseInt(page),
+							totalPages: 0,
+							totalProducts: 0,
+							hasNextPage: false,
+							hasPrevPage: false,
+							limit: parseInt(limit),
+						},
+						message: `No subcategories found in category "${categoryDoc.name}"`,
+					});
+				}
+
+				const subcategoryIds = subcategories.map((sub) => sub._id);
+				filter.subcategory = { $in: subcategoryIds };
 			}
-
-			if (!categoryDoc) {
-				return res.status(404).json({
-					success: false,
-					message: `Category "${category}" not found`,
-				});
-			}
-
-			// Find all subcategories in this category
-			const Subcategory = require("../models/Subcategory");
-			const subcategories = await Subcategory.find({
-				parentCategory: categoryDoc._id,
-				isActive: true,
-			}).select("_id");
-
-			if (subcategories.length === 0) {
-				return res.json({
-					success: true,
-					data: [],
-					pagination: {
-						currentPage: parseInt(page),
-						totalPages: 0,
-						totalProducts: 0,
-						hasNextPage: false,
-						hasPrevPage: false,
-						limit: parseInt(limit),
-					},
-					message: `No subcategories found in category "${categoryDoc.name}"`,
-				});
-			}
-
-			const subcategoryIds = subcategories.map((sub) => sub._id);
-			filter.subcategory = { $in: subcategoryIds };
 		}
 
 		if (subcategory) {

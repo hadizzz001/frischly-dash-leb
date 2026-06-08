@@ -469,16 +469,16 @@
 			<!-- Orders Section -->
 			<div class="orders-section">
 				<div class="section-header">
-					<h2>Ready Orders</h2>
-					<p>Orders ready for pickup and delivery</p>
+					<h2>My Deliveries</h2>
+					<p>Orders assigned to you — mark each as delivered once dropped off</p>
 				</div>
 
 				<div class="section-actions">
-					<button class="btn btn-primary" onclick="loadReadyOrders()">
-						<i class="fas fa-sync"></i> Refresh Orders
+					<button class="btn btn-primary" onclick="loadMyDeliveries()">
+						<i class="fas fa-sync"></i> Refresh
 					</button>
-					<button class="btn btn-secondary" onclick="loadMyDeliveries()">
-						<i class="fas fa-truck"></i> My Deliveries
+					<button class="btn btn-secondary" onclick="loadReadyOrders()">
+						<i class="fas fa-box"></i> Available Orders
 					</button>
 					<button class="btn btn-info" onclick="updateLocation()">
 						<i class="fas fa-map-marker-alt"></i> Update Location
@@ -542,12 +542,12 @@
 			let currentToken = localStorage.getItem("authToken");
 			let currentRefreshToken = localStorage.getItem("refreshToken");
 			let currentRider = null;
+			let currentUser = null;
 			let allOrders = [];
 
 			// Initialize the page
 			document.addEventListener("DOMContentLoaded", function () {
 				checkAuthentication();
-				loadReadyOrders();
 			});
 
 			// Check if rider is authenticated
@@ -575,18 +575,39 @@
 						}
 						return response.json();
 					})
-					.then((data) => {
+					.then(async (data) => {
 						if (data && data.success && data.data.user) {
 							const user = data.data.user;
-							if (user.role !== "rider") {
+							if (user.role !== "rider" && user.role !== "market_driver") {
 								showMessage("Access denied. Rider access only.", "error");
 								setTimeout(() => {
 									window.location.href = "signin.html";
 								}, 2000);
 								return;
 							}
-							currentRider = user;
+							currentUser = user;
 							updateWelcomeMessage(user);
+							// Resolve the Rider document for this account. Orders reference
+							// the Rider (not the User), so we need its _id to load the
+							// deliveries assigned to this driver.
+							try {
+								const rRes = await fetch(`${API_BASE_URL}/riders/me`, {
+									headers: {
+										Authorization: `Bearer ${currentToken}`,
+										"Content-Type": "application/json",
+									},
+								});
+								if (rRes.ok) {
+									const rData = await rRes.json();
+									currentRider = rData.data || user;
+								} else {
+									currentRider = user;
+								}
+							} catch (_) {
+								currentRider = user;
+							}
+							// Show the orders assigned to this driver.
+							loadMyDeliveries();
 							// Auto-start GPS tracking so admin can see live location.
 							startAutoLocationTracking();
 						} else {
@@ -707,10 +728,13 @@
 				showTableLoading(true, "Loading your deliveries...");
 
 				try {
+					// The backend scopes riders / market drivers to their own assigned
+					// orders automatically, so we don't pass an assignedRider id here.
+					// Show everything still in progress (assigned but not yet delivered).
 					const response = await fetch(
-						`${API_BASE_URL}/orders?assignedRider=${
-							currentRider._id
-						}&status=${encodeURIComponent("OnTheWay")}&limit=50`,
+						`${API_BASE_URL}/orders?status=${encodeURIComponent(
+							"OnTheWay,ready for pickup"
+						)}&limit=50`,
 						{
 							headers: {
 								Authorization: `Bearer ${currentToken}`,
@@ -723,6 +747,7 @@
 						const data = await response.json();
 						const deliveries = data.data || [];
 						displayOrders(deliveries);
+						updateStats(deliveries);
 						showMessage(
 							`Found ${deliveries.length} deliveries in progress`,
 							"info"
@@ -810,7 +835,7 @@
 					return `<button class="action-btn pickup" onclick="pickupOrder('${order._id}')">
 						<i class="fas fa-hand-paper"></i> Pick Up
 					</button>`;
-				} else if (order.status === "On the way") {
+				} else if (order.status === "OnTheWay" || order.status === "On the way") {
 					return `<button class="action-btn deliver" onclick="deliverOrder('${order._id}')">
 						<i class="fas fa-check"></i> Mark Delivered
 					</button>`;

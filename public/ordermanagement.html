@@ -1090,7 +1090,18 @@
 
 		<script>
 			// Global variables
-			let currentToken = localStorage.getItem("authToken");
+			// Context: market admins arrive from the market dashboard (?ctx=market)
+			// and authenticate with `marketToken`; main admin/staff use `authToken`.
+			// Detect explicitly so a stale authToken can't hide the market's drivers.
+			const _ctxParam = new URLSearchParams(location.search).get("ctx");
+			const _authToken = localStorage.getItem("authToken");
+			const _marketToken = localStorage.getItem("marketToken");
+			const IS_MARKET_CTX =
+				_ctxParam === "market" ||
+				(_ctxParam !== "admin" && !_authToken && !!_marketToken);
+			let currentToken = IS_MARKET_CTX
+				? _marketToken || _authToken
+				: _authToken || _marketToken;
 			let currentUser = null;
 			let allOrders = [];
 			let filteredOrders = [];
@@ -1328,8 +1339,8 @@
 							Mark Ready
 						</button>`;
 					case "ready for pickup":
-						return `<button class="action-btn edit" onclick="updateOrderStatus('${order._id}', 'OnTheWay')">
-							Mark OnTheWay
+						return `<button class="action-btn edit" onclick="openAssignDriverModal('${order._id}', '${order.orderNumber}')">
+							🚚 Mark OnTheWay
 						</button>`;
 					case "OnTheWay":
 						return `<button class="action-btn edit" onclick="updateOrderStatus('${order._id}', 'delivered')">
@@ -1401,6 +1412,139 @@
 					showMessage("Error updating order status", "error");
 				} finally {
 					hideLoading();
+				}
+			}
+
+			// ───── Assign driver / Send rider (opens when marking an order On The Way) ─────
+			let assignOrderId = null;
+			let assignOrderNumber = null;
+
+			function ensureAssignDriverModal() {
+				if (document.getElementById("assign-driver-modal")) return;
+				const overlay = document.createElement("div");
+				overlay.id = "assign-driver-modal";
+				overlay.style.cssText =
+					"position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;z-index:3000;align-items:center;justify-content:center;padding:20px;";
+				overlay.innerHTML = `
+					<div style="background:#fff;max-width:460px;width:100%;border-radius:12px;padding:24px;box-shadow:0 10px 40px rgba(0,0,0,.2);">
+						<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+							<h3 style="margin:0;">🚚 Assign Driver</h3>
+							<span style="cursor:pointer;font-size:26px;color:#888;line-height:1;" onclick="closeAssignDriverModal()">&times;</span>
+						</div>
+						<p style="color:#666;font-size:14px;margin:0 0 14px;">Select a driver to deliver this order. It will be marked <strong>On The Way</strong>.</p>
+						<label style="display:block;font-weight:600;margin-bottom:6px;font-size:14px;">Driver</label>
+						<select id="assign-driver-select" style="width:100%;padding:10px;border:1px solid #ced4da;border-radius:8px;font-size:14px;"></select>
+						<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:22px;">
+							<button class="btn btn-secondary" onclick="closeAssignDriverModal()">Cancel</button>
+							<button class="btn btn-primary" onclick="confirmAssignDriver()">Assign &amp; Send</button>
+						</div>
+					</div>`;
+				document.body.appendChild(overlay);
+			}
+
+			async function openAssignDriverModal(orderId, orderNumber) {
+				assignOrderId = orderId;
+				assignOrderNumber = orderNumber;
+				ensureAssignDriverModal();
+				const modal = document.getElementById("assign-driver-modal");
+				const select = document.getElementById("assign-driver-select");
+				select.innerHTML = '<option value="">Loading drivers…</option>';
+				modal.style.display = "flex";
+				try {
+					// Market admins see their own market's drivers; main admin sees main-store drivers.
+					const driversUrl = IS_MARKET_CTX
+						? `${API_BASE_URL}/market-admin/drivers`
+						: `${API_BASE_URL}/riders?limit=200`;
+					const res = await fetch(driversUrl, {
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+					const data = await res.json();
+					let riders = [];
+					if (IS_MARKET_CTX) {
+						riders = Array.isArray(data.data) ? data.data : [];
+					} else {
+						const all = (data.data && data.data.riders) || [];
+						// Main admin assigns ONLY its own (main-store) drivers, never a market's.
+						riders = all.filter((r) => !r.market);
+					}
+					if (!riders.length) {
+						select.innerHTML =
+							'<option value="">No drivers available. Add a driver first.</option>';
+						return;
+					}
+					select.innerHTML = riders
+						.map((r) => {
+							const name =
+								(r.user && r.user.name) ||
+								(r.userInfo && r.userInfo.name) ||
+								r.name ||
+								"Driver";
+							const zones = Array.isArray(r.zones)
+								? r.zones.join(", ")
+								: r.zone || "";
+							return `<option value="${r._id}">${name}${
+								zones ? " — " + zones : ""
+							} (${r.status || "available"})</option>`;
+						})
+						.join("");
+				} catch (e) {
+					select.innerHTML = '<option value="">Failed to load drivers</option>';
+				}
+			}
+
+			function closeAssignDriverModal() {
+				const modal = document.getElementById("assign-driver-modal");
+				if (modal) modal.style.display = "none";
+				assignOrderId = null;
+				assignOrderNumber = null;
+			}
+
+			async function confirmAssignDriver() {
+				const select = document.getElementById("assign-driver-select");
+				const riderId = select ? select.value : "";
+				if (!riderId) {
+					showMessage("Please select a driver", "error");
+					return;
+				}
+				try {
+					const ordersBase = IS_MARKET_CTX
+						? `${API_BASE_URL}/market-admin/orders`
+						: `${API_BASE_URL}/orders`;
+					const res = await fetch(`${ordersBase}/${assignOrderId}`, {
+						method: "PUT",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							status: "OnTheWay",
+							assignedRider: riderId,
+							riderAssignedAt: new Date().toISOString(),
+						}),
+					});
+					const result = await res.json();
+					if (res.ok) {
+						showMessage(
+							`Order "${assignOrderNumber}" assigned and marked On The Way`,
+							"success"
+						);
+						closeAssignDriverModal();
+						closeOrderDetailsModal();
+						loadOrders(
+							currentPage,
+							currentStatusFilter,
+							currentSearchFilter,
+							currentDateFromFilter,
+							currentDateToFilter
+						);
+					} else {
+						showMessage(result.message || "Failed to assign driver", "error");
+					}
+				} catch (e) {
+					showMessage("Error assigning driver: " + e.message, "error");
 				}
 			}
 

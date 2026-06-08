@@ -2,6 +2,7 @@ const express = require("express");
 const {
 	getRiders,
 	getRider,
+	getMyRiderProfile,
 	createRider,
 	updateRider,
 	updateRiderStatus,
@@ -29,6 +30,13 @@ router.get(
 );
 
 router.get("/", protect, authorize("admin", "manager"), getRiders);
+
+router.get(
+	"/me",
+	protect,
+	authorize("rider", "market_driver", "admin", "manager"),
+	getMyRiderProfile,
+);
 
 router.get("/:id", protect, authorize("admin", "manager", "rider", "market_driver"), getRider);
 

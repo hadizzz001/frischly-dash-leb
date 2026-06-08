@@ -15,6 +15,7 @@ const {
 	getOrdersForRiders,
 	verifyStripePayment,
 	getCustomerOrderCounts,
+	getOrderRiderLocation,
 } = require("../controllers/orderController");
 
 // Import middleware
@@ -54,20 +55,34 @@ router.get(
 router.get(
 	"/",
 	protect,
-	authorize("admin", "manager", "staff", "customer", "rider", "market"),
+	authorize("admin", "manager", "staff", "customer", "rider", "market", "market_driver"),
 	getOrders
 );
 router.get(
 	"/runningOrder",
 	protect,
-	authorize("admin", "manager", "staff", "customer", "rider"),
+	authorize("admin", "manager", "staff", "customer", "rider", "market_driver"),
 	getOrdersForRiders
 );
 router.get(
 	"/:id",
 	protect,
-	authorize("admin", "manager", "staff", "customer", "rider", "market"),
+	authorize("admin", "manager", "staff", "customer", "rider", "market", "market_driver"),
 	getOrder
+);
+router.get(
+	"/:id/rider-location",
+	protect,
+	authorize(
+		"admin",
+		"manager",
+		"staff",
+		"customer",
+		"rider",
+		"market",
+		"market_driver"
+	),
+	getOrderRiderLocation
 );
 router.post(
 	"/",
@@ -78,7 +93,7 @@ router.post(
 router.put(
 	"/:id",
 	protect,
-	authorize("admin", "manager", "staff", "rider", "market"),
+	authorize("admin", "manager", "staff", "rider", "market", "market_driver"),
 	updateOrder
 );
 router.patch(
@@ -90,7 +105,7 @@ router.patch(
 router.patch(
 	"/:id/status",
 	protect,
-	authorize("admin", "manager", "staff", "rider", "market"),
+	authorize("admin", "manager", "staff", "rider", "market", "market_driver"),
 	updateOrderStatus
 );
 router.patch(

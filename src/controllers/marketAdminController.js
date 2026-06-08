@@ -557,6 +557,48 @@ exports.listRiderUsers = async (req, res) => {
 exports.listMarketDrivers = async (req, res) => {
 	try {
 		const Rider = require("../models/Rider");
+
+		// Self-heal: every market_driver User should have a Rider doc, because
+		// Order.assignedRider references a Rider (not a User). Drivers created
+		// before the auto-create logic — or via other paths — can be missing one,
+		// which makes them show in the staff/drivers list (User-based) but NOT in
+		// the "assign driver" dropdown (Rider-based). Backfill the missing Rider
+		// docs on the fly so every driver becomes assignable.
+		const driverUsers = await User.find({
+			market: req.marketId,
+			role: "market_driver",
+			isActive: true,
+		}).select("_id");
+
+		if (driverUsers.length) {
+			const linkedUserIds = await Rider.find({
+				user: { $in: driverUsers.map((u) => u._id) },
+			}).distinct("user");
+			const linkedSet = new Set(linkedUserIds.map((id) => String(id)));
+			const missing = driverUsers.filter(
+				(u) => !linkedSet.has(String(u._id))
+			);
+			for (const u of missing) {
+				try {
+					await Rider.create({
+						user: u._id,
+						market: req.marketId,
+						zones: ["Default"],
+						vehicleType: "motorbike",
+						status: "available",
+						isActive: true,
+						isVerified: true,
+					});
+				} catch (e) {
+					console.error(
+						"[market-admin] Failed to backfill Rider for market_driver",
+						String(u._id) + ":",
+						e.message
+					);
+				}
+			}
+		}
+
 		const riders = await Rider.find({
 			market: req.marketId,
 			isActive: true,
@@ -1010,7 +1052,9 @@ exports.listOrders = async (req, res) => {
 	try {
 		const { page, limit, skip } = paginate(req.query);
 		const search = (req.query.search || "").trim();
-		const filter = { market: req.marketId };
+		// Exclude soft-deleted orders (isActive:false). Use $ne:false so legacy
+		// orders without the field still appear.
+		const filter = { market: req.marketId, isActive: { $ne: false } };
 		if (req.query.status) filter.status = req.query.status;
 		if (search) {
 			filter.$or = [
@@ -1038,7 +1082,10 @@ exports.listOrders = async (req, res) => {
 // polling. Returns { success, count } to mirror the global /api/orders/count.
 exports.ordersCount = async (req, res) => {
 	try {
-		const count = await Order.countDocuments({ market: req.marketId });
+		const count = await Order.countDocuments({
+			market: req.marketId,
+			isActive: { $ne: false },
+		});
 		res.json({ success: true, count, total: count });
 	} catch (err) {
 		handleErr(res, err);
@@ -1102,20 +1149,46 @@ exports.updateOrder = async (req, res) => {
 };
 
 // Soft-delete an order (market-scoped) — used by the dashboard "Delete" action.
+// Deleting restocks each item back into inventory, unless the order was already
+// cancelled (cancelling already restored its stock).
 exports.deleteOrder = async (req, res) => {
 	try {
 		if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
 			return fail(res, 400, "Invalid order ID");
 		}
+		const order = await Order.findOne({
+			_id: req.params.id,
+			market: req.marketId,
+		});
+		if (!order) return fail(res, 404, "Order not found");
+
+		// Already soft-deleted — return success without restocking again.
+		if (order.isActive === false) {
+			return ok(res, order, "Order already deleted");
+		}
+
+		// Restock items back into the market's inventory. Skip when the order is
+		// already cancelled, because cancelling an order already restored its stock
+		// and restocking here would inflate it.
+		if (order.status !== "cancelled") {
+			for (const item of order.items || []) {
+				if (item.product && item.quantity) {
+					await Product.findOneAndUpdate(
+						{ _id: item.product, market: req.marketId },
+						{ $inc: { stock: item.quantity } },
+					);
+				}
+			}
+		}
+
 		const update = { isActive: false };
 		if (req.user && req.user.id) update.updatedBy = req.user.id;
-		const order = await Order.findOneAndUpdate(
+		const deleted = await Order.findOneAndUpdate(
 			{ _id: req.params.id, market: req.marketId },
 			update,
 			{ new: true },
 		);
-		if (!order) return fail(res, 404, "Order not found");
-		ok(res, order, "Order deleted successfully");
+		ok(res, deleted, "Order deleted successfully");
 	} catch (err) {
 		handleErr(res, err);
 	}

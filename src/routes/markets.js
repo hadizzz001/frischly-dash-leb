@@ -12,6 +12,7 @@ const {
 	uploadLogoMiddleware,
 	getPublicMarkets,
 	getMarketProducts,
+	getMarketCategories,
 } = require("../controllers/marketController");
 
 const { protect, authorize } = require("../middleware/auth");
@@ -26,6 +27,9 @@ router.get("/public", getPublicMarkets);
 
 // Public route: list active products for a specific market
 router.get("/:id/products", getMarketProducts);
+
+// Public route: list active categories for a specific market
+router.get("/:id/categories", getMarketCategories);
 
 // Market admin self-profile
 router.get("/me/profile", protect, authorize("market"), getMyMarket);
