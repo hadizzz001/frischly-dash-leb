@@ -1,0 +1,120 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Notification Token Audit",
+			"type": "shell",
+			"command": "node tests/_token-audit.js"
+		},
+		{
+			"label": "Locate myMob App",
+			"type": "shell",
+			"command": "find ~/Desktop -maxdepth 4 -type d -iname \"*mob*\" 2>/dev/null; echo '---APP-CONFIG-FILES---'; find ~/Desktop -maxdepth 5 \\( -iname 'app.json' -o -iname 'app.config.js' -o -iname 'eas.json' -o -iname 'google-services.json' -o -iname 'GoogleService-Info.plist' \\) 2>/dev/null"
+		},
+		{
+			"label": "Compare Firebase Project IDs",
+			"type": "shell",
+			"command": "echo '===== SERVER project_id ====='; grep -o '\"project_id\"[^,]*' \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server/src/config/firebase-service-account.json\"; echo; echo '===== leb/myMob google-services.json ====='; grep -E '\"project_id\"|\"project_number\"|\"package_name\"|\"mobilesdk_app_id\"' \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob/google-services.json\"; echo; echo '===== FRISCHLY/mob/myMob google-services.json (older) ====='; grep -E '\"project_id\"|\"project_number\"|\"package_name\"|\"mobilesdk_app_id\"' \"/Users/apple/Desktop/Hadiz/FRISCHLY/mob/myMob/google-services.json\"; echo; echo '===== leb/myMob app.json ====='; cat \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob/app.json\""
+		},
+		{
+			"label": "Copy App Config For Review",
+			"type": "shell",
+			"command": "mkdir -p tests/_appcheck && cp \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob/google-services.json\" tests/_appcheck/leb_google-services.json && cp \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob/app.json\" tests/_appcheck/leb_app.json && cp \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob/eas.json\" tests/_appcheck/leb_eas.json && cp \"/Users/apple/Desktop/Hadiz/FRISCHLY/mob/myMob/google-services.json\" tests/_appcheck/old_google-services.json && echo COPIED_OK && ls -la tests/_appcheck"
+		},
+		{
+			"label": "Find Notification Code In App",
+			"type": "shell",
+			"command": "cd \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob\" && OUT=\"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server/tests/_appcheck/grep.txt\" && : > \"$OUT\" && echo '### files matching notification patterns ###' >> \"$OUT\" && grep -rilE 'getExpoPushTokenAsync|notifications/token|registerForPushNotifications|expo-notifications|fcmToken' --include='*.js' --include='*.jsx' --include='*.ts' --include='*.tsx' . | grep -v node_modules >> \"$OUT\" 2>/dev/null; echo >> \"$OUT\"; echo '### API base URL definitions ###' >> \"$OUT\" && grep -rnE 'API_URL|baseURL|BASE_URL|https?://[a-zA-Z0-9.-]+' --include='*.js' --include='*.jsx' --include='*.ts' --include='*.tsx' . | grep -v node_modules | grep -iE 'api|url|http' | head -40 >> \"$OUT\" 2>/dev/null; echo DONE && wc -l \"$OUT\""
+		},
+		{
+			"label": "Inspect App Structure",
+			"type": "shell",
+			"command": "cd \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob\" && OUT=\"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server/tests/_appcheck/structure.txt\" && : > \"$OUT\" && echo '### top-level entries ###' >> \"$OUT\" && ls -1 >> \"$OUT\" && echo >> \"$OUT\" && echo '### source dirs (app/src/components/etc) ###' >> \"$OUT\" && find . -type d -not -path '*/node_modules/*' -not -path '*/.git/*' -maxdepth 2 >> \"$OUT\" && echo >> \"$OUT\" && echo '### count of source files by ext ###' >> \"$OUT\" && find . -type f \\( -name '*.js' -o -name '*.jsx' -o -name '*.ts' -o -name '*.tsx' \\) -not -path '*/node_modules/*' | wc -l >> \"$OUT\" && echo >> \"$OUT\" && echo '### any Notification/expo-notifications anywhere (case-insensitive) ###' >> \"$OUT\" && grep -rilE 'expo-notifications|ExpoPushToken|Notifications\\.|notifications/token|fcmToken|pushToken' --include='*.js' --include='*.jsx' --include='*.ts' --include='*.tsx' . | grep -v node_modules >> \"$OUT\" 2>/dev/null; echo DONE && cat \"$OUT\""
+		},
+		{
+			"label": "Copy Notification Source",
+			"type": "shell",
+			"command": "cd \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob\" && D=\"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server/tests/_appcheck\" && cp \"hooks/useNotifications.js\" \"$D/useNotifications.js\" && cp \"app/start.jsx\" \"$D/start.jsx\" && cp \"app/(tabs)/acc.tsx\" \"$D/acc.tsx\" && OUT=\"$D/apiurl.txt\" && : > \"$OUT\" && echo '### API base URL search in constants/utils/contexts ###' >> \"$OUT\" && grep -rnE 'https?://|API|baseURL|EXPO_PUBLIC' constants utils contexts --include='*.js' --include='*.jsx' --include='*.ts' --include='*.tsx' 2>/dev/null | grep -iE 'url|api|http|render|onrender|herokuapp|localhost|3000|8080' | head -40 >> \"$OUT\"; echo DONE && cat \"$OUT\""
+		},
+		{
+			"label": "Check APK Build vs Code",
+			"type": "shell",
+			"command": "cd \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob\" && OUT=\"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server/tests/_appcheck/buildcheck.txt\" && : > \"$OUT\" && echo '### git log for useNotifications.js (when added) ###' >> \"$OUT\" && git log --format='%ad %s' --date=short -- hooks/useNotifications.js 2>/dev/null | head -5 >> \"$OUT\"; echo >> \"$OUT\" && echo '### mtime of notification files ###' >> \"$OUT\" && ls -la --time-style=long-iso hooks/useNotifications.js app/start.jsx \"app/(tabs)/acc.tsx\" 2>/dev/null >> \"$OUT\"; echo >> \"$OUT\" && echo '### where useNotifications()/syncPushTokenToServer are used ###' >> \"$OUT\" && grep -rnE 'useNotifications|syncPushTokenToServer' app components --include='*.js' --include='*.jsx' --include='*.tsx' 2>/dev/null | grep -v node_modules >> \"$OUT\"; echo >> \"$OUT\" && echo '### built APK/AAB artifacts and their dates ###' >> \"$OUT\" && find . -type f \\( -name '*.apk' -o -name '*.aab' \\) -not -path '*/node_modules/*' -exec ls -la --time-style=long-iso {} \\; 2>/dev/null >> \"$OUT\"; echo '(none found above if blank)' >> \"$OUT\"; echo DONE && cat \"$OUT\""
+		},
+		{
+			"label": "DB Recent Logins",
+			"type": "shell",
+			"command": "node tests/_db-recent.js"
+		},
+		{
+			"label": "App File Dates",
+			"type": "shell",
+			"command": "cd \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob\" && OUT=\"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server/tests/_appcheck/dates.txt\" && : > \"$OUT\" && echo '### file dates (macOS stat) ###' >> \"$OUT\" && stat -f '%Sm  %N' -t '%Y-%m-%d %H:%M' hooks/useNotifications.js app/start.jsx app/_layout.tsx \"app/(tabs)/acc.tsx\" >> \"$OUT\" 2>/dev/null; echo >> \"$OUT\" && echo '### git log for notification code ###' >> \"$OUT\" && git log --format='%ad  %s' --date=short -- hooks/useNotifications.js app/_layout.tsx 2>/dev/null | head -8 >> \"$OUT\"; echo >> \"$OUT\" && echo '### git last commit overall ###' >> \"$OUT\" && git log -1 --format='%ad  %s' --date=short 2>/dev/null >> \"$OUT\"; echo DONE && cat \"$OUT\""
+		},
+		{
+			"label": "DB Recent To File",
+			"type": "shell",
+			"command": "node tests/_db-recent.js && echo WROTE"
+		},
+		{
+			"label": "Cleanup Temp Analysis Files",
+			"type": "shell",
+			"command": "cd \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server\" && rm -rf tests/_appcheck && echo CLEANED && ls tests"
+		},
+		{
+			"label": "App Git Tracking Check",
+			"type": "shell",
+			"command": "cd \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob\" && D=\"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server/tests/_appcheck\" && mkdir -p \"$D\" && { echo '### git status --porcelain ###'; git status --porcelain; echo; echo '### are key files TRACKED by git? (git ls-files) ###'; git ls-files -- hooks/useNotifications.js app/_layout.tsx app/start.jsx 'app/(tabs)/acc.tsx' google-services.json android/app/google-services.json; echo; echo '### untracked files (excluded from EAS git builds) ###'; git ls-files --others --exclude-standard | head -40; echo; echo '### .gitignore ###'; cat .gitignore 2>/dev/null; echo; echo '### does google-services.json match a gitignore rule? ###'; git check-ignore -v google-services.json android/app/google-services.json 2>/dev/null || echo 'not ignored'; } > \"$D/gitcheck.txt\" 2>&1; echo DONE"
+		},
+		{
+			"label": "App Native Config Check",
+			"type": "shell",
+			"command": "cd \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob\" && D=\"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server/tests/_appcheck\" && mkdir -p \"$D\" && { echo '### android/ native project present? (means EAS will NOT run prebuild) ###'; ls -la android 2>/dev/null | head; echo; echo '### google-services.json locations ###'; find . -name 'google-services.json' -not -path '*/node_modules/*'; echo; echo '### android/app/google-services.json exists? ###'; test -f android/app/google-services.json && echo YES || echo 'NO -- FCM will NOT be configured in a bare android build'; echo; echo '### applicationId in android/app/build.gradle ###'; grep -nE 'applicationId|com.google.gms|google-services' android/app/build.gradle android/build.gradle 2>/dev/null; echo; echo '### POST_NOTIFICATIONS in manifest? ###'; grep -rn 'POST_NOTIFICATIONS' android/app/src/main/AndroidManifest.xml 2>/dev/null || echo 'not in manifest'; echo; echo '### expo + notification deps ###'; node -e \"const p=require('./package.json');const d={...p.dependencies};['expo','expo-notifications','expo-device','expo-constants','expo-dev-client'].forEach(k=>console.log(k+': '+(d[k]||'MISSING')))\"; } > \"$D/nativecheck.txt\" 2>&1; echo DONE"
+		},
+		{
+			"label": "Gradle And Manifest Capture",
+			"type": "shell",
+			"command": "cd \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob\" && D=\"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server/tests/_appcheck\" && mkdir -p \"$D\" && cp android/app/build.gradle \"$D/app-build.gradle.txt\" 2>/dev/null; cp android/build.gradle \"$D/root-build.gradle.txt\" 2>/dev/null; cp android/app/src/main/AndroidManifest.xml \"$D/AndroidManifest.xml.txt\" 2>/dev/null; { echo '### is google-services in COMMITTED git (HEAD)? ###'; git cat-file -e HEAD:android/app/google-services.json 2>/dev/null && echo 'YES committed at HEAD' || echo 'NO'; echo; echo '### git diff --stat for android/app/build.gradle (what changed today) ###'; git diff -- android/app/build.gradle | head -60; echo; echo '### root build.gradle diff ###'; git diff -- android/build.gradle | head -40; } > \"$D/gradle-diff.txt\" 2>&1; echo DONE"
+		},
+		{
+			"label": "Restore Native Firebase Config",
+			"type": "shell",
+			"command": "cd \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob\" && D=\"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server/tests/_appcheck\" && mkdir -p \"$D\" && { echo '### BEFORE: status of target files ###'; git status --porcelain -- android/app/google-services.json android/build.gradle android/app/build.gradle; echo; echo '### running restore from HEAD ###'; git checkout HEAD -- android/app/google-services.json android/build.gradle android/app/build.gradle && echo 'RESTORE_OK'; echo; echo '### AFTER: status of target files (blank = clean/matches HEAD) ###'; git status --porcelain -- android/app/google-services.json android/build.gradle android/app/build.gradle; echo '(end status)'; } > \"$D/restore.txt\" 2>&1; echo DONE"
+		},
+		{
+			"label": "Verify Native Config Restored",
+			"type": "shell",
+			"command": "cd \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob\" && D=\"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server/tests/_appcheck\" && mkdir -p \"$D\" && { echo '### google-services.json exists + project_id ###'; test -f android/app/google-services.json && echo 'FILE PRESENT' || echo 'FILE MISSING'; grep -o '\"project_id\"[^,]*' android/app/google-services.json; grep -o '\"package_name\"[^,]*' android/app/google-services.json; echo; echo '### root build.gradle: google-services classpath ###'; grep -n 'com.google.gms:google-services' android/build.gradle || echo 'MISSING classpath'; echo; echo '### app build.gradle: apply plugin ###'; grep -n \"apply plugin: 'com.google.gms.google-services'\" android/app/build.gradle || echo 'MISSING apply plugin'; echo; echo '### is google-services.json TRACKED by git? ###'; git ls-files --error-unmatch android/app/google-services.json >/dev/null 2>&1 && echo 'TRACKED (EAS will include it)' || echo 'NOT TRACKED'; echo; echo '### final status of the 3 files (blank=clean) ###'; git status --porcelain -- android/app/google-services.json android/build.gradle android/app/build.gradle; echo '(end)'; } > \"$D/verify.txt\" 2>&1; echo DONE"
+		},
+		{
+			"label": "Inspect Correct Config Before Copy",
+			"type": "shell",
+			"command": "cd \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob\" && D=\"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server/tests/_appcheck\" && mkdir -p \"$D\" && { echo '### ROOT ./google-services.json (the NEW correct one) ###'; grep -o '\"project_id\"[^,]*' google-services.json; grep -o '\"package_name\"[^,]*' google-services.json; echo; echo '### app applicationId (working tree) ###'; grep -n 'applicationId' android/app/build.gradle; echo; echo '### app applicationId at HEAD ###'; git show HEAD:android/app/build.gradle | grep -n 'applicationId'; echo; echo '### does ROOT file contain a client for com.frischly.lebanon? ###'; grep -c 'com.frischly.lebanon' google-services.json; } > \"$D/precopy.txt\" 2>&1; echo DONE"
+		},
+		{
+			"label": "Place Correct google-services.json",
+			"type": "shell",
+			"command": "cd \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob\" && D=\"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server/tests/_appcheck\" && mkdir -p \"$D\" && cp google-services.json android/app/google-services.json && { echo '### COPIED root -> android/app ###'; echo '### android/app/google-services.json now ###'; grep -o '\"project_id\"[^,]*' android/app/google-services.json; grep -o '\"package_name\"[^,]*' android/app/google-services.json; echo; echo '### matching client for com.frischly.lebanon? (expect 1) ###'; grep -c 'com.frischly.lebanon' android/app/google-services.json; echo; echo '### gradle plugin lines still present ###'; grep -n 'com.google.gms:google-services' android/build.gradle; grep -n \"apply plugin: 'com.google.gms.google-services'\" android/app/build.gradle; echo; echo '### tracked + status ###'; git ls-files --error-unmatch android/app/google-services.json >/dev/null 2>&1 && echo 'TRACKED' || echo 'NOT TRACKED'; git status --porcelain -- android/app/google-services.json android/build.gradle android/app/build.gradle; echo '(end)'; } > \"$D/postcopy.txt\" 2>&1; echo DONE"
+		},
+		{
+			"label": "Diagnose google-services Git State",
+			"type": "shell",
+			"command": "cd \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob\" && D=\"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server/tests/_appcheck\" && mkdir -p \"$D\" && { echo '### Is android/app/google-services.json committed in HEAD? ###'; git cat-file -e HEAD:android/app/google-services.json 2>/dev/null && echo 'YES - in HEAD' || echo 'NO - NOT in HEAD (this is why EAS lacks it)'; echo; echo '### project_id of the version stored in HEAD (if any) ###'; git show HEAD:android/app/google-services.json 2>/dev/null | grep -o '\"project_id\"[^,]*' || echo '(not in HEAD)'; echo; echo '### Is it in the git INDEX (staged)? ###'; git ls-files --cached -- android/app/google-services.json | sed 's/^/  cached: /'; test -z \"$(git ls-files --cached -- android/app/google-services.json)\" && echo '  (NOT in index)'; echo; echo '### .gitignore rules hitting it ###'; git check-ignore -v android/app/google-services.json google-services.json 2>/dev/null || echo '  not ignored'; echo; echo '### working-tree status of the file ###'; git status --porcelain -- android/app/google-services.json; echo '(blank above = clean/unchanged vs index)'; echo; echo '### last commit + whether it touched google-services.json ###'; git log -1 --format='HEAD: %h %s'; git show --stat --oneline HEAD | grep -i 'google-services' || echo '  (HEAD commit did NOT modify google-services.json)'; } > \"$D/gsdiag.txt\" 2>&1; echo DONE"
+		},
+		{
+			"label": "Apply gitignore Fix And Stage",
+			"type": "shell",
+			"command": "cd \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob\" && D=\"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server/tests/_appcheck\" && cp \"$D/gitignore_copy.txt\" .gitignore && git add .gitignore android/app/google-services.json google-services.json && { echo '### check-ignore google-services.json (expect: not ignored) ###'; git check-ignore -v android/app/google-services.json google-services.json 2>/dev/null && echo 'STILL IGNORED (bad)' || echo 'NOT ignored (good)'; echo; echo '### admin key now ignored? (expect: ignored) ###'; git check-ignore -v frischlyshop-lb-firebase-adminsdk-fbsvc-df33fcd7b0.json 2>/dev/null && echo 'IGNORED (good - secret protected)' || echo 'NOT ignored (bad)'; echo; echo '### staged changes to commit ###'; git status --porcelain; echo; echo '### confirm google-services.json content in index ###'; git show :android/app/google-services.json | grep -o '\"project_id\"[^,]*'; } > \"$D/postignore.txt\" 2>&1; echo DONE"
+		},
+		{
+			"label": "Verify Admin Key Protection",
+			"type": "shell",
+			"command": "cd \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob\" && D=\"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server/tests/_appcheck\" && { echo '### tail of on-disk .gitignore (Firebase section) ###'; grep -n -A2 -B1 'firebase\\|google-services\\|adminsdk' .gitignore; echo; echo '### does the admin key file still exist on disk? ###'; ls -la *firebase-adminsdk*.json 2>/dev/null && echo 'EXISTS (should be deleted)' || echo 'not present (deleted/clean)'; echo; echo '### explicit check-ignore test ###'; git check-ignore -v 'frischlyshop-lb-firebase-adminsdk-fbsvc-df33fcd7b0.json'; echo \"exit=$?\"; echo; echo '### is admin key tracked? ###'; git ls-files --error-unmatch 'frischlyshop-lb-firebase-adminsdk-fbsvc-df33fcd7b0.json' 2>/dev/null && echo 'TRACKED (bad!)' || echo 'not tracked (good)'; } > \"$D/adminkey.txt\" 2>&1; echo DONE"
+		},
+		{
+			"label": "Untrack Admin Key And Final Status",
+			"type": "shell",
+			"command": "cd \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob\" && D=\"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server/tests/_appcheck\" && git rm --cached 'frischlyshop-lb-firebase-adminsdk-fbsvc-df33fcd7b0.json' >/dev/null 2>&1; { echo '### admin key now untracked? ###'; git ls-files --error-unmatch 'frischlyshop-lb-firebase-adminsdk-fbsvc-df33fcd7b0.json' 2>/dev/null && echo 'STILL TRACKED (bad)' || echo 'UNTRACKED (good)'; echo; echo '### admin key now ignored? ###'; git check-ignore -v 'frischlyshop-lb-firebase-adminsdk-fbsvc-df33fcd7b0.json' >/dev/null 2>&1 && echo 'IGNORED (good)' || echo 'NOT ignored'; echo; echo '### FINAL staged changes to commit ###'; git status --porcelain; echo; echo '### confirm google-services in index = frischlyshop-lb + matching client ###'; git show :android/app/google-services.json | grep -o '\"project_id\"[^,]*'; git show :android/app/google-services.json | grep -c 'com.frischly.lebanon'; } > \"$D/final.txt\" 2>&1; echo DONE"
+		}
+	]
+}
