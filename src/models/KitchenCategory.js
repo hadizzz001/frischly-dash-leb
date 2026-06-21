@@ -1,33 +1,25 @@
 const mongoose = require("mongoose");
 
-// "For Kitchens" entries. Each kitchen has a name and a list of products that
-// the kitchen needs. Selecting products here does NOT touch product stock.
+// Kitchen categories group kitchens together (e.g. "Bakery", "Grill",
+// "Salads"). Each Kitchen may belong to one KitchenCategory.
 //
 // `market`:
 //   - null/undefined => owned by the main store (visible to main admin)
 //   - ObjectId       => owned by that Market (tenant scoped)
-const kitchenSchema = new mongoose.Schema(
+const kitchenCategorySchema = new mongoose.Schema(
 	{
 		name: {
 			type: String,
-			required: [true, "Please provide a kitchen name"],
+			required: [true, "Please provide a kitchen category name"],
 			trim: true,
 			maxlength: [120, "Name cannot be more than 120 characters"],
 		},
-		// Optional grouping category for the kitchen. Kept optional so existing
-		// kitchens (created before categories existed) remain valid.
-		category: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: "KitchenCategory",
-			default: null,
-			index: true,
+		description: {
+			type: String,
+			default: "",
+			trim: true,
+			maxlength: [500, "Description cannot be more than 500 characters"],
 		},
-		items: [
-			{
-				type: mongoose.Schema.Types.ObjectId,
-				ref: "Product",
-			},
-		],
 		isActive: {
 			type: Boolean,
 			default: true,
@@ -60,6 +52,6 @@ const kitchenSchema = new mongoose.Schema(
 	{ timestamps: true },
 );
 
-kitchenSchema.index({ market: 1, name: 1 });
+kitchenCategorySchema.index({ market: 1, name: 1 });
 
-module.exports = mongoose.model("Kitchen", kitchenSchema);
+module.exports = mongoose.model("KitchenCategory", kitchenCategorySchema);

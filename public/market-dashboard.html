@@ -354,6 +354,12 @@
 					</a>
 				</li>
 				<li class="menu-item">
+					<a href="#" onclick="showSection('kitchencategories')" id="menu-kitchencategories">
+						<span class="menu-icon">🗂️</span>
+						<span class="menu-text">Kitchen Categories</span>
+					</a>
+				</li>
+				<li class="menu-item">
 					<a href="#" onclick="showSection('settings')" id="menu-settings">
 						<span class="menu-icon">⚙️</span>
 						<span class="menu-text">Settings</span>
@@ -2278,6 +2284,7 @@
 										<th style="width:90px;">Order</th>
 										<th>Image</th>
 										<th>Name</th>
+										<th>Category</th>
 										<th>Status</th>
 										<th>Created</th>
 										<th>Actions</th>
@@ -2285,8 +2292,60 @@
 								</thead>
 								<tbody id="kitchens-table-body">
 									<tr>
-										<td colspan="6" style="text-align: center; padding: 40px; color: #666;">
+										<td colspan="7" style="text-align: center; padding: 40px; color: #666;">
 											No kitchens found. Click "Add Kitchen" to create one.
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+
+				<!-- Kitchen Categories Section -->
+				<div id="kitchencategories-section" class="content-section">
+					<div class="section-header">
+						<h2>Kitchen Categories</h2>
+						<p>Group your kitchens into categories (e.g. Bakery, Grill, Salads). Assign a category to each kitchen from the "For Kitchens" page.</p>
+					</div>
+
+					<div class="section-actions">
+						<button class="btn btn-primary" onclick="openKitchenCategoryModal()">
+							➕ Add Category
+						</button>
+						<button class="btn btn-secondary" onclick="loadKitchenCategories()">
+							🔄 Refresh
+						</button>
+					</div>
+
+					<div class="data-table">
+						<div class="table-header">
+							<h3>All Kitchen Categories</h3>
+							<div class="table-header-controls" style="display:flex;align-items:center;gap:10px;">
+								<span id="kitchen-categories-count-display">0 categories</span>
+								<button id="kitchen-categories-save-order-btn" type="button" class="btn btn-primary" onclick="saveKitchenCategoryOrder()" disabled
+									style="opacity:.55;cursor:not-allowed;padding:6px 14px;font-size:13px;">💾 Save order</button>
+								<button id="kitchen-categories-reset-order-btn" type="button" class="btn btn-secondary" onclick="resetKitchenCategoryOrder()" disabled
+									style="opacity:.55;cursor:not-allowed;padding:6px 14px;font-size:13px;">Undo</button>
+							</div>
+						</div>
+						<div class="users-table-container">
+							<table class="users-table">
+								<thead>
+									<tr>
+										<th style="width:90px;">Order</th>
+										<th>Image</th>
+										<th>Name</th>
+										<th>Kitchens</th>
+										<th>Status</th>
+										<th>Created</th>
+										<th>Actions</th>
+									</tr>
+								</thead>
+								<tbody id="kitchen-categories-table-body">
+									<tr>
+										<td colspan="7" style="text-align: center; padding: 40px; color: #666;">
+											No categories found. Click "Add Category" to create one.
 										</td>
 									</tr>
 								</tbody>
@@ -2331,6 +2390,19 @@
 								<option value="true">Active</option>
 								<option value="false">Inactive</option>
 							</select>
+						</div>
+					</div>
+
+					<!-- Kitchen category selector -->
+					<div class="form-group" style="margin:0 0 18px;">
+						<label for="kitchen-category" style="font-weight:600;font-size:13px;color:#374151;">Kitchen category</label>
+						<select id="kitchen-category" name="category" required style="width:100%;padding:10px 12px;border:1px solid #e3e7ec;border-radius:8px;font-size:14px;background:#fff;">
+							<option value="">Select a category…</option>
+						</select>
+						<div id="kitchen-category-hint" style="font-size:12px;color:#9aa4b2;margin-top:6px;display:none;">
+							No categories yet —
+							<a href="#" onclick="event.preventDefault(); closeKitchenModal(); showSection('kitchencategories');" style="color:#2563eb;">create a kitchen category</a>
+							first.
 						</div>
 					</div>
 
@@ -2431,6 +2503,77 @@
 					<button type="button" class="btn btn-secondary" onclick="closeKitchenViewModal()">Close</button>
 					<button type="button" class="btn btn-primary" id="kitchen-view-edit-btn" onclick="editFromKitchenView()">Edit</button>
 				</div>
+			</div>
+		</div>
+
+		<!-- Kitchen Category Modal -->
+		<div id="kitchen-category-modal" class="modal">
+			<div class="modal-content" style="max-width:560px;">
+				<div class="modal-header" style="border-bottom:1px solid #eef0f3;">
+					<div>
+						<h2 id="kitchen-category-modal-title" style="margin:0;font-size:20px;">Add Category</h2>
+						<div style="color:#7b8794;font-size:13px;margin-top:2px;">Categories help you group your kitchens together.</div>
+					</div>
+					<span class="close" onclick="closeKitchenCategoryModal()">&times;</span>
+				</div>
+
+				<form id="kitchen-category-form" onsubmit="event.preventDefault(); saveKitchenCategory();" style="padding:4px 0;">
+					<input type="hidden" id="kitchen-category-id" />
+
+					<div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px;">
+						<div class="form-group" style="margin:0;">
+							<label for="kitchen-category-name" style="font-weight:600;font-size:13px;color:#374151;">Category name</label>
+							<input type="text" id="kitchen-category-name" name="name" required maxlength="120" placeholder="e.g. Bakery"
+								style="width:100%;padding:10px 12px;border:1px solid #e3e7ec;border-radius:8px;font-size:14px;" />
+						</div>
+						<div class="form-group" style="margin:0;">
+							<label for="kitchen-category-status" style="font-weight:600;font-size:13px;color:#374151;">Status</label>
+							<select id="kitchen-category-status" style="width:100%;padding:10px 12px;border:1px solid #e3e7ec;border-radius:8px;font-size:14px;background:#fff;">
+								<option value="true">Active</option>
+								<option value="false">Inactive</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="form-group" style="margin:0 0 18px;">
+						<label for="kitchen-category-description" style="font-weight:600;font-size:13px;color:#374151;">Description <span style="color:#9aa4b2;font-weight:400;">(optional)</span></label>
+						<textarea id="kitchen-category-description" maxlength="500" rows="2" placeholder="Short description…"
+							style="width:100%;padding:10px 12px;border:1px solid #e3e7ec;border-radius:8px;font-size:14px;resize:vertical;font-family:inherit;"></textarea>
+					</div>
+
+					<!-- Picture upload -->
+					<div style="margin-bottom:18px;">
+						<label style="font-weight:600;font-size:13px;color:#374151;display:block;margin-bottom:6px;">Category image <span style="color:#9aa4b2;font-weight:400;">(optional)</span></label>
+						<div id="kitchen-category-picture-dropzone"
+							onclick="if(event.target.closest('button'))return; document.getElementById('kitchen-category-picture-file').click();"
+							ondragover="handleKitchenCategoryPictureDragOver(event)"
+							ondragenter="handleKitchenCategoryPictureDragOver(event)"
+							ondragleave="handleKitchenCategoryPictureDragLeave(event)"
+							ondrop="handleKitchenCategoryPictureDrop(event)"
+							style="display:flex;gap:14px;align-items:center;border:2px dashed #d6dbe2;border-radius:10px;padding:14px;background:#fafbfc;cursor:pointer;transition:background .15s,border-color .15s;">
+							<div id="kitchen-category-picture-preview" style="width:80px;height:80px;border-radius:10px;background:#eef2f7;display:flex;align-items:center;justify-content:center;color:#9aa4b2;font-size:28px;font-weight:600;overflow:hidden;flex-shrink:0;">📷</div>
+							<div style="flex:1;min-width:0;pointer-events:none;">
+								<div style="font-size:14px;font-weight:600;color:#111;">Drag &amp; drop an image here</div>
+								<div style="font-size:12px;color:#7b8794;margin-top:2px;">or click anywhere in this box to browse</div>
+								<div id="kitchen-category-picture-status" style="font-size:12px;color:#7b8794;margin-top:8px;">PNG, JPG or WEBP • Max 5MB • Auto-optimized</div>
+							</div>
+							<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+								<input type="hidden" id="kitchen-category-picture-url" />
+								<input type="hidden" id="kitchen-category-picture-public-id" />
+								<input type="file" id="kitchen-category-picture-file" accept="image/*" onchange="uploadKitchenCategoryPicture(this)" style="display:none;" />
+								<button type="button" onclick="event.stopPropagation(); document.getElementById('kitchen-category-picture-file').click();"
+									style="border:1px solid #e3e7ec;background:#fff;color:#111;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">📁 Browse</button>
+								<button type="button" id="kitchen-category-picture-remove" onclick="event.stopPropagation(); removeKitchenCategoryPicture();"
+									style="border:1px solid #fee2e2;background:#fff;color:#dc2626;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:none;white-space:nowrap;">Remove</button>
+							</div>
+						</div>
+					</div>
+
+					<div class="form-actions" style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+						<button type="button" class="btn btn-secondary" onclick="closeKitchenCategoryModal()">Cancel</button>
+						<button type="submit" class="btn btn-primary">Save Category</button>
+					</div>
+				</form>
 			</div>
 		</div>
 
@@ -4875,6 +5018,9 @@
 						break;
 					case "kitchens":
 						loadKitchens();
+						break;
+					case "kitchencategories":
+						loadKitchenCategories();
 						break;
 				}
 			}
@@ -17171,13 +17317,16 @@
 			let kitchenProducts = [];
 			let kitchenProductsFiltered = [];
 			let selectedKitchenItemIds = new Set();
+			let kitchenCategoriesData = [];
+			let kitchenCategoriesLoaded = false;
+			let kitchenCategoryCounts = {};
 
 			async function loadKitchens() {
 				const tbody = document.getElementById("kitchens-table-body");
 				const countEl = document.getElementById("kitchens-count-display");
 				if (tbody) {
 					tbody.innerHTML =
-						'<tr><td colspan="6" style="text-align:center;padding:30px;color:#666;">Loading...</td></tr>';
+						'<tr><td colspan="7" style="text-align:center;padding:30px;color:#666;">Loading...</td></tr>';
 				}
 				try {
 					const response = await authenticatedFetch(`${API_BASE_URL}/kitchens`);
@@ -17194,7 +17343,7 @@
 					console.error("loadKitchens:", err);
 					if (tbody) {
 						tbody.innerHTML =
-							'<tr><td colspan="6" style="text-align:center;padding:30px;color:#c00;">Failed to load kitchens.</td></tr>';
+							'<tr><td colspan="7" style="text-align:center;padding:30px;color:#c00;">Failed to load kitchens.</td></tr>';
 					}
 					showMessage("Failed to load kitchens: " + err.message, "error");
 				}
@@ -17205,7 +17354,7 @@
 				if (!tbody) return;
 				if (!kitchensData.length) {
 					tbody.innerHTML =
-						'<tr><td colspan="6" style="text-align:center;padding:40px;color:#666;">No kitchens found. Click "Add Kitchen" to create one.</td></tr>';
+						'<tr><td colspan="7" style="text-align:center;padding:40px;color:#666;">No kitchens found. Click "Add Kitchen" to create one.</td></tr>';
 					updateKitchenOrderButtons();
 					return;
 				}
@@ -17231,6 +17380,7 @@
 						</td>
 						<td>${imgCell}</td>
 						<td><strong>${k.name || "—"}</strong></td>
+						<td>${k.category && k.category.name ? `<span class="status-badge" style="background:#eef2ff;color:#3730a3;">${String(k.category.name).replace(/</g, "&lt;")}</span>` : '<span style="color:#9aa4b2;font-size:12px;">—</span>'}</td>
 						<td>${statusBadge}</td>
 						<td>${created}</td>
 						<td>
@@ -17389,6 +17539,7 @@
 							<div style="font-size:22px;font-weight:700;color:#111;margin-bottom:6px;">${esc(k.name || "—")}</div>
 							<div style="margin-bottom:10px;">${statusBadge}</div>
 							<div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;color:#374151;">
+								<div style="color:#7b8794;">Category</div><div>${k.category && k.category.name ? esc(k.category.name) : "—"}</div>
 								<div style="color:#7b8794;">Items</div><div><strong>${items.length}</strong></div>
 								<div style="color:#7b8794;">Created</div><div>${esc(created)}</div>
 								<div style="color:#7b8794;">Updated</div><div>${esc(updated)}</div>
@@ -17439,6 +17590,17 @@
 				const clearBtn = document.getElementById("kitchen-search-clear");
 				if (clearBtn) clearBtn.style.display = "none";
 				setKitchenPicture("", "");
+
+				// Populate the kitchen category dropdown (loading categories if needed).
+				await ensureKitchenCategoriesLoaded();
+				const editingKitchenForCat = id
+					? kitchensData.find((x) => String(x._id) === String(id))
+					: null;
+				populateKitchenCategoryDropdown(
+					editingKitchenForCat && editingKitchenForCat.category
+						? editingKitchenForCat.category._id || editingKitchenForCat.category
+						: "",
+				);
 
 				if (id) {
 					title.textContent = "Edit Kitchen";
@@ -17774,10 +17936,18 @@
 					showMessage("Please enter a kitchen name", "error");
 					return;
 				}
+				const categorySelect = document.getElementById("kitchen-category");
+				const category = categorySelect ? categorySelect.value : "";
+				if (!category) {
+					showMessage("Please select a kitchen category", "error");
+					if (categorySelect) categorySelect.focus();
+					return;
+				}
 				const pictureUrl = (document.getElementById("kitchen-picture-url") || {}).value || "";
 				const picturePid = (document.getElementById("kitchen-picture-public-id") || {}).value || "";
 				const payload = {
 					name,
+					category,
 					isActive: statusSelect.value === "true",
 					items: Array.from(selectedKitchenItemIds),
 					picture: pictureUrl,
@@ -17824,6 +17994,447 @@
 					console.error("deleteKitchen:", err);
 					showMessage("Failed to delete kitchen: " + err.message, "error");
 				}
+			}
+
+			// ============================================================
+			//  Kitchen Categories
+			// ============================================================
+
+			// Make sure the category list is cached so the kitchen modal dropdown
+			// can be filled without first visiting the Kitchen Categories section.
+			async function ensureKitchenCategoriesLoaded() {
+				if (kitchenCategoriesLoaded) return;
+				try {
+					const response = await authenticatedFetch(`${API_BASE_URL}/kitchen-categories`);
+					if (!response.ok) throw new Error(`HTTP ${response.status}`);
+					const result = await response.json();
+					kitchenCategoriesData = Array.isArray(result.data) ? result.data : [];
+					kitchenCategoriesLoaded = true;
+				} catch (err) {
+					console.error("ensureKitchenCategoriesLoaded:", err);
+				}
+			}
+
+			// Fill the kitchen modal's category <select> from the cached categories.
+			function populateKitchenCategoryDropdown(selectedId) {
+				const select = document.getElementById("kitchen-category");
+				const hint = document.getElementById("kitchen-category-hint");
+				if (!select) return;
+				const sel = selectedId ? String(selectedId) : "";
+				let options = (kitchenCategoriesData || []).filter((c) => c.isActive !== false);
+				// Keep a currently-assigned (possibly inactive) category selectable.
+				if (sel && !options.some((c) => String(c._id) === sel)) {
+					const found = (kitchenCategoriesData || []).find((c) => String(c._id) === sel);
+					if (found) options = [found].concat(options);
+				}
+				select.innerHTML =
+					'<option value="">Select a category…</option>' +
+					options
+						.map((c) => {
+							const name = (c.name || "Unnamed").replace(/</g, "&lt;");
+							const inactive = c.isActive === false ? " (inactive)" : "";
+							return `<option value="${c._id}">${name}${inactive}</option>`;
+						})
+						.join("");
+				select.value = sel;
+				if (hint) hint.style.display = options.length ? "none" : "block";
+			}
+
+			// Count how many kitchens use each category (best-effort, for display).
+			async function loadKitchenCategoryCounts() {
+				try {
+					const res = await authenticatedFetch(`${API_BASE_URL}/kitchens`);
+					if (!res.ok) return;
+					const result = await res.json();
+					const list = Array.isArray(result.data) ? result.data : [];
+					const map = {};
+					list.forEach((k) => {
+						if (k.category) {
+							const id = String(k.category._id || k.category);
+							map[id] = (map[id] || 0) + 1;
+						}
+					});
+					kitchenCategoryCounts = map;
+				} catch (e) {
+					/* non-fatal */
+				}
+			}
+
+			async function loadKitchenCategories() {
+				const tbody = document.getElementById("kitchen-categories-table-body");
+				const countEl = document.getElementById("kitchen-categories-count-display");
+				if (tbody) {
+					tbody.innerHTML =
+						'<tr><td colspan="7" style="text-align:center;padding:30px;color:#666;">Loading...</td></tr>';
+				}
+				try {
+					const response = await authenticatedFetch(`${API_BASE_URL}/kitchen-categories`);
+					if (!response.ok) {
+						const err = await response.json().catch(() => ({}));
+						throw new Error(err.message || "Failed to load categories");
+					}
+					const result = await response.json();
+					kitchenCategoriesData = Array.isArray(result.data) ? result.data : [];
+					kitchenCategoriesLoaded = true;
+					await loadKitchenCategoryCounts();
+					snapshotKitchenCategoryOrder();
+					renderKitchenCategories();
+					if (countEl)
+						countEl.textContent = `${kitchenCategoriesData.length} categor${kitchenCategoriesData.length === 1 ? "y" : "ies"}`;
+				} catch (err) {
+					console.error("loadKitchenCategories:", err);
+					if (tbody) {
+						tbody.innerHTML =
+							'<tr><td colspan="7" style="text-align:center;padding:30px;color:#c00;">Failed to load categories.</td></tr>';
+					}
+					showMessage("Failed to load kitchen categories: " + err.message, "error");
+				}
+			}
+
+			function renderKitchenCategories() {
+				const tbody = document.getElementById("kitchen-categories-table-body");
+				if (!tbody) return;
+				if (!kitchenCategoriesData.length) {
+					tbody.innerHTML =
+						'<tr><td colspan="7" style="text-align:center;padding:40px;color:#666;">No categories found. Click "Add Category" to create one.</td></tr>';
+					updateKitchenCategoryOrderButtons();
+					return;
+				}
+				tbody.innerHTML = "";
+				kitchenCategoriesData.forEach((c, idx) => {
+					const statusBadge = `<span class="status-badge ${c.isActive ? "active" : "inactive"}">${c.isActive ? "Active" : "Inactive"}</span>`;
+					const created = c.createdAt ? new Date(c.createdAt).toLocaleDateString() : "—";
+					const safeName = (c.name || "").replace(/'/g, "\\'");
+					const initial = ((c.name || "?").trim().charAt(0) || "?").toUpperCase();
+					const imgCell = c.picture
+						? `<img src="${c.picture}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:8px;background:#f1f3f6;display:block;" onerror="this.outerHTML='<div style=&quot;width:44px;height:44px;border-radius:8px;background:#eef2f7;color:#566275;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;&quot;>${initial}</div>'" />`
+						: `<div style="width:44px;height:44px;border-radius:8px;background:#eef2f7;color:#566275;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;">${initial}</div>`;
+					const kCount = kitchenCategoryCounts[String(c._id)] || 0;
+					const row = document.createElement("tr");
+					row.dataset.kitchenCategoryId = String(c._id);
+					row.innerHTML = `
+						<td>
+							<input type="number" min="1" step="1" value="${idx + 1}"
+								class="kitchen-category-order-input"
+								data-kitchen-category-id="${c._id}"
+								onchange="applyKitchenCategoryOrderChange('${c._id}', this)"
+								onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+								style="width:64px;padding:6px 8px;border:1px solid #d6dbe2;border-radius:6px;font-size:13px;text-align:center;" />
+						</td>
+						<td>${imgCell}</td>
+						<td><strong>${c.name || "—"}</strong></td>
+						<td>${kCount}</td>
+						<td>${statusBadge}</td>
+						<td>${created}</td>
+						<td>
+							<div class="action-buttons">
+								<button class="action-btn edit" onclick="openKitchenCategoryModal('${c._id}')">Edit</button>
+								<button class="action-btn delete" onclick="deleteKitchenCategory('${c._id}', '${safeName}')">Delete</button>
+							</div>
+						</td>
+					`;
+					tbody.appendChild(row);
+				});
+				updateKitchenCategoryOrderButtons();
+			}
+
+			// === Kitchen category ordering via numeric inputs ===
+			let originalKitchenCategoryOrder = [];
+
+			function snapshotKitchenCategoryOrder() {
+				originalKitchenCategoryOrder = kitchenCategoriesData.map((c) => String(c._id));
+			}
+
+			function currentKitchenCategoryOrder() {
+				return kitchenCategoriesData.map((c) => String(c._id));
+			}
+
+			function kitchenCategoryOrderDirty() {
+				const cur = currentKitchenCategoryOrder();
+				if (cur.length !== originalKitchenCategoryOrder.length) return true;
+				for (let i = 0; i < cur.length; i++) {
+					if (cur[i] !== originalKitchenCategoryOrder[i]) return true;
+				}
+				return false;
+			}
+
+			function updateKitchenCategoryOrderButtons() {
+				const saveBtn = document.getElementById("kitchen-categories-save-order-btn");
+				const undoBtn = document.getElementById("kitchen-categories-reset-order-btn");
+				const dirty = kitchenCategoryOrderDirty();
+				[saveBtn, undoBtn].forEach((b) => {
+					if (!b) return;
+					b.disabled = !dirty;
+					b.style.opacity = dirty ? "1" : ".55";
+					b.style.cursor = dirty ? "pointer" : "not-allowed";
+				});
+			}
+
+			function applyKitchenCategoryOrderChange(id, inputEl) {
+				const from = kitchenCategoriesData.findIndex((c) => String(c._id) === String(id));
+				if (from < 0) return;
+				let raw = parseInt(inputEl.value, 10);
+				if (!Number.isFinite(raw)) raw = from + 1;
+				let to = Math.max(1, Math.min(kitchenCategoriesData.length, raw)) - 1;
+				if (to === from) {
+					inputEl.value = String(from + 1);
+					return;
+				}
+				const [moved] = kitchenCategoriesData.splice(from, 1);
+				kitchenCategoriesData.splice(to, 0, moved);
+				renderKitchenCategories();
+				setTimeout(() => {
+					const nextInput = document.querySelector(
+						`.kitchen-category-order-input[data-kitchen-category-id="${id}"]`
+					);
+					if (nextInput) { nextInput.focus(); nextInput.select(); }
+				}, 0);
+			}
+
+			function resetKitchenCategoryOrder() {
+				if (!originalKitchenCategoryOrder.length) return;
+				const byId = new Map(kitchenCategoriesData.map((c) => [String(c._id), c]));
+				kitchenCategoriesData = originalKitchenCategoryOrder.map((id) => byId.get(id)).filter(Boolean);
+				renderKitchenCategories();
+			}
+
+			async function saveKitchenCategoryOrder() {
+				if (!kitchenCategoryOrderDirty()) return;
+				const saveBtn = document.getElementById("kitchen-categories-save-order-btn");
+				const order = currentKitchenCategoryOrder();
+				try {
+					if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving…"; }
+					const response = await authenticatedFetch(`${API_BASE_URL}/kitchen-categories/reorder`, {
+						method: "PUT",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ order }),
+					});
+					if (!response.ok) {
+						const err = await response.json().catch(() => ({}));
+						throw new Error(err.message || `HTTP ${response.status}`);
+					}
+					const result = await response.json();
+					showMessage(result.message || "Category order saved", "success");
+					snapshotKitchenCategoryOrder();
+					updateKitchenCategoryOrderButtons();
+				} catch (err) {
+					console.error("saveKitchenCategoryOrder:", err);
+					showMessage("Failed to save order: " + err.message, "error");
+				} finally {
+					if (saveBtn) saveBtn.textContent = "💾 Save order";
+					updateKitchenCategoryOrderButtons();
+				}
+			}
+
+			function openKitchenCategoryModal(id) {
+				const modal = document.getElementById("kitchen-category-modal");
+				const title = document.getElementById("kitchen-category-modal-title");
+				const form = document.getElementById("kitchen-category-form");
+				const idInput = document.getElementById("kitchen-category-id");
+				const statusSelect = document.getElementById("kitchen-category-status");
+				const descInput = document.getElementById("kitchen-category-description");
+				if (!modal) return;
+
+				form.reset();
+				idInput.value = "";
+				setKitchenCategoryPicture("", "");
+
+				if (id) {
+					title.textContent = "Edit Category";
+					const c = kitchenCategoriesData.find((x) => String(x._id) === String(id));
+					if (c) {
+						idInput.value = c._id;
+						document.getElementById("kitchen-category-name").value = c.name || "";
+						statusSelect.value = c.isActive ? "true" : "false";
+						if (descInput) descInput.value = c.description || "";
+						setKitchenCategoryPicture(c.picture || "", c.picturePublicId || "");
+					}
+				} else {
+					title.textContent = "Add Category";
+					statusSelect.value = "true";
+				}
+
+				modal.style.display = "block";
+				modal.scrollTop = 0;
+				const mc = modal.querySelector(".modal-content");
+				if (mc) mc.scrollTop = 0;
+			}
+
+			function closeKitchenCategoryModal() {
+				const modal = document.getElementById("kitchen-category-modal");
+				if (modal) modal.style.display = "none";
+			}
+
+			async function saveKitchenCategory() {
+				const idInput = document.getElementById("kitchen-category-id");
+				const nameInput = document.getElementById("kitchen-category-name");
+				const statusSelect = document.getElementById("kitchen-category-status");
+				const descInput = document.getElementById("kitchen-category-description");
+				const id = idInput.value || "";
+				const name = (nameInput.value || "").trim();
+				if (!name) {
+					showMessage("Please enter a category name", "error");
+					return;
+				}
+				const payload = {
+					name,
+					description: descInput ? (descInput.value || "").trim() : "",
+					isActive: statusSelect.value === "true",
+					picture: (document.getElementById("kitchen-category-picture-url") || {}).value || "",
+					picturePublicId: (document.getElementById("kitchen-category-picture-public-id") || {}).value || "",
+				};
+				try {
+					const url = id
+						? `${API_BASE_URL}/kitchen-categories/${id}`
+						: `${API_BASE_URL}/kitchen-categories`;
+					const method = id ? "PUT" : "POST";
+					const response = await authenticatedFetch(url, {
+						method,
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify(payload),
+					});
+					if (!response.ok) {
+						const err = await response.json().catch(() => ({}));
+						throw new Error(err.message || `HTTP ${response.status}`);
+					}
+					const result = await response.json();
+					showMessage(result.message || "Category saved", "success");
+					closeKitchenCategoryModal();
+					await loadKitchenCategories();
+				} catch (err) {
+					console.error("saveKitchenCategory:", err);
+					showMessage("Failed to save category: " + err.message, "error");
+				}
+			}
+
+			async function deleteKitchenCategory(id, name) {
+				if (!confirm(`Delete category "${name}"? Kitchens using it will be left without a category.`)) return;
+				try {
+					const response = await authenticatedFetch(
+						`${API_BASE_URL}/kitchen-categories/${id}`,
+						{ method: "DELETE" },
+					);
+					if (!response.ok) {
+						const err = await response.json().catch(() => ({}));
+						throw new Error(err.message || `HTTP ${response.status}`);
+					}
+					showMessage("Category deleted", "success");
+					kitchenCategoriesLoaded = false;
+					await loadKitchenCategories();
+				} catch (err) {
+					console.error("deleteKitchenCategory:", err);
+					showMessage("Failed to delete category: " + err.message, "error");
+				}
+			}
+
+			// === Kitchen category image upload ===
+			function setKitchenCategoryPicture(url, publicId) {
+				const urlInput = document.getElementById("kitchen-category-picture-url");
+				const pidInput = document.getElementById("kitchen-category-picture-public-id");
+				const preview = document.getElementById("kitchen-category-picture-preview");
+				const removeBtn = document.getElementById("kitchen-category-picture-remove");
+				const status = document.getElementById("kitchen-category-picture-status");
+				const fileInput = document.getElementById("kitchen-category-picture-file");
+				if (urlInput) urlInput.value = url || "";
+				if (pidInput) pidInput.value = publicId || "";
+				if (fileInput) fileInput.value = "";
+				if (preview) {
+					if (url) preview.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;" />`;
+					else preview.textContent = "📷";
+				}
+				if (removeBtn) removeBtn.style.display = url ? "inline-block" : "none";
+				if (status) status.textContent = url ? "" : "No image selected";
+			}
+
+			function removeKitchenCategoryPicture() {
+				setKitchenCategoryPicture("", "");
+			}
+
+			async function uploadKitchenCategoryPicture(input) {
+				let file = null;
+				if (input && input.files && input.files[0]) file = input.files[0];
+				else if (input instanceof File) file = input;
+				if (!file) return;
+				if (!file.type.startsWith("image/")) {
+					showMessage("Please choose an image file", "error");
+					if (input && input.value !== undefined) input.value = "";
+					return;
+				}
+				if (file.size > 5 * 1024 * 1024) {
+					showMessage("Image must be 5MB or less", "error");
+					if (input && input.value !== undefined) input.value = "";
+					return;
+				}
+				const status = document.getElementById("kitchen-category-picture-status");
+				if (status) status.textContent = "Uploading…";
+				try {
+					const fd = new FormData();
+					fd.append("image", file);
+					const res = await authenticatedFetch(`${API_BASE_URL}/kitchen-categories/upload-image`, {
+						method: "POST",
+						body: fd,
+					});
+					if (!res.ok) {
+						const err = await res.json().catch(() => ({}));
+						throw new Error(err.message || `HTTP ${res.status}`);
+					}
+					const result = await res.json();
+					const data = result.data || result;
+					setKitchenCategoryPicture(data.url || data.secure_url || "", data.public_id || "");
+					if (status) status.textContent = "Image ready";
+				} catch (err) {
+					console.error("uploadKitchenCategoryPicture:", err);
+					showMessage("Failed to upload image: " + err.message, "error");
+					if (status) status.textContent = "Upload failed";
+					if (input && input.value !== undefined) input.value = "";
+				}
+			}
+
+			function handleKitchenCategoryPictureDragOver(e) {
+				e.preventDefault();
+				e.stopPropagation();
+				if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+				const dz = document.getElementById("kitchen-category-picture-dropzone");
+				if (dz) {
+					dz.style.background = "#eef6ff";
+					dz.style.borderColor = "#3b82f6";
+				}
+			}
+
+			function handleKitchenCategoryPictureDragLeave(e) {
+				e.preventDefault();
+				e.stopPropagation();
+				const dz = document.getElementById("kitchen-category-picture-dropzone");
+				if (!dz) return;
+				if (e.relatedTarget && dz.contains(e.relatedTarget)) return;
+				dz.style.background = "#fafbfc";
+				dz.style.borderColor = "#d6dbe2";
+			}
+
+			function handleKitchenCategoryPictureDrop(e) {
+				e.preventDefault();
+				e.stopPropagation();
+				const dz = document.getElementById("kitchen-category-picture-dropzone");
+				if (dz) {
+					dz.style.background = "#fafbfc";
+					dz.style.borderColor = "#d6dbe2";
+				}
+				const dt = e.dataTransfer;
+				if (!dt) return;
+				let file = null;
+				if (dt.files && dt.files.length) {
+					file = dt.files[0];
+				} else if (dt.items && dt.items.length) {
+					for (let i = 0; i < dt.items.length; i++) {
+						const it = dt.items[i];
+						if (it.kind === "file") { file = it.getAsFile(); break; }
+					}
+				}
+				if (!file) {
+					showMessage("Please drop an image file", "error");
+					return;
+				}
+				uploadKitchenCategoryPicture(file);
 			}
 		</script>
 	</body>

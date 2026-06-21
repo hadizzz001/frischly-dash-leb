@@ -27,6 +27,7 @@ const announcementRoutes = require("./src/routes/announcements");
 const marketRoutes = require("./src/routes/markets");
 const marketAdminRoutes = require("./src/routes/marketAdmin");
 const kitchenRoutes = require("./src/routes/kitchens");
+const kitchenCategoryRoutes = require("./src/routes/kitchenCategories");
 const backupRoutes = require("./src/routes/backup");
 
 // Controllers
@@ -320,6 +321,7 @@ app.use("/api/announcements", announcementRoutes);
 app.use("/api/markets", marketRoutes);
 app.use("/api/market-admin", marketAdminRoutes);
 app.use("/api/kitchens", kitchenRoutes);
+app.use("/api/kitchen-categories", kitchenCategoryRoutes);
 app.use("/api/backup", backupRoutes);
 
 // Route for customer shop page

@@ -79,6 +79,14 @@ const sanitizeItems = (raw) => {
 	];
 };
 
+// Normalize an incoming kitchen category value to an ObjectId string or null
+// (so a kitchen can be created/updated without a category, or have it cleared).
+const sanitizeCategory = (raw) => {
+	if (raw === undefined || raw === null || raw === "") return null;
+	const id = raw && raw._id ? String(raw._id) : String(raw);
+	return mongoose.Types.ObjectId.isValid(id) ? id : null;
+};
+
 // Guard: market-owned kitchens are view-only for the main admin. They are
 // managed by the owning market on its own dashboard, so a non-market (admin)
 // caller may read them but must not edit or delete them. Market admins are
@@ -121,6 +129,7 @@ exports.getPublicKitchens = async (req, res) => {
 				select:
 					"name barcode price discount tax bottlerefund stock isActive is18Plus picture shelfNumber market",
 			})
+			.populate("category", "name picture isActive sortOrder")
 			.populate("market", "name username location logo")
 			.sort({ sortOrder: 1, createdAt: -1 })
 			.lean();
@@ -148,6 +157,7 @@ exports.getPublicKitchen = async (req, res) => {
 				select:
 					"name barcode price discount tax bottlerefund stock isActive is18Plus picture shelfNumber market",
 			})
+			.populate("category", "name picture isActive sortOrder")
 			.populate("market", "name username location logo")
 			.lean();
 		if (!kitchen) return fail(res, 404, "Kitchen not found");
@@ -175,6 +185,7 @@ exports.getKitchens = async (req, res) => {
 				path: "items",
 				select: "name barcode price stock isActive picture shelfNumber",
 			})
+			.populate("category", "name picture isActive sortOrder")
 			.populate("market", "name username location")
 			.sort({ sortOrder: 1, createdAt: -1 })
 			.lean();
@@ -199,6 +210,7 @@ exports.getKitchen = async (req, res) => {
 				path: "items",
 				select: "name barcode price stock isActive picture shelfNumber",
 			})
+			.populate("category", "name picture isActive sortOrder")
 			.populate("market", "name username location")
 			.lean();
 		if (!kitchen) return fail(res, 404, "Kitchen not found");
@@ -220,6 +232,7 @@ exports.createKitchen = async (req, res) => {
 
 		const doc = {
 			name,
+			category: sanitizeCategory(req.body && req.body.category),
 			items,
 			isActive: req.body && req.body.isActive !== undefined ? !!req.body.isActive : true,
 			picture: req.body && req.body.picture ? String(req.body.picture).trim() : "",
@@ -242,6 +255,7 @@ exports.createKitchen = async (req, res) => {
 				path: "items",
 				select: "name barcode price stock isActive picture shelfNumber",
 			})
+			.populate("category", "name picture isActive sortOrder")
 			.populate("market", "name username location")
 			.lean();
 		res.status(201).json({
@@ -273,6 +287,9 @@ exports.updateKitchen = async (req, res) => {
 		}
 		if (req.body && req.body.items !== undefined) {
 			update.items = sanitizeItems(req.body.items);
+		}
+		if (req.body && req.body.category !== undefined) {
+			update.category = sanitizeCategory(req.body.category);
 		}
 		if (req.body && req.body.isActive !== undefined) {
 			update.isActive = !!req.body.isActive;
@@ -308,6 +325,7 @@ exports.updateKitchen = async (req, res) => {
 				path: "items",
 				select: "name barcode price stock isActive picture shelfNumber",
 			})
+			.populate("category", "name picture isActive sortOrder")
 			.populate("market", "name username location")
 			.lean();
 
