@@ -10527,22 +10527,20 @@
 							</select>
 						</div>
 
-						<div class="form-group">
+						<div class="form-group full-width">
 							<label for="product-barcode">Barcode *</label>
-							<div style="display: flex; gap: 10px; align-items: center">
+							<div class="input-with-actions">
 								<input
 									type="text"
 									id="product-barcode"
 									name="barcode"
 									required
 									placeholder="e.g., APP123456"
-									style="flex: 1"
 								/>
 								<button
 									type="button"
 									class="btn btn-secondary"
 									onclick="BarcodeScanner.fillField('product-barcode', { title: 'Scan product barcode' })"
-									style="white-space: nowrap"
 								>
 									📷 Scan
 								</button>
@@ -10550,7 +10548,6 @@
 									type="button"
 									class="btn btn-secondary"
 									onclick="showBarcodeGeneratorModal()"
-									style="white-space: nowrap"
 								>
 									🔄 Generate
 								</button>
@@ -10709,12 +10706,12 @@
 							</select>
 						</div>
 
-						<div class="form-group">
+						<div class="form-group toggle">
 							<label for="product-in-ads">In Ads</label>
 							<input type="checkbox" id="product-in-ads" name="inAds" />
 						</div>
 
-						<div class="form-group">
+						<div class="form-group toggle">
 							<label for="product-is18plus">+18 (Age Restricted)</label>
 							<input type="checkbox" id="product-is18plus" name="is18Plus" />
 						</div>

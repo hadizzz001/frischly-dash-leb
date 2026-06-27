@@ -1969,6 +1969,124 @@ body {
 	box-shadow: 0 0 5px rgba(255, 195, 0, 0.3);
 }
 
+/* =====================================================================
+   Modal & form polish — nicer spacing, alignment and responsiveness.
+   ===================================================================== */
+
+/* Smooth, modern modal entrance + deeper shadow */
+.modal-content {
+	box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+	animation: modalPop 0.25s ease;
+}
+@keyframes modalPop {
+	from {
+		opacity: 0;
+		transform: translateY(16px) scale(0.985);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+/* Input + inline action buttons (e.g. Barcode + Scan / Generate).
+   The input always takes its own full-width line; the action buttons sit
+   neatly on the line below so the textbox is never crushed. */
+.input-with-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	align-items: stretch;
+}
+.input-with-actions > input {
+	flex: 1 1 100%; /* full-width: forces the buttons onto the next line */
+	min-width: 0;
+	width: 100%;
+}
+.input-with-actions > .btn {
+	flex: 0 0 auto;
+	padding: 11px 18px;
+	white-space: nowrap;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+/* Collapse the 2-column form grid to a single column on small screens and
+   give the modal a comfortable, near full-bleed fit on phones. */
+@media (max-width: 640px) {
+	.form-grid {
+		grid-template-columns: 1fr;
+		gap: 16px;
+	}
+	.modal-content {
+		padding: 20px;
+		margin: 16px auto;
+		width: calc(100% - 24px);
+		max-height: 92vh;
+	}
+	.input-with-actions > .btn {
+		flex: 1 1 auto; /* full-width buttons stacked under the field */
+		justify-content: center;
+	}
+}
+
+/* ---- Add / Edit Product modal: refined, well-aligned layout ---- */
+#product-modal .modal-content {
+	max-width: 780px;
+}
+#product-modal .modal-header h2 {
+	font-size: 1.4em;
+}
+#product-modal .form-grid {
+	gap: 18px 24px;
+	margin-bottom: 24px;
+}
+#product-modal .form-group {
+	/* Even spacing is handled by the grid gap for clean alignment */
+	margin-bottom: 0;
+}
+#product-modal .form-group label {
+	margin-bottom: 7px;
+	font-size: 13.5px;
+	letter-spacing: 0.2px;
+}
+#product-modal .form-group input[type="text"],
+#product-modal .form-group input[type="number"],
+#product-modal .form-group input[type="file"],
+#product-modal .form-group select,
+#product-modal .form-group textarea {
+	padding: 11px 14px;
+	border-radius: 10px;
+}
+
+/* Tidy on/off toggles for In-Ads / +18 instead of stretched checkboxes */
+#product-modal .form-group.toggle {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 10px;
+	background: #fafafa;
+	border: 1px solid #eee;
+	border-radius: 10px;
+	padding: 12px 14px;
+}
+#product-modal .form-group.toggle label {
+	order: 2;
+	margin: 0;
+	cursor: pointer;
+}
+#product-modal .form-group.toggle input[type="checkbox"] {
+	order: 1;
+	width: 20px;
+	height: 20px;
+	min-width: 20px;
+	padding: 0;
+	margin: 0;
+	accent-color: #ffc300;
+	cursor: pointer;
+}
+
 .form-row {
 	display: flex;
 	gap: 15px;

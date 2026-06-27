@@ -1034,9 +1034,9 @@
 								📷 Scan items with camera
 							</button>
 							<small style="color: #666; margin-top: 5px; display: block">
-								The camera opens automatically. Scan every unit — an item with
-								quantity 2 must be scanned twice. You can also tap the buttons in
-								the table or use a USB scanner.
+								The camera closes after each successful scan — tap the button
+								again to scan the next unit (for a quantity of 2, scan twice).
+								You can also tap the buttons in the table or use a USB scanner.
 							</small>
 						</div>
 					</div>
@@ -2237,11 +2237,12 @@
 				}
 				BarcodeScanner.open({
 					continuous: true,
+					closeOnSuccess: true,
 					cooldownMs: 1000,
 					title: `Scan items — Order ${
 						currentProcessingOrder.orderNumber || ""
 					}`,
-					hint: "Scan each unit. Items with quantity > 1 must be scanned that many times.",
+					hint: "The camera closes after each successful scan. Tap “Scan items with camera” again for the next unit.",
 					onDetect: (code) => handleScannedBarcode(code, { source: "camera" }),
 				});
 			}

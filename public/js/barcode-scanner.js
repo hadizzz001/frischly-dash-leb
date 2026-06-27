@@ -11,6 +11,11 @@
  *
  * options for open():
  *   continuous   {boolean}  Keep scanning after each hit (default false).
+ *   closeOnSuccess {boolean} Close the scanner as soon as ONE scan is accepted
+ *                           (ok !== false). Works in continuous mode too;
+ *                           failed/unrecognized scans keep the camera open so
+ *                           the user can retry. Single-shot mode always closes
+ *                           on success regardless of this flag.
  *   onDetect     {function} Called with the decoded string for every accepted
  *                           scan. May return { ok:boolean, message:string } to
  *                           drive the on-screen feedback (green/ok vs red/err).
@@ -50,6 +55,7 @@
 		torchOn: false,
 		torchSupported: false,
 		flashTimer: null,
+		locked: false, // true once a final (closing) scan has been accepted
 	};
 
 	/* ----------------------------- library load ---------------------------- */
@@ -245,6 +251,10 @@
 	// Called by html5-qrcode for every successful decode, and by manual entry.
 	function handleHit(decodedText, force) {
 		var opts = state.options || {};
+		// Once a final (closing) scan has been accepted, ignore any further
+		// frames so a single barcode can't be processed/counted twice while the
+		// brief close animation plays out.
+		if (state.locked) return;
 		var now = Date.now();
 		var cooldown = opts.cooldownMs != null ? opts.cooldownMs : 1000;
 
@@ -274,8 +284,12 @@
 		beep(ok);
 		vibrate(ok ? 60 : [40, 30, 40]);
 
-		if (!opts.continuous && ok) {
-			// Single-shot: brief confirmation, then close.
+		// Close the camera after a single SUCCESSFUL scan. This always happens in
+		// single-shot mode, and also in continuous mode when the caller asks for
+		// it via closeOnSuccess. Failed/unrecognized scans keep the camera open so
+		// the user can immediately try again.
+		if (ok && (!opts.continuous || opts.closeOnSuccess)) {
+			state.locked = true; // block any further frames during the close delay
 			setTimeout(close, 320);
 		}
 	}
@@ -299,12 +313,32 @@
 		];
 	}
 
+	// Ask the browser for the highest practical resolution. More pixels across
+	// the barcode means far more reliable, much faster 1D/2D decoding. `ideal`
+	// keeps it a soft request, so devices that top out lower still start cleanly
+	// instead of failing outright. These are passed as the getUserMedia video
+	// constraints (first arg of start()), which reliably applies the resolution
+	// and avoids the library's stricter `videoConstraints` validation.
+	var IDEAL_WIDTH = 1920;
+	var IDEAL_HEIGHT = 1080;
+
+	function cameraConstraints(extra) {
+		var base = {
+			width: { ideal: IDEAL_WIDTH },
+			height: { ideal: IDEAL_HEIGHT },
+			frameRate: { ideal: 30 },
+			// Best-effort hint — applied where supported, ignored otherwise.
+			advanced: [{ focusMode: "continuous" }],
+		};
+		return Object.assign(base, extra || {});
+	}
+
 	function scanConfig() {
 		return {
-			fps: 15,
+			fps: 20,
 			qrbox: function (vw, vh) {
-				var w = Math.max(200, Math.floor(Math.min(vw * 0.86, 440)));
-				var h = Math.max(140, Math.floor(Math.min(vh * 0.5, w * 0.62)));
+				var w = Math.max(220, Math.floor(Math.min(vw * 0.86, 480)));
+				var h = Math.max(150, Math.floor(Math.min(vh * 0.5, w * 0.64)));
 				return { width: w, height: h };
 			},
 			aspectRatio: undefined,
@@ -337,10 +371,15 @@
 
 	function afterStart() {
 		setStatus("Point the camera at a barcode", "info");
-		// Continuous autofocus dramatically improves 1D barcode reads.
+		// Continuous autofocus + a nudge toward high resolution dramatically
+		// improve (and speed up) 1D barcode reads. All best-effort.
 		try {
 			state.scanner
-				.applyVideoConstraints({ advanced: [{ focusMode: "continuous" }] })
+				.applyVideoConstraints({
+					width: { ideal: IDEAL_WIDTH },
+					height: { ideal: IDEAL_HEIGHT },
+					advanced: [{ focusMode: "continuous" }],
+				})
 				.catch(function () {});
 		} catch (e) {
 			/* not supported — ignore */
@@ -370,8 +409,15 @@
 	function startCameraChain() {
 		var cfg = scanConfig();
 		freshInstance();
+		// First attempt: rear camera at high resolution. Passing the constraints
+		// as the first argument sends them straight to getUserMedia.
 		return state.scanner
-			.start({ facingMode: "environment" }, cfg, handleHit, onScanError)
+			.start(
+				cameraConstraints({ facingMode: { ideal: "environment" } }),
+				cfg,
+				handleHit,
+				onScanError
+			)
 			.then(afterStart)
 			.catch(function () {
 				freshInstance();
@@ -385,8 +431,14 @@
 						}
 					}
 					var camId = (back || cams[cams.length - 1]).id;
+					// Bind to the chosen device, still at high resolution.
 					return state.scanner
-						.start(camId, cfg, handleHit, onScanError)
+						.start(
+							cameraConstraints({ deviceId: { exact: camId } }),
+							cfg,
+							handleHit,
+							onScanError
+						)
 						.then(afterStart);
 				});
 			})
@@ -422,6 +474,7 @@
 		state.lastCode = null;
 		state.lastTime = 0;
 		state.torchOn = false;
+		state.locked = false;
 
 		loadLibrary()
 			.then(function () {
