@@ -55,6 +55,7 @@
 		torchOn: false,
 		torchSupported: false,
 		flashTimer: null,
+		focusTimer: null, // periodic continuous-autofocus nudge (hands-free scan)
 		locked: false, // true once a final (closing) scan has been accepted
 	};
 
@@ -379,21 +380,43 @@
 		/* per-frame "not found" — ignored on purpose */
 	}
 
-	function afterStart() {
-		setStatus("Point the camera at a barcode", "info");
-		// Continuous autofocus + a nudge toward high resolution dramatically
-		// improve (and speed up) 1D barcode reads. All best-effort.
+	// Keep the camera continuously focused so a barcode held in front of it is
+	// read automatically — no tap-to-focus required. Many phone cameras only
+	// autofocus when explicitly told to, and the video track is often not ready
+	// the instant scanning starts, so we (re)apply the hint immediately, a few
+	// times shortly after, and then on a gentle loop.
+	function applyContinuousFocus() {
+		if (!state.scanner) return;
 		try {
 			state.scanner
-				.applyVideoConstraints({
-					width: { ideal: IDEAL_WIDTH },
-					height: { ideal: IDEAL_HEIGHT },
-					advanced: [{ focusMode: "continuous" }],
-				})
+				.applyVideoConstraints({ advanced: [{ focusMode: "continuous" }] })
 				.catch(function () {});
 		} catch (e) {
 			/* not supported — ignore */
 		}
+	}
+
+	function enableAutoFocus() {
+		applyContinuousFocus(); // now
+		setTimeout(applyContinuousFocus, 400); // again once the track settles
+		setTimeout(applyContinuousFocus, 1500);
+		// Gentle periodic refocus keeps close-up barcodes sharp and re-triggers
+		// autofocus on cameras that would otherwise lock/drift out of focus.
+		if (state.focusTimer) clearInterval(state.focusTimer);
+		state.focusTimer = setInterval(applyContinuousFocus, 2500);
+	}
+
+	function stopAutoFocus() {
+		if (state.focusTimer) {
+			clearInterval(state.focusTimer);
+			state.focusTimer = null;
+		}
+	}
+
+	function afterStart() {
+		setStatus("Point the camera at a barcode", "info");
+		// Auto-focus continuously so scanning is fully hands-free (no tapping).
+		enableAutoFocus();
 		// Torch availability.
 		try {
 			var caps = state.scanner.getRunningTrackCapabilities();
@@ -498,6 +521,7 @@
 		if (!state.open && !el.overlay) return;
 		var opts = state.options;
 		var sc = state.scanner;
+		stopAutoFocus();
 		state.open = false;
 		state.options = null;
 		state.scanner = null;

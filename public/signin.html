@@ -77,6 +77,57 @@
 				border-color: #000000;
 			}
 
+			.password-wrap {
+				position: relative;
+				display: flex;
+				align-items: center;
+			}
+
+			.password-wrap input {
+				padding-right: 46px;
+			}
+
+			.password-toggle {
+				position: absolute;
+				right: 6px;
+				top: 50%;
+				transform: translateY(-50%);
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				width: 34px;
+				height: 34px;
+				padding: 0;
+				background: transparent;
+				border: none;
+				border-radius: 8px;
+				color: #6c757d;
+				cursor: pointer;
+				transition: color 0.2s ease, background 0.2s ease;
+			}
+
+			.password-toggle:hover {
+				color: #000000;
+				background: rgba(255, 195, 0, 0.18);
+			}
+
+			.password-toggle:focus-visible {
+				outline: 2px solid #000000;
+				outline-offset: 1px;
+			}
+
+			.password-toggle .eye-closed {
+				display: none;
+			}
+
+			.password-toggle.is-visible .eye-open {
+				display: none;
+			}
+
+			.password-toggle.is-visible .eye-closed {
+				display: block;
+			}
+
 			.btn {
 				width: 100%;
 				padding: 12px;
@@ -194,13 +245,31 @@
 
 				<div class="form-group">
 					<label for="password">Password</label>
-					<input
-						type="password"
-						id="password"
-						name="password"
-						required
-						placeholder="Enter your password"
-					/>
+					<div class="password-wrap">
+						<input
+							type="password"
+							id="password"
+							name="password"
+							required
+							placeholder="Enter your password"
+						/>
+						<button
+							type="button"
+							class="password-toggle"
+							onclick="togglePassword(this)"
+							aria-label="Show password"
+							aria-pressed="false"
+						>
+							<svg class="eye-open" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+								<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+								<circle cx="12" cy="12" r="3" />
+							</svg>
+							<svg class="eye-closed" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+								<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+								<line x1="1" y1="1" x2="23" y2="23" />
+							</svg>
+						</button>
+					</div>
 				</div>
 
 				<button type="submit" class="btn">Sign In</button>
@@ -231,6 +300,22 @@
 				if (messageDiv) {
 					messageDiv.innerHTML = `<div class="message ${type}">${message}</div>`;
 				}
+			}
+
+			// Show/hide the password field when the eye icon is clicked.
+			function togglePassword(btn) {
+				const wrap = btn.closest(".password-wrap");
+				const input = wrap && wrap.querySelector("input");
+				if (!input) return;
+				const willShow = input.type === "password";
+				input.type = willShow ? "text" : "password";
+				btn.classList.toggle("is-visible", willShow);
+				btn.setAttribute("aria-pressed", String(willShow));
+				btn.setAttribute(
+					"aria-label",
+					willShow ? "Hide password" : "Show password"
+				);
+				input.focus();
 			}
 
 			function clearMessage() {
