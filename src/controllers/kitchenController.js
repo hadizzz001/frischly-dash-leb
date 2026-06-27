@@ -130,7 +130,7 @@ exports.getPublicKitchens = async (req, res) => {
 					"name barcode price discount tax bottlerefund stock isActive is18Plus picture shelfNumber market",
 			})
 			.populate("category", "name picture isActive sortOrder")
-			.populate("market", "name username location logo")
+			.populate("market", "name username location logo cities")
 			.sort({ sortOrder: 1, createdAt: -1 })
 			.lean();
 		ok(res, kitchens);
@@ -158,7 +158,7 @@ exports.getPublicKitchen = async (req, res) => {
 					"name barcode price discount tax bottlerefund stock isActive is18Plus picture shelfNumber market",
 			})
 			.populate("category", "name picture isActive sortOrder")
-			.populate("market", "name username location logo")
+			.populate("market", "name username location logo cities")
 			.lean();
 		if (!kitchen) return fail(res, 404, "Kitchen not found");
 		ok(res, kitchen);
@@ -186,7 +186,7 @@ exports.getKitchens = async (req, res) => {
 				select: "name barcode price stock isActive picture shelfNumber",
 			})
 			.populate("category", "name picture isActive sortOrder")
-			.populate("market", "name username location")
+			.populate("market", "name username location cities")
 			.sort({ sortOrder: 1, createdAt: -1 })
 			.lean();
 		ok(res, kitchens);
@@ -211,7 +211,7 @@ exports.getKitchen = async (req, res) => {
 				select: "name barcode price stock isActive picture shelfNumber",
 			})
 			.populate("category", "name picture isActive sortOrder")
-			.populate("market", "name username location")
+			.populate("market", "name username location cities")
 			.lean();
 		if (!kitchen) return fail(res, 404, "Kitchen not found");
 		ok(res, kitchen);
@@ -256,7 +256,7 @@ exports.createKitchen = async (req, res) => {
 				select: "name barcode price stock isActive picture shelfNumber",
 			})
 			.populate("category", "name picture isActive sortOrder")
-			.populate("market", "name username location")
+			.populate("market", "name username location cities")
 			.lean();
 		res.status(201).json({
 			success: true,
@@ -326,7 +326,7 @@ exports.updateKitchen = async (req, res) => {
 				select: "name barcode price stock isActive picture shelfNumber",
 			})
 			.populate("category", "name picture isActive sortOrder")
-			.populate("market", "name username location")
+			.populate("market", "name username location cities")
 			.lean();
 
 		if (!kitchen) return fail(res, 404, "Kitchen not found");

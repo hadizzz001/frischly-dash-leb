@@ -785,11 +785,14 @@ exports.getPublicMarkets = async (req, res) => {
 		const city = (req.query.city || "").trim();
 		if (city) {
 			const escaped = city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-			filter["location.city"] = new RegExp(`^${escaped}$`, "i");
+			const cityRegex = new RegExp(`^${escaped}$`, "i");
+			// A market serves a city if it is listed in its `cities` array (the
+			// new multi-select) or matches the legacy single `location.city`.
+			filter.$or = [{ cities: cityRegex }, { "location.city": cityRegex }];
 		}
 
 		const markets = await Market.find(filter)
-			.select("name username logo location")
+			.select("name username logo location cities")
 			.sort({ name: 1 });
 
 		res.json({

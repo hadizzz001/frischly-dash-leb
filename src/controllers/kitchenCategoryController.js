@@ -99,7 +99,7 @@ exports.getPublicKitchenCategories = async (req, res) => {
 			}
 		}
 		const categories = await KitchenCategory.find(filter)
-			.populate("market", "name username location logo")
+			.populate("market", "name username location logo cities")
 			.sort({ sortOrder: 1, createdAt: -1 })
 			.lean();
 		ok(res, categories);
@@ -123,7 +123,7 @@ exports.getKitchenCategories = async (req, res) => {
 			filter.name = new RegExp(safe, "i");
 		}
 		const categories = await KitchenCategory.find(filter)
-			.populate("market", "name username location")
+			.populate("market", "name username location cities")
 			.sort({ sortOrder: 1, createdAt: -1 })
 			.lean();
 		ok(res, categories);
@@ -142,7 +142,7 @@ exports.getKitchenCategory = async (req, res) => {
 		}
 		const filter = { _id: req.params.id, ...scope(req) };
 		const category = await KitchenCategory.findOne(filter)
-			.populate("market", "name username location")
+			.populate("market", "name username location cities")
 			.lean();
 		if (!category) return fail(res, 404, "Kitchen category not found");
 		ok(res, category);
@@ -191,7 +191,7 @@ exports.createKitchenCategory = async (req, res) => {
 
 		const category = await KitchenCategory.create(doc);
 		const populated = await KitchenCategory.findById(category._id)
-			.populate("market", "name username location")
+			.populate("market", "name username location cities")
 			.lean();
 		res.status(201).json({
 			success: true,
@@ -257,7 +257,7 @@ exports.updateKitchenCategory = async (req, res) => {
 			new: true,
 			runValidators: true,
 		})
-			.populate("market", "name username location")
+			.populate("market", "name username location cities")
 			.lean();
 
 		if (!category) return fail(res, 404, "Kitchen category not found");

@@ -1,4 +1,30 @@
 const Setting = require("../models/Setting");
+const User = require("../models/User");
+
+// Main-store ("dash") coverage = the union of every admin account's service
+// cities (User.cities), with a Setting.cities fallback. The shop hides
+// main-store items for users whose city is not served. An empty array means
+// served everywhere (backwards compatible with the previous "show to all").
+const getAdminServiceCities = async () => {
+	const admins = await User.find({ role: "admin" }).select("cities").lean();
+	const fromAdmins = admins.flatMap((a) =>
+		Array.isArray(a.cities) ? a.cities : []
+	);
+
+	let fromSettings = [];
+	try {
+		const raw = await Setting.findOne().lean();
+		if (raw && Array.isArray(raw.cities)) fromSettings = raw.cities;
+	} catch (_) {}
+
+	return [
+		...new Set(
+			[...fromAdmins, ...fromSettings]
+				.map((c) => String(c).trim())
+				.filter(Boolean)
+		),
+	];
+};
 
 // @desc    Get global settings
 // @route   GET /api/admin/settings
@@ -59,6 +85,7 @@ exports.updateSettings = async (req, res) => {
 exports.getPublicSettings = async (req, res) => {
 	try {
 		const settings = await Setting.getSettings();
+		const cities = await getAdminServiceCities();
 		res.status(200).json({
 			success: true,
 			data: {
@@ -66,6 +93,8 @@ exports.getPublicSettings = async (req, res) => {
 				areOrdersDisabled: settings.areOrdersDisabled,
 				maintenanceMessage: settings.maintenanceMessage,
 				minimumOrderValue: settings.minimumOrderValue,
+				// Dash serving cities (array). Empty => main store shown everywhere.
+				cities,
 			},
 		});
 	} catch (error) {
