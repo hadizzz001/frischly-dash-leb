@@ -316,24 +316,32 @@
 	// Ask the browser for the highest practical resolution. More pixels across
 	// the barcode means far more reliable, much faster 1D/2D decoding. `ideal`
 	// keeps it a soft request, so devices that top out lower still start cleanly
-	// instead of failing outright. These are passed as the getUserMedia video
-	// constraints (first arg of start()), which reliably applies the resolution
-	// and avoids the library's stricter `videoConstraints` validation.
+	// instead of failing outright.
+	//
+	// IMPORTANT: html5-qrcode requires the FIRST argument of start() to be a
+	// single-key camera selector ({ facingMode } | { deviceId } | "<id>"). The
+	// resolution/focus hints must therefore live in config.videoConstraints
+	// (the second arg) — passing them as the first arg throws
+	// "'cameraIdOrConfig' object should have exactly 1 key…". The library's
+	// validator only rejects audio keys, so width/height/frameRate/facingMode
+	// are all accepted here.
 	var IDEAL_WIDTH = 1920;
 	var IDEAL_HEIGHT = 1080;
 
-	function cameraConstraints(extra) {
-		var base = {
-			width: { ideal: IDEAL_WIDTH },
-			height: { ideal: IDEAL_HEIGHT },
-			frameRate: { ideal: 30 },
-			// Best-effort hint — applied where supported, ignored otherwise.
-			advanced: [{ focusMode: "continuous" }],
-		};
-		return Object.assign(base, extra || {});
+	function videoConstraints(selector) {
+		return Object.assign(
+			{
+				width: { ideal: IDEAL_WIDTH },
+				height: { ideal: IDEAL_HEIGHT },
+				frameRate: { ideal: 30 },
+				// Best-effort focus hint — applied where supported, ignored otherwise.
+				advanced: [{ focusMode: "continuous" }],
+			},
+			selector || {}
+		);
 	}
 
-	function scanConfig() {
+	function scanConfig(constraints) {
 		return {
 			fps: 20,
 			qrbox: function (vw, vh) {
@@ -343,6 +351,8 @@
 			},
 			aspectRatio: undefined,
 			disableFlip: false,
+			// High-resolution camera request lives here (NOT the first start() arg).
+			videoConstraints: constraints,
 			formatsToSupport: supportedFormats(),
 			experimentalFeatures: { useBarCodeDetectorIfSupported: true },
 			rememberLastUsedCamera: true,
@@ -407,14 +417,13 @@
 	// Try the rear camera first via facingMode, then fall back to enumerating
 	// cameras (handles laptops / devices where facingMode is rejected).
 	function startCameraChain() {
-		var cfg = scanConfig();
 		freshInstance();
-		// First attempt: rear camera at high resolution. Passing the constraints
-		// as the first argument sends them straight to getUserMedia.
+		// First attempt: rear camera. The selector (1 key) is the FIRST arg; the
+		// high-resolution request rides along in config.videoConstraints.
 		return state.scanner
 			.start(
-				cameraConstraints({ facingMode: { ideal: "environment" } }),
-				cfg,
+				{ facingMode: "environment" },
+				scanConfig(videoConstraints({ facingMode: "environment" })),
 				handleHit,
 				onScanError
 			)
@@ -431,11 +440,11 @@
 						}
 					}
 					var camId = (back || cams[cams.length - 1]).id;
-					// Bind to the chosen device, still at high resolution.
+					// Bind to the chosen device (string id = 1 selector), still high-res.
 					return state.scanner
 						.start(
-							cameraConstraints({ deviceId: { exact: camId } }),
-							cfg,
+							camId,
+							scanConfig(videoConstraints({ deviceId: { exact: camId } })),
 							handleHit,
 							onScanError
 						)
