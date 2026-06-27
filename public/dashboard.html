@@ -2145,7 +2145,7 @@
 											onchange="changeLanguage(this.value)"
 										>
 											<option value="en">English</option>
-											<option value="de">Deutsch (German)</option>
+											<option value="ar">العربية (Arabic)</option>
 										</select>
 									</div>
 									<p class="setting-description">
@@ -2215,10 +2215,10 @@
 						</div>
 
 						<div class="address-card">
-							<h3 data-translation="address-information">
-								Address Information
+							<h3 data-translation="city">
+								City
 							</h3>
-							<div id="user-address">-</div>
+							<div id="user-cities" data-no-translate>—</div>
 						</div>
 
 						<div class="actions">
@@ -2729,17 +2729,13 @@
 							/>
 						</div>
 
-						<h4 data-translation="address-information">Address Information</h4>
-
 						<div class="form-group">
-							<label for="edit-street">Street Address</label>
-							<input type="text" id="edit-street" name="street" required />
-						</div>
-						<div class="form-row">
-							<div class="form-group half">
-								<label for="edit-city">City</label>
-								<select id="edit-city" name="city" required data-lebanese-city-select></select>
-							</div>
+							<label for="edit-cities" data-translation="city">City</label>
+							<div
+								id="edit-cities"
+								data-lebanese-city-multiselect
+								data-placeholder="Select cities"
+							></div>
 						</div>
 					</form>
 				</div>
@@ -2932,8 +2928,10 @@
 
 		<!-- Global Config -->
 		<script src="js/config.js"></script>
+		<script src="js/translator.js"></script>
 		<script src="js/lebanese-cities.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+		<script src="js/barcode-scanner.js"></script>
 
 		<script>
 			let currentToken = localStorage.getItem("authToken");
@@ -3056,6 +3054,7 @@
 					"your-profile": "Your Profile",
 					"account-role": "Account Role",
 					"address-information": "Address Information",
+					"city": "City",
 					"edit-profile": "Edit Profile",
 					"change-password": "Change Password",
 
@@ -3130,144 +3129,6 @@
 						"Language changed to {language} successfully!",
 					"language-change-error": "Error changing language. Please try again.",
 				},
-				de: {
-					// Navigation
-					Dashboard: "Dashboard",
-					"Staff Management": "Staff Management",
-					Categories: "Categories",
-					Products: "Products",
-					Orders: "Orders",
-					"Riders Management": "Riders Management",
-					"Waste Management": "Waste Management",
-					Settings: "Settings",
-					Profile: "Profile",
-					"Sign Out": "Sign Out",
-
-					// Dashboard
-					"Dashboard Overview": "Dashboard Overview",
-					"Welcome back": "Welcome back",
-					"Total Customers": "Total Customers",
-					"Active Products": "Active Products",
-					Orders: "Orders",
-					"Active Riders": "Active Riders",
-
-					// Settings
-					"System Settings": "System Settings",
-					"Configure system-wide settings and preferences":
-						"Configure system-wide settings and preferences",
-					"Product Management": "Product Management",
-					"Product Status Control": "Product Status Control",
-					"Activate All Products": "Activate All Products",
-					"Deactivate All Products": "Deactivate All Products",
-					"Bulk update the active status of all products in the system.":
-						"Bulk update the active status of all products in the system.",
-					"Database Management": "Database Management",
-					"Database Operations": "Database Operations",
-					"Create Database Backup": "Create Database Backup",
-					"Manage database backups.": "Manage database backups.",
-					"System Information": "System Information",
-					"System Stats": "System Stats",
-					"View System Information": "View System Information",
-					"View detailed system statistics and information.":
-						"View detailed system statistics and information.",
-					Maintenance: "Maintenance",
-					"System Maintenance": "System Maintenance",
-					"Run Maintenance Tasks": "Run Maintenance Tasks",
-					"Perform routine system maintenance and cleanup.":
-						"Perform routine system maintenance and cleanup.",
-					"Language Settings": "Language Settings",
-					"Application Language": "Application Language",
-					"Change the language of the application interface.":
-						"Change the language of the application interface.",
-					"Minimum Order Value ($)": "Minimum Order Value ($)",
-					"Set the minimum order value required for customers to place orders.":
-						"Set the minimum order value required for customers to place orders.",
-
-					// Profile section
-					"profile-settings": "Profile Settings",
-					"manage-personal-info":
-						"Manage your personal information and preferences",
-					"member-since": "Member Since",
-					"last-login": "Last Login",
-					"account-status": "Account Status",
-					"your-profile": "Your Profile",
-					"account-role": "Account Role",
-					"address-information": "Address Information",
-					"edit-profile": "Edit Profile",
-					"change-password": "Change Password",
-
-					// Common fields
-					"full-name": "Full Name",
-					"email-address": "Email Address",
-					"phone-number": "Phone Number",
-
-					// Change password functionality
-					"current-password": "Current Password",
-					"new-password": "New Password",
-					"confirm-new-password": "Confirm New Password",
-					"update-password": "Update Password",
-					"password-changed-success": "Password changed successfully",
-					"password-mismatch": "Passwords do not match",
-					"password-too-short": "Password must be at least 6 characters long",
-					"current-password-incorrect": "Current password is incorrect",
-					"password-change-error": "Error changing password",
-
-					// Edit profile functionality
-					"update-profile": "Update Profile",
-					"profile-updated-success": "Profile updated successfully",
-					"profile-update-error": "Error updating profile",
-					"invalid-email": "Please enter a valid email address",
-					"invalid-phone": "Please enter a valid phone number",
-
-					// Common UI elements
-					cancel: "Cancel",
-					error: "Error",
-
-					// Common
-					"Loading...": "Loading...",
-					Error: "Error",
-					Success: "Success",
-					Warning: "Warning",
-					Info: "Info",
-
-					// Product status update messages
-					"confirm-activate-all-products":
-						"Are you sure you want to activate ALL products? This will affect product visibility in the app.",
-					"confirm-deactivate-all-products":
-						"Are you sure you want to deactivate ALL products? This will affect product visibility in the app.",
-					"setting-products-status":
-						"Setting all products to {status}...",
-					"products-status-success": "Successfully {action}d {count} products!",
-					"products-status-error": "Error: {error}",
-					"products-status-failed": "Failed to update products",
-					"products-status-update-error":
-						"Error updating products status. Please try again.",
-
-					// Database backup messages
-					"backup-creating": "Creating database backup...",
-					"backup-success": "Database backup created successfully: {path}",
-					"backup-error": "Error: {error}",
-					"backup-failed": "Failed to create backup",
-					"backup-create-error":
-						"Error creating database backup. Please try again.",
-
-					// System maintenance messages
-					"maintenance-running": "Running system maintenance...",
-					"maintenance-success": "Maintenance completed successfully. {message}",
-					"maintenance-error": "Error: {error}",
-					"maintenance-failed": "Maintenance failed",
-					"maintenance-run-error":
-						"Error running system maintenance. Please try again.",
-
-					// Language change messages
-					"language-changing": "Changing language to {language}...",
-
-					// Language change success/error messages
-					"language-changed-success":
-						"Language changed to {language} successfully!",
-					"language-change-error":
-						"Error changing language. Please try again.",
-				},
 			};
 
 			// Debounce utility function for search inputs
@@ -3287,23 +3148,6 @@
 			const debounceCategorySearch = debounce(filterCategories, 300);
 			const debounceSubcategorySearch = debounce(filterSubcategories, 300);
 			const debounceProductSearch = debounce(searchProducts, 300);
-
-			function switchLanguage(lang) {
-				currentLanguage = lang;
-				localStorage.setItem("selectedLanguage", lang);
-
-				// Update HTML lang attribute
-				document.getElementById("html-root").setAttribute("lang", lang);
-
-				// Update page content
-				updatePageLanguage();
-
-				// Show confirmation message
-				showMessage(
-					`Language switched to ${lang === "en" ? "English" : "German"}`,
-					"success"
-				);
-			}
 
 			function updatePageLanguage() {
 				try {
@@ -3561,12 +3405,6 @@
 						document.getElementById("user-role").textContent =
 							user.role.toUpperCase();
 
-						// Update address
-						const addressText = [user.address.street, user.address.city]
-							.filter(Boolean)
-							.join(", ");
-						document.getElementById("user-address").textContent = addressText;
-
 						// Update stats
 						document.getElementById("member-since").textContent = formatDate(
 							user.createdAt
@@ -3579,6 +3417,7 @@
 
 						// Store current user and check admin access
 						currentUser = user;
+						setProfileCities(user.cities || []);
 						updateSidebarRoleBadge(user.role);
 						checkAdminAccess(user);
 
@@ -3589,8 +3428,26 @@
 							dashboardContent.style.display = "block";
 						}
 
-						// Land on Products by default (the standalone Dashboard page was removed).
-						try { showSection("products", true); } catch (e) { console.warn("initial showSection failed", e); }
+						// Open the section requested via URL (?section=XXX) when the
+						// signed-in role is allowed to see it; otherwise land on the
+						// role's default section. Also support ?action=backup, used by
+						// the Backup link on the standalone admin pages.
+						try {
+							const _params = new URLSearchParams(window.location.search);
+							const _section = (_params.get("section") || "").trim();
+							const _action = (_params.get("action") || "").trim();
+							const _target = isSectionAllowed(_section, user.role)
+								? _section
+								: getDefaultSection(user.role);
+							showSection(_target, true);
+							if (_action === "backup") {
+								setTimeout(() => {
+									try { downloadBackup(); } catch (e) {}
+								}, 300);
+							}
+						} catch (e) {
+							console.warn("initial showSection failed", e);
+						}
 
 						showLoading(false);
 					} else {
@@ -3608,6 +3465,26 @@
 				}
 			}
 
+			// Render the user's cities into the profile "City" display.
+			// Safe to call before the components init.
+			function setProfileCities(citiesList) {
+				const list = Array.isArray(citiesList) ? citiesList : [];
+				const display = document.getElementById("user-cities");
+				if (display)
+					display.textContent = list.length ? list.join(", ") : "—";
+			}
+
+			// Read the selection from the Edit Profile multi-select (falls back to
+			// the current user's saved cities if the component isn't mounted).
+			function getEditCitiesSelection() {
+				const api =
+					window.getLebaneseCityMultiSelect &&
+					window.getLebaneseCityMultiSelect("edit-cities");
+				return api
+					? api.getSelected()
+					: (currentUser && currentUser.cities) || [];
+			}
+
 			function editProfile() {
 				// Populate the form with current user data
 				if (currentUser) {
@@ -3617,13 +3494,12 @@
 					document.getElementById("edit-phone").value =
 						currentUser.phoneNumber || "";
 
-					// Populate address fields
-					if (currentUser.address) {
-						document.getElementById("edit-street").value =
-							currentUser.address.street || "";
-						document.getElementById("edit-city").value =
-							currentUser.address.city || "";
-					}
+					// Populate the city multi-select
+					const citiesApi =
+						window.getLebaneseCityMultiSelect &&
+						window.getLebaneseCityMultiSelect("edit-cities");
+					if (citiesApi)
+						citiesApi.setSelected(currentUser.cities || []);
 				}
 
 				// Show the modal
@@ -3640,17 +3516,13 @@
 				const fullName = document.getElementById("edit-full-name").value.trim();
 				const email = document.getElementById("edit-email").value.trim();
 				const phoneNumber = document.getElementById("edit-phone").value.trim();
-				const street = document.getElementById("edit-street").value.trim();
-				const city = document.getElementById("edit-city").value.trim();
+				const cities = getEditCitiesSelection();
+				// The address keeps a single representative city (required by the
+				// User model); the full list is saved separately in `cities`.
+				const city = cities[0] || "";
 
-				// Basic validation
-				if (
-					!fullName ||
-					!email ||
-					!phoneNumber ||
-					!street ||
-					!city
-				) {
+				// Basic validation (at least one city must be selected)
+				if (!fullName || !email || !phoneNumber || !cities.length) {
 					showMessage(
 						translations[currentLanguage]["error"] || "Error",
 						"error"
@@ -3686,9 +3558,9 @@
 					email: email,
 					phoneNumber: phoneNumber,
 					address: {
-						street: street,
 						city: city,
 					},
+					cities: cities,
 				};
 
 				try {
@@ -3719,14 +3591,7 @@
 						document.getElementById("user-phone").textContent =
 							currentUser.phoneNumber;
 
-						// Update address display
-						const addressText = [
-							currentUser.address.street,
-							currentUser.address.city,
-						]
-							.filter(Boolean)
-							.join(", ");
-						document.getElementById("user-address").textContent = addressText;
+						setProfileCities(currentUser.cities || []);
 
 						// Update welcome message
 						document.getElementById("welcome-user-name").textContent =
@@ -3938,12 +3803,107 @@
 				}
 			}
 
+			// ───────────────────────── Sidebar role permissions ─────────────────────────
+			// Which sidebar items each role may see. Admin sees EVERYTHING; the other
+			// roles get a role-appropriate subset. Keys match the menu-<key> anchor ids.
+			// This is the single source of truth so the sidebar stays consistent on
+			// every page and correct for every role.
+			const ALL_SIDEBAR_MENU_KEYS = [
+				"users",
+				"categories",
+				"products",
+				"markets",
+				"orders",
+				"statistics",
+				"riders",
+				"waste",
+				"promocodes",
+				"announcements",
+				"kitchens",
+				"kitchencategories",
+				"settings",
+				"profile",
+				"backup",
+			];
+			const SIDEBAR_MENU_ACCESS = {
+				// Admin: all links.
+				admin: ALL_SIDEBAR_MENU_KEYS.slice(),
+				// Manager: everything except Market Management (admin-only).
+				manager: [
+					"users",
+					"categories",
+					"products",
+					"orders",
+					"statistics",
+					"riders",
+					"waste",
+					"promocodes",
+					"announcements",
+					"kitchens",
+					"kitchencategories",
+					"settings",
+					"profile",
+					"backup",
+				],
+				// Staff: day-to-day operations only (no staff/markets/settings/backup).
+				staff: [
+					"categories",
+					"products",
+					"orders",
+					"statistics",
+					"riders",
+					"waste",
+					"promocodes",
+					"announcements",
+					"kitchens",
+					"kitchencategories",
+					"profile",
+				],
+				// Riders/drivers: just their orders and profile.
+				rider: ["orders", "profile"],
+				market_driver: ["orders", "profile"],
+			};
+
+			// Items that are NOT in-page sections: Market Management is its own page
+			// and Backup is an action, so they can't be opened via showSection().
+			const NON_SECTION_MENU_KEYS = ["markets", "backup"];
+
+			function getAllowedMenuKeys(role) {
+				return SIDEBAR_MENU_ACCESS[role] || SIDEBAR_MENU_ACCESS.staff;
+			}
+
+			// Show/hide each sidebar item according to the user's role.
+			function applySidebarPermissions(role) {
+				const allowed = getAllowedMenuKeys(role);
+				ALL_SIDEBAR_MENU_KEYS.forEach((key) => {
+					const anchor = document.getElementById("menu-" + key);
+					if (!anchor) return;
+					const li = anchor.closest("li") || anchor.parentElement;
+					if (!li) return;
+					li.style.display = allowed.includes(key) ? "" : "none";
+				});
+			}
+
+			// May this role open this in-page section?
+			function isSectionAllowed(section, role) {
+				if (!section) return false;
+				if (NON_SECTION_MENU_KEYS.includes(section)) return false;
+				return getAllowedMenuKeys(role).includes(section);
+			}
+
+			// The section a role should land on when none is requested.
+			function getDefaultSection(role) {
+				const allowed = getAllowedMenuKeys(role).filter(
+					(k) => !NON_SECTION_MENU_KEYS.includes(k)
+				);
+				if (allowed.includes("products")) return "products";
+				return allowed[0] || "profile";
+			}
+
 			// Check if user has management access and show/hide user management section
 			function checkAdminAccess(user) {
-				const marketsMenuItem = document.getElementById("markets-menu-item");
-				if (marketsMenuItem) {
-					marketsMenuItem.style.display = user.role === "admin" ? "" : "none";
-				}
+				// Role-aware sidebar: admin sees all links, others see their subset.
+				applySidebarPermissions(user.role);
 
 				// Allow both admin and manager roles to access user management
 				if (user.role === "admin" || user.role === "manager") {
@@ -9860,7 +9820,6 @@
 					const userEmailEl = document.getElementById("user-email");
 					const userPhoneEl = document.getElementById("user-phone");
 					const userRoleEl = document.getElementById("user-role");
-					const userAddressEl = document.getElementById("user-address");
 
 					if (userNameEl) userNameEl.textContent = currentUser.name;
 					if (userEmailEl) userEmailEl.textContent = currentUser.email;
@@ -9868,15 +9827,7 @@
 					if (userRoleEl)
 						userRoleEl.textContent = currentUser.role.toUpperCase();
 
-					if (userAddressEl && currentUser.address) {
-						const addressText = [
-							currentUser.address.street,
-							currentUser.address.city,
-						]
-							.filter(Boolean)
-							.join(", ");
-						userAddressEl.textContent = addressText;
-					}
+					setProfileCities(currentUser.cities || []);
 				}
 			}
 
@@ -9890,8 +9841,8 @@
 				loadUserProfile();
 				// Set dashboard as default active section
 				showSection("dashboard");
-				// Initialize language
-				updatePageLanguage();
+				// Language is initialized by loadSavedLanguage() (separate
+				// DOMContentLoaded handler below).
 			});
 
 			// Handle window resize for responsive sidebar
@@ -10433,6 +10384,14 @@
 									placeholder="e.g., APP123456"
 									style="flex: 1"
 								/>
+								<button
+									type="button"
+									class="btn btn-secondary"
+									onclick="BarcodeScanner.fillField('product-barcode', { title: 'Scan product barcode' })"
+									style="white-space: nowrap"
+								>
+									📷 Scan
+								</button>
 								<button
 									type="button"
 									class="btn btn-secondary"
@@ -15550,48 +15509,50 @@
 
 			// Language change function
 			async function changeLanguage(languageCode) {
-				const currentLang = localStorage.getItem("app-language") || "en";
-				const langTranslations = translations[currentLang] || translations.en;
-
 				try {
-					const changingMessage = langTranslations["language-changing"].replace(
-						"{language}",
-						getLanguageName(languageCode)
+					showMessage(
+						`Changing language to ${getLanguageName(languageCode)}...`,
+						"info"
 					);
-					showMessage(changingMessage, "info");
 
 					// Save language preference to localStorage
 					localStorage.setItem("app-language", languageCode);
 
+					// Build the target language via the free translation APIs (cached).
+					await ensureTranslations(languageCode);
+
 					// Update user preference on server if logged in
 					if (currentToken && currentUser) {
-						const response = await fetch(
-							`${API_BASE_URL}/users/${currentUser._id}/preferences`,
-							{
-								method: "PUT",
-								headers: {
-									Authorization: `Bearer ${currentToken}`,
-									"Content-Type": "application/json",
-								},
-								body: JSON.stringify({ language: languageCode }),
+						try {
+							const response = await fetch(
+								`${API_BASE_URL}/users/${currentUser._id}/preferences`,
+								{
+									method: "PUT",
+									headers: {
+										Authorization: `Bearer ${currentToken}`,
+										"Content-Type": "application/json",
+									},
+									body: JSON.stringify({ language: languageCode }),
+								}
+							);
+							if (!response.ok) {
+								console.warn("Failed to save language preference to server");
 							}
-						);
-
-						if (!response.ok) {
-							console.warn("Failed to save language preference to server");
+						} catch (e) {
+							console.warn("Failed to save language preference to server", e);
 						}
 					}
 
 					// Apply language change
 					await applyLanguage(languageCode);
 
-					const successMessage = langTranslations[
-						"language-changed-success"
-					].replace("{language}", getLanguageName(languageCode));
-					showMessage(successMessage, "success");
+					showMessage(
+						`Language changed to ${getLanguageName(languageCode)} successfully!`,
+						"success"
+					);
 				} catch (error) {
 					console.error("Error changing language:", error);
-					showMessage(langTranslations["language-change-error"], "error");
+					showMessage("Error changing language. Please try again.", "error");
 				}
 			}
 
@@ -15722,35 +15683,78 @@
 			function getLanguageName(code) {
 				const languages = {
 					en: "English",
-					de: "Deutsch",
-					fr: "Français",
-					es: "Español",
-					it: "Italiano",
+					ar: "العربية (Arabic)",
 				};
 				return languages[code] || code;
 			}
 
+			// Build the dictionary for a non-English language on demand using the
+			// free translation APIs (cached in localStorage). Falls back to English
+			// text if translation is unavailable so the UI never breaks.
+			async function ensureTranslations(code) {
+				if (code === "en" || translations[code]) return;
+				if (window.FrischlyI18n && typeof window.FrischlyI18n.translateMap === "function") {
+					try {
+						translations[code] = await window.FrischlyI18n.translateMap(
+							translations.en,
+							code,
+							"en"
+						);
+						return;
+					} catch (e) {
+						console.warn("Translation build failed; using English:", e);
+					}
+				}
+				translations[code] = translations.en;
+			}
+
 			// Apply language to the interface
 			async function applyLanguage(languageCode) {
-				// Update document language attribute
+				// Make sure the dictionary exists (e.g. when restoring a saved language).
+				await ensureTranslations(languageCode);
+
+				// Update document language + direction (Arabic is right-to-left).
 				document.documentElement.lang = languageCode;
+				document.documentElement.setAttribute(
+					"dir",
+					languageCode === "ar" ? "rtl" : "ltr"
+				);
 
 				// Store current language globally
 				window.currentLanguage = languageCode;
 
-				// Get translations for the selected language
-				const langTranslations = translations[languageCode] || translations.en;
-
-				// Update navigation menu items
-				updateNavigationTranslations(langTranslations);
-
-				// Update dashboard content
-				updateDashboardTranslations(langTranslations);
-
-				// Update settings content
-				updateSettingsTranslations(langTranslations);
+				// Translate the entire visible UI through the same-origin proxy.
+				// This covers nav, headings, labels, buttons, table headers,
+				// placeholders and modals, and keeps translating dynamically
+				// loaded content. Switching back to English restores originals.
+				if (window.FrischlyI18n && window.FrischlyI18n.applyPageLanguage) {
+					try {
+						await window.FrischlyI18n.applyPageLanguage(languageCode);
+					} catch (e) {
+						console.warn("Page translation failed:", e);
+					}
+				}
 
 				console.log(`Language applied: ${languageCode}`);
+			}
+
+			// Translate every element carrying a data-translation key.
+			function applyDataTranslations(langTranslations) {
+				if (!langTranslations) return;
+				const els = document.querySelectorAll("[data-translation]");
+				els.forEach((el) => {
+					const key = el.getAttribute("data-translation");
+					const val = langTranslations[key];
+					if (!val) return;
+					if (
+						(el.tagName === "INPUT" || el.tagName === "TEXTAREA") &&
+						el.hasAttribute("placeholder")
+					) {
+						el.placeholder = val;
+					} else {
+						el.textContent = val;
+					}
+				});
 			}
 
 			// Update navigation menu translations
@@ -15939,13 +15943,18 @@
 			}
 
 			// Load saved language preference on page load
-			function loadSavedLanguage() {
-				const savedLanguage = localStorage.getItem("app-language") || "en";
+			async function loadSavedLanguage() {
+				let savedLanguage = localStorage.getItem("app-language") || "en";
+				// Only English and Arabic are supported; reset anything else.
+				if (savedLanguage !== "en" && savedLanguage !== "ar") {
+					savedLanguage = "en";
+					localStorage.setItem("app-language", "en");
+				}
 				const languageSelect = document.getElementById("language-select");
 				if (languageSelect) {
 					languageSelect.value = savedLanguage;
 				}
-				applyLanguage(savedLanguage);
+				await applyLanguage(savedLanguage);
 			}
 
 			// Initialize waste management when showing section

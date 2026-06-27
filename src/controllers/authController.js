@@ -488,6 +488,7 @@ const getMe = async (req, res) => {
 						address: {
 							city: market.location?.city || "",
 						},
+						cities: market.cities || [],
 						logo: market.logo || "",
 						isActive: market.isActive,
 						lastLogin: market.lastLogin,
@@ -542,7 +543,7 @@ const updateProfile = async (req, res) => {
 		}
 
 		const fieldsToUpdate = {};
-		const { name, phoneNumber, email, address, creditCard } = req.body;
+		const { name, phoneNumber, email, address, creditCard, cities } = req.body;
 
 		if (name) fieldsToUpdate.name = name;
 		if (phoneNumber) fieldsToUpdate.phoneNumber = phoneNumber;
@@ -562,6 +563,19 @@ const updateProfile = async (req, res) => {
 		}
 		if (address) fieldsToUpdate.address = address;
 		if (creditCard) fieldsToUpdate.creditCard = creditCard;
+		if (cities !== undefined) {
+			// Accept an array of city names; trim, drop blanks, de-duplicate, cap.
+			fieldsToUpdate.cities = Array.isArray(cities)
+				? [
+						...new Set(
+							cities
+								.filter((c) => typeof c === "string")
+								.map((c) => c.trim())
+								.filter(Boolean)
+						),
+				  ].slice(0, 60)
+				: [];
+		}
 
 		const user = await User.findByIdAndUpdate(req.user._id, fieldsToUpdate, {
 			new: true,

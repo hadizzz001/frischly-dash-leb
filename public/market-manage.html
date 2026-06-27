@@ -63,20 +63,14 @@
 		}
 	</style>
 </head>
-<body>
+<body data-active-menu="markets">
 	<div class="sidebar">
 		<div class="sidebar-header">
 			<img src="/icons/icon_128.png" alt="Freshly.lb Logo" class="sidebar-logo" />
 			<h2>Freshly.lb Admin</h2>
 			<p>Management Dashboard</p>
 		</div>
-		<ul class="sidebar-menu">
-			<li class="menu-item"><a href="/dashboard"><span class="menu-icon">🏠</span><span>Dashboard</span></a></li>
-			<li class="menu-item active"><a href="/markets"><span class="menu-icon">🏪</span><span>Market Management</span></a></li>
-			<li class="menu-item"><a href="/dashboard"><span class="menu-icon">📦</span><span>Products</span></a></li>
-			<li class="menu-item"><a href="/dashboard"><span class="menu-icon">🛒</span><span>Orders</span></a></li>
-			<li class="menu-item"><a href="#" onclick="logout(); return false;"><span class="menu-icon">🚪</span><span>Sign Out</span></a></li>
-		</ul>
+		<ul class="sidebar-menu" id="admin-sidebar-menu"></ul>
 	</div>
 
 	<div class="main-content">
@@ -118,6 +112,7 @@
 
 	<div class="toast" id="toast"></div>
 
+	<script src="js/admin-sidebar.js"></script>
 	<script>
 		const API = (path) => `/api${path}`;
 		const fmt = (n) => `$${Number(n||0).toFixed(2)}`;

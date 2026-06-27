@@ -29,6 +29,7 @@ const marketAdminRoutes = require("./src/routes/marketAdmin");
 const kitchenRoutes = require("./src/routes/kitchens");
 const kitchenCategoryRoutes = require("./src/routes/kitchenCategories");
 const backupRoutes = require("./src/routes/backup");
+const translateRoutes = require("./src/routes/translate");
 
 // Controllers
 const { cancelOrder } = require("./src/controllers/orderController");
@@ -323,6 +324,7 @@ app.use("/api/market-admin", marketAdminRoutes);
 app.use("/api/kitchens", kitchenRoutes);
 app.use("/api/kitchen-categories", kitchenCategoryRoutes);
 app.use("/api/backup", backupRoutes);
+app.use("/api/translate", translateRoutes);
 
 // Route for customer shop page
 app.get("/shop", (req, res) => {

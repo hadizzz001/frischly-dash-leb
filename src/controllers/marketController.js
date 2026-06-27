@@ -83,6 +83,29 @@ const parseLocation = (location) => {
 	}
 };
 
+// Normalise the multi-select "cities" payload. Accepts a JSON string (sent via
+// multipart FormData), a comma-separated string, or an array. Trims, drops
+// blanks, de-duplicates and caps the list.
+const parseCities = (cities) => {
+	let arr = cities;
+	if (typeof cities === "string") {
+		try {
+			arr = JSON.parse(cities);
+		} catch (error) {
+			arr = cities.split(",");
+		}
+	}
+	if (!Array.isArray(arr)) return [];
+	return [
+		...new Set(
+			arr
+				.filter((c) => typeof c === "string")
+				.map((c) => c.trim())
+				.filter(Boolean)
+		),
+	].slice(0, 60);
+};
+
 const buildMarketDuplicateQuery = ({ name, username, email }, excludeId) => {
 	const conditions = [];
 	if (name) conditions.push({ name: String(name).trim() });
@@ -149,6 +172,7 @@ exports.createMarket = async (req, res) => {
 			email,
 			phoneNumber,
 			location: rawLocation,
+			cities: rawCities,
 			logo,
 		} = req.body;
 
@@ -172,13 +196,20 @@ exports.createMarket = async (req, res) => {
 			});
 		}
 
+		const cities = parseCities(rawCities);
+		const location = parseLocation(rawLocation) || {};
+		// Keep a single representative city in location.city for legacy displays
+		// and search; default it to the first selected city when not provided.
+		if (!location.city && cities.length) location.city = cities[0];
+
 		const marketData = {
 			name: String(name).trim(),
 			username: String(username).toLowerCase().trim(),
 			password,
 			email: email ? String(email).toLowerCase().trim() : undefined,
 			phoneNumber,
-			location: parseLocation(rawLocation),
+			location,
+			cities,
 			logo,
 			createdBy: req.user ? req.user.id : undefined,
 		};
@@ -384,14 +415,18 @@ exports.updateMarket = async (req, res) => {
 					"email",
 					"phoneNumber",
 					"location",
+					"cities",
 					"logo",
 					"logoPublicId",
 					"isActive",
 				]
-			: ["email", "phoneNumber", "location", "logo"];
+			: ["email", "phoneNumber", "location", "cities", "logo"];
 
 		if (typeof req.body.location === "string") {
 			req.body.location = parseLocation(req.body.location);
+		}
+		if (req.body.cities !== undefined) {
+			req.body.cities = parseCities(req.body.cities);
 		}
 
 		const duplicate = await findDuplicateAccount(
@@ -422,6 +457,12 @@ exports.updateMarket = async (req, res) => {
 				}
 			}
 		});
+
+		// Keep the legacy single-city field aligned with the multi-select.
+		if (Array.isArray(req.body.cities) && req.body.cities.length) {
+			if (!market.location) market.location = {};
+			if (!market.location.city) market.location.city = req.body.cities[0];
+		}
 
 		if (req.file) {
 			try {

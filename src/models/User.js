@@ -56,7 +56,6 @@ const userSchema = new mongoose.Schema(
 		address: {
 			street: {
 				type: String,
-				required: [true, "Please provide a street address"],
 				trim: true,
 				maxlength: [200, "Street address cannot be more than 200 characters"],
 			},
@@ -77,6 +76,12 @@ const userSchema = new mongoose.Schema(
 				default: "LB",
 				maxlength: [100, "Country cannot be more than 100 characters"],
 			},
+		},
+		// Service / coverage cities (multi-select of Lebanese cities). Optional,
+		// used by admin and market accounts to declare the areas they operate in.
+		cities: {
+			type: [String],
+			default: [],
 		},
 		creditCard: {
 			cardNumber: {

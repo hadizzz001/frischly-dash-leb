@@ -52,6 +52,11 @@ const marketSchema = new mongoose.Schema(
 			street: { type: String, trim: true },
 			city: { type: String, trim: true },
 		},
+		// Service / coverage cities (multi-select of Lebanese cities).
+		cities: {
+			type: [String],
+			default: [],
+		},
 		logo: {
 			type: String,
 			trim: true,

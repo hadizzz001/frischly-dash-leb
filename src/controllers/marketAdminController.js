@@ -2042,11 +2042,23 @@ exports.updateProfile = async (req, res) => {
 		if (!req.isMarketOwner) {
 			return fail(res, 403, "Only the market owner can update the profile");
 		}
-		const allowed = ["name", "email", "phoneNumber", "location", "logo"];
+		const allowed = ["name", "email", "phoneNumber", "location", "logo", "cities"];
 		const data = {};
 		allowed.forEach((f) => {
 			if (req.body[f] !== undefined) data[f] = req.body[f];
 		});
+		if (data.cities !== undefined) {
+			data.cities = Array.isArray(data.cities)
+				? [
+						...new Set(
+							data.cities
+								.filter((c) => typeof c === "string")
+								.map((c) => c.trim())
+								.filter(Boolean)
+						),
+				  ].slice(0, 60)
+				: [];
+		}
 		const market = await Market.findByIdAndUpdate(req.marketId, data, {
 			new: true,
 			runValidators: true,

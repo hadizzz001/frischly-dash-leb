@@ -1025,8 +1025,18 @@
 									Process
 								</button>
 							</div>
+							<button
+								type="button"
+								class="btn btn-primary"
+								onclick="openProcessingScanner()"
+								style="margin-top: 10px; width: 100%"
+							>
+								📷 Scan items with camera
+							</button>
 							<small style="color: #666; margin-top: 5px; display: block">
-								Barcode will auto-process on scan/input or press Enter
+								The camera opens automatically. Scan every unit — an item with
+								quantity 2 must be scanned twice. You can also tap the buttons in
+								the table or use a USB scanner.
 							</small>
 						</div>
 					</div>
@@ -1041,6 +1051,7 @@
 										<th>Shelf #</th>
 										<th>Barcode</th>
 										<th>Quantity</th>
+										<th>Scanned</th>
 										<th>Status</th>
 										<th>Actions</th>
 									</tr>
@@ -1089,6 +1100,8 @@
 
 		<!-- Global Config -->
 		<script src="js/config.js"></script>
+		<!-- Reusable camera barcode scanner -->
+		<script src="js/barcode-scanner.js"></script>
 
 		<script>
 			// Global variables
@@ -2010,6 +2023,9 @@
 			// Process Order Functions
 			let currentProcessingOrder = null;
 			let processedItems = new Set();
+			// Per-item scan progress: itemId -> number of units scanned so far.
+			// An item is only fully "processed" once its count reaches its quantity.
+			let scanCounts = new Map();
 
 			// Process order function
 			async function processOrder(orderId) {
@@ -2028,6 +2044,7 @@
 					if (response.ok) {
 						currentProcessingOrder = result.data;
 						processedItems.clear();
+						scanCounts.clear();
 						showProcessOrderModal(result.data);
 					} else {
 						showMessage("Failed to load order details", "error");
@@ -2075,7 +2092,7 @@
 						const productName = item.product?.name || "N/A";
 						const shelfNumber = item.product?.shelfNumber || "N/A";
 						const barcode = item.product?.barcode || "N/A";
-						const quantity = item.quantity || 0;
+						const quantity = Number(item.quantity) || 1;
 						const itemId = item.product?._id || `item-${index}`;
 
 						row.innerHTML = `
@@ -2084,13 +2101,18 @@
 							<td>${barcode}</td>
 							<td>${quantity}</td>
 							<td>
+								<span id="scanned-${itemId}" style="font-weight: 700; color: #856404;">
+									0 / ${quantity}
+								</span>
+							</td>
+							<td>
 								<span id="status-${itemId}" class="status-badge status-pending">
 									Pending
 								</span>
 							</td>
 							<td>
-								<button class="action-btn edit" onclick="markItemProcessed('${itemId}', '${barcode}')">
-									Mark Processed
+								<button id="btn-${itemId}" class="action-btn edit" onclick="markItemProcessed('${itemId}')">
+									＋ Mark 1
 								</button>
 							</td>
 						`;
@@ -2099,7 +2121,7 @@
 				} else {
 					itemsTable.innerHTML = `
 						<tr>
-							<td colspan="6" style="text-align: center; padding: 20px; color: #666;">
+							<td colspan="7" style="text-align: center; padding: 20px; color: #666;">
 								No items found in this order
 							</td>
 						</tr>
@@ -2117,13 +2139,27 @@
 				document.getElementById("complete-btn").style.display = "none";
 
 				modal.style.display = "block";
+
+				// Automatically open the camera so items can be scanned right away.
+				// (The manual buttons and text box keep working underneath.)
+				setTimeout(() => {
+					try {
+						openProcessingScanner();
+					} catch (e) {
+						/* ignore — manual entry still works */
+					}
+				}, 350);
 			}
 
 			// Close process order modal
 			function closeProcessOrderModal() {
+				if (window.BarcodeScanner && BarcodeScanner.isOpen()) {
+					BarcodeScanner.close();
+				}
 				document.getElementById("process-order-modal").style.display = "none";
 				currentProcessingOrder = null;
 				processedItems.clear();
+				scanCounts.clear();
 			}
 
 			// Handle barcode keypress (Enter key)
@@ -2159,7 +2195,7 @@
 				}, 300); // 300ms delay to allow barcode scanner to finish input
 			}
 
-			// Process scanned barcode
+			// Process a barcode typed in the box or sent by a USB/keyboard scanner.
 			function processBarcode() {
 				const barcodeInput = document.getElementById("barcode-input");
 				const barcode = barcodeInput.value.trim();
@@ -2175,92 +2211,182 @@
 					return;
 				}
 
-				if (!currentProcessingOrder || !currentProcessingOrder.items) {
-					showMessage("No order is currently being processed", "error");
+				const res = handleScannedBarcode(barcode, { source: "input" });
+				barcodeInput.value = "";
+				barcodeInput.focus();
+
+				const statusElement = document.getElementById("process-status");
+				if (res.ok) {
+					statusElement.innerHTML = `✅ ${res.message}`;
+					statusElement.className = "processing-status completed";
+					setTimeout(() => updateProcessStatus(), 2000);
+				} else {
+					showMessage(res.message, "error");
+				}
+			}
+
+			// Open the live camera scanner in continuous mode for fast scanning.
+			function openProcessingScanner() {
+				if (!currentProcessingOrder) {
+					showMessage("No order is being processed", "error");
 					return;
 				}
+				if (!window.BarcodeScanner) {
+					showMessage("Camera scanner is unavailable", "error");
+					return;
+				}
+				BarcodeScanner.open({
+					continuous: true,
+					cooldownMs: 1000,
+					title: `Scan items — Order ${
+						currentProcessingOrder.orderNumber || ""
+					}`,
+					hint: "Scan each unit. Items with quantity > 1 must be scanned that many times.",
+					onDetect: (code) => handleScannedBarcode(code, { source: "camera" }),
+				});
+			}
 
-				// Find item with matching barcode
-				const matchingItem = currentProcessingOrder.items.find(
+			// Resolve a scanned/typed barcode to an order item and count one unit.
+			// Returns { ok, message } so the camera overlay can show feedback.
+			function handleScannedBarcode(rawBarcode, ctx) {
+				ctx = ctx || {};
+				const barcode = String(rawBarcode || "").trim();
+				if (!barcode) return { ok: false, message: "Empty barcode" };
+				if (!currentProcessingOrder || !currentProcessingOrder.items) {
+					return { ok: false, message: "No order is being processed" };
+				}
+				const idx = currentProcessingOrder.items.findIndex(
 					(item) => item.product?.barcode === barcode
 				);
-
-				if (matchingItem) {
-					// Use the same ID generation logic as in showProcessOrderModal
-					const itemIndex = currentProcessingOrder.items.indexOf(matchingItem);
-					const itemId = matchingItem.product?._id || `item-${itemIndex}`;
-
-					if (itemId) {
-						// Automatically mark item as processed
-						markItemProcessed(itemId, barcode);
-						barcodeInput.value = "";
-
-						// Clear input and focus back for next scan
-						barcodeInput.focus();
-
-						// Show brief success feedback (inline, not alert)
-						const statusElement = document.getElementById("process-status");
-						statusElement.innerHTML = `✅ "${
-							matchingItem.product?.name || "Item"
-						}" scanned and processed!`;
-						statusElement.className = "processing-status completed";
-
-						// Reset status message after 2 seconds
-						setTimeout(() => {
-							updateProcessStatus();
-						}, 2000);
-
-						// Visual feedback - briefly highlight the processed row
-						const row = document
-							.getElementById(`status-${itemId}`)
-							.closest("tr");
-						if (row) {
-							row.style.backgroundColor = "#d4edda";
-							setTimeout(() => {
-								row.style.backgroundColor = "";
-							}, 1000);
-						}
-					} else {
-						showMessage("Unable to identify item for processing", "error");
-					}
-				} else {
-					showMessage(`Barcode "${barcode}" not found in this order`, "error");
-					// Clear input on error too
-					barcodeInput.value = "";
-					barcodeInput.focus();
+				if (idx === -1) {
+					return { ok: false, message: `Not in this order: ${barcode}` };
 				}
+				const itemId =
+					currentProcessingOrder.items[idx].product?._id || `item-${idx}`;
+				return incrementItemScan(itemId, { source: ctx.source || "scan" });
 			}
 
-			// Mark item as processed
-			function markItemProcessed(itemId, barcode) {
+			// Count one scanned/clicked unit for an item. An item is only fully
+			// processed once its count reaches its ordered quantity.
+			function incrementItemScan(itemId, opts) {
+				opts = opts || {};
+				const info = itemIndexById(itemId);
+				if (!info) return { ok: false, message: "Unknown item" };
+				const name = info.item.product?.name || "Item";
+				const required = Number(info.item.quantity) || 1;
+				let current = scanCounts.get(itemId) || 0;
+
+				if (current >= required) {
+					return {
+						ok: false,
+						message: `"${name}" already complete (${required}/${required})`,
+					};
+				}
+
+				current += 1;
+				scanCounts.set(itemId, current);
+				if (current >= required) processedItems.add(itemId);
+
+				updateItemRow(itemId, current, required);
+				updateProcessStatus();
+				const allDone = checkAllItemsProcessed();
+
+				let message = `"${name}" ${current}/${required} • ${processedItems.size} of ${currentProcessingOrder.items.length} items done`;
+				if (allDone) {
+					message = "✅ All items processed! Ready to complete.";
+					// Close the camera shortly after the last item.
+					setTimeout(() => {
+						if (window.BarcodeScanner && BarcodeScanner.isOpen()) {
+							BarcodeScanner.close();
+						}
+					}, 700);
+				}
+				return { ok: true, message, complete: current >= required, allDone };
+			}
+
+			// Find an order item (and its index) by the id used in the table rows.
+			function itemIndexById(itemId) {
+				if (!currentProcessingOrder || !currentProcessingOrder.items) return null;
+				const items = currentProcessingOrder.items;
+				for (let i = 0; i < items.length; i++) {
+					const id = items[i].product?._id || `item-${i}`;
+					if (id === itemId) return { item: items[i], index: i };
+				}
+				return null;
+			}
+
+			// Update a single row's scan progress, status badge and button.
+			function updateItemRow(itemId, current, required) {
+				const progress = document.getElementById(`scanned-${itemId}`);
+				if (progress) {
+					progress.textContent = `${current} / ${required}`;
+					progress.style.color = current >= required ? "#155724" : "#856404";
+				}
 				const statusElement = document.getElementById(`status-${itemId}`);
 				if (statusElement) {
-					statusElement.className = "status-badge status-processing";
-					statusElement.textContent = "Processed";
-					processedItems.add(itemId);
+					if (current >= required) {
+						statusElement.className = "status-badge status-processing";
+						statusElement.textContent = "Processed";
+					} else {
+						statusElement.className = "status-badge status-pending";
+						statusElement.textContent = `Scanning ${current}/${required}`;
+					}
+					const row = statusElement.closest("tr");
+					if (row) {
+						row.style.backgroundColor =
+							current >= required ? "#d4edda" : "#fff7df";
+						if (current < required) {
+							setTimeout(() => {
+								if ((scanCounts.get(itemId) || 0) < required) {
+									row.style.backgroundColor = "";
+								}
+							}, 900);
+						}
+					}
 				}
-
-				// Check if all items are processed
-				checkAllItemsProcessed();
-
-				// Update status message
-				updateProcessStatus();
+				const button = document.getElementById(`btn-${itemId}`);
+				if (button) {
+					if (current >= required) {
+						button.disabled = true;
+						button.textContent = "✓ Done";
+					} else {
+						button.textContent = `＋ Mark 1 (${current}/${required})`;
+					}
+				}
 			}
 
-			// Check if all items are processed
+			// Manual "Mark 1" button — counts a single unit, same as one scan.
+			function markItemProcessed(itemId) {
+				const res = incrementItemScan(itemId, { source: "manual" });
+				const statusElement = document.getElementById("process-status");
+				if (res.ok) {
+					statusElement.innerHTML = `✅ ${res.message}`;
+					statusElement.className = "processing-status completed";
+					setTimeout(() => updateProcessStatus(), 2000);
+				} else {
+					showMessage(res.message, "error");
+				}
+			}
+
+			// Check if all items are fully processed; returns true when complete.
 			function checkAllItemsProcessed() {
-				if (!currentProcessingOrder || !currentProcessingOrder.items) return;
+				if (!currentProcessingOrder || !currentProcessingOrder.items)
+					return false;
 
 				const totalItems = currentProcessingOrder.items.length;
 				const processedCount = processedItems.size;
+				const allDone = totalItems > 0 && processedCount === totalItems;
 
-				if (processedCount === totalItems) {
-					document.getElementById("complete-btn").style.display =
-						"inline-block";
+				const completeBtn = document.getElementById("complete-btn");
+				if (completeBtn) {
+					completeBtn.style.display = allDone ? "inline-block" : "none";
+				}
+				if (allDone) {
 					const statusElement = document.getElementById("process-status");
 					statusElement.innerHTML = `✅ All items processed! Ready to complete.`;
 					statusElement.className = "processing-status completed";
 				}
+				return allDone;
 			}
 
 			// Update process status
