@@ -26,6 +26,18 @@
  *                           seen again within this many ms (default 1000). This
  *                           is what lets quantity scanning work: present an item,
  *                           wait, present the next identical item.
+ *   confirmations {number}  How many times an UN-checksummable code (e.g.
+ *                           CODE_128 / EAN-8 / UPC-E) must be read identically
+ *                           in a row before it is accepted (default 2). Higher =
+ *                           safer but slightly slower. Numeric GTINs that pass
+ *                           their check digit are trusted immediately.
+ *
+ * Accuracy: to avoid accepting a WRONG barcode, every raw decode is screened
+ * before acceptance:
+ *   1. Numeric GTINs (UPC-A / EAN-13 / GTIN-14) must pass their check digit; a
+ *      bad check digit is a corrupt read and is rejected outright.
+ *   2. Codes that can't be checksum-verified must be decoded identically several
+ *      times in a row (see `confirmations`) so a one-off misread can't get in.
  *
  * Decoding uses html5-qrcode (loaded lazily from a CDN). When the browser
  * supports the native BarcodeDetector API it is used for fast, high-quality
@@ -57,6 +69,8 @@
 		flashTimer: null,
 		focusTimer: null, // periodic continuous-autofocus nudge (hands-free scan)
 		locked: false, // true once a final (closing) scan has been accepted
+		voteCode: null, // candidate code awaiting confirmation (anti-misread)
+		voteCount: 0, // how many identical reads of voteCode we've seen
 	};
 
 	/* ----------------------------- library load ---------------------------- */
@@ -249,13 +263,91 @@
 	}
 
 	/* ----------------------------- detection ------------------------------- */
-	// Called by html5-qrcode for every successful decode, and by manual entry.
+	// Validate the check digit of a numeric GTIN barcode (UPC-A / EAN-13 /
+	// GTIN-14). Returns:
+	//   true  — check digit matches: a trusted, almost-certainly-correct read.
+	//   false — check digit is wrong: a corrupt/misread scan that must be rejected.
+	//   null  — not applicable: a non-numeric code (e.g. CODE_128) or an ambiguous
+	//           length such as 8 (could be EAN-8 *or* UPC-E, whose maths differ).
+	function gtinCheckValid(code) {
+		if (!/^[0-9]+$/.test(code)) return null;
+		var len = code.length;
+		// Only the unambiguous retail GTIN lengths can be safely rejected on a bad
+		// check digit. Length 8 is skipped on purpose to avoid wrongly rejecting a
+		// valid UPC-E.
+		if (len !== 12 && len !== 13 && len !== 14) return null;
+		var sum = 0;
+		var mult = 3;
+		for (var i = len - 2; i >= 0; i--) {
+			sum += parseInt(code.charAt(i), 10) * mult;
+			mult = mult === 3 ? 1 : 3;
+		}
+		var check = (10 - (sum % 10)) % 10;
+		return check === parseInt(code.charAt(len - 1), 10);
+	}
+
+	function resetVote() {
+		state.voteCode = null;
+		state.voteCount = 0;
+	}
+
+	// Gatekeeper: html5-qrcode calls this for EVERY raw decode. To stop the
+	// scanner from accepting a WRONG barcode we screen each decode before it is
+	// accepted (see the accuracy notes in the file header). Manual keyboard entry
+	// passes force=true and skips straight to acceptance.
 	function handleHit(decodedText, force) {
-		var opts = state.options || {};
-		// Once a final (closing) scan has been accepted, ignore any further
-		// frames so a single barcode can't be processed/counted twice while the
-		// brief close animation plays out.
 		if (state.locked) return;
+		var code = String(decodedText == null ? "" : decodedText).trim();
+		if (!code) return;
+
+		if (force) {
+			resetVote();
+			acceptHit(code, true);
+			return;
+		}
+
+		var opts = state.options || {};
+		var needed = opts.confirmations != null ? opts.confirmations : 2;
+		if (needed < 1) needed = 1;
+
+		var validity = gtinCheckValid(code);
+
+		if (validity === false) {
+			// Definite misread (check digit failed) — never accept; keep scanning.
+			resetVote();
+			setStatus("Reading\u2026 hold the barcode steady", "info");
+			return;
+		}
+
+		if (validity === true) {
+			// Trusted by its check digit → accept immediately (fast *and* correct).
+			resetVote();
+			acceptHit(code, false);
+			return;
+		}
+
+		// Uncheckable code (CODE_128 / EAN-8 / UPC-E…): require the same value to be
+		// read `needed` times in a row before trusting it, so a single misread of a
+		// different value can never be accepted.
+		if (code === state.voteCode) {
+			state.voteCount += 1;
+		} else {
+			state.voteCode = code;
+			state.voteCount = 1;
+		}
+		if (state.voteCount >= needed) {
+			resetVote();
+			acceptHit(code, false);
+		} else {
+			setStatus("Confirming barcode\u2026", "info");
+		}
+	}
+
+	// Executor: runs once a decode has passed the safeguards above (or was typed
+	// manually). Handles continuous-mode debouncing, the onDetect callback, the
+	// success/failure feedback and closing.
+	function acceptHit(decodedText, force) {
+		var opts = state.options || {};
 		var now = Date.now();
 		var cooldown = opts.cooldownMs != null ? opts.cooldownMs : 1000;
 
@@ -507,6 +599,7 @@
 		state.lastTime = 0;
 		state.torchOn = false;
 		state.locked = false;
+		resetVote();
 
 		loadLibrary()
 			.then(function () {
@@ -529,6 +622,7 @@
 		state.lastTime = 0;
 		state.torchOn = false;
 		state.torchSupported = false;
+		resetVote();
 		document.removeEventListener("keydown", onEscKey);
 
 		function teardown() {
