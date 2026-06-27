@@ -1002,10 +1002,6 @@
 							<!-- Order info will be populated here -->
 						</div>
 
-						<!-- Items still to scan, shown up top so the picker knows
-						     exactly which products to grab next. Updates live. -->
-						<div id="process-pending-items" style="margin-bottom: 20px"></div>
-
 						<div style="margin-bottom: 20px">
 							<label
 								for="barcode-input"
@@ -1037,11 +1033,6 @@
 							>
 								📷 Scan items with camera
 							</button>
-							<small style="color: #666; margin-top: 5px; display: block">
-								The camera closes after each successful scan — tap the button
-								again to scan the next unit (for a quantity of 2, scan twice).
-								You can also tap the buttons in the table or use a USB scanner.
-							</small>
 						</div>
 					</div>
 
@@ -2137,9 +2128,6 @@
 					`;
 				}
 
-				// Show the “still to scan” panel for this order.
-				renderPendingItems();
-
 				// Reset barcode input
 				document.getElementById("barcode-input").value = "";
 				document.getElementById("process-status").textContent =
@@ -2251,9 +2239,7 @@
 					continuous: true,
 					closeOnSuccess: true,
 					cooldownMs: 1000,
-					title: `Scan items — Order ${
-						currentProcessingOrder.orderNumber || ""
-					}`,
+					title: pendingItemsTitle(),
 					hint: "The camera closes after each successful scan. Tap “Scan items with camera” again for the next unit.",
 					onDetect: (code) => handleScannedBarcode(code, { source: "camera" }),
 				});
@@ -2279,88 +2265,26 @@
 				return incrementItemScan(itemId, { source: ctx.source || "scan" });
 			}
 
-			// Render the list of items that still need scanning, at the top of the
-			// modal, so the picker immediately knows which products to grab. Items
-			// drop off the list as they reach their required quantity.
-			function renderPendingItems() {
-				const box = document.getElementById("process-pending-items");
-				if (!box) return;
-				if (
-					!currentProcessingOrder ||
-					!currentProcessingOrder.items ||
-					!currentProcessingOrder.items.length
-				) {
-					box.innerHTML = "";
-					return;
+			// Build the comma-separated list of items that still need scanning. Shown
+			// as the camera title so the picker knows exactly what to grab next. Items
+			// with more than one unit left show a ×count suffix.
+			function pendingItemsTitle() {
+				if (!currentProcessingOrder || !currentProcessingOrder.items) {
+					return "Scan items";
 				}
-
-				const esc = (s) =>
-					String(s).replace(
-						/[&<>"]/g,
-						(c) =>
-							({
-								"&": "&amp;",
-								"<": "&lt;",
-								">": "&gt;",
-								'"': "&quot;",
-							}[c])
-					);
-
-				const pending = [];
+				const names = [];
 				currentProcessingOrder.items.forEach((item, index) => {
 					const itemId = item.product?._id || `item-${index}`;
 					const required = Number(item.quantity) || 1;
 					const current = scanCounts.get(itemId) || 0;
-					if (current < required) {
-						pending.push({
-							name: item.product?.name || "Unnamed item",
-							shelf: item.product?.shelfNumber || "\u2014",
-							barcode: item.product?.barcode || "\u2014",
-							current,
-							required,
-							remaining: required - current,
-						});
+					const remaining = required - current;
+					if (remaining > 0) {
+						const name = item.product?.name || "Unnamed item";
+						names.push(remaining > 1 ? `${name} \u00d7${remaining}` : name);
 					}
 				});
-
-				if (!pending.length) {
-					box.innerHTML = `
-						<div style="background:#d4edda;border:1px solid #c3e6cb;color:#155724;padding:14px 16px;border-radius:10px;font-weight:600;">
-							✅ All items scanned — ready to complete the order.
-						</div>`;
-					return;
-				}
-
-				const rows = pending
-					.map(
-						(p) => `
-						<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid #ffe0a3;border-radius:10px;padding:10px 14px;">
-							<div style="min-width:0;">
-								<div style="font-weight:700;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(
-									p.name
-								)}</div>
-								<div style="font-size:12px;color:#666;">Shelf ${esc(
-									String(p.shelf)
-								)} \u2022 ${esc(String(p.barcode))}</div>
-							</div>
-							<span style="flex:0 0 auto;background:#ffc107;color:#000;font-weight:700;border-radius:999px;padding:4px 12px;font-size:13px;white-space:nowrap;">
-								${p.current}/${p.required} — scan ${p.remaining} more
-							</span>
-						</div>`
-					)
-					.join("");
-
-				box.innerHTML = `
-					<div style="background:#fff7df;border:1px solid #ffe0a3;border-radius:12px;padding:14px 16px;">
-						<div style="font-weight:700;color:#856404;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
-							🛒 Still to scan (${pending.length} ${
-					pending.length === 1 ? "item" : "items"
-				})
-						</div>
-						<div style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;">
-							${rows}
-						</div>
-					</div>`;
+				if (!names.length) return "\u2705 All items scanned";
+				return names.join(", ");
 			}
 
 			// Count one scanned/clicked unit for an item. An item is only fully
@@ -2386,7 +2310,6 @@
 
 				updateItemRow(itemId, current, required);
 				updateProcessStatus();
-				renderPendingItems();
 				const allDone = checkAllItemsProcessed();
 
 				let message = `"${name}" ${current}/${required} • ${processedItems.size} of ${currentProcessingOrder.items.length} items done`;
