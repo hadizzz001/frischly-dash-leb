@@ -18,10 +18,13 @@ const userSchema = new mongoose.Schema(
 		dateOfBirth: {
 			type: Date,
 		},
+		// ✅ Email is optional now that phone number (verified via SMS/WhatsApp)
+		// is the primary identifier for registration/login. `sparse: true` on
+		// the unique index (below) means any number of users can have no email
+		// at all without conflicting with each other.
 		email: {
 			type: String,
-			required: [true, "Please provide an email"],
-			unique: true,
+			required: false,
 			lowercase: true,
 			match: [
 				/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
@@ -45,6 +48,21 @@ const userSchema = new mongoose.Schema(
 			type: String,
 		},
 		emailTokenExpires: {
+			type: Date,
+		},
+		// ✅ Phone verification (primary verification channel — link sent via
+		// SMS or WhatsApp on registration, see authController.register).
+		phoneVerified: {
+			type: Boolean,
+			default: false,
+		},
+		phoneVerifiedAt: {
+			type: Date,
+		},
+		phoneVerificationToken: {
+			type: String,
+		},
+		phoneVerificationExpires: {
 			type: Date,
 		},
 		passwordResetToken: {
@@ -240,6 +258,8 @@ userSchema.methods.toSafeObject = function () {
 	delete userObject.creditCard; // Don't expose credit card info
 	delete userObject.emailToken;
 	delete userObject.emailTokenExpires;
+	delete userObject.phoneVerificationToken;
+	delete userObject.phoneVerificationExpires;
 	delete userObject.loginAttempts; // Don't expose security info
 	delete userObject.lockUntil; // Don't expose security info
 	return userObject;
@@ -263,10 +283,21 @@ userSchema.methods.toMaskedObject = function () {
 
 	delete userObject.emailToken;
 	delete userObject.emailTokenExpires;
+	delete userObject.phoneVerificationToken;
+	delete userObject.phoneVerificationExpires;
 	delete userObject.loginAttempts; // Don't expose security info
 	delete userObject.lockUntil; // Don't expose security info
 
 	return userObject;
 };
+
+// ✅ Email is optional, but when present must be unique. `sparse` means
+// documents with no email field at all don't collide with each other.
+userSchema.index({ email: 1 }, { unique: true, sparse: true });
+
+// ✅ Phone number is the primary identifier for registration/login — keep it
+// unique so lookups are unambiguous (sparse just in case any legacy/system
+// documents were created without one).
+userSchema.index({ phoneNumber: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model("User", userSchema);

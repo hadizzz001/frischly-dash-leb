@@ -3,6 +3,7 @@ const { body } = require("express-validator");
 const {
 	register,
 	confirmEmail,
+	confirmPhone,
 	login,
 	loginProfile,
 	refreshToken,
@@ -35,6 +36,7 @@ const registerValidation = [
 		.matches(/^[\+]?[1-9][\d]{0,15}$/)
 		.withMessage("Please provide a valid phone number"),
 	body("email")
+		.optional({ checkFalsy: true })
 		.isEmail()
 		.normalizeEmail()
 		.withMessage("Please provide a valid email address"),
@@ -68,11 +70,15 @@ const loginValidation = [
 ];
 
 const loginProfileValidation = [
-	body("email")
-		.trim()
-		.notEmpty()
-		.withMessage("Please provide an email address or market username"),
+	body("phone").optional({ checkFalsy: true }).trim(),
+	body("email").optional({ checkFalsy: true }).trim(),
 	body("password").notEmpty().withMessage("Password is required"),
+	body().custom((_, { req }) => {
+		if (!req.body.phone && !req.body.email) {
+			throw new Error("Please provide a phone number or email address");
+		}
+		return true;
+	}),
 ];
 
 const updateProfileValidation = [
@@ -194,6 +200,7 @@ const resetPasswordValidation = [
 // Public routes
 router.post("/register", registerValidation, register);
 router.get("/confirm/:token", confirmEmail);
+router.get("/confirm-phone/:token", confirmPhone);
 router.post("/login", loginValidation, login);
 router.post("/login-profile", loginProfileValidation, loginProfile);
 router.post("/refresh", refreshTokenValidation, refreshToken);
