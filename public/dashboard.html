@@ -329,6 +329,12 @@
 					</a>
 				</li>
 				<li class="menu-item">
+					<a href="#" onclick="showSection('feedback')" id="menu-feedback">
+						<span class="menu-icon">⭐</span>
+						<span class="menu-text">Feedback</span>
+					</a>
+				</li>
+				<li class="menu-item">
 					<a href="#" onclick="showSection('waste')" id="menu-waste">
 						<span class="menu-icon">♻️</span>
 						<span class="menu-text">Waste Management</span>
@@ -1631,6 +1637,106 @@
 									</tbody>
 								</table>
 							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Feedback Section -->
+				<div id="feedback-section" class="content-section">
+					<div class="section-header">
+						<h2>Feedback</h2>
+						<p>Customer ratings and comments about orders and drivers</p>
+					</div>
+
+					<div class="stats">
+						<div class="stat">
+							<span class="stat-number" id="feedback-total-count">0</span>
+							<span class="stat-label">Total Feedback</span>
+						</div>
+						<div class="stat">
+							<span class="stat-number" id="feedback-avg-order-rating">0.0</span>
+							<span class="stat-label">Avg. Order Rating</span>
+						</div>
+						<div class="stat">
+							<span class="stat-number" id="feedback-avg-driver-rating">0.0</span>
+							<span class="stat-label">Avg. Driver Rating</span>
+						</div>
+						<div class="stat">
+							<span class="stat-number" id="feedback-driver-rated-count">0</span>
+							<span class="stat-label">Driver Ratings Given</span>
+						</div>
+					</div>
+
+					<div class="action-bar">
+						<div class="filter-group">
+							<input
+								type="text"
+								id="feedback-search"
+								placeholder="Search by order number..."
+								onkeyup="if(event.key==='Enter') filterFeedback();"
+							/>
+							<select id="feedback-order-rating-filter" onchange="filterFeedback()">
+								<option value="">All Order Ratings</option>
+								<option value="5">5 stars</option>
+								<option value="4">4+ stars</option>
+								<option value="3">3+ stars</option>
+								<option value="2">2+ stars</option>
+								<option value="1">1+ stars</option>
+							</select>
+							<select id="feedback-driver-rating-filter" onchange="filterFeedback()">
+								<option value="">All Driver Ratings</option>
+								<option value="5">5 stars</option>
+								<option value="4">4+ stars</option>
+								<option value="3">3+ stars</option>
+								<option value="2">2+ stars</option>
+								<option value="1">1+ stars</option>
+							</select>
+							<button class="btn btn-outline" onclick="resetFeedbackFilters()">
+								Reset Filters
+							</button>
+						</div>
+					</div>
+
+					<div class="waste-table-container">
+						<table class="data-table" id="feedback-table">
+							<thead>
+								<tr>
+									<th>Date</th>
+									<th>Order #</th>
+									<th>Customer</th>
+									<th>Order Rating</th>
+									<th>Driver Rating</th>
+									<th>Driver</th>
+									<th>Actions</th>
+								</tr>
+							</thead>
+							<tbody id="feedback-list">
+								<tr class="empty-row">
+									<td colspan="7" style="text-align: center; padding: 40px; color: #666">
+										No feedback submitted yet.
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+
+					<div class="pagination" id="feedback-pagination">
+						<!-- Pagination will be added dynamically -->
+					</div>
+				</div>
+
+				<!-- Feedback View Modal -->
+				<div id="feedback-view-modal" class="modal" onclick="if(event.target===this) closeFeedbackViewModal();">
+					<div class="modal-content" style="max-width:640px;">
+						<div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;">
+							<h2 id="feedback-view-title" style="margin:0;font-size:20px;">Feedback details</h2>
+							<span class="close" onclick="closeFeedbackViewModal()">&times;</span>
+						</div>
+						<div id="feedback-view-body" style="padding:4px 0;">
+							<!-- populated by viewFeedback -->
+						</div>
+						<div class="form-actions" style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+							<button type="button" class="btn btn-secondary" onclick="closeFeedbackViewModal()">Close</button>
 						</div>
 					</div>
 				</div>
@@ -3816,6 +3922,7 @@
 				"orders",
 				"statistics",
 				"riders",
+				"feedback",
 				"waste",
 				"promocodes",
 				"announcements",
@@ -4613,6 +4720,10 @@
 					case "riders":
 						// Default to riders tab, load riders data
 						showRidersTab("riders");
+						break;
+					case "feedback":
+						loadFeedbackStats();
+						loadFeedbackRecords(1);
 						break;
 					case "profile":
 						loadProfileSection();
@@ -14449,6 +14560,245 @@
 				</form>
 			</div>
 		</div>
+
+		<!-- Feedback Management JavaScript -->
+		<script>
+			// Feedback Management Variables
+			let currentFeedbackPage = 1;
+			let currentFeedbackList = [];
+
+			// Build a read-only 5-star display (filled/unfilled) as an HTML string.
+			function renderStarsHtml(rating, size) {
+				size = size || 15;
+				const value = Math.max(0, Math.min(5, Math.round(Number(rating) || 0)));
+				let html = '<span style="white-space:nowrap;letter-spacing:1px;">';
+				for (let i = 1; i <= 5; i++) {
+					html +=
+						'<span style="font-size:' +
+						size +
+						'px;color:' +
+						(i <= value ? '#f4bb26' : '#d9d9d9') +
+						';">\u2605</span>';
+				}
+				html += '</span>';
+				return html;
+			}
+
+			async function loadFeedbackStats() {
+				try {
+					const response = await authenticatedFetch('/api/feedback/stats');
+					if (!response.ok) throw new Error('Failed to fetch feedback stats');
+					const json = await response.json();
+					const stats = json.data || {};
+					document.getElementById('feedback-total-count').textContent = stats.totalFeedback || 0;
+					document.getElementById('feedback-avg-order-rating').textContent = (stats.avgOrderRating || 0).toFixed(1);
+					document.getElementById('feedback-avg-driver-rating').textContent = (stats.avgDriverRating || 0).toFixed(1);
+					document.getElementById('feedback-driver-rated-count').textContent = stats.driverRatedCount || 0;
+				} catch (error) {
+					console.error('Error loading feedback stats:', error);
+				}
+			}
+
+			async function loadFeedbackRecords(page = 1, limit = 10) {
+				try {
+					currentFeedbackPage = page;
+					const searchEl = document.getElementById('feedback-search');
+					const minOrderEl = document.getElementById('feedback-order-rating-filter');
+					const minDriverEl = document.getElementById('feedback-driver-rating-filter');
+					const search = searchEl ? searchEl.value : '';
+					const minOrderRating = minOrderEl ? minOrderEl.value : '';
+					const minDriverRating = minDriverEl ? minDriverEl.value : '';
+
+					let url = `/api/feedback?page=${page}&limit=${limit}`;
+					if (search && search.trim()) url += `&search=${encodeURIComponent(search.trim())}`;
+					if (minOrderRating) url += `&minOrderRating=${encodeURIComponent(minOrderRating)}`;
+					if (minDriverRating) url += `&minDriverRating=${encodeURIComponent(minDriverRating)}`;
+
+					const response = await authenticatedFetch(url);
+					if (!response.ok) throw new Error('Failed to fetch feedback');
+
+					const data = await response.json();
+					currentFeedbackList = Array.isArray(data.data) ? data.data : [];
+					renderFeedbackTable(currentFeedbackList);
+					renderFeedbackPagination(data.pagination);
+				} catch (error) {
+					console.error('Error loading feedback:', error);
+					showMessage('Failed to load feedback: ' + error.message, 'error');
+				}
+			}
+
+			function renderFeedbackTable(list) {
+				const tbody = document.getElementById('feedback-list');
+				if (!tbody) return;
+
+				if (!list || list.length === 0) {
+					tbody.innerHTML = `
+						<tr class="empty-row">
+							<td colspan="7" style="text-align:center;padding:40px;color:#666">
+								No feedback submitted yet.
+							</td>
+						</tr>
+					`;
+					return;
+				}
+
+				const esc = (s) =>
+					String(s == null ? '' : s).replace(/[&<>"]/g, (c) =>
+						({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])
+					);
+
+				let html = '';
+				list.forEach((fb) => {
+					const date = fb.createdAt ? new Date(fb.createdAt).toLocaleString() : '\u2014';
+					const order = fb.order || {};
+					const orderNumber = order.orderNumber || '\u2014';
+					const customerName =
+						(fb.customer && fb.customer.name) ||
+						(order.customer && order.customer.name) ||
+						'\u2014';
+					const rider = fb.assignedRider || order.assignedRider || null;
+					const driverName = (rider && rider.user && rider.user.name) || '\u2014';
+
+					html += `
+						<tr>
+							<td>${esc(date)}</td>
+							<td>${esc(orderNumber)}</td>
+							<td>${esc(customerName)}</td>
+							<td>${renderStarsHtml(fb.orderRating, 15)}</td>
+							<td>${fb.driverRating > 0 ? renderStarsHtml(fb.driverRating, 15) : '<span style="color:#9aa4b2;">\u2014</span>'}</td>
+							<td>${esc(driverName)}</td>
+							<td class="actions">
+								<button class="action-btn view" onclick="viewFeedback('${fb._id}')">View</button>
+							</td>
+						</tr>
+					`;
+				});
+
+				tbody.innerHTML = html;
+			}
+
+			function renderFeedbackPagination(pagination) {
+				const container = document.getElementById('feedback-pagination');
+				if (!container) return;
+				if (!pagination || pagination.totalPages <= 1) {
+					container.innerHTML = '';
+					return;
+				}
+
+				let html = '';
+				html += `
+					<button class="btn-page ${pagination.page === 1 ? 'disabled' : ''}"
+						${pagination.page === 1 ? 'disabled' : `onclick="loadFeedbackRecords(${pagination.page - 1})"`}>
+						&laquo;
+					</button>
+				`;
+
+				const startPage = Math.max(1, pagination.page - 2);
+				const endPage = Math.min(pagination.totalPages, pagination.page + 2);
+				for (let i = startPage; i <= endPage; i++) {
+					html += `
+						<button class="btn-page ${i === pagination.page ? 'active' : ''}" onclick="loadFeedbackRecords(${i})">
+							${i}
+						</button>
+					`;
+				}
+
+				html += `
+					<button class="btn-page ${pagination.page === pagination.totalPages ? 'disabled' : ''}"
+						${pagination.page === pagination.totalPages ? 'disabled' : `onclick="loadFeedbackRecords(${pagination.page + 1})"`}>
+						&raquo;
+					</button>
+				`;
+
+				container.innerHTML = html;
+			}
+
+			function filterFeedback() {
+				loadFeedbackRecords(1);
+			}
+
+			function resetFeedbackFilters() {
+				const searchEl = document.getElementById('feedback-search');
+				const minOrderEl = document.getElementById('feedback-order-rating-filter');
+				const minDriverEl = document.getElementById('feedback-driver-rating-filter');
+				if (searchEl) searchEl.value = '';
+				if (minOrderEl) minOrderEl.value = '';
+				if (minDriverEl) minDriverEl.value = '';
+				loadFeedbackRecords(1);
+			}
+
+			function viewFeedback(id) {
+				const fb = currentFeedbackList.find((x) => String(x._id) === String(id));
+				if (!fb) {
+					showMessage('Feedback not found', 'error');
+					return;
+				}
+
+				const esc = (s) =>
+					String(s == null ? '' : s).replace(/[&<>"]/g, (c) =>
+						({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])
+					);
+				const order = fb.order || {};
+				const orderCustomer = fb.customer || order.customer || {};
+				const rider = fb.assignedRider || order.assignedRider || null;
+				const driverName = (rider && rider.user && rider.user.name) || null;
+				const driverPhone = (rider && rider.user && rider.user.phoneNumber) || null;
+				const submittedAt = fb.createdAt ? new Date(fb.createdAt).toLocaleString() : '\u2014';
+
+				const body = document.getElementById('feedback-view-body');
+				const titleEl = document.getElementById('feedback-view-title');
+				if (titleEl) {
+					titleEl.textContent = order.orderNumber
+						? `Feedback \u2014 ${order.orderNumber}`
+						: 'Feedback details';
+				}
+
+				const customerLine = [orderCustomer.name, orderCustomer.email, orderCustomer.phoneNumber]
+					.filter(Boolean)
+					.map(esc)
+					.join(' &middot; ') || '\u2014';
+				const driverLine = driverName
+					? esc(driverName) + (driverPhone ? ' &middot; ' + esc(driverPhone) : '')
+					: 'Not assigned';
+				const orderTotal =
+					order.total !== undefined && order.total !== null
+						? '$' + Number(order.total).toFixed(2)
+						: '\u2014';
+
+				body.innerHTML = `
+					<div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;color:#374151;margin-bottom:18px;">
+						<div style="color:#7b8794;">Order #</div><div>${esc(order.orderNumber || '\u2014')}</div>
+						<div style="color:#7b8794;">Order Total</div><div>${orderTotal}</div>
+						<div style="color:#7b8794;">Order Status</div><div>${esc(order.status || '\u2014')}</div>
+						<div style="color:#7b8794;">Customer</div><div>${customerLine}</div>
+						<div style="color:#7b8794;">Driver</div><div>${driverLine}</div>
+						<div style="color:#7b8794;">Submitted</div><div>${esc(submittedAt)}</div>
+					</div>
+
+					<div style="border:1px solid #e8ecf1;border-radius:10px;background:#fafbfc;padding:14px 16px;margin-bottom:14px;">
+						<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+							<strong style="font-size:14px;color:#111;">Order Feedback</strong>
+							${renderStarsHtml(fb.orderRating, 18)}
+						</div>
+						<div style="font-size:13px;color:#374151;white-space:pre-wrap;">${fb.orderDescription ? esc(fb.orderDescription) : '<span style="color:#9aa4b2;">No description provided.</span>'}</div>
+					</div>
+
+					<div style="border:1px solid #e8ecf1;border-radius:10px;background:#fafbfc;padding:14px 16px;">
+						<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+							<strong style="font-size:14px;color:#111;">Driver Feedback</strong>
+							${fb.driverRating > 0 ? renderStarsHtml(fb.driverRating, 18) : '<span style="color:#9aa4b2;font-size:13px;">Not rated</span>'}
+						</div>
+						<div style="font-size:13px;color:#374151;white-space:pre-wrap;">${fb.driverDescription ? esc(fb.driverDescription) : '<span style="color:#9aa4b2;">No description provided.</span>'}</div>
+					</div>
+				`;
+
+				document.getElementById('feedback-view-modal').style.display = 'block';
+			}
+
+			function closeFeedbackViewModal() {
+				document.getElementById('feedback-view-modal').style.display = 'none';
+			}
+		</script>
 
 		<!-- Waste Management JavaScript -->
 		<script>

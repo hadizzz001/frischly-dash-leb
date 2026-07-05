@@ -30,6 +30,8 @@ const kitchenRoutes = require("./src/routes/kitchens");
 const kitchenCategoryRoutes = require("./src/routes/kitchenCategories");
 const backupRoutes = require("./src/routes/backup");
 const translateRoutes = require("./src/routes/translate");
+const scannerRoutes = require("./src/routes/scanner");
+const feedbackRoutes = require("./src/routes/feedback");
 
 // Controllers
 const { cancelOrder } = require("./src/controllers/orderController");
@@ -325,6 +327,8 @@ app.use("/api/kitchens", kitchenRoutes);
 app.use("/api/kitchen-categories", kitchenCategoryRoutes);
 app.use("/api/backup", backupRoutes);
 app.use("/api/translate", translateRoutes);
+app.use("/api/scanner", scannerRoutes);
+app.use("/api/feedback", feedbackRoutes);
 
 // Route for customer shop page
 app.get("/shop", (req, res) => {

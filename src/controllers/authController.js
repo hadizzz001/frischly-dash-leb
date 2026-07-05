@@ -882,6 +882,60 @@ const refreshToken = async (req, res) => {
 			// Verify refresh token
 			const decoded = verifyRefreshToken(refreshToken);
 
+			if (decoded && decoded.isMarket) {
+				const market = await Market.findById(decoded.id);
+				if (!market) {
+					return res.status(401).json({
+						success: false,
+						message: "Invalid refresh token",
+					});
+				}
+
+				if (!market.isActive) {
+					return res.status(401).json({
+						success: false,
+						message: "Market account is deactivated",
+					});
+				}
+
+				const newAccessToken = generateToken({
+					id: market._id,
+					isMarket: true,
+				});
+				const newRefreshToken = generateRefreshToken({
+					id: market._id,
+					isMarket: true,
+				});
+
+				return res.json({
+					success: true,
+					message: "Token refreshed successfully",
+					data: {
+						token: newAccessToken,
+						refreshToken: newRefreshToken,
+						user: {
+							id: market._id,
+							_id: market._id,
+							name: market.name,
+							username: market.username,
+							email: market.email || `${market.username}@market.local`,
+							phoneNumber: market.phoneNumber || "",
+							role: "market",
+							marketId: market._id,
+							isMarket: true,
+							address: {
+								city: market.location?.city || "",
+							},
+							cities: market.cities || [],
+							logo: market.logo || "",
+							isActive: market.isActive,
+							lastLogin: market.lastLogin,
+							createdAt: market.createdAt,
+						},
+					},
+				});
+			}
+
 			// Get user from token
 			const user = await User.findById(decoded.id);
 			if (!user) {
