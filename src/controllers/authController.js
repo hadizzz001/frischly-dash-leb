@@ -1456,7 +1456,103 @@ const resetCustomerPassword = async (req, res) => {
 	}
 };
 
+// @desc    Sign in / sign up with a Google account
+// @route   POST /api/auth/google
+// @access  Public
+const googleSignIn = async (req, res) => {
+	try {
+		const { idToken } = req.body;
+		if (!idToken) {
+			return sendError(res, 400, "Missing Google idToken");
+		}
+
+		// Verify the Google ID token using Google's public tokeninfo endpoint.
+		// This avoids adding the google-auth-library dependency and works with
+		// the global fetch available in Node 18+.
+		let payload;
+		try {
+			const resp = await fetch(
+				`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(
+					idToken
+				)}`
+			);
+			if (!resp.ok) {
+				return sendError(res, 401, "Invalid Google token");
+			}
+			payload = await resp.json();
+		} catch (e) {
+			console.error("Google token verify error:", e);
+			return sendError(res, 401, "Could not verify Google token");
+		}
+
+		// Optionally validate the audience against configured client id(s).
+		const allowedAud = (process.env.GOOGLE_CLIENT_ID || "")
+			.split(",")
+			.map((a) => a.trim())
+			.filter(Boolean);
+		if (allowedAud.length && !allowedAud.includes(payload.aud)) {
+			return sendError(res, 401, "Google token audience mismatch");
+		}
+
+		const googleId = payload.sub;
+		const email = payload.email
+			? String(payload.email).toLowerCase()
+			: undefined;
+		const name =
+			payload.name || (email ? email.split("@")[0] : "Google User");
+		const emailVerified =
+			payload.email_verified === true || payload.email_verified === "true";
+
+		if (!googleId) {
+			return sendError(res, 401, "Invalid Google token payload");
+		}
+
+		// Find an existing user by googleId first, then by email (link accounts).
+		let user = await User.findOne({ googleId });
+		if (!user && email) {
+			user = await User.findOne({ email });
+		}
+
+		if (user) {
+			// Link Google to an existing (e.g. local) account if not linked yet.
+			if (!user.googleId) {
+				user.googleId = googleId;
+			}
+			if (emailVerified && !user.emailConfirmed) {
+				user.emailConfirmed = true;
+				user.emailConfirmedAt = new Date();
+			}
+			user.lastLogin = new Date();
+			await user.save();
+		} else {
+			// Create a brand new Google-backed account.
+			user = await User.create({
+				name,
+				email,
+				googleId,
+				authProvider: "google",
+				emailConfirmed: emailVerified,
+				emailConfirmedAt: emailVerified ? new Date() : undefined,
+				lastLogin: new Date(),
+			});
+		}
+
+		const token = generateToken({ id: user._id });
+		const refreshToken = generateRefreshToken({ id: user._id });
+
+		sendResponse(res, 200, true, "Login successful", {
+			user: user.toSafeObject(),
+			token,
+			refreshToken,
+		});
+	} catch (error) {
+		console.error("Google sign-in error:", error);
+		sendError(res, 500, "Server error during Google sign-in");
+	}
+};
+
 module.exports = {
+	googleSignIn,
 	register,
 	confirmEmail,
 	confirmPhone,

@@ -1,6 +1,7 @@
 const express = require("express");
 const { body } = require("express-validator");
 const {
+	googleSignIn,
 	register,
 	confirmEmail,
 	confirmPhone,
@@ -202,6 +203,7 @@ router.post("/register", registerValidation, register);
 router.get("/confirm/:token", confirmEmail);
 router.get("/confirm-phone/:token", confirmPhone);
 router.post("/login", loginValidation, login);
+router.post("/google", googleSignIn);
 router.post("/login-profile", loginProfileValidation, loginProfile);
 router.post("/refresh", refreshTokenValidation, refreshToken);
 router.post(

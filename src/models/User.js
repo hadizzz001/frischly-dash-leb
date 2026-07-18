@@ -11,7 +11,13 @@ const userSchema = new mongoose.Schema(
 		},
 		phoneNumber: {
 			type: String,
-			required: [true, "Please provide a phone number"],
+			// Phone required for local accounts; Google sign-in users may add it later.
+			required: [
+				function () {
+					return this.authProvider !== "google" && !this.googleId;
+				},
+				"Please provide a phone number",
+			],
 			trim: true,
 			match: [/^[\+]?[1-9][\d]{0,15}$/, "Please provide a valid phone number"],
 		},
@@ -33,9 +39,29 @@ const userSchema = new mongoose.Schema(
 		},
 		password: {
 			type: String,
-			required: [true, "Please provide a password"],
+			// Password is required for local accounts only. Google sign-in
+			// users authenticate via their Google account, so no password.
+			required: [
+				function () {
+					return this.authProvider !== "google" && !this.googleId;
+				},
+				"Please provide a password",
+			],
 			minlength: [6, "Password must be at least 6 characters"],
 			select: false, // Don't include password in queries by default
+		},
+		// ✅ Google sign-in support. `googleId` is the Google account subject
+		// (`sub`) returned by Google's token verification. `authProvider`
+		// distinguishes local (phone/email + password) vs google accounts.
+		googleId: {
+			type: String,
+			index: true,
+			sparse: true,
+		},
+		authProvider: {
+			type: String,
+			enum: ["local", "google"],
+			default: "local",
 		},
 		emailConfirmed: {
 			type: Boolean,
@@ -201,6 +227,7 @@ userSchema.pre("save", async function (next) {
 
 // Instance method to check password
 userSchema.methods.comparePassword = async function (candidatePassword) {
+	if (!this.password) return false;
 	return await bcrypt.compare(candidatePassword, this.password);
 };
 
