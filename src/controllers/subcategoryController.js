@@ -1,5 +1,6 @@
 const Subcategory = require("../models/Subcategory");
 const Category = require("../models/Category");
+const { sendSuccess, sendError, sendResponse } = require("../utils/apiResponse");
 
 // Create subcategory
 exports.createSubcategory = async (req, res) => {
@@ -7,18 +8,13 @@ exports.createSubcategory = async (req, res) => {
 		const { name, parentCategory, sortorder } = req.body;
 
 		if (!name || !parentCategory) {
-			return res.status(400).json({
-				success: false,
-				error: "Name and parentCategory are required",
-			});
+			return sendError(res, 400, "Name and parentCategory are required");
 		}
 
 		// Ensure parent category exists
 		const category = await Category.findById(parentCategory);
 		if (!category)
-			return res
-				.status(404)
-				.json({ success: false, error: "Parent category not found" });
+			return sendError(res, 404, "Parent category not found");
 
 		const sub = await Subcategory.create({
 			name,
@@ -27,9 +23,9 @@ exports.createSubcategory = async (req, res) => {
 			createdBy: req.user ? req.user.id : undefined,
 		});
 
-		res.status(201).json({ success: true, data: sub });
+		sendSuccess(res, sub, "Subcategory created", 201);
 	} catch (error) {
-		res.status(400).json({ success: false, error: error.message });
+		sendError(res, 400, error.message);
 	}
 };
 
@@ -52,13 +48,11 @@ exports.getAllSubcategories = async (req, res) => {
 		const subcategories = await Subcategory.find(query)
 			.populate("parentCategory", "name image")
 			.sort({ sortorder: 1 });
-		res.status(200).json({
-			success: true,
+		sendResponse(res, 200, true, "Subcategories fetched", subcategories, {
 			count: subcategories.length,
-			data: subcategories,
 		});
 	} catch (error) {
-		res.status(400).json({ success: false, error: error.message });
+		sendError(res, 400, error.message);
 	}
 };
 
@@ -69,13 +63,10 @@ exports.getSubcategoryById = async (req, res) => {
 			"parentCategory",
 			"name image"
 		);
-		if (!sub)
-			return res
-				.status(404)
-				.json({ success: false, error: "Subcategory not found" });
-		res.status(200).json({ success: true, data: sub });
+		if (!sub) return sendError(res, 404, "Subcategory not found");
+		sendSuccess(res, sub);
 	} catch (error) {
-		res.status(400).json({ success: false, error: error.message });
+		sendError(res, 400, error.message);
 	}
 };
 
@@ -92,13 +83,10 @@ exports.updateSubcategory = async (req, res) => {
 			new: true,
 			runValidators: true,
 		});
-		if (!sub)
-			return res
-				.status(404)
-				.json({ success: false, error: "Subcategory not found" });
-		res.status(200).json({ success: true, data: sub });
+		if (!sub) return sendError(res, 404, "Subcategory not found");
+		sendSuccess(res, sub);
 	} catch (error) {
-		res.status(400).json({ success: false, error: error.message });
+		sendError(res, 400, error.message);
 	}
 };
 
@@ -110,12 +98,9 @@ exports.deleteSubcategory = async (req, res) => {
 			{ isActive: false },
 			{ new: true }
 		);
-		if (!sub)
-			return res
-				.status(404)
-				.json({ success: false, error: "Subcategory not found" });
-		res.status(200).json({ success: true, data: {} });
+		if (!sub) return sendError(res, 404, "Subcategory not found");
+		sendSuccess(res, {});
 	} catch (error) {
-		res.status(400).json({ success: false, error: error.message });
+		sendError(res, 400, error.message);
 	}
 };

@@ -9,7 +9,9 @@ const User = require("../models/User");
 const Setting = require("../models/Setting");
 const sendEmail = require("../utils/sendEmail");
 const NotificationService = require("../services/notifications");
+const { notifyCustomerOrderStatus } = require("../services/orderStatusNotification");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -216,24 +218,16 @@ exports.getOrders = async (req, res) => {
 		const totalOrders = await Order.countDocuments(filter);
 		const totalPages = Math.ceil(totalOrders / limitNum);
 
-		res.json({
-			success: true,
-			data: orders,
-			pagination: {
+		sendResponse(res, 200, true, "Success", orders, { pagination: {
 				currentPage: pageNum,
 				totalPages,
 				totalOrders,
 				hasNextPage: pageNum < totalPages,
 				hasPrevPage: pageNum > 1,
-			},
-		});
+			} });
 	} catch (error) {
 		console.error("Error fetching orders:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching orders",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching orders", error.message);
 	}
 };
 
@@ -254,9 +248,7 @@ exports.getOrderRiderLocation = async (req, res) => {
 			});
 
 		if (!order) {
-			return res
-				.status(404)
-				.json({ success: false, message: "Order not found" });
+			return sendError(res, 404, "Order not found");
 		}
 
 		// Authorization: the customer who owns the order, privileged staff,
@@ -275,16 +267,11 @@ exports.getOrderRiderLocation = async (req, res) => {
 		const isAssignedRider = role === "rider" || role === "market_driver";
 
 		if (!isPrivileged && !isOwner && !isMarketOwner && !isAssignedRider) {
-			return res
-				.status(403)
-				.json({ success: false, message: "Not authorized to view this order" });
+			return sendError(res, 403, "Not authorized to view this order");
 		}
 
 		if (!order.assignedRider) {
-			return res.json({
-				success: true,
-				data: { hasRider: false, hasLocation: false, orderStatus: order.status },
-			});
+			return sendResponse(res, 200, true, "Success", { hasRider: false, hasLocation: false, orderStatus: order.status });
 		}
 
 		const rider = order.assignedRider;
@@ -293,9 +280,7 @@ exports.getOrderRiderLocation = async (req, res) => {
 			typeof loc.latitude === "number" &&
 			typeof loc.longitude === "number";
 
-		return res.json({
-			success: true,
-			data: {
+		return sendResponse(res, 200, true, "Success", {
 				hasRider: true,
 				hasLocation,
 				latitude: hasLocation ? loc.latitude : null,
@@ -314,13 +299,10 @@ exports.getOrderRiderLocation = async (req, res) => {
 				// admin riderslocation dashboard does.
 				address: (rider.user && rider.user.address) || null,
 				zones: Array.isArray(rider.zones) ? rider.zones : [],
-			},
-		});
+			});
 	} catch (error) {
 		console.error("Error getting order rider location:", error);
-		return res
-			.status(500)
-			.json({ success: false, message: "Error getting rider location" });
+		return sendError(res, 500, "Error getting rider location");
 	}
 };
 
@@ -412,24 +394,16 @@ exports.getOrdersForRiders = async (req, res) => {
 		const totalOrders = await Order.countDocuments(filter);
 		const totalPages = Math.ceil(totalOrders / limitNum);
 
-		res.json({
-			success: true,
-			data: orders,
-			pagination: {
+		sendResponse(res, 200, true, "Success", orders, { pagination: {
 				currentPage: pageNum,
 				totalPages,
 				totalOrders,
 				hasNextPage: pageNum < totalPages,
 				hasPrevPage: pageNum > 1,
-			},
-		});
+			} });
 	} catch (error) {
 		console.error("Error fetching completed orders:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching completed orders",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching completed orders", error.message);
 	}
 };
 
@@ -441,10 +415,7 @@ exports.getOrder = async (req, res) => {
 		const { id } = req.params;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid order ID",
-			});
+			return sendError(res, 400, "Invalid order ID");
 		}
 
 		const order = await Order.findById(id)
@@ -458,10 +429,7 @@ exports.getOrder = async (req, res) => {
 			);
 
 		if (!order) {
-			return res.status(404).json({
-				success: false,
-				message: "Order not found",
-			});
+			return sendError(res, 404, "Order not found");
 		}
 
 		// Sort items by shelfNumber
@@ -487,10 +455,7 @@ exports.getOrder = async (req, res) => {
 			req.user.role === "customer" &&
 			order.customer.email !== req.user.email
 		) {
-			return res.status(403).json({
-				success: false,
-				message: "You are not authorized to view this order",
-			});
+			return sendError(res, 403, "You are not authorized to view this order");
 		}
 
 		// Market admins can only view their own market's orders
@@ -500,23 +465,13 @@ exports.getOrder = async (req, res) => {
 				String(order.market._id || order.market) !==
 					String(req.user.marketId))
 		) {
-			return res.status(403).json({
-				success: false,
-				message: "You are not authorized to view this order",
-			});
+			return sendError(res, 403, "You are not authorized to view this order");
 		}
 
-		res.json({
-			success: true,
-			data: order,
-		});
+		sendResponse(res, 200, true, "Success", order);
 	} catch (error) {
 		console.error("Error fetching order:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching order",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching order", error.message);
 	}
 };
 
@@ -535,12 +490,8 @@ exports.createOrder = async (req, res) => {
 			console.log(
 				"Order creation disabled due to maintenance or disabled settings.",
 			);
-			return res.status(400).json({
-				success: false,
-				message:
-					settings.maintenanceMessage ||
-					"Order creation is currently disabled.",
-			});
+			return sendError(res, 400, settings.maintenanceMessage ||
+					"Order creation is currently disabled.");
 		}
 
 		const {
@@ -576,10 +527,7 @@ exports.createOrder = async (req, res) => {
 			!dbCustomer.phoneNumber
 		) {
 			console.log("Customer validation failed. Missing required fields.");
-			return res.status(400).json({
-				success: false,
-				message: "Customer name, ID, email and phone are required",
-			});
+			return sendError(res, 400, "Customer name, ID, email and phone are required");
 		}
 
 		// Handle new address if provided
@@ -588,10 +536,7 @@ exports.createOrder = async (req, res) => {
 
 		if (!items || !Array.isArray(items) || items.length === 0) {
 			console.log("No items provided in order.");
-			return res.status(400).json({
-				success: false,
-				message: "Order must contain at least one item",
-			});
+			return sendError(res, 400, "Order must contain at least one item");
 		}
 
 		// Validate and process items
@@ -603,10 +548,7 @@ exports.createOrder = async (req, res) => {
 			console.log("Processing item:", item.product);
 			if (!item.product || !item.quantity) {
 				console.log("Invalid item structure:", item);
-				return res.status(400).json({
-					success: false,
-					message: "Jeder Artikel muss Produkt und Menge haben",
-				});
+				return sendError(res, 400, "Jeder Artikel muss Produkt und Menge haben");
 			}
 
 			// Verify product exists
@@ -614,10 +556,7 @@ exports.createOrder = async (req, res) => {
 
 			if (!product) {
 				console.log("Product not found:", item.product);
-				return res.status(400).json({
-					success: false,
-					message: `Product with ID ${item.product} not found`,
-				});
+				return sendError(res, 400, `Product with ID ${item.product} not found`);
 			}
 
 			// Check stock availability
@@ -630,10 +569,7 @@ exports.createOrder = async (req, res) => {
 					"Requested:",
 					item.quantity,
 				);
-				return res.status(400).json({
-					success: false,
-					message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`,
-				});
+				return sendError(res, 400, `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`);
 			}
 
 			const totalPrice =
@@ -718,17 +654,11 @@ exports.createOrder = async (req, res) => {
 
 			if (promoCodeDoc) {
 				if (!promoCodeDoc.isActive || !promoCodeDoc.isFromOwnCompany) {
-					return res.status(400).json({
-						success: false,
-						message: "Invalid or inactive promo code",
-					});
+					return sendError(res, 400, "Invalid or inactive promo code");
 				}
 				// Admin promo codes only apply to main-store orders.
 				if (orderMarket) {
-					return res.status(400).json({
-						success: false,
-						message: "This promo code is not valid for this market",
-					});
+					return sendError(res, 400, "This promo code is not valid for this market");
 				}
 				if (promoCodeDoc.discountType === "percentage") {
 					discount =
@@ -744,42 +674,27 @@ exports.createOrder = async (req, res) => {
 				marketPromoDoc = await MarketPromoCode.findById(promoCode);
 
 				if (!marketPromoDoc || !marketPromoDoc.isActive) {
-					return res.status(400).json({
-						success: false,
-						message: "Invalid or inactive promo code",
-					});
+					return sendError(res, 400, "Invalid or inactive promo code");
 				}
 				// Must belong to the same market the order is placed from.
 				if (
 					!orderMarket ||
 					String(marketPromoDoc.market) !== String(orderMarket)
 				) {
-					return res.status(400).json({
-						success: false,
-						message: "This promo code is not valid for this market",
-					});
+					return sendError(res, 400, "This promo code is not valid for this market");
 				}
 				const now = new Date();
 				if (marketPromoDoc.startsAt && now < marketPromoDoc.startsAt) {
-					return res.status(400).json({
-						success: false,
-						message: "This promo code is not active yet",
-					});
+					return sendError(res, 400, "This promo code is not active yet");
 				}
 				if (marketPromoDoc.expiresAt && now > marketPromoDoc.expiresAt) {
-					return res.status(400).json({
-						success: false,
-						message: "This promo code has expired",
-					});
+					return sendError(res, 400, "This promo code has expired");
 				}
 				if (
 					marketPromoDoc.usageLimit > 0 &&
 					marketPromoDoc.usageCount >= marketPromoDoc.usageLimit
 				) {
-					return res.status(400).json({
-						success: false,
-						message: "This promo code has reached its usage limit",
-					});
+					return sendError(res, 400, "This promo code has reached its usage limit");
 				}
 				const minRequired =
 					marketPromoDoc.minOrderTotal ||
@@ -787,10 +702,7 @@ exports.createOrder = async (req, res) => {
 						marketPromoDoc.triggerCondition.minOrderTotal) ||
 					0;
 				if (minRequired && orderTotalBeforeDiscount < minRequired) {
-					return res.status(400).json({
-						success: false,
-						message: `Minimum order total for this promo code is ${minRequired}`,
-					});
+					return sendError(res, 400, `Minimum order total for this promo code is ${minRequired}`);
 				}
 				if (marketPromoDoc.discountType === "percentage") {
 					discount =
@@ -821,10 +733,7 @@ exports.createOrder = async (req, res) => {
 
 		if (total < settings.minimumOrderValue) {
 			console.log("Order total below minimum:", settings.minimumOrderValue);
-			return res.status(400).json({
-				success: false,
-				message: `Minimum order value is $${settings.minimumOrderValue}`,
-			});
+			return sendError(res, 400, `Minimum order value is $${settings.minimumOrderValue}`);
 		}
 
 		// Determine initial status and payment status based on payment method
@@ -952,12 +861,12 @@ exports.createOrder = async (req, res) => {
 					line_items: lineItems,
 					mode: "payment",
 					success_url: `${
-						process.env.SERVER_URL || "https://frischly-dash-leb.onrender.com"
+						process.env.SERVER_URL || "https://freshlylb.onrender.com"
 					}/payment/stripe-success.html?session_id={CHECKOUT_SESSION_ID}&order=${
 						populatedOrder._id
 					}`,
 					cancel_url: `${
-						process.env.SERVER_URL || "https://frischly-dash-leb.onrender.com"
+						process.env.SERVER_URL || "https://freshlylb.onrender.com"
 					}/payment/cancel.html?order=${populatedOrder._id}`,
 					client_reference_id: populatedOrder._id.toString(),
 					customer_email: populatedOrder.customer.email,
@@ -1000,12 +909,7 @@ exports.createOrder = async (req, res) => {
 		}
 
 		console.log("Sending response to client...");
-		res.status(201).json({
-			success: true,
-			message: "Order created successfully",
-			data: populatedOrder,
-			paymentUrl: paymentUrl,
-		});
+		sendResponse(res, 201, true, "Order created successfully", populatedOrder, { paymentUrl: paymentUrl });
 
 		// Send confirmation email to customer
 		console.log("Preparing confirmation email...");
@@ -1194,11 +1098,7 @@ exports.createOrder = async (req, res) => {
 		}
 	} catch (error) {
 		console.error("Error creating order:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error creating order",
-			error: error.message,
-		});
+		sendError(res, 500, "Error creating order", error.message);
 	}
 	console.log("createOrder finished.");
 };
@@ -1223,18 +1123,12 @@ exports.updateOrder = async (req, res) => {
 		} = req.body;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid order ID",
-			});
+			return sendError(res, 400, "Invalid order ID");
 		}
 
 		const order = await Order.findById(id);
 		if (!order) {
-			return res.status(404).json({
-				success: false,
-				message: "Order not found",
-			});
+			return sendError(res, 404, "Order not found");
 		}
 
 		// Market admins can only modify their own market's orders
@@ -1243,10 +1137,7 @@ exports.updateOrder = async (req, res) => {
 			(!order.market ||
 				String(order.market) !== String(req.user.marketId))
 		) {
-			return res.status(403).json({
-				success: false,
-				message: "You are not authorized to modify this order",
-			});
+			return sendError(res, 403, "You are not authorized to modify this order");
 		}
 
 		// Riders / market drivers may claim an unassigned order (pick up) or modify
@@ -1259,31 +1150,23 @@ exports.updateOrder = async (req, res) => {
 				? String(order.assignedRider)
 				: null;
 			if (!mine || (assignedTo && assignedTo !== mine)) {
-				return res.status(403).json({
-					success: false,
-					message: "You can only update orders assigned to you",
-				});
+				return sendError(res, 403, "You can only update orders assigned to you");
 			}
 		}
 
 		// Check if order can be modified
 		if (order.status === "cancelled") {
-			return res.status(400).json({
-				success: false,
-				message: "Cancelled orders cannot be modified",
-			});
+			return sendError(res, 400, "Cancelled orders cannot be modified");
 		}
 
 		// Check if order can be modified
 		if (order.status === "delivered" && req.user.role !== "admin") {
-			return res.status(400).json({
-				success: false,
-				message: "Delivered orders cannot be modified",
-			});
+			return sendError(res, 400, "Delivered orders cannot be modified");
 		}
 
 		// Update fields
 		if (customer) order.customer = { ...order.customer, ...customer };
+		const __previousStatus = order.status;
 		if (status) order.status = status;
 		if (paymentStatus) order.paymentStatus = paymentStatus;
 		if (paymentMethod) order.paymentMethod = paymentMethod;
@@ -1384,18 +1267,18 @@ exports.updateOrder = async (req, res) => {
 			}
 		}
 
-		res.json({
-			success: true,
-			message: "Order updated successfully",
-			data: updatedOrder,
-		});
+		// Notify the customer (push, works even when the app is closed) when
+		// the order status actually changed.
+		if (status && status !== __previousStatus) {
+			notifyCustomerOrderStatus(updatedOrder, status).catch((e) =>
+				console.error("Order status notification failed:", e),
+			);
+		}
+
+		sendResponse(res, 200, true, "Order updated successfully", updatedOrder);
 	} catch (error) {
 		console.error("Error updating order:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error updating order",
-			error: error.message,
-		});
+		sendError(res, 500, "Error updating order", error.message);
 	}
 };
 
@@ -1407,10 +1290,7 @@ exports.deleteOrder = async (req, res) => {
 		const { id } = req.params;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid order ID",
-			});
+			return sendError(res, 400, "Invalid order ID");
 		}
 
 		const order = await Order.findByIdAndUpdate(
@@ -1420,24 +1300,13 @@ exports.deleteOrder = async (req, res) => {
 		);
 
 		if (!order) {
-			return res.status(404).json({
-				success: false,
-				message: "Order not found",
-			});
+			return sendError(res, 404, "Order not found");
 		}
 
-		res.json({
-			success: true,
-			message: "Order deleted successfully",
-			data: order,
-		});
+		sendResponse(res, 200, true, "Order deleted successfully", order);
 	} catch (error) {
 		console.error("Error deleting order:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error deleting order",
-			error: error.message,
-		});
+		sendError(res, 500, "Error deleting order", error.message);
 	}
 };
 
@@ -1479,22 +1348,15 @@ exports.getOrderStats = async (req, res) => {
 			},
 		]);
 
-		res.json({
-			success: true,
-			data: {
+		sendResponse(res, 200, true, "Success", {
 				...stats,
 				todayOrders,
 				monthlyOrders,
 				monthlyRevenue: monthlyRevenue[0]?.total || 0,
-			},
-		});
+			});
 	} catch (error) {
 		console.error("Error fetching order stats:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching order statistics",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching order statistics", error.message);
 	}
 };
 
@@ -1517,10 +1379,7 @@ exports.cancelOrder = async (req, res) => {
 		console.log("Step 2: Validating order ID format...");
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			console.log("❌ Step 2: Invalid order ID format");
-			return res.status(400).json({
-				success: false,
-				message: "Invalid order ID",
-			});
+			return sendError(res, 400, "Invalid order ID");
 		}
 		console.log("✅ Step 2: Order ID format is valid");
 
@@ -1529,10 +1388,7 @@ exports.cancelOrder = async (req, res) => {
 		const order = await Order.findById(id);
 		if (!order) {
 			console.log("❌ Step 3: Order not found in database");
-			return res.status(404).json({
-				success: false,
-				message: "Order not found",
-			});
+			return sendError(res, 404, "Order not found");
 		}
 		console.log(
 			`✅ Step 3: Order found - Status: ${order.status}, Payment: ${order.paymentStatus}, Total: $${order.total}`,
@@ -1542,10 +1398,7 @@ exports.cancelOrder = async (req, res) => {
 		console.log("Step 4: Checking if order is already cancelled...");
 		if (order.status === "cancelled") {
 			console.log("❌ Step 4: Order is already cancelled");
-			return res.status(400).json({
-				success: false,
-				message: "Order is already cancelled",
-			});
+			return sendError(res, 400, "Order is already cancelled");
 		}
 		console.log("✅ Step 4: Order is not already cancelled");
 
@@ -1555,10 +1408,7 @@ exports.cancelOrder = async (req, res) => {
 			console.log(
 				`❌ Step 5: Cannot cancel order with status '${order.status}'`,
 			);
-			return res.status(400).json({
-				success: false,
-				message: "Delivered order cannot be cancelled",
-			});
+			return sendError(res, 400, "Delivered order cannot be cancelled");
 		}
 		console.log("✅ Step 5: Order can be cancelled");
 
@@ -1740,19 +1590,17 @@ exports.cancelOrder = async (req, res) => {
 		console.log("=== ORDER CANCELLATION COMPLETED SUCCESSFULLY ===");
 		console.log(`Final Status: ${updatedOrder.status}`);
 
-		res.json({
-			success: true,
-			message: "Order cancelled successfully",
-			data: updatedOrder,
-		});
+		// Let the customer know their order was cancelled (push works even
+		// when the app is closed/killed).
+		notifyCustomerOrderStatus(updatedOrder, "cancelled").catch((e) =>
+			console.error("Order status notification failed:", e),
+		);
+
+		sendResponse(res, 200, true, "Order cancelled successfully", updatedOrder);
 	} catch (error) {
 		console.log("=== ORDER CANCELLATION FAILED ===");
 		console.error("Error cancelling order:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error cancelling order",
-			error: error.message,
-		});
+		sendError(res, 500, "Error cancelling order", error.message);
 	}
 };
 
@@ -1765,17 +1613,11 @@ exports.updateOrderShelfNumber = async (req, res) => {
 		const { shelfNumber } = req.body;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid order ID",
-			});
+			return sendError(res, 400, "Invalid order ID");
 		}
 
 		if (shelfNumber === undefined || shelfNumber === null) {
-			return res.status(400).json({
-				success: false,
-				message: "Shelf number is required",
-			});
+			return sendError(res, 400, "Shelf number is required");
 		}
 
 		// Convert to number if it's a valid number string
@@ -1783,27 +1625,18 @@ exports.updateOrderShelfNumber = async (req, res) => {
 			typeof shelfNumber === "string" ? parseFloat(shelfNumber) : shelfNumber;
 
 		if (isNaN(shelfNum) || shelfNum < 0) {
-			return res.status(400).json({
-				success: false,
-				message: "Shelf number must be a valid non-negative number",
-			});
+			return sendError(res, 400, "Shelf number must be a valid non-negative number");
 		}
 
 		const order = await Order.findById(id);
 
 		if (!order) {
-			return res.status(404).json({
-				success: false,
-				message: "Order not found",
-			});
+			return sendError(res, 404, "Order not found");
 		}
 
 		// Check if order can be modified
 		if (order.status === "cancelled" || order.status === "delivered") {
-			return res.status(400).json({
-				success: false,
-				message: "Cannot modify shelf number for cancelled or delivered orders",
-			});
+			return sendError(res, 400, "Cannot modify shelf number for cancelled or delivered orders");
 		}
 
 		order.shelfNumber = shelfNum;
@@ -1820,18 +1653,10 @@ exports.updateOrderShelfNumber = async (req, res) => {
 				"name barcode shelfNumber price discount tax bottlerefund picture",
 			);
 
-		res.json({
-			success: true,
-			message: "Order shelf number updated successfully",
-			data: updatedOrder,
-		});
+		sendResponse(res, 200, true, "Order shelf number updated successfully", updatedOrder);
 	} catch (error) {
 		console.error("Error updating order shelf number:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error updating order shelf number",
-			error: error.message,
-		});
+		sendError(res, 500, "Error updating order shelf number", error.message);
 	}
 };
 
@@ -1844,17 +1669,11 @@ exports.updateOrderStatus = async (req, res) => {
 		const { status } = req.body;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid order ID",
-			});
+			return sendError(res, 400, "Invalid order ID");
 		}
 
 		if (!status) {
-			return res.status(400).json({
-				success: false,
-				message: "Status is required",
-			});
+			return sendError(res, 400, "Status is required");
 		}
 
 		// Valid status values from the Order model
@@ -1869,19 +1688,13 @@ exports.updateOrderStatus = async (req, res) => {
 		];
 
 		if (!validStatuses.includes(status)) {
-			return res.status(400).json({
-				success: false,
-				message: `Status must be one of: ${validStatuses.join(", ")}`,
-			});
+			return sendError(res, 400, `Status must be one of: ${validStatuses.join(", ")}`);
 		}
 
 		const order = await Order.findById(id);
 
 		if (!order) {
-			return res.status(404).json({
-				success: false,
-				message: "Order not found",
-			});
+			return sendError(res, 404, "Order not found");
 		}
 
 		// Market admin scoping: can only update orders for their own market
@@ -1890,10 +1703,7 @@ exports.updateOrderStatus = async (req, res) => {
 			(!order.market ||
 				String(order.market) !== String(req.user.marketId))
 		) {
-			return res.status(403).json({
-				success: false,
-				message: "Not authorized to update this order",
-			});
+			return sendError(res, 403, "Not authorized to update this order");
 		}
 
 		// Role-based status update permissions
@@ -1916,10 +1726,7 @@ exports.updateOrderStatus = async (req, res) => {
 		const allowedStatuses = statusPermissions[userRole] || [];
 
 		if (!allowedStatuses.includes(status)) {
-			return res.status(403).json({
-				success: false,
-				message: `${userRole} role is not permitted to update status to '${status}'`,
-			});
+			return sendError(res, 403, `${userRole} role is not permitted to update status to '${status}'`);
 		}
 
 		// Additional business logic for riders
@@ -1928,10 +1735,7 @@ exports.updateOrderStatus = async (req, res) => {
 			const rider = await Rider.findOne({ user: req.user.id });
 
 			if (!rider) {
-				return res.status(403).json({
-					success: false,
-					message: "Rider profile not found",
-				});
+				return sendError(res, 403, "Rider profile not found");
 			}
 
 			// Check if the order is assigned to this rider or if rider can access orders in their zones
@@ -1945,17 +1749,11 @@ exports.updateOrderStatus = async (req, res) => {
 						);
 
 						if (zones.length === 0) {
-							return res.status(403).json({
-								success: false,
-								message: "You are not authorized to update this order",
-							});
+							return sendError(res, 403, "You are not authorized to update this order");
 						}
 					}
 				} else {
-					return res.status(403).json({
-						success: false,
-						message: "You are not authorized to update this order",
-					});
+					return sendError(res, 403, "You are not authorized to update this order");
 				}
 			}
 
@@ -1971,18 +1769,12 @@ exports.updateOrderStatus = async (req, res) => {
 
 		// Prevent updating already completed orders
 		if (["delivered", "cancelled"].includes(order.status)) {
-			return res.status(400).json({
-				success: false,
-				message: "Cannot update status of delivered or cancelled orders",
-			});
+			return sendError(res, 400, "Cannot update status of delivered or cancelled orders");
 		}
 
 		// Business logic validations
 		if (status === "cancelled" && order.status === "delivered") {
-			return res.status(400).json({
-				success: false,
-				message: "Cannot cancel a delivered order",
-			});
+			return sendError(res, 400, "Cannot cancel a delivered order");
 		}
 
 		// Update the order status
@@ -2085,18 +1877,18 @@ exports.updateOrderStatus = async (req, res) => {
 			}
 		}
 
-		res.json({
-			success: true,
-			message: `Order status updated from '${previousStatus}' to '${status}' successfully`,
-			data: updatedOrder,
-		});
+		// Push the status change to the customer's device (delivered even
+		// when the app is fully closed/killed).
+		if (status !== previousStatus) {
+			notifyCustomerOrderStatus(updatedOrder, status).catch((e) =>
+				console.error("Order status notification failed:", e),
+			);
+		}
+
+		sendResponse(res, 200, true, `Order status updated from '${previousStatus}' to '${status}' successfully`, updatedOrder);
 	} catch (error) {
 		console.error("Error updating order status:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error updating order status",
-			error: error.message,
-		});
+		sendError(res, 500, "Error updating order status", error.message);
 	}
 };
 
@@ -2107,18 +1899,10 @@ exports.getOrdersCount = async (req, res) => {
 	try {
 		const totalOrders = await Order.countDocuments({ isActive: true });
 
-		res.json({
-			success: true,
-			count: totalOrders,
-			message: `Total active orders: ${totalOrders}`,
-		});
+		sendResponse(res, 200, true, `Total active orders: ${totalOrders}`, null, { count: totalOrders });
 	} catch (error) {
 		console.error("Error getting orders count:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error retrieving orders count",
-			error: error.message,
-		});
+		sendError(res, 500, "Error retrieving orders count", error.message);
 	}
 };
 
@@ -2293,31 +2077,21 @@ exports.getProductSalesStats = async (req, res) => {
 			uniqueProducts: 0,
 		};
 
-		res.json({
-			success: true,
-			data: productSales,
-			summary,
-			pagination: {
+		sendResponse(res, 200, true, "Success", productSales, { summary: summary, pagination: {
 				currentPage: pageNum,
 				totalPages,
 				totalProducts,
 				hasNextPage: pageNum < totalPages,
 				hasPrevPage: pageNum > 1,
 				limit: limitNum,
-			},
-			filters: {
+			}, filters: {
 				timeRange: timeRange || "custom",
 				dateFrom: dateFilter.$gte || null,
 				dateTo: dateFilter.$lte || null,
-			},
-		});
+			} });
 	} catch (error) {
 		console.error("Error fetching product sales statistics:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching product sales statistics",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching product sales statistics", error.message);
 	}
 };
 
@@ -2458,31 +2232,20 @@ exports.getMarketCommissionStats = async (req, res) => {
 		const grandTotalEarnings =
 			Math.round((ownSales.totalSales + totalCommission) * 100) / 100;
 
-		res.json({
-			success: true,
-			data,
-			totals: {
+		sendResponse(res, 200, true, "Success", data, { totals: {
 				marketCount: data.length,
 				totalOrders,
 				totalSales: Math.round(totalSales * 100) / 100,
 				totalCommission: Math.round(totalCommission * 100) / 100,
 				commissionRate: COMMISSION_RATE,
-			},
-			ownSales,
-			grandTotalEarnings,
-			filters: {
+			}, ownSales: ownSales, grandTotalEarnings: grandTotalEarnings, filters: {
 				timeRange: timeRange || "custom",
 				dateFrom: dateFilter.$gte || null,
 				dateTo: dateFilter.$lte || null,
-			},
-		});
+			} });
 	} catch (error) {
 		console.error("Error fetching market commission statistics:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching market commission statistics",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching market commission statistics", error.message);
 	}
 };
 
@@ -2603,30 +2366,21 @@ exports.getUnsoldProducts = async (req, res) => {
 			}),
 		);
 
-		res.json({
-			success: true,
-			data: productsWithCategory,
-			pagination: {
+		sendResponse(res, 200, true, "Success", productsWithCategory, { pagination: {
 				currentPage: pageNum,
 				totalPages,
 				totalProducts,
 				hasNextPage: pageNum < totalPages,
 				hasPrevPage: pageNum > 1,
 				limit: limitNum,
-			},
-			filters: {
+			}, filters: {
 				timeRange: timeRange || "custom",
 				dateFrom: dateFilter.$gte || null,
 				dateTo: dateFilter.$lte || null,
-			},
-		});
+			} });
 	} catch (error) {
 		console.error("Error fetching unsold products:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching unsold products",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching unsold products", error.message);
 	}
 };
 
@@ -2643,10 +2397,7 @@ exports.verifyStripePayment = async (req, res) => {
 
 		if (!sessionId || !orderId) {
 			console.log("Missing sessionId or orderId in request");
-			return res.status(400).json({
-				success: false,
-				message: "Session ID and Order ID are required",
-			});
+			return sendError(res, 400, "Session ID and Order ID are required");
 		}
 
 		console.log("Retrieving Stripe session...");
@@ -2654,10 +2405,7 @@ exports.verifyStripePayment = async (req, res) => {
 
 		if (!session) {
 			console.log("Stripe session not found for ID:", sessionId);
-			return res.status(404).json({
-				success: false,
-				message: "Session not found",
-			});
+			return sendError(res, 404, "Session not found");
 		}
 
 		console.log("Stripe session payment status:", session.payment_status);
@@ -2666,10 +2414,7 @@ exports.verifyStripePayment = async (req, res) => {
 			const order = await Order.findById(orderId);
 			if (!order) {
 				console.log("Order not found for ID:", orderId);
-				return res.status(404).json({
-					success: false,
-					message: "Order not found",
-				});
+				return sendError(res, 404, "Order not found");
 			}
 
 			if (order.paymentStatus !== "paid") {
@@ -2686,24 +2431,14 @@ exports.verifyStripePayment = async (req, res) => {
 			}
 
 			console.log("Payment verification successful");
-			return res.json({
-				success: true,
-				message: "Payment verified successfully",
-			});
+			return sendResponse(res, 200, true, "Payment verified successfully", null);
 		} else {
 			console.log("Payment not completed. Status:", session.payment_status);
-			return res.status(400).json({
-				success: false,
-				message: "Payment not completed",
-			});
+			return sendError(res, 400, "Payment not completed");
 		}
 	} catch (error) {
 		console.error("Error verifying payment:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error verifying payment",
-			error: error.message,
-		});
+		sendError(res, 500, "Error verifying payment", error.message);
 	}
 };
 
@@ -2731,16 +2466,9 @@ exports.getCustomerOrderCounts = async (req, res) => {
 			},
 		]);
 
-		res.json({
-			success: true,
-			data: orderCounts,
-		});
+		sendResponse(res, 200, true, "Success", orderCounts);
 	} catch (error) {
 		console.error("Error getting customer order counts:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error retrieving customer order counts",
-			error: error.message,
-		});
+		sendError(res, 500, "Error retrieving customer order counts", error.message);
 	}
 };

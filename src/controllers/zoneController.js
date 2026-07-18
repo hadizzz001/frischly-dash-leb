@@ -1,5 +1,6 @@
 const Zone = require("../models/Zone");
 const mongoose = require("mongoose");
+const { sendSuccess, sendError, sendResponse } = require("../utils/apiResponse");
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -112,9 +113,7 @@ exports.getZones = async (req, res) => {
 		const totalZones = await Zone.countDocuments(filter);
 		const totalPages = Math.ceil(totalZones / limitNum);
 
-		res.status(200).json({
-			success: true,
-			data: zones,
+		sendResponse(res, 200, true, "Success", zones, {
 			pagination: {
 				current: pageNum,
 				pages: totalPages,
@@ -125,10 +124,7 @@ exports.getZones = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error fetching zones:", error);
-		res.status(500).json({
-			success: false,
-			error: "Server error while fetching zones",
-		});
+		sendError(res, 500, "Server error while fetching zones");
 	}
 };
 
@@ -143,28 +139,16 @@ exports.getZone = async (req, res) => {
 			.populate("market", "name username");
 
 		if (!zone) {
-			return res.status(404).json({
-				success: false,
-				error: "Zone not found",
-			});
+			return sendError(res, 404, "Zone not found");
 		}
 
-		res.status(200).json({
-			success: true,
-			data: zone,
-		});
+		sendSuccess(res, zone);
 	} catch (error) {
 		console.error("Error fetching zone:", error);
 		if (error.name === "CastError") {
-			return res.status(400).json({
-				success: false,
-				error: "Invalid zone ID format",
-			});
+			return sendError(res, 400, "Invalid zone ID format");
 		}
-		res.status(500).json({
-			success: false,
-			error: "Server error while fetching zone",
-		});
+		sendError(res, 500, "Server error while fetching zone");
 	}
 };
 
@@ -208,10 +192,7 @@ exports.createZone = async (req, res) => {
 
 		// Validate required fields
 		if (!zoneName || distance === undefined) {
-			return res.status(400).json({
-				success: false,
-				error: "Zone name and distance are required",
-			});
+			return sendError(res, 400, "Zone name and distance are required");
 		}
 
 		// Check if zone with same name already exists *within the same tenant*
@@ -222,10 +203,7 @@ exports.createZone = async (req, res) => {
 		});
 
 		if (existingZone) {
-			return res.status(400).json({
-				success: false,
-				error: "Zone with this name already exists",
-			});
+			return sendError(res, 400, "Zone with this name already exists");
 		}
 
 		const zoneData = {
@@ -250,37 +228,23 @@ exports.createZone = async (req, res) => {
 		// Populate the created zone
 		await zone.populate("createdBy", "name email");
 
-		res.status(201).json({
-			success: true,
-			data: zone,
-			message: "Zone created successfully",
-		});
+		sendSuccess(res, zone, "Zone created successfully", 201);
 	} catch (error) {
 		console.error("Error creating zone:", error);
 
 		// Handle validation errors
 		if (error.name === "ValidationError") {
 			const messages = Object.values(error.errors).map((val) => val.message);
-			return res.status(400).json({
-				success: false,
-				error: "Validation error",
-				details: messages,
-			});
+			return sendError(res, 400, "Validation error", messages);
 		}
 
 		// Handle duplicate key errors
 		if (error.code === 11000) {
 			const field = Object.keys(error.keyValue)[0];
-			return res.status(400).json({
-				success: false,
-				error: `Zone with this ${field} already exists`,
-			});
+			return sendError(res, 400, `Zone with this ${field} already exists`);
 		}
 
-		res.status(500).json({
-			success: false,
-			error: "Server error while creating zone",
-		});
+		sendError(res, 500, "Server error while creating zone");
 	}
 };
 
@@ -308,10 +272,7 @@ exports.updateZone = async (req, res) => {
 		});
 
 		if (!zone) {
-			return res.status(404).json({
-				success: false,
-				error: "Zone not found",
-			});
+			return sendError(res, 404, "Zone not found");
 		}
 
 		// Check for duplicate zone name within the same tenant (excluding current zone)
@@ -323,10 +284,7 @@ exports.updateZone = async (req, res) => {
 			});
 
 			if (existingZone) {
-				return res.status(400).json({
-					success: false,
-					error: "Zone with this name already exists",
-				});
+				return sendError(res, 400, "Zone with this name already exists");
 			}
 		}
 
@@ -354,34 +312,20 @@ exports.updateZone = async (req, res) => {
 			runValidators: true,
 		}).populate("createdBy updatedBy", "name email");
 
-		res.status(200).json({
-			success: true,
-			data: zone,
-			message: "Zone updated successfully",
-		});
+		sendSuccess(res, zone, "Zone updated successfully");
 	} catch (error) {
 		console.error("Error updating zone:", error);
 
 		if (error.name === "ValidationError") {
 			const messages = Object.values(error.errors).map((val) => val.message);
-			return res.status(400).json({
-				success: false,
-				error: "Validation error",
-				details: messages,
-			});
+			return sendError(res, 400, "Validation error", messages);
 		}
 
 		if (error.name === "CastError") {
-			return res.status(400).json({
-				success: false,
-				error: "Invalid zone ID format",
-			});
+			return sendError(res, 400, "Invalid zone ID format");
 		}
 
-		res.status(500).json({
-			success: false,
-			error: "Server error while updating zone",
-		});
+		sendError(res, 500, "Server error while updating zone");
 	}
 };
 
@@ -393,10 +337,7 @@ exports.updateZoneStatus = async (req, res) => {
 		const { isActive } = req.body;
 
 		if (isActive === undefined) {
-			return res.status(400).json({
-				success: false,
-				error: "isActive field is required",
-			});
+			return sendError(res, 400, "Error", "isActive field is required");
 		}
 
 		const patch = { isActive };
@@ -410,31 +351,18 @@ exports.updateZoneStatus = async (req, res) => {
 		);
 
 		if (!zone) {
-			return res.status(404).json({
-				success: false,
-				error: "Zone not found",
-			});
+			return sendError(res, 404, "Error", "Zone not found");
 		}
 
-		res.status(200).json({
-			success: true,
-			data: zone,
-			message: `Zone ${isActive ? "activated" : "deactivated"} successfully`,
-		});
+		sendResponse(res, 200, true, `Zone ${isActive ? "activated" : "deactivated"} successfully`, zone);
 	} catch (error) {
 		console.error("Error updating zone status:", error);
 
 		if (error.name === "CastError") {
-			return res.status(400).json({
-				success: false,
-				error: "Invalid zone ID format",
-			});
+			return sendError(res, 400, "Error", "Invalid zone ID format");
 		}
 
-		res.status(500).json({
-			success: false,
-			error: "Server error while updating zone status",
-		});
+		sendError(res, 500, "Error", "Server error while updating zone status");
 	}
 };
 
@@ -454,31 +382,18 @@ exports.deleteZone = async (req, res) => {
 		);
 
 		if (!zone) {
-			return res.status(404).json({
-				success: false,
-				error: "Zone not found",
-			});
+			return sendError(res, 404, "Error", "Zone not found");
 		}
 
-		res.status(200).json({
-			success: true,
-			data: zone,
-			message: "Zone deactivated successfully",
-		});
+		sendResponse(res, 200, true, "Zone deactivated successfully", zone);
 	} catch (error) {
 		console.error("Error deleting zone:", error);
 
 		if (error.name === "CastError") {
-			return res.status(400).json({
-				success: false,
-				error: "Invalid zone ID format",
-			});
+			return sendError(res, 400, "Error", "Invalid zone ID format");
 		}
 
-		res.status(500).json({
-			success: false,
-			error: "Server error while deleting zone",
-		});
+		sendError(res, 500, "Error", "Server error while deleting zone");
 	}
 };
 
@@ -493,30 +408,18 @@ exports.permanentDeleteZone = async (req, res) => {
 		});
 
 		if (!zone) {
-			return res.status(404).json({
-				success: false,
-				error: "Zone not found",
-			});
+			return sendError(res, 404, "Error", "Zone not found");
 		}
 
-		res.status(200).json({
-			success: true,
-			message: "Zone permanently deleted successfully",
-		});
+		sendResponse(res, 200, true, "Zone permanently deleted successfully", null);
 	} catch (error) {
 		console.error("Error permanently deleting zone:", error);
 
 		if (error.name === "CastError") {
-			return res.status(400).json({
-				success: false,
-				error: "Invalid zone ID format",
-			});
+			return sendError(res, 400, "Error", "Invalid zone ID format");
 		}
 
-		res.status(500).json({
-			success: false,
-			error: "Server error while permanently deleting zone",
-		});
+		sendError(res, 500, "Error", "Server error while permanently deleting zone");
 	}
 };
 
@@ -565,19 +468,13 @@ exports.getZoneStats = async (req, res) => {
 			},
 		]);
 
-		res.status(200).json({
-			success: true,
-			data: {
+		sendResponse(res, 200, true, "Success", {
 				...zoneStats,
 				distanceUnitBreakdown: distanceUnitStats,
-			},
-		});
+			});
 	} catch (error) {
 		console.error("Error fetching zone statistics:", error);
-		res.status(500).json({
-			success: false,
-			error: "Server error while fetching zone statistics",
-		});
+		sendError(res, 500, "Error", "Server error while fetching zone statistics");
 	}
 };
 
@@ -589,35 +486,23 @@ exports.calculateDeliveryFee = async (req, res) => {
 		const zoneName = req.body.zoneName || req.body.city;
 
 		if (!zoneName) {
-			return res.status(400).json({
-				success: false,
-				error: "Zone name or city is required",
-			});
+			return sendError(res, 400, "Error", "Zone name or city is required");
 		}
 
 		const zone = await Zone.findByName(zoneName);
 
 		if (!zone) {
-			return res.status(404).json({
-				success: false,
-				error: "No delivery zone found for this city",
-			});
+			return sendError(res, 404, "Error", "No delivery zone found for this city");
 		}
 
 		const deliveryFee = zone.deliveryFee ? zone.deliveryFee : 4;
 
-		res.status(200).json({
-			success: true,
-			data: {
+		sendResponse(res, 200, true, "Success", {
 				deliveryFee,
 				estimatedDeliveryTime: zone.estimatedDeliveryTime,
-			},
-		});
+			});
 	} catch (error) {
 		console.error("Error calculating delivery fee:", error);
-		res.status(500).json({
-			success: false,
-			error: "Server error while calculating delivery fee",
-		});
+		sendError(res, 500, "Error", "Server error while calculating delivery fee");
 	}
 };

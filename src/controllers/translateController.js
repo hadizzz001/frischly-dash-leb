@@ -18,6 +18,7 @@
 const os = require("os");
 const fs = require("fs");
 const path = require("path");
+const { sendError, sendResponse } = require("../utils/apiResponse");
 
 const SUPPORTED = new Set(["en", "ar"]);
 const MAX_ITEMS = 400; // per request
@@ -193,20 +194,13 @@ exports.translate = async (req, res) => {
 		const source = String(body.source || "en");
 
 		if (!SUPPORTED.has(target) || !SUPPORTED.has(source)) {
-			return res
-				.status(400)
-				.json({ success: false, message: "Unsupported language" });
+			return sendError(res, 400, "Unsupported language");
 		}
 		if (!Array.isArray(body.q)) {
-			return res
-				.status(400)
-				.json({ success: false, message: "`q` must be an array of strings" });
+			return sendError(res, 400, "`q` must be an array of strings");
 		}
 		if (body.q.length > MAX_ITEMS) {
-			return res.status(400).json({
-				success: false,
-				message: `Too many items (max ${MAX_ITEMS})`,
-			});
+			return sendError(res, 400, `Too many items (max ${MAX_ITEMS})`);
 		}
 
 		const items = body.q.map((s) =>
@@ -214,7 +208,7 @@ exports.translate = async (req, res) => {
 		);
 
 		if (source === target) {
-			return res.json({ success: true, translations: items });
+			return sendResponse(res, 200, true, "Success", null, { translations: items });
 		}
 
 		const out = new Array(items.length);
@@ -230,10 +224,10 @@ exports.translate = async (req, res) => {
 			Array.from({ length: Math.min(CONCURRENCY, items.length || 1) }, worker)
 		);
 
-		res.json({ success: true, translations: out });
+		sendResponse(res, 200, true, "Success", null, { translations: out });
 	} catch (err) {
 		console.error("translate error:", err);
-		res.status(500).json({ success: false, message: "Translation failed" });
+		sendError(res, 500, "Translation failed");
 	}
 };
 

@@ -2,6 +2,7 @@ const Rider = require("../models/Rider");
 const User = require("../models/User");
 const Order = require("../models/Order");
 const mongoose = require("mongoose");
+const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
 
 // @desc    Get all riders with stats
 // @route   GET /api/riders
@@ -201,9 +202,7 @@ exports.getRiders = async (req, res) => {
 		const totalRiders = await Rider.countDocuments(filter);
 		const totalPages = Math.ceil(totalRiders / limitNum);
 
-		res.json({
-			success: true,
-			data: {
+		sendResponse(res, 200, true, `Successfully retrieved ${enrichedRiders.length} riders`, {
 				riders: enrichedRiders,
 				pagination: {
 					currentPage: pageNum,
@@ -212,16 +211,10 @@ exports.getRiders = async (req, res) => {
 					hasNext: pageNum < totalPages,
 					hasPrev: pageNum > 1,
 				},
-			},
-			message: `Successfully retrieved ${enrichedRiders.length} riders`,
-		});
+			});
 	} catch (error) {
 		console.error("Error getting riders:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching riders",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching riders", error.message);
 	}
 };
 
@@ -235,23 +228,12 @@ exports.getMyRiderProfile = async (req, res) => {
 			"name email phoneNumber address isActive role",
 		);
 		if (!rider) {
-			return res.status(404).json({
-				success: false,
-				message: "No rider profile found for this account",
-			});
+			return sendError(res, 404, "No rider profile found for this account");
 		}
-		res.json({
-			success: true,
-			data: rider,
-			message: "Rider profile retrieved successfully",
-		});
+		sendResponse(res, 200, true, "Rider profile retrieved successfully", rider);
 	} catch (error) {
 		console.error("Error getting my rider profile:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching rider profile",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching rider profile", error.message);
 	}
 };
 
@@ -263,10 +245,7 @@ exports.getRider = async (req, res) => {
 		const { id } = req.params;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid rider ID",
-			});
+			return sendError(res, 400, "Invalid rider ID");
 		}
 
 		const rider = await Rider.findById(id)
@@ -277,10 +256,7 @@ exports.getRider = async (req, res) => {
 			});
 
 		if (!rider) {
-			return res.status(404).json({
-				success: false,
-				message: "Rider not found",
-			});
+			return sendError(res, 404, "Rider not found");
 		}
 
 		// Check if user is authorized to view this rider
@@ -289,24 +265,13 @@ exports.getRider = async (req, res) => {
 			req.user.role !== "manager" &&
 			rider.user._id.toString() !== req.user.id
 		) {
-			return res.status(403).json({
-				success: false,
-				message: "Not authorized to view this rider",
-			});
+			return sendError(res, 403, "Not authorized to view this rider");
 		}
 
-		res.json({
-			success: true,
-			data: rider,
-			message: "Rider retrieved successfully",
-		});
+		sendResponse(res, 200, true, "Rider retrieved successfully", rider);
 	} catch (error) {
 		console.error("Error getting rider:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching rider",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching rider", error.message);
 	}
 };
 
@@ -332,35 +297,23 @@ exports.createRider = async (req, res) => {
 			zones.length === 0 ||
 			!vehicleType
 		) {
-			return res.status(400).json({
-				success: false,
-				message: "User ID, zones (array) and vehicle type are required",
-			});
+			return sendError(res, 400, "User ID, zones (array) and vehicle type are required");
 		}
 
 		// Check if user exists and has rider role
 		const user = await User.findById(userId);
 		if (!user) {
-			return res.status(404).json({
-				success: false,
-				message: "User not found",
-			});
+			return sendError(res, 404, "User not found");
 		}
 
 		if (user.role !== "rider") {
-			return res.status(400).json({
-				success: false,
-				message: "User must have rider role",
-			});
+			return sendError(res, 400, "User must have rider role");
 		}
 
 		// Check if rider profile already exists
 		const existingRider = await Rider.findOne({ user: userId });
 		if (existingRider) {
-			return res.status(400).json({
-				success: false,
-				message: "Rider profile already exists for this user",
-			});
+			return sendError(res, 400, "Rider profile already exists for this user");
 		}
 
 		// Create rider profile
@@ -378,26 +331,15 @@ exports.createRider = async (req, res) => {
 		// Populate user details for response
 		await rider.populate("user", "name email phoneNumber");
 
-		res.status(201).json({
-			success: true,
-			data: rider,
-			message: "Rider profile created successfully",
-		});
+		sendResponse(res, 201, true, "Rider profile created successfully", rider);
 	} catch (error) {
 		console.error("Error creating rider:", error);
 
 		if (error.code === 11000) {
-			return res.status(400).json({
-				success: false,
-				message: "Rider profile already exists for this user",
-			});
+			return sendError(res, 400, "Rider profile already exists for this user");
 		}
 
-		res.status(500).json({
-			success: false,
-			message: "Error creating rider profile",
-			error: error.message,
-		});
+		sendError(res, 500, "Error creating rider profile", error.message);
 	}
 };
 
@@ -410,18 +352,12 @@ exports.updateRider = async (req, res) => {
 		const updates = req.body;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid rider ID",
-			});
+			return sendError(res, 400, "Invalid rider ID");
 		}
 
 		const rider = await Rider.findById(id);
 		if (!rider) {
-			return res.status(404).json({
-				success: false,
-				message: "Rider not found",
-			});
+			return sendError(res, 404, "Rider not found");
 		}
 
 		// Main admin / manager have view-only access to market-owned riders.
@@ -431,11 +367,7 @@ exports.updateRider = async (req, res) => {
 			rider.market &&
 			(req.user.role === "admin" || req.user.role === "manager")
 		) {
-			return res.status(403).json({
-				success: false,
-				message:
-					"This rider belongs to a market. Main admins have view-only access.",
-			});
+			return sendError(res, 403, "This rider belongs to a market. Main admins have view-only access.");
 		}
 
 		// Check authorization
@@ -444,10 +376,7 @@ exports.updateRider = async (req, res) => {
 			req.user.role !== "manager" &&
 			rider.user.toString() !== req.user.id
 		) {
-			return res.status(403).json({
-				success: false,
-				message: "Not authorized to update this rider",
-			});
+			return sendError(res, 403, "Not authorized to update this rider");
 		}
 
 		// Update allowed fields
@@ -483,18 +412,10 @@ exports.updateRider = async (req, res) => {
 		// Populate user details for response
 		await rider.populate("user", "name email phoneNumber");
 
-		res.json({
-			success: true,
-			data: rider,
-			message: "Rider profile updated successfully",
-		});
+		sendResponse(res, 200, true, "Rider profile updated successfully", rider);
 	} catch (error) {
 		console.error("Error updating rider:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error updating rider profile",
-			error: error.message,
-		});
+		sendError(res, 500, "Error updating rider profile", error.message);
 	}
 };
 
@@ -507,25 +428,16 @@ exports.updateRiderStatus = async (req, res) => {
 		const { status, location } = req.body;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid rider ID",
-			});
+			return sendError(res, 400, "Invalid rider ID");
 		}
 
 		if (!status) {
-			return res.status(400).json({
-				success: false,
-				message: "Status is required",
-			});
+			return sendError(res, 400, "Status is required");
 		}
 
 		const rider = await Rider.findById(id);
 		if (!rider) {
-			return res.status(404).json({
-				success: false,
-				message: "Rider not found",
-			});
+			return sendError(res, 404, "Rider not found");
 		}
 
 		// Main admin / manager have view-only access to market-owned riders.
@@ -533,11 +445,7 @@ exports.updateRiderStatus = async (req, res) => {
 			rider.market &&
 			(req.user.role === "admin" || req.user.role === "manager")
 		) {
-			return res.status(403).json({
-				success: false,
-				message:
-					"This rider belongs to a market. Main admins have view-only access.",
-			});
+			return sendError(res, 403, "This rider belongs to a market. Main admins have view-only access.");
 		}
 
 		// Check authorization
@@ -546,10 +454,7 @@ exports.updateRiderStatus = async (req, res) => {
 			req.user.role !== "manager" &&
 			rider.user.toString() !== req.user.id
 		) {
-			return res.status(403).json({
-				success: false,
-				message: "Nicht autorisiert, diesen Fahrerstatus zu aktualisieren",
-			});
+			return sendError(res, 403, "Nicht autorisiert, diesen Fahrerstatus zu aktualisieren");
 		}
 
 		rider.status = status;
@@ -565,23 +470,15 @@ exports.updateRiderStatus = async (req, res) => {
 
 		await rider.save();
 
-		res.json({
-			success: true,
-			data: {
+		sendResponse(res, 200, true, "Rider status updated successfully", {
 				riderId: rider._id,
 				status: rider.status,
 				currentLocation: rider.currentLocation,
 				lastActiveAt: rider.lastActiveAt,
-			},
-			message: "Rider status updated successfully",
-		});
+			});
 	} catch (error) {
 		console.error("Error updating rider status:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error updating rider status",
-			error: error.message,
-		});
+		sendError(res, 500, "Error updating rider status", error.message);
 	}
 };
 
@@ -594,35 +491,23 @@ exports.updateRiderLocation = async (req, res) => {
 
 		// Validate required fields
 		if (latitude === undefined || longitude === undefined) {
-			return res.status(400).json({
-				success: false,
-				message: "Latitude and longitude are required",
-			});
+			return sendError(res, 400, "Latitude and longitude are required");
 		}
 
 		// Validate latitude range
 		if (latitude < -90 || latitude > 90) {
-			return res.status(400).json({
-				success: false,
-				message: "Breitengrad muss zwischen -90 und 90 liegen",
-			});
+			return sendError(res, 400, "Breitengrad muss zwischen -90 und 90 liegen");
 		}
 
 		// Validate longitude range
 		if (longitude < -180 || longitude > 180) {
-			return res.status(400).json({
-				success: false,
-				message: "Longitude must be between -180 and 180",
-			});
+			return sendError(res, 400, "Longitude must be between -180 and 180");
 		}
 
 		// Get rider ID from token (req.user.id)
 		const rider = await Rider.findOne({ user: req.user.id });
 		if (!rider) {
-			return res.status(404).json({
-				success: false,
-				message: "Rider not found",
-			});
+			return sendError(res, 404, "Rider not found");
 		}
 
 		// Update location
@@ -634,21 +519,13 @@ exports.updateRiderLocation = async (req, res) => {
 
 		await rider.save();
 
-		res.json({
-			success: true,
-			data: {
+		sendResponse(res, 200, true, "Rider location updated successfully", {
 				riderId: rider._id,
 				currentLocation: rider.currentLocation,
-			},
-			message: "Rider location updated successfully",
-		});
+			});
 	} catch (error) {
 		console.error("Error updating rider location:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error updating rider location",
-			error: error.message,
-		});
+		sendError(res, 500, "Error updating rider location", error.message);
 	}
 };
 
@@ -661,19 +538,10 @@ exports.getAvailableRiders = async (req, res) => {
 
 		const availableRiders = await Rider.findAvailableInZone(zone);
 
-		res.json({
-			success: true,
-			data: availableRiders,
-			count: availableRiders.length,
-			message: `Found ${availableRiders.length} available riders in ${zone}`,
-		});
+		sendResponse(res, 200, true, `Found ${availableRiders.length} available riders in ${zone}`, availableRiders, { count: availableRiders.length });
 	} catch (error) {
 		console.error("Error getting available riders:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching available riders",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching available riders", error.message);
 	}
 };
 
@@ -734,9 +602,7 @@ exports.getRiderStats = async (req, res) => {
 			{ $sort: { count: -1 } },
 		]);
 
-		res.json({
-			success: true,
-			data: {
+		sendResponse(res, 200, true, "Rider statistics fetched successfully", {
 				overall: stats[0] || {
 					totalRiders: 0,
 					availableRiders: 0,
@@ -750,16 +616,10 @@ exports.getRiderStats = async (req, res) => {
 				},
 				byZone: zoneStats,
 				byVehicleType: vehicleStats,
-			},
-			message: "Rider statistics fetched successfully",
-		});
+			});
 	} catch (error) {
 		console.error("Error getting rider stats:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching rider statistics",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching rider statistics", error.message);
 	}
 };
 
@@ -771,18 +631,12 @@ exports.deleteRider = async (req, res) => {
 		const { id } = req.params;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid rider ID",
-			});
+			return sendError(res, 400, "Invalid rider ID");
 		}
 
 		const rider = await Rider.findById(id);
 		if (!rider) {
-			return res.status(404).json({
-				success: false,
-				message: "Rider not found",
-			});
+			return sendError(res, 404, "Rider not found");
 		}
 
 		// Main admin / manager have view-only access to market-owned riders.
@@ -790,11 +644,7 @@ exports.deleteRider = async (req, res) => {
 			rider.market &&
 			(req.user.role === "admin" || req.user.role === "manager")
 		) {
-			return res.status(403).json({
-				success: false,
-				message:
-					"This rider belongs to a market. Main admins have view-only access.",
-			});
+			return sendError(res, 403, "This rider belongs to a market. Main admins have view-only access.");
 		}
 
 		// Check for active orders
@@ -804,25 +654,15 @@ exports.deleteRider = async (req, res) => {
 		});
 
 		if (activeOrders > 0) {
-			return res.status(400).json({
-				success: false,
-				message: `Cannot delete rider with ${activeOrders} active orders`,
-			});
+			return sendError(res, 400, `Cannot delete rider with ${activeOrders} active orders`);
 		}
 
 		// Permanent delete
 		await Rider.findByIdAndDelete(id);
 
-		res.json({
-			success: true,
-			message: "Rider profile permanently deleted",
-		});
+		sendResponse(res, 200, true, "Rider profile permanently deleted", null);
 	} catch (error) {
 		console.error("Error deleting rider:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error deleting rider profile",
-			error: error.message,
-		});
+		sendError(res, 500, "Error deleting rider profile", error.message);
 	}
 };

@@ -5,6 +5,7 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const cloudinary = require("cloudinary").v2;
+const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
 
 // Configure Cloudinary
 cloudinary.config({
@@ -134,25 +135,17 @@ exports.getCategories = async (req, res) => {
 		const hasNextPage = pageNumber < totalPages;
 		const hasPrevPage = pageNumber > 1;
 
-		res.json({
-			success: true,
-			data: categories,
-			pagination: {
+		sendResponse(res, 200, true, "Success", categories, { pagination: {
 				currentPage: pageNumber,
 				totalPages,
 				totalCategories: total,
 				hasNextPage,
 				hasPrevPage,
 				limit: limitNumber,
-			},
-		});
+			} });
 	} catch (error) {
 		console.error("Error getting categories:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching categories",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching categories", error.message);
 	}
 };
 
@@ -165,10 +158,7 @@ exports.getCategory = async (req, res) => {
 		const { withProductCount = false } = req.query;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid category ID",
-			});
+			return sendError(res, 400, "Invalid category ID");
 		}
 
 		let query = Category.findById(id).populate("createdBy", "name email");
@@ -180,23 +170,13 @@ exports.getCategory = async (req, res) => {
 		const category = await query;
 
 		if (!category) {
-			return res.status(404).json({
-				success: false,
-				message: "Category not found",
-			});
+			return sendError(res, 404, "Category not found");
 		}
 
-		res.json({
-			success: true,
-			data: category,
-		});
+		sendResponse(res, 200, true, "Success", category);
 	} catch (error) {
 		console.error("Error getting category:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching category",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching category", error.message);
 	}
 };
 
@@ -255,11 +235,7 @@ exports.createCategory = async (req, res) => {
 				categoryData.imagePublicId = uploadResult.public_id;
 			} catch (uploadError) {
 				console.error("Error uploading image to Cloudinary:", uploadError);
-				return res.status(500).json({
-					success: false,
-					message: "Error uploading image",
-					error: uploadError.message,
-				});
+				return sendError(res, 500, "Error uploading image", uploadError.message);
 			}
 		}
 
@@ -273,27 +249,16 @@ exports.createCategory = async (req, res) => {
 		// Populate the created category
 		await category.populate("createdBy", "name email");
 
-		res.status(201).json({
-			success: true,
-			message: "Category created successfully",
-			data: category,
-		});
+		sendResponse(res, 201, true, "Category created successfully", category);
 	} catch (error) {
 		console.error("Error creating category:", error);
 
 		// Handle duplicate name error
 		if (error.code === 11000 && error.keyPattern?.name) {
-			return res.status(400).json({
-				success: false,
-				message: "A category with this name already exists",
-			});
+			return sendError(res, 400, "A category with this name already exists");
 		}
 
-		res.status(400).json({
-			success: false,
-			message: "Error creating category",
-			error: error.message,
-		});
+		sendError(res, 400, "Error creating category", error.message);
 	}
 };
 
@@ -305,18 +270,12 @@ exports.updateCategory = async (req, res) => {
 		const { id } = req.params;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid category ID",
-			});
+			return sendError(res, 400, "Invalid category ID");
 		}
 
 		const category = await Category.findById(id);
 		if (!category) {
-			return res.status(404).json({
-				success: false,
-				message: "Category not found",
-			});
+			return sendError(res, 404, "Category not found");
 		}
 
 		const updateData = { ...req.body, updatedAt: new Date() };
@@ -335,11 +294,7 @@ exports.updateCategory = async (req, res) => {
 				updateData.imagePublicId = uploadResult.public_id;
 			} catch (uploadError) {
 				console.error("Error uploading image to Cloudinary:", uploadError);
-				return res.status(500).json({
-					success: false,
-					message: "Error uploading image",
-					error: uploadError.message,
-				});
+				return sendError(res, 500, "Error uploading image", uploadError.message);
 			}
 		}
 
@@ -357,27 +312,16 @@ exports.updateCategory = async (req, res) => {
 			);
 		}
 
-		res.json({
-			success: true,
-			message: "Category updated successfully",
-			data: updatedCategory,
-		});
+		sendResponse(res, 200, true, "Category updated successfully", updatedCategory);
 	} catch (error) {
 		console.error("Error updating category:", error);
 
 		// Handle duplicate name error
 		if (error.code === 11000 && error.keyPattern?.name) {
-			return res.status(400).json({
-				success: false,
-				message: "A category with this name already exists",
-			});
+			return sendError(res, 400, "A category with this name already exists");
 		}
 
-		res.status(400).json({
-			success: false,
-			message: "Error updating category",
-			error: error.message,
-		});
+		sendError(res, 400, "Error updating category", error.message);
 	}
 };
 
@@ -389,10 +333,7 @@ exports.deleteCategory = async (req, res) => {
 		const { id } = req.params;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid category ID",
-			});
+			return sendError(res, 400, "Invalid category ID");
 		}
 
 		// Check if category has products through subcategories
@@ -409,10 +350,7 @@ exports.deleteCategory = async (req, res) => {
 		});
 
 		if (productCount > 0) {
-			return res.status(400).json({
-				success: false,
-				message: `Category cannot be deleted because it has ${productCount} active products`,
-			});
+			return sendError(res, 400, `Category cannot be deleted because it has ${productCount} active products`);
 		}
 
 		const category = await Category.findByIdAndUpdate(
@@ -422,10 +360,7 @@ exports.deleteCategory = async (req, res) => {
 		);
 
 		if (!category) {
-			return res.status(404).json({
-				success: false,
-				message: "Category not found",
-			});
+			return sendError(res, 404, "Category not found");
 		}
 
 		// Deactivate all subcategories of this category
@@ -434,18 +369,10 @@ exports.deleteCategory = async (req, res) => {
 			{ isActive: false, updatedAt: new Date() }
 		);
 
-		res.json({
-			success: true,
-			message: "Category and its subcategories deleted successfully",
-			data: category,
-		});
+		sendResponse(res, 200, true, "Category and its subcategories deleted successfully", category);
 	} catch (error) {
 		console.error("Error deleting category:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error deleting category",
-			error: error.message,
-		});
+		sendError(res, 500, "Error deleting category", error.message);
 	}
 };
 
@@ -457,10 +384,7 @@ exports.permanentDeleteCategory = async (req, res) => {
 		const { id } = req.params;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid category ID",
-			});
+			return sendError(res, 400, "Invalid category ID");
 		}
 
 		// Check if category has products through subcategories
@@ -474,19 +398,13 @@ exports.permanentDeleteCategory = async (req, res) => {
 		});
 
 		if (productCount > 0) {
-			return res.status(400).json({
-				success: false,
-				message: `Category cannot be permanently deleted because it has ${productCount} associated products`,
-			});
+			return sendError(res, 400, `Category cannot be permanently deleted because it has ${productCount} associated products`);
 		}
 
 		const category = await Category.findById(id);
 
 		if (!category) {
-			return res.status(404).json({
-				success: false,
-				message: "Category not found",
-			});
+			return sendError(res, 404, "Category not found");
 		}
 
 		// Delete image from Cloudinary if it exists
@@ -502,17 +420,10 @@ exports.permanentDeleteCategory = async (req, res) => {
 		// Permanently delete the category
 		await Category.findByIdAndDelete(id);
 
-		res.json({
-			success: true,
-			message: "Category permanently deleted",
-		});
+		sendResponse(res, 200, true, "Category permanently deleted", null);
 	} catch (error) {
 		console.error("Error permanently deleting category:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error permanently deleting category",
-			error: error.message,
-		});
+		sendError(res, 500, "Error permanently deleting category", error.message);
 	}
 };
 
@@ -615,31 +526,20 @@ exports.permanentDeleteCategory = async (req, res) => {
 exports.uploadImage = async (req, res) => {
 	try {
 		if (!req.file) {
-			return res.status(400).json({
-				success: false,
-				message: "Keine Bilddatei bereitgestellt",
-			});
+			return sendError(res, 400, "Keine Bilddatei bereitgestellt");
 		}
 
 		// Upload image to Cloudinary
 		const uploadResult = await uploadToCloudinary(req.file.buffer);
 
-		res.json({
-			success: true,
-			message: "Image uploaded successfully",
-			data: {
+		sendResponse(res, 200, true, "Image uploaded successfully", {
 				url: uploadResult.url,
 				public_id: uploadResult.public_id,
 				size: req.file.size,
-			},
-		});
+			});
 	} catch (error) {
 		console.error("Error uploading image:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error uploading image",
-			error: error.message,
-		});
+		sendError(res, 500, "Error uploading image", error.message);
 	}
 };
 
@@ -652,19 +552,13 @@ exports.getCategoryProductCount = async (req, res) => {
 
 		// Validate category ID
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid category ID format",
-			});
+			return sendError(res, 400, "Invalid category ID format");
 		}
 
 		// First check if the category exists
 		const category = await Category.findById(id);
 		if (!category) {
-			return res.status(404).json({
-				success: false,
-				message: "Category not found",
-			});
+			return sendError(res, 404, "Category not found");
 		}
 
 		// Count products in this category through subcategories
@@ -684,22 +578,14 @@ exports.getCategoryProductCount = async (req, res) => {
 			isActive: true,
 		});
 
-		res.json({
-			success: true,
-			data: {
+		sendResponse(res, 200, true, `Category '${category.name}' has ${productCount} active products`, {
 				categoryId: id,
 				categoryName: category.name,
 				productCount: productCount,
-			},
-			message: `Category '${category.name}' has ${productCount} active products`,
-		});
+			});
 	} catch (error) {
 		console.error("Error getting category product count:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching category product count",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching category product count", error.message);
 	}
 };
 
@@ -768,19 +654,10 @@ exports.getAllCategoriesProductCount = async (req, res) => {
 			},
 		]);
 
-		res.json({
-			success: true,
-			data: categoryProductCounts,
-			total: categoryProductCounts.length,
-			message: `Product counts retrieved for ${categoryProductCounts.length} categories`,
-		});
+		sendResponse(res, 200, true, `Product counts retrieved for ${categoryProductCounts.length} categories`, categoryProductCounts, { total: categoryProductCounts.length });
 	} catch (error) {
 		console.error("Error getting all categories product count:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching category product counts",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching category product counts", error.message);
 	}
 };
 

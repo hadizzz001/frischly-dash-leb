@@ -1,6 +1,7 @@
 const NotificationService = require("../services/notifications");
 const User = require("../models/User");
 const NotificationCampaign = require("../models/NotificationCampaign");
+const { sendSuccess, sendError, sendResponse } = require("../utils/apiResponse");
 
 /**
  * Update user's FCM token
@@ -19,10 +20,7 @@ exports.updateFcmToken = async (req, res) => {
 
 		if (!fcmToken) {
 			console.log(`❌ FCM Token Update Failed - No token provided`);
-			return res.status(400).json({
-				success: false,
-				message: "FCM token is required",
-			});
+			return sendError(res, 400, "FCM token is required");
 		}
 
 		await NotificationService.updateUserToken(userId, fcmToken);
@@ -49,17 +47,10 @@ exports.updateFcmToken = async (req, res) => {
 		// }
 
 		console.log(`✅ FCM Token Updated Successfully - User: ${userId}`);
-		res.json({
-			success: true,
-			message: "FCM token updated successfully",
-		});
+		sendSuccess(res, null, "FCM token updated successfully");
 	} catch (error) {
 		console.error("❌ Error updating FCM token:", error);
-		res.status(500).json({
-			success: false,
-			message: "Failed to update FCM token",
-			error: error.message,
-		});
+		sendError(res, 500, "Failed to update FCM token", error.message);
 	}
 };
 
@@ -72,17 +63,10 @@ exports.removeFcmToken = async (req, res) => {
 
 		await NotificationService.removeUserToken(userId);
 
-		res.json({
-			success: true,
-			message: "FCM token removed successfully",
-		});
+		sendSuccess(res, null, "FCM token removed successfully");
 	} catch (error) {
 		console.error("Error removing FCM token:", error);
-		res.status(500).json({
-			success: false,
-			message: "Failed to remove FCM token",
-			error: error.message,
-		});
+		sendError(res, 500, "Failed to remove FCM token", error.message);
 	}
 };
 
@@ -94,10 +78,7 @@ exports.sendToUser = async (req, res) => {
 		const { userId, title, body, data } = req.body;
 
 		if (!userId || !title || !body) {
-			return res.status(400).json({
-				success: false,
-				message: "userId, title, and body are required",
-			});
+			return sendError(res, 400, "userId, title, and body are required");
 		}
 
 		const result = await NotificationService.sendToUser(
@@ -107,18 +88,10 @@ exports.sendToUser = async (req, res) => {
 			data
 		);
 
-		res.json({
-			success: true,
-			message: "Notification sent successfully",
-			data: result,
-		});
+		sendSuccess(res, result, "Notification sent successfully");
 	} catch (error) {
 		console.error("Error sending notification to user:", error);
-		res.status(500).json({
-			success: false,
-			message: "Failed to send notification",
-			error: error.message,
-		});
+		sendError(res, 500, "Failed to send notification", error.message);
 	}
 };
 
@@ -136,10 +109,7 @@ exports.sendToUsers = async (req, res) => {
 			!title ||
 			!body
 		) {
-			return res.status(400).json({
-				success: false,
-				message: "userIds (array), title, and body are required",
-			});
+			return sendError(res, 400, "userIds (array), title, and body are required");
 		}
 
 		const result = await NotificationService.sendToUsers(
@@ -149,18 +119,10 @@ exports.sendToUsers = async (req, res) => {
 			data
 		);
 
-		res.json({
-			success: true,
-			message: `Notifications sent to ${userIds.length} users`,
-			data: result,
-		});
+		sendSuccess(res, result, `Notifications sent to ${userIds.length} users`);
 	} catch (error) {
 		console.error("Error sending notifications to users:", error);
-		res.status(500).json({
-			success: false,
-			message: "Failed to send notifications",
-			error: error.message,
-		});
+		sendError(res, 500, "Failed to send notifications", error.message);
 	}
 };
 
@@ -172,26 +134,15 @@ exports.sendToAllUsers = async (req, res) => {
 		const { title, body, data } = req.body;
 
 		if (!title || !body) {
-			return res.status(400).json({
-				success: false,
-				message: "title and body are required",
-			});
+			return sendError(res, 400, "title and body are required");
 		}
 
 		const result = await NotificationService.sendToAllUsers(title, body, data);
 
-		res.json({
-			success: true,
-			message: `Notifications sent to ${result.totalSent} customers`,
-			data: result,
-		});
+		sendSuccess(res, result, `Notifications sent to ${result.totalSent} customers`);
 	} catch (error) {
 		console.error("Error sending notifications to all users:", error);
-		res.status(500).json({
-			success: false,
-			message: "Failed to send notifications",
-			error: error.message,
-		});
+		sendError(res, 500, "Failed to send notifications", error.message);
 	}
 };
 
@@ -203,10 +154,7 @@ exports.sendToRole = async (req, res) => {
 		const { role, title, body, data } = req.body;
 
 		if (!role || !title || !body) {
-			return res.status(400).json({
-				success: false,
-				message: "role, title, and body are required",
-			});
+			return sendError(res, 400, "role, title, and body are required");
 		}
 
 		const validRoles = [
@@ -218,10 +166,7 @@ exports.sendToRole = async (req, res) => {
 			"admin",
 		];
 		if (!validRoles.includes(role)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid role. Must be one of: " + validRoles.join(", "),
-			});
+			return sendError(res, 400, "Invalid role. Must be one of: " + validRoles.join(", "));
 		}
 
 		const result = await NotificationService.sendToRole(
@@ -231,18 +176,10 @@ exports.sendToRole = async (req, res) => {
 			data
 		);
 
-		res.json({
-			success: true,
-			message: `Notifications sent to ${role}s`,
-			data: result,
-		});
+		sendSuccess(res, result, `Notifications sent to ${role}s`);
 	} catch (error) {
 		console.error("Error sending notifications to role:", error);
-		res.status(500).json({
-			success: false,
-			message: "Failed to send notifications",
-			error: error.message,
-		});
+		sendError(res, 500, "Failed to send notifications", error.message);
 	}
 };
 
@@ -262,25 +199,18 @@ exports.getStats = async (req, res) => {
 			{ $group: { _id: "$role", count: { $sum: 1 } } },
 		]);
 
-		res.json({
-			success: true,
-			data: {
-				totalUsers,
-				usersWithTokens,
-				tokenCoverage:
-					totalUsers > 0
-						? ((usersWithTokens / totalUsers) * 100).toFixed(2)
-						: 0,
-				roleBreakdown: roleStats,
-			},
+		sendSuccess(res, {
+			totalUsers,
+			usersWithTokens,
+			tokenCoverage:
+				totalUsers > 0
+					? ((usersWithTokens / totalUsers) * 100).toFixed(2)
+					: 0,
+			roleBreakdown: roleStats,
 		});
 	} catch (error) {
 		console.error("Error getting notification stats:", error);
-		res.status(500).json({
-			success: false,
-			message: "Failed to get notification statistics",
-			error: error.message,
-		});
+		sendError(res, 500, "Failed to get notification statistics", error.message);
 	}
 };
 
@@ -326,18 +256,10 @@ exports.createCampaign = async (req, res) => {
 
 		const campaign = await NotificationCampaign.create(campaignData);
 
-		res.status(201).json({
-			success: true,
-			message: "Notification campaign created successfully",
-			data: campaign,
-		});
+		sendSuccess(res, campaign, "Notification campaign created successfully", 201);
 	} catch (error) {
 		console.error("Error creating notification campaign:", error);
-		res.status(500).json({
-			success: false,
-			message: "Failed to create notification campaign",
-			error: error.message,
-		});
+		sendError(res, 500, "Failed to create notification campaign", error.message);
 	}
 };
 
@@ -359,9 +281,7 @@ exports.getCampaigns = async (req, res) => {
 
 		const total = await NotificationCampaign.countDocuments();
 
-		res.json({
-			success: true,
-			data: campaigns,
+		sendResponse(res, 200, true, "Success", campaigns, {
 			pagination: {
 				page,
 				limit,
@@ -371,11 +291,7 @@ exports.getCampaigns = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error getting notification campaigns:", error);
-		res.status(500).json({
-			success: false,
-			message: "Failed to get notification campaigns",
-			error: error.message,
-		});
+		sendError(res, 500, "Failed to get notification campaigns", error.message);
 	}
 };
 
@@ -389,23 +305,13 @@ exports.getCampaign = async (req, res) => {
 			.populate("targetUserIds", "name email");
 
 		if (!campaign) {
-			return res.status(404).json({
-				success: false,
-				message: "Notification campaign not found",
-			});
+			return sendError(res, 404, "Notification campaign not found");
 		}
 
-		res.json({
-			success: true,
-			data: campaign,
-		});
+		sendSuccess(res, campaign);
 	} catch (error) {
 		console.error("Error getting notification campaign:", error);
-		res.status(500).json({
-			success: false,
-			message: "Failed to get notification campaign",
-			error: error.message,
-		});
+		sendError(res, 500, "Failed to get notification campaign", error.message);
 	}
 };
 
@@ -446,24 +352,13 @@ exports.updateCampaign = async (req, res) => {
 			.populate("targetUserIds", "name email");
 
 		if (!campaign) {
-			return res.status(404).json({
-				success: false,
-				message: "Notification campaign not found",
-			});
+			return sendError(res, 404, "Notification campaign not found");
 		}
 
-		res.json({
-			success: true,
-			message: "Notification campaign updated successfully",
-			data: campaign,
-		});
+		sendSuccess(res, campaign, "Notification campaign updated successfully");
 	} catch (error) {
 		console.error("Error updating notification campaign:", error);
-		res.status(500).json({
-			success: false,
-			message: "Failed to update notification campaign",
-			error: error.message,
-		});
+		sendError(res, 500, "Failed to update notification campaign", error.message);
 	}
 };
 
@@ -477,23 +372,13 @@ exports.deleteCampaign = async (req, res) => {
 		);
 
 		if (!campaign) {
-			return res.status(404).json({
-				success: false,
-				message: "Notification campaign not found",
-			});
+			return sendError(res, 404, "Notification campaign not found");
 		}
 
-		res.json({
-			success: true,
-			message: "Notification campaign deleted successfully",
-		});
+		sendSuccess(res, null, "Notification campaign deleted successfully");
 	} catch (error) {
 		console.error("Error deleting notification campaign:", error);
-		res.status(500).json({
-			success: false,
-			message: "Failed to delete notification campaign",
-			error: error.message,
-		});
+		sendError(res, 500, "Failed to delete notification campaign", error.message);
 	}
 };
 
@@ -505,17 +390,11 @@ exports.sendCampaign = async (req, res) => {
 		const campaign = await NotificationCampaign.findById(req.params.id);
 
 		if (!campaign) {
-			return res.status(404).json({
-				success: false,
-				message: "Notification campaign not found",
-			});
+			return sendError(res, 404, "Notification campaign not found");
 		}
 
 		if (campaign.status === "sent") {
-			return res.status(400).json({
-				success: false,
-				message: "Campaign has already been sent",
-			});
+			return sendError(res, 400, "Campaign has already been sent");
 		}
 
 		// Update campaign status
@@ -571,14 +450,10 @@ exports.sendCampaign = async (req, res) => {
 
 			await campaign.save();
 
-			res.json({
-				success: true,
-				message: "Notification campaign sent successfully",
-				data: {
-					campaign,
-					result,
-				},
-			});
+			sendSuccess(res, {
+				campaign,
+				result,
+			}, "Notification campaign sent successfully");
 		} catch (sendError) {
 			// Update campaign status to failed
 			campaign.status = "failed";
@@ -588,10 +463,6 @@ exports.sendCampaign = async (req, res) => {
 		}
 	} catch (error) {
 		console.error("Error sending notification campaign:", error);
-		res.status(500).json({
-			success: false,
-			message: "Failed to send notification campaign",
-			error: error.message,
-		});
+		sendError(res, 500, "Failed to send notification campaign", error.message);
 	}
 };

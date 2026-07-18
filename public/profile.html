@@ -262,7 +262,7 @@
 						<div class="profile-item">
 							<span class="profile-label">Status:</span>
 							<span class="profile-value" id="gps-status" style="color:#888;">
-								🟡 Not started — click the button to enable
+								🟡 Requesting permission…
 							</span>
 						</div>
 						<div class="profile-item">
@@ -280,7 +280,9 @@
 								<span id="enable-location-label">📍 Enable Live Location</span>
 							</button>
 							<small style="display:block;margin-top:8px;color:#666;">
-								Required so the admin/market can see you on the live map.
+								Your browser will ask for location permission automatically
+								— just tap <strong>Allow</strong>. Once granted, your location
+								updates every 1 minute with no further clicks needed.
 								Works only on <code>http://localhost</code> or HTTPS.
 							</small>
 						</div>
@@ -795,7 +797,8 @@
 								"rider-location-section"
 							);
 							if (sec) sec.style.display = "";
-							// Try silent auto-start; if blocked, the button still works.
+							// Ask for location permission directly (no click needed);
+							// the button remains only as a fallback if this is denied.
 							setTimeout(() => tryAutoStartLocation(), 300);
 							// Show the driver's assigned orders right here on the profile.
 							const delSec = document.getElementById(
@@ -925,8 +928,10 @@
 
 			// ===== Rider live location tracking =====
 			let __locWatchId = null;
+			let __autoPushIntervalId = null;
 			let __lastPushAt = 0;
 			let __lastPushed = { lat: null, lng: null };
+			let __permissionRequested = false; // ensures we only ever auto-ask once
 
 			function __setStatus(text, color) {
 				const el = document.getElementById("gps-status");
@@ -1018,10 +1023,31 @@
 				);
 			}
 
-			// Called automatically after profile loads.
-			// On some browsers, the permission prompt won't appear without a
-			// user gesture — in that case we simply wait for the button click.
+			// Guarantees a location push at least once every 1 minute, even if the
+			// driver hasn't moved (watchPosition above only fires on movement, so
+			// a stationary driver could otherwise go stale on the admin/market map).
+			function __startAutoPushInterval() {
+				if (__autoPushIntervalId !== null) return;
+				__autoPushIntervalId = setInterval(() => {
+					if (!("geolocation" in navigator)) return;
+					navigator.geolocation.getCurrentPosition(
+						(pos) =>
+							__pushLocation(pos.coords.latitude, pos.coords.longitude),
+						(err) => console.warn("Auto location refresh failed:", err),
+						{ enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+					);
+				}, 60000); // every 1 minute
+			}
+
+			// Called automatically after profile loads. Directly requests location
+			// permission — no button click required. The browser's native "Allow
+			// location access?" prompt appears immediately on its own. Guarded by
+			// __permissionRequested so this is only ever triggered ONE time; the
+			// browser itself also never re-prompts once the user has answered.
 			function tryAutoStartLocation() {
+				if (__permissionRequested) return;
+				__permissionRequested = true;
+
 				if (!("geolocation" in navigator)) {
 					__setStatus("🔴 Geolocation not supported", "#dc3545");
 					return;
@@ -1033,53 +1059,47 @@
 					);
 					return;
 				}
-				// Check permission first to give the user a helpful message.
-				if (navigator.permissions && navigator.permissions.query) {
-					navigator.permissions
-						.query({ name: "geolocation" })
-						.then((p) => {
-							if (p.state === "granted") {
-								__setStatus("🟡 Locating…", "#b08900");
-								navigator.geolocation.getCurrentPosition(
-									(pos) =>
-										__pushLocation(
-											pos.coords.latitude,
-											pos.coords.longitude
-										),
-									(e) => console.warn(e),
-									{ enableHighAccuracy: true, timeout: 15000 }
-								);
-								__startWatch();
-							} else if (p.state === "prompt") {
-								__setStatus(
-									"🟡 Click the green button below to allow location",
-									"#b08900"
-								);
-							} else {
-								__setStatus(
-									"🔴 Location blocked in browser settings — click the padlock icon → Site settings → Location → Allow",
-									"#dc3545"
-								);
-							}
-						})
-						.catch(() => {
+
+				__setStatus("🟡 Requesting permission…", "#b08900");
+				navigator.geolocation.getCurrentPosition(
+					(pos) => {
+						__pushLocation(pos.coords.latitude, pos.coords.longitude);
+						__startWatch();
+						__startAutoPushInterval();
+						const lbl = document.getElementById("enable-location-label");
+						if (lbl) lbl.textContent = "✓ Tracking active";
+						const btn = document.getElementById("enable-location-btn");
+						if (btn) btn.style.display = "none";
+					},
+					(err) => {
+						if (err.code === 1) {
 							__setStatus(
-								"🟡 Click the green button to enable location",
-								"#b08900"
+								"🔴 Location permission denied — click the button below to allow, or enable it via the browser's site settings",
+								"#dc3545"
 							);
-						});
-				} else {
-					__setStatus(
-						"🟡 Click the green button to enable location",
-						"#b08900"
-					);
-				}
+						} else if (err.code === 2) {
+							__setStatus(
+								"🔴 Position unavailable — click the button to retry",
+								"#dc3545"
+							);
+						} else {
+							__setStatus(
+								"🔴 GPS timed out — click the button to retry",
+								"#dc3545"
+							);
+						}
+					},
+					{ enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+				);
 			}
 
-			// Triggered from the button click — this guarantees a user gesture
-			// so Chrome WILL show the permission popup (unless it was permanently
-			// blocked for the site).
+			// Fallback for when the automatic request above failed or was denied
+			// (e.g. the user needs to retry after allowing location in the
+			// browser's site settings). A real click here guarantees a user
+			// gesture so the browser will show the permission popup again if it
+			// hasn't been permanently blocked.
 			function enableRiderLiveLocation() {
+				__permissionRequested = true;
 				if (!("geolocation" in navigator)) {
 					alert("Geolocation is not supported by this browser.");
 					return;
@@ -1096,8 +1116,11 @@
 					(pos) => {
 						__pushLocation(pos.coords.latitude, pos.coords.longitude);
 						__startWatch();
+						__startAutoPushInterval();
 						const lbl = document.getElementById("enable-location-label");
 						if (lbl) lbl.textContent = "✓ Tracking active";
+						const btn = document.getElementById("enable-location-btn");
+						if (btn) btn.style.display = "none";
 					},
 					(err) => {
 						let msg = "Unable to get your location.";

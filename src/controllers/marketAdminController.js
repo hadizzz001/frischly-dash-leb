@@ -32,16 +32,14 @@ const MarketPromoCode = require("../models/MarketPromoCode");
 const MarketAnnouncement = require("../models/MarketAnnouncement");
 const MarketSetting = require("../models/MarketSetting");
 const Shelf = require("../models/Shelf");
+const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
 
 const ok = (res, data, message = "OK") =>
-	res.json({ success: true, message, data });
+	sendResponse(res, 200, true, message, data);
 const created = (res, data, message = "Created") =>
-	res.status(201).json({ success: true, message, data });
-const fail = (res, code, message, errors) => {
-	const body = { success: false, message };
-	if (errors) body.errors = errors;
-	return res.status(code).json(body);
-};
+	sendResponse(res, 201, true, message, data);
+const fail = (res, code, message, errors) =>
+	sendError(res, code, message, errors || null);
 
 const handleErr = (res, err) => {
 	console.error("[market-admin]", err);
@@ -664,12 +662,7 @@ const crud = (Model, allowedFields, opts = {}) => ({
 				Model.countDocuments(filter),
 			]);
 			const data = opts.transform ? items.map(opts.transform) : items;
-			res.json({
-				success: true,
-				message: "OK",
-				data,
-				meta: { total, page, limit },
-			});
+			sendResponse(res, 200, true, "OK", data, { meta: { total, page, limit } });
 		} catch (err) {
 			handleErr(res, err);
 		}
@@ -877,20 +870,14 @@ exports.listProducts = async (req, res) => {
 					: item.subcategory,
 			};
 		});
-		res.json({
-			success: true,
-			message: "OK",
-			data,
-			meta: { total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) },
-			pagination: {
+		sendResponse(res, 200, true, "OK", data, { meta: { total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) }, pagination: {
 				totalProducts: total,
 				total,
 				page,
 				currentPage: page,
 				limit,
 				totalPages: Math.max(1, Math.ceil(total / limit)),
-			},
-		});
+			} });
 	} catch (err) {
 		handleErr(res, err);
 	}
@@ -1067,12 +1054,7 @@ exports.listOrders = async (req, res) => {
 			Order.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
 			Order.countDocuments(filter),
 		]);
-		res.json({
-			success: true,
-			message: "OK",
-			data: items,
-			meta: { total, page, limit },
-		});
+		sendResponse(res, 200, true, "OK", items, { meta: { total, page, limit } });
 	} catch (err) {
 		handleErr(res, err);
 	}
@@ -1086,7 +1068,7 @@ exports.ordersCount = async (req, res) => {
 			market: req.marketId,
 			isActive: { $ne: false },
 		});
-		res.json({ success: true, count, total: count });
+		sendResponse(res, 200, true, "Success", null, { count: count, total: count });
 	} catch (err) {
 		handleErr(res, err);
 	}
@@ -1346,22 +1328,16 @@ exports.getProductSalesStats = async (req, res) => {
 			},
 		]);
 
-		res.json({
-			success: true,
-			data,
-			summary: summaryResult[0] || {
+		sendResponse(res, 200, true, "Success", data, { summary: summaryResult[0] || {
 				totalRevenue: 0,
 				totalQuantitySold: 0,
 				totalOrders: 0,
 				uniqueProducts: 0,
-			},
-			pagination: paginationMeta(page, limit, totalProducts),
-			filters: {
+			}, pagination: paginationMeta(page, limit, totalProducts), filters: {
 				timeRange: req.query.timeRange || "custom",
 				dateFrom: dateFilter.$gte || null,
 				dateTo: dateFilter.$lte || null,
-			},
-		});
+			} });
 	} catch (err) {
 		handleErr(res, err);
 	}
@@ -1414,16 +1390,11 @@ exports.getUnsoldProducts = async (req, res) => {
 			};
 		});
 
-		res.json({
-			success: true,
-			data,
-			pagination: paginationMeta(page, limit, totalProducts),
-			filters: {
+		sendResponse(res, 200, true, "Success", data, { pagination: paginationMeta(page, limit, totalProducts), filters: {
 				timeRange: req.query.timeRange || "custom",
 				dateFrom: dateFilter.$gte || null,
 				dateTo: dateFilter.$lte || null,
-			},
-		});
+			} });
 	} catch (err) {
 		handleErr(res, err);
 	}
@@ -1665,12 +1636,7 @@ exports.riders = {
 				);
 			}
 
-			res.json({
-				success: true,
-				message: "OK",
-				data,
-				meta: { total, page, limit },
-			});
+			sendResponse(res, 200, true, "OK", data, { meta: { total, page, limit } });
 		} catch (err) {
 			handleErr(res, err);
 		}

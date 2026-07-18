@@ -3,6 +3,7 @@ const multer = require("multer");
 const cloudinary = require("cloudinary").v2;
 const Kitchen = require("../models/Kitchen");
 const Product = require("../models/Product");
+const { sendSuccess, sendError } = require("../utils/apiResponse");
 
 // Cloudinary is already configured in productController on require, but we
 // reconfigure defensively in case this module is loaded first.
@@ -46,10 +47,8 @@ const safeDestroy = (publicId) => {
 	});
 };
 
-const ok = (res, data, message = "OK") =>
-	res.json({ success: true, message, data });
-const fail = (res, code, message) =>
-	res.status(code).json({ success: false, message });
+const ok = (res, data, message = "OK") => sendSuccess(res, data, message);
+const fail = (res, code, message) => sendError(res, code, message);
 
 // Build a market-scoping filter so admins see everything but market admins
 // only see their own kitchens.
@@ -258,11 +257,7 @@ exports.createKitchen = async (req, res) => {
 			.populate("category", "name picture isActive sortOrder")
 			.populate("market", "name username location cities")
 			.lean();
-		res.status(201).json({
-			success: true,
-			message: "Kitchen created successfully",
-			data: populated,
-		});
+		sendSuccess(res, populated, "Kitchen created successfully", 201);
 	} catch (err) {
 		console.error("createKitchen:", err);
 		fail(res, 500, err.message || "Server Error");
@@ -409,15 +404,11 @@ exports.uploadImage = async (req, res) => {
 	try {
 		if (!req.file) return fail(res, 400, "No image file provided");
 		const result = await uploadBufferToCloudinary(req.file.buffer, "kitchens");
-		res.json({
-			success: true,
-			message: "Image uploaded successfully",
-			data: {
-				url: result.url,
-				public_id: result.public_id,
-				size: req.file.size,
-			},
-		});
+		sendSuccess(res, {
+			url: result.url,
+			public_id: result.public_id,
+			size: req.file.size,
+		}, "Image uploaded successfully");
 	} catch (err) {
 		console.error("uploadImage (kitchen):", err);
 		fail(res, 500, err.message || "Error uploading image");

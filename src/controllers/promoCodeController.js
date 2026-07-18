@@ -2,6 +2,7 @@ const PromoCode = require("../models/PromoCode");
 const MarketPromoCode = require("../models/MarketPromoCode");
 const User = require("../models/User");
 const { t } = require("../utils/translations");
+const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
 
 // @desc    Get all promo codes (public - without code)
 // @route   GET /api/promocodes/public
@@ -12,17 +13,9 @@ exports.getPublicPromoCodes = async (req, res) => {
 			.select("-code")
 			.sort({ createdAt: -1 });
 
-		res.status(200).json({
-			success: true,
-			count: promoCodes.length,
-			data: promoCodes,
-		});
+		sendResponse(res, 200, true, "Success", promoCodes, { count: promoCodes.length });
 	} catch (err) {
-		res.status(500).json({
-			success: false,
-			message: "Server Error",
-			error: err.message,
-		});
+		sendError(res, 500, "Server Error", err.message);
 	}
 };
 
@@ -34,10 +27,7 @@ exports.validatePromoCode = async (req, res) => {
 		const { code, orderTotal, market } = req.body;
 
 		if (!code) {
-			return res.status(400).json({
-				success: false,
-				message: "Promo code is required",
-			});
+			return sendError(res, 400, "Promo code is required");
 		}
 
 		const upperCode = code.toUpperCase();
@@ -55,34 +45,22 @@ exports.validatePromoCode = async (req, res) => {
 			});
 
 			if (!marketPromo) {
-				return res.status(404).json({
-					success: false,
-					message: "Invalid or inactive promo code",
-				});
+				return sendError(res, 404, "Invalid or inactive promo code");
 			}
 
 			const now = new Date();
 			if (marketPromo.startsAt && now < marketPromo.startsAt) {
-				return res.status(400).json({
-					success: false,
-					message: "This promo code is not active yet",
-				});
+				return sendError(res, 400, "This promo code is not active yet");
 			}
 			if (marketPromo.expiresAt && now > marketPromo.expiresAt) {
-				return res.status(400).json({
-					success: false,
-					message: "This promo code has expired",
-				});
+				return sendError(res, 400, "This promo code has expired");
 			}
 
 			if (
 				marketPromo.usageLimit > 0 &&
 				marketPromo.usageCount >= marketPromo.usageLimit
 			) {
-				return res.status(400).json({
-					success: false,
-					message: "This promo code has reached its usage limit",
-				});
+				return sendError(res, 400, "This promo code has reached its usage limit");
 			}
 
 			const minRequired =
@@ -91,10 +69,7 @@ exports.validatePromoCode = async (req, res) => {
 					marketPromo.triggerCondition.minOrderTotal) ||
 				0;
 			if (minRequired && total < minRequired) {
-				return res.status(400).json({
-					success: false,
-					message: `Minimum order total for this promo code is ${minRequired}`,
-				});
+				return sendError(res, 400, `Minimum order total for this promo code is ${minRequired}`);
 			}
 
 			let discountAmount = 0;
@@ -107,9 +82,7 @@ exports.validatePromoCode = async (req, res) => {
 
 			const finalTotal = total - discountAmount;
 
-			return res.status(200).json({
-				success: true,
-				data: {
+			return sendResponse(res, 200, true, t("promoCodeApplied", req), {
 					promoCode: {
 						id: marketPromo._id,
 						code: marketPromo.code,
@@ -123,9 +96,7 @@ exports.validatePromoCode = async (req, res) => {
 					discountAmount: parseFloat(discountAmount.toFixed(2)),
 					originalTotal: total,
 					finalTotal: parseFloat(finalTotal.toFixed(2)),
-				},
-				message: t("promoCodeApplied", req),
-			});
+				});
 		}
 
 		// Main store cart -> admin own-company promo codes only.
@@ -136,10 +107,7 @@ exports.validatePromoCode = async (req, res) => {
 		});
 
 		if (!promoCode) {
-			return res.status(404).json({
-				success: false,
-				message: "Invalid or inactive promo code",
-			});
+			return sendError(res, 404, "Invalid or inactive promo code");
 		}
 
 		let discountAmount = 0;
@@ -156,9 +124,7 @@ exports.validatePromoCode = async (req, res) => {
 
 		const finalTotal = total - discountAmount;
 
-		res.status(200).json({
-			success: true,
-			data: {
+		sendResponse(res, 200, true, t("promoCodeApplied", req), {
 				promoCode: {
 					id: promoCode._id,
 					code: promoCode.code,
@@ -172,15 +138,9 @@ exports.validatePromoCode = async (req, res) => {
 				discountAmount: parseFloat(discountAmount.toFixed(2)),
 				originalTotal: total,
 				finalTotal: parseFloat(finalTotal.toFixed(2)),
-			},
-			message: t("promoCodeApplied", req),
-		});
+			});
 	} catch (err) {
-		res.status(500).json({
-			success: false,
-			message: t("serverError", req),
-			error: err.message,
-		});
+		sendError(res, 500, t("serverError", req), err.message);
 	}
 };
 
@@ -191,17 +151,9 @@ exports.getPromoCodes = async (req, res) => {
 	try {
 		const promoCodes = await PromoCode.find().sort({ createdAt: -1 });
 
-		res.status(200).json({
-			success: true,
-			count: promoCodes.length,
-			data: promoCodes,
-		});
+		sendResponse(res, 200, true, "Success", promoCodes, { count: promoCodes.length });
 	} catch (err) {
-		res.status(500).json({
-			success: false,
-			message: t("serverError", req),
-			error: err.message,
-		});
+		sendError(res, 500, t("serverError", req), err.message);
 	}
 };
 
@@ -213,22 +165,12 @@ exports.getPromoCode = async (req, res) => {
 		const promoCode = await PromoCode.findById(req.params.id);
 
 		if (!promoCode) {
-			return res.status(404).json({
-				success: false,
-				message: t("promoCodeNotFound", req),
-			});
+			return sendError(res, 404, t("promoCodeNotFound", req));
 		}
 
-		res.status(200).json({
-			success: true,
-			data: promoCode,
-		});
+		sendResponse(res, 200, true, "Success", promoCode);
 	} catch (err) {
-		res.status(500).json({
-			success: false,
-			message: t("serverError", req),
-			error: err.message,
-		});
+		sendError(res, 500, t("serverError", req), err.message);
 	}
 };
 
@@ -253,10 +195,7 @@ exports.createPromoCode = async (req, res) => {
 		// Check if code already exists
 		const existingCode = await PromoCode.findOne({ code });
 		if (existingCode) {
-			return res.status(400).json({
-				success: false,
-				message: t("promoCodeExists", req),
-			});
+			return sendError(res, 400, t("promoCodeExists", req));
 		}
 
 		// Validate discount value based on type
@@ -264,17 +203,11 @@ exports.createPromoCode = async (req, res) => {
 			discountType === "percentage" &&
 			(discountValue < 0 || discountValue > 100)
 		) {
-			return res.status(400).json({
-				success: false,
-				message: t("percentageDiscountRange", req),
-			});
+			return sendError(res, 400, t("percentageDiscountRange", req));
 		}
 
 		if (discountType === "cash" && discountValue < 0) {
-			return res.status(400).json({
-				success: false,
-				message: t("cashDiscountNegative", req),
-			});
+			return sendError(res, 400, t("cashDiscountNegative", req));
 		}
 
 		const promoCode = await PromoCode.create({
@@ -290,17 +223,9 @@ exports.createPromoCode = async (req, res) => {
 			isActive,
 		});
 
-		res.status(201).json({
-			success: true,
-			data: promoCode,
-			message: t("promoCodeCreated", req),
-		});
+		sendResponse(res, 201, true, t("promoCodeCreated", req), promoCode);
 	} catch (err) {
-		res.status(500).json({
-			success: false,
-			message: t("serverError", req),
-			error: err.message,
-		});
+		sendError(res, 500, t("serverError", req), err.message);
 	}
 };
 
@@ -312,10 +237,7 @@ exports.updatePromoCode = async (req, res) => {
 		let promoCode = await PromoCode.findById(req.params.id);
 
 		if (!promoCode) {
-			return res.status(404).json({
-				success: false,
-				message: t("promoCodeNotFound", req),
-			});
+			return sendError(res, 404, t("promoCodeNotFound", req));
 		}
 
 		promoCode = await PromoCode.findByIdAndUpdate(req.params.id, req.body, {
@@ -323,17 +245,9 @@ exports.updatePromoCode = async (req, res) => {
 			runValidators: true,
 		});
 
-		res.status(200).json({
-			success: true,
-			data: promoCode,
-			message: t("promoCodeUpdated", req),
-		});
+		sendResponse(res, 200, true, t("promoCodeUpdated", req), promoCode);
 	} catch (err) {
-		res.status(500).json({
-			success: false,
-			message: t("serverError", req),
-			error: err.message,
-		});
+		sendError(res, 500, t("serverError", req), err.message);
 	}
 };
 
@@ -345,24 +259,13 @@ exports.deletePromoCode = async (req, res) => {
 		const promoCode = await PromoCode.findById(req.params.id);
 
 		if (!promoCode) {
-			return res.status(404).json({
-				success: false,
-				message: t("promoCodeNotFound", req),
-			});
+			return sendError(res, 404, t("promoCodeNotFound", req));
 		}
 
 		await promoCode.deleteOne();
 
-		res.status(200).json({
-			success: true,
-			data: {},
-			message: t("promoCodeDeleted", req),
-		});
+		sendResponse(res, 200, true, t("promoCodeDeleted", req), {});
 	} catch (err) {
-		res.status(500).json({
-			success: false,
-			message: t("serverError", req),
-			error: err.message,
-		});
+		sendError(res, 500, t("serverError", req), err.message);
 	}
 };

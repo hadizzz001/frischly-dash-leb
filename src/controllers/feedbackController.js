@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Feedback = require("../models/Feedback");
 const Order = require("../models/Order");
+const { sendSuccess, sendError, sendResponse } = require("../utils/apiResponse");
 
 // Populate config shared by the list + single-record endpoints so the admin
 // dashboard always gets the same shape (order info, submitting customer, and
@@ -37,10 +38,7 @@ exports.createFeedback = async (req, res) => {
 		} = req.body;
 
 		if (!orderId || !mongoose.Types.ObjectId.isValid(orderId)) {
-			return res.status(400).json({
-				success: false,
-				message: "A valid order id is required",
-			});
+			return sendError(res, 400, "A valid order id is required");
 		}
 
 		const clampedOrderRating = Math.max(
@@ -53,34 +51,22 @@ exports.createFeedback = async (req, res) => {
 		);
 
 		if (clampedOrderRating <= 0 && clampedDriverRating <= 0) {
-			return res.status(400).json({
-				success: false,
-				message: "Please provide at least one rating before submitting",
-			});
+			return sendError(res, 400, "Please provide at least one rating before submitting");
 		}
 
 		const order = await Order.findById(orderId);
 		if (!order) {
-			return res.status(404).json({
-				success: false,
-				message: "Order not found",
-			});
+			return sendError(res, 404, "Order not found");
 		}
 
 		// Only the customer who placed the order can leave feedback for it.
 		if (String(order.createdBy) !== String(req.user._id || req.user.id)) {
-			return res.status(403).json({
-				success: false,
-				message: "You can only leave feedback for your own orders",
-			});
+			return sendError(res, 403, "You can only leave feedback for your own orders");
 		}
 
 		const existing = await Feedback.findOne({ order: orderId });
 		if (existing) {
-			return res.status(400).json({
-				success: false,
-				message: "Feedback has already been submitted for this order",
-			});
+			return sendError(res, 400, "Feedback has already been submitted for this order");
 		}
 
 		const feedback = await Feedback.create({
@@ -93,24 +79,14 @@ exports.createFeedback = async (req, res) => {
 			driverDescription: String(driverDescription || "").trim(),
 		});
 
-		res.status(201).json({
-			success: true,
-			message: "Thank you for your feedback!",
-			data: feedback,
-		});
+		sendSuccess(res, feedback, "Thank you for your feedback!", 201);
 	} catch (error) {
 		// Duplicate key (race condition on the unique `order` index).
 		if (error.code === 11000) {
-			return res.status(400).json({
-				success: false,
-				message: "Feedback has already been submitted for this order",
-			});
+			return sendError(res, 400, "Feedback has already been submitted for this order");
 		}
 		console.error("createFeedback error:", error);
-		res.status(400).json({
-			success: false,
-			message: error.message || "Failed to submit feedback",
-		});
+		sendError(res, 400, error.message || "Failed to submit feedback");
 	}
 };
 
@@ -155,8 +131,7 @@ exports.getAllFeedback = async (req, res) => {
 			.limit(parsedLimit)
 			.populate(FEEDBACK_POPULATE);
 
-		res.status(200).json({
-			success: true,
+		sendResponse(res, 200, true, "Feedback fetched", feedback, {
 			count: feedback.length,
 			total,
 			pagination: {
@@ -165,14 +140,10 @@ exports.getAllFeedback = async (req, res) => {
 				totalPages: Math.ceil(total / parsedLimit) || 1,
 				hasNextPage: parsedPage * parsedLimit < total,
 			},
-			data: feedback,
 		});
 	} catch (error) {
 		console.error("getAllFeedback error:", error);
-		res.status(400).json({
-			success: false,
-			message: error.message || "Failed to load feedback",
-		});
+		sendError(res, 400, error.message || "Failed to load feedback");
 	}
 };
 
@@ -183,31 +154,19 @@ exports.getFeedbackById = async (req, res) => {
 	try {
 		const { id } = req.params;
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid feedback id",
-			});
+			return sendError(res, 400, "Invalid feedback id");
 		}
 
 		const feedback = await Feedback.findById(id).populate(FEEDBACK_POPULATE);
 
 		if (!feedback) {
-			return res.status(404).json({
-				success: false,
-				message: "Feedback not found",
-			});
+			return sendError(res, 404, "Feedback not found");
 		}
 
-		res.status(200).json({
-			success: true,
-			data: feedback,
-		});
+		sendSuccess(res, feedback);
 	} catch (error) {
 		console.error("getFeedbackById error:", error);
-		res.status(400).json({
-			success: false,
-			message: error.message || "Failed to load feedback",
-		});
+		sendError(res, 400, error.message || "Failed to load feedback");
 	}
 };
 
@@ -217,15 +176,9 @@ exports.getFeedbackById = async (req, res) => {
 exports.getFeedbackStats = async (req, res) => {
 	try {
 		const stats = await Feedback.getStats();
-		res.status(200).json({
-			success: true,
-			data: stats,
-		});
+		sendSuccess(res, stats);
 	} catch (error) {
 		console.error("getFeedbackStats error:", error);
-		res.status(400).json({
-			success: false,
-			message: error.message || "Failed to load feedback stats",
-		});
+		sendError(res, 400, error.message || "Failed to load feedback stats");
 	}
 };

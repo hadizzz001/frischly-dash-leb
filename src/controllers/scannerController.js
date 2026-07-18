@@ -3,6 +3,7 @@ const Product = require("../models/Product");
 const PickTracking = require("../models/PickTracking");
 const Rider = require("../models/Rider");
 const mongoose = require("mongoose");
+const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
 
 // @desc    Scan barcode and retrieve product details
 // @route   POST /api/scanner/scan-product
@@ -12,10 +13,7 @@ exports.scanProductBarcode = async (req, res) => {
     const { barcode } = req.body;
 
     if (!barcode || barcode.trim() === "") {
-      return res.status(400).json({
-        success: false,
-        message: "Barcode is required",
-      });
+      return sendError(res, 400, "Barcode is required");
     }
 
     const normalizedBarcode = barcode.trim().toUpperCase();
@@ -30,16 +28,10 @@ exports.scanProductBarcode = async (req, res) => {
     }).populate("market", "_id name");
 
     if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: "Product not found",
-        barcode: normalizedBarcode,
-      });
+      return sendResponse(res, 404, false, "Product not found", null, { barcode: normalizedBarcode });
     }
 
-    res.json({
-      success: true,
-      product: {
+    sendResponse(res, 200, true, "Success", null, { product: {
         _id: product._id,
         name: product.name,
         barcode: product.barcode,
@@ -50,15 +42,10 @@ exports.scanProductBarcode = async (req, res) => {
         shelfNumber: product.shelfNumber,
         picture: product.picture,
         description: product.description,
-      },
-    });
+      } });
   } catch (error) {
     console.error("Error scanning product:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error scanning product",
-      error: error.message,
-    });
+    sendError(res, 500, "Error scanning product", error.message);
   }
 };
 
@@ -70,10 +57,7 @@ exports.scanOrderBarcode = async (req, res) => {
     const { barcode } = req.body;
 
     if (!barcode || barcode.trim() === "") {
-      return res.status(400).json({
-        success: false,
-        message: "Order barcode/number is required",
-      });
+      return sendError(res, 400, "Order barcode/number is required");
     }
 
     const normalizedBarcode = barcode.trim().toUpperCase();
@@ -90,37 +74,25 @@ exports.scanOrderBarcode = async (req, res) => {
       .populate("assignedRider");
 
     if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-        barcode: normalizedBarcode,
-      });
+      return sendResponse(res, 404, false, "Order not found", null, { barcode: normalizedBarcode });
     }
 
     // Check if user has permission to access this order
     if (req.user.role === "rider" || req.user.role === "market_driver") {
       const myRider = await Rider.findOne({ user: req.user.id });
       if (!myRider || order.assignedRider?._id?.toString() !== myRider._id.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: "You are not assigned to this order",
-        });
+        return sendError(res, 403, "You are not assigned to this order");
       }
     } else if (req.user.role === "market") {
       if (order.market?.toString() !== req.user.marketId?.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: "This order does not belong to your market",
-        });
+        return sendError(res, 403, "This order does not belong to your market");
       }
     }
 
     // Get pick progress for this order
     const pickProgress = await PickTracking.findOne({ orderId: order._id, userId: req.user.id });
 
-    res.json({
-      success: true,
-      order: {
+    sendResponse(res, 200, true, "Success", null, { order: {
         _id: order._id,
         orderNumber: order.orderNumber,
         status: order.status,
@@ -136,21 +108,15 @@ exports.scanOrderBarcode = async (req, res) => {
         shelfNumber: order.shelfNumber,
         createdAt: order.createdAt,
         assignedRider: order.assignedRider,
-      },
-      pickProgress: pickProgress ? {
+      }, pickProgress: pickProgress ? {
         totalItems: pickProgress.totalItems,
         pickedItems: pickProgress.pickedItems,
         skippedItems: pickProgress.skippedItems,
         pickedDetails: pickProgress.pickedDetails,
-      } : null,
-    });
+      } : null });
   } catch (error) {
     console.error("Error scanning order:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error scanning order",
-      error: error.message,
-    });
+    sendError(res, 500, "Error scanning order", error.message);
   }
 };
 
@@ -162,35 +128,23 @@ exports.pickItem = async (req, res) => {
     const { orderId, itemId, quantity, productId, shelfNumber } = req.body;
 
     if (!orderId || !itemId || !quantity || quantity <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "orderId, itemId, and quantity (>0) are required",
-      });
+      return sendError(res, 400, "orderId, itemId, and quantity (>0) are required");
     }
 
     // Verify order exists and user has access
     const order = await Order.findById(orderId);
     if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
+      return sendError(res, 404, "Order not found");
     }
 
     if (req.user.role === "rider" || req.user.role === "market_driver") {
       const myRider = await Rider.findOne({ user: req.user.id });
       if (!myRider || order.assignedRider?.toString() !== myRider._id.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: "You are not assigned to this order",
-        });
+        return sendError(res, 403, "You are not assigned to this order");
       }
     } else if (req.user.role === "market") {
       if (order.market?.toString() !== req.user.marketId?.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: "This order does not belong to your market",
-        });
+        return sendError(res, 403, "This order does not belong to your market");
       }
     }
 
@@ -218,10 +172,7 @@ exports.pickItem = async (req, res) => {
     );
 
     if (alreadyPicked) {
-      return res.status(400).json({
-        success: false,
-        message: "Item already marked as picked",
-      });
+      return sendError(res, 400, "Item already marked as picked");
     }
 
     // Add to picked items
@@ -240,28 +191,19 @@ exports.pickItem = async (req, res) => {
     const pickedCount = pickTracking.pickedItems.length;
     const percentage = Math.round((pickedCount / totalOrderItems) * 100);
 
-    res.json({
-      success: true,
-      message: "Item marked as picked",
-      progress: {
+    sendResponse(res, 200, true, "Item marked as picked", null, { progress: {
         pickedItems: pickedCount,
         totalItems: totalOrderItems,
         percentage: percentage,
         remaining: totalOrderItems - pickedCount,
-      },
-      pickTracking: {
+      }, pickTracking: {
         _id: pickTracking._id,
         pickedItems: pickTracking.pickedItems,
         skippedItems: pickTracking.skippedItems,
-      },
-    });
+      } });
   } catch (error) {
     console.error("Error picking item:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error picking item",
-      error: error.message,
-    });
+    sendError(res, 500, "Error picking item", error.message);
   }
 };
 
@@ -273,35 +215,23 @@ exports.skipItem = async (req, res) => {
     const { orderId, itemId, reason } = req.body;
 
     if (!orderId || !itemId) {
-      return res.status(400).json({
-        success: false,
-        message: "orderId and itemId are required",
-      });
+      return sendError(res, 400, "orderId and itemId are required");
     }
 
     // Verify order exists and user has access
     const order = await Order.findById(orderId);
     if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
+      return sendError(res, 404, "Order not found");
     }
 
     if (req.user.role === "rider" || req.user.role === "market_driver") {
       const myRider = await Rider.findOne({ user: req.user.id });
       if (!myRider || order.assignedRider?.toString() !== myRider._id.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: "You are not assigned to this order",
-        });
+        return sendError(res, 403, "You are not assigned to this order");
       }
     } else if (req.user.role === "market") {
       if (order.market?.toString() !== req.user.marketId?.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: "This order does not belong to your market",
-        });
+        return sendError(res, 403, "This order does not belong to your market");
       }
     }
 
@@ -329,10 +259,7 @@ exports.skipItem = async (req, res) => {
     );
 
     if (alreadySkipped) {
-      return res.status(400).json({
-        success: false,
-        message: "Item already marked as skipped",
-      });
+      return sendError(res, 400, "Item already marked as skipped");
     }
 
     // Add to skipped items
@@ -349,28 +276,19 @@ exports.skipItem = async (req, res) => {
     const pickedCount = pickTracking.pickedItems.length;
     const percentage = Math.round((pickedCount / totalOrderItems) * 100);
 
-    res.json({
-      success: true,
-      message: "Item marked as skipped",
-      progress: {
+    sendResponse(res, 200, true, "Item marked as skipped", null, { progress: {
         pickedItems: pickedCount,
         totalItems: totalOrderItems,
         percentage: percentage,
         remaining: totalOrderItems - pickedCount,
-      },
-      pickTracking: {
+      }, pickTracking: {
         _id: pickTracking._id,
         pickedItems: pickTracking.pickedItems,
         skippedItems: pickTracking.skippedItems,
-      },
-    });
+      } });
   } catch (error) {
     console.error("Error skipping item:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error skipping item",
-      error: error.message,
-    });
+    sendError(res, 500, "Error skipping item", error.message);
   }
 };
 
@@ -387,26 +305,17 @@ exports.getPickProgress = async (req, res) => {
     );
 
     if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
+      return sendError(res, 404, "Order not found");
     }
 
     if (req.user.role === "rider" || req.user.role === "market_driver") {
       const myRider = await Rider.findOne({ user: req.user.id });
       if (!myRider || order.assignedRider?.toString() !== myRider._id.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: "You are not assigned to this order",
-        });
+        return sendError(res, 403, "You are not assigned to this order");
       }
     } else if (req.user.role === "market") {
       if (order.market?.toString() !== req.user.marketId?.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: "This order does not belong to your market",
-        });
+        return sendError(res, 403, "This order does not belong to your market");
       }
     }
 
@@ -420,30 +329,21 @@ exports.getPickProgress = async (req, res) => {
     const skippedCount = pickTracking?.skippedItems?.length || 0;
     const remainingCount = totalItems - pickedCount - skippedCount;
 
-    res.json({
-      success: true,
-      progress: {
+    sendResponse(res, 200, true, "Success", null, { progress: {
         totalItems: totalItems,
         pickedItems: pickedCount,
         skippedItems: skippedCount,
         remainingItems: remainingCount,
         percentage: Math.round((pickedCount / totalItems) * 100),
-      },
-      pickTracking: pickTracking || null,
-      order: {
+      }, pickTracking: pickTracking || null, order: {
         _id: order._id,
         orderNumber: order.orderNumber,
         status: order.status,
         items: order.items,
-      },
-    });
+      } });
   } catch (error) {
     console.error("Error getting pick progress:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error getting pick progress",
-      error: error.message,
-    });
+    sendError(res, 500, "Error getting pick progress", error.message);
   }
 };
 
@@ -455,35 +355,23 @@ exports.completeOrder = async (req, res) => {
     const { orderId, notes } = req.body;
 
     if (!orderId) {
-      return res.status(400).json({
-        success: false,
-        message: "orderId is required",
-      });
+      return sendError(res, 400, "orderId is required");
     }
 
     const order = await Order.findById(orderId);
 
     if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
+      return sendError(res, 404, "Order not found");
     }
 
     if (req.user.role === "rider" || req.user.role === "market_driver") {
       const myRider = await Rider.findOne({ user: req.user.id });
       if (!myRider || order.assignedRider?.toString() !== myRider._id.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: "You are not assigned to this order",
-        });
+        return sendError(res, 403, "You are not assigned to this order");
       }
     } else if (req.user.role === "market") {
       if (order.market?.toString() !== req.user.marketId?.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: "This order does not belong to your market",
-        });
+        return sendError(res, 403, "This order does not belong to your market");
       }
     }
 
@@ -526,28 +414,19 @@ exports.completeOrder = async (req, res) => {
       await pickTracking.save();
     }
 
-    res.json({
-      success: true,
-      message: "Order fulfillment completed",
-      order: {
+    sendResponse(res, 200, true, "Order fulfillment completed", null, { order: {
         _id: order._id,
         orderNumber: order.orderNumber,
         status: newStatus,
         notes: order.notes,
-      },
-      fulfillmentSummary: {
+      }, fulfillmentSummary: {
         totalItems: totalItems,
         pickedItems: pickedCount,
         skippedItems: skippedCount,
-      },
-    });
+      } });
   } catch (error) {
     console.error("Error completing order:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error completing order",
-      error: error.message,
-    });
+    sendError(res, 500, "Error completing order", error.message);
   }
 };
 
@@ -606,9 +485,7 @@ exports.getScannerOrders = async (req, res) => {
       };
     }
 
-    res.json({
-      success: true,
-      orders: orders.map((order) => ({
+    sendResponse(res, 200, true, "Success", null, { orders: orders.map((order) => ({
         _id: order._id,
         orderNumber: order.orderNumber,
         status: order.status,
@@ -618,20 +495,14 @@ exports.getScannerOrders = async (req, res) => {
         market: order.market,
         createdAt: order.createdAt,
         progress: progressMap[order._id],
-      })),
-      pagination: {
+      })), pagination: {
         total,
         page: pageNum,
         limit: limitNum,
         pages: Math.ceil(total / limitNum),
-      },
-    });
+      } });
   } catch (error) {
     console.error("Error getting scanner orders:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error retrieving orders",
-      error: error.message,
-    });
+    sendError(res, 500, "Error retrieving orders", error.message);
   }
 };

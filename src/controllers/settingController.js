@@ -1,5 +1,6 @@
 const Setting = require("../models/Setting");
 const User = require("../models/User");
+const { sendSuccess, sendError } = require("../utils/apiResponse");
 
 // Main-store ("dash") coverage = the union of every admin account's service
 // cities (User.cities), with a Setting.cities fallback. The shop hides
@@ -32,15 +33,9 @@ const getAdminServiceCities = async () => {
 exports.getSettings = async (req, res) => {
 	try {
 		const settings = await Setting.getSettings();
-		res.status(200).json({
-			success: true,
-			data: settings,
-		});
+		sendSuccess(res, settings);
 	} catch (error) {
-		res.status(500).json({
-			success: false,
-			error: "Server Error",
-		});
+		sendError(res, 500, "Server Error");
 	}
 };
 
@@ -67,15 +62,9 @@ exports.updateSettings = async (req, res) => {
 
 		await settings.save();
 
-		res.status(200).json({
-			success: true,
-			data: settings,
-		});
+		sendSuccess(res, settings);
 	} catch (error) {
-		res.status(500).json({
-			success: false,
-			error: "Server Error",
-		});
+		sendError(res, 500, "Server Error");
 	}
 };
 
@@ -86,21 +75,15 @@ exports.getPublicSettings = async (req, res) => {
 	try {
 		const settings = await Setting.getSettings();
 		const cities = await getAdminServiceCities();
-		res.status(200).json({
-			success: true,
-			data: {
-				isMaintenanceMode: settings.isMaintenanceMode,
-				areOrdersDisabled: settings.areOrdersDisabled,
-				maintenanceMessage: settings.maintenanceMessage,
-				minimumOrderValue: settings.minimumOrderValue,
-				// Dash serving cities (array). Empty => main store shown everywhere.
-				cities,
-			},
+		sendSuccess(res, {
+			isMaintenanceMode: settings.isMaintenanceMode,
+			areOrdersDisabled: settings.areOrdersDisabled,
+			maintenanceMessage: settings.maintenanceMessage,
+			minimumOrderValue: settings.minimumOrderValue,
+			// Dash serving cities (array). Empty => main store shown everywhere.
+			cities,
 		});
 	} catch (error) {
-		res.status(500).json({
-			success: false,
-			error: "Server Error",
-		});
+		sendError(res, 500, "Server Error");
 	}
 };

@@ -4,6 +4,7 @@ const Order = require("../models/Order");
 const mongoose = require("mongoose");
 const multer = require("multer");
 const cloudinary = require("cloudinary").v2;
+const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
 const {
 	generateToken,
 	generateRefreshToken,
@@ -182,18 +183,12 @@ exports.createMarket = async (req, res) => {
 		if (!String(password || "").trim()) missingFields.push("password");
 
 		if (missingFields.length) {
-			return res.status(400).json({
-				success: false,
-				message: `Missing required field${missingFields.length > 1 ? "s" : ""}: ${missingFields.join(", ")}`,
-			});
+			return sendError(res, 400, `Missing required field${missingFields.length > 1 ? "s" : ""}: ${missingFields.join(", ")}`);
 		}
 
 		const duplicate = await findDuplicateAccount({ name, username, email });
 		if (duplicate) {
-			return res.status(400).json({
-				success: false,
-				message: duplicateAccountMessage(duplicate),
-			});
+			return sendError(res, 400, duplicateAccountMessage(duplicate));
 		}
 
 		const cities = parseCities(rawCities);
@@ -221,30 +216,17 @@ exports.createMarket = async (req, res) => {
 				marketData.logoPublicId = uploadResult.public_id;
 			} catch (uploadError) {
 				console.error("Error uploading market logo:", uploadError);
-				return res.status(500).json({
-					success: false,
-					message: "Error uploading market logo",
-					error: uploadError.message,
-				});
+				return sendError(res, 500, "Error uploading market logo", uploadError.message);
 			}
 		}
 
 		const market = await Market.create(marketData);
 
-		res.status(201).json({
-			success: true,
-			message: "Market created successfully",
-			data: market.toSafeObject(),
-		});
+		sendResponse(res, 201, true, "Market created successfully", market.toSafeObject());
 	} catch (error) {
 		console.error("Create market error:", error);
 		const errorResponse = marketErrorResponse(error, "Error creating market");
-		res.status(400).json({
-			success: false,
-			message: errorResponse.message,
-			errors: errorResponse.errors,
-			error: error.message,
-		});
+		sendResponse(res, 400, false, errorResponse.message, null, { errors: error.message, errors: errorResponse.errors });
 	}
 };
 
@@ -314,24 +296,16 @@ exports.getMarkets = async (req, res) => {
 			m.totalSales = s ? s.totalSales : 0;
 		});
 
-		res.json({
-			success: true,
-			data: markets,
-			pagination: {
+		sendResponse(res, 200, true, "Success", markets, { pagination: {
 				currentPage: pageNum,
 				totalPages: Math.ceil(total / limitNum),
 				totalMarkets: total,
 				hasNextPage: pageNum * limitNum < total,
 				hasPrevPage: pageNum > 1,
-			},
-		});
+			} });
 	} catch (error) {
 		console.error("Get markets error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching markets",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching markets", error.message);
 	}
 };
 
@@ -342,9 +316,7 @@ exports.getMarket = async (req, res) => {
 	try {
 		const { id } = req.params;
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res
-				.status(400)
-				.json({ success: false, message: "Invalid market ID" });
+			return sendError(res, 400, "Invalid market ID");
 		}
 
 		// Market admins can only view themselves
@@ -352,9 +324,7 @@ exports.getMarket = async (req, res) => {
 			req.user.role === "market" &&
 			String(req.user.marketId) !== String(id)
 		) {
-			return res
-				.status(403)
-				.json({ success: false, message: "Not authorized" });
+			return sendError(res, 403, "Not authorized");
 		}
 
 		const market = await Market.findById(id)
@@ -362,19 +332,13 @@ exports.getMarket = async (req, res) => {
 			.populate("createdBy", "name email");
 
 		if (!market) {
-			return res
-				.status(404)
-				.json({ success: false, message: "Market not found" });
+			return sendError(res, 404, "Market not found");
 		}
 
-		res.json({ success: true, data: market });
+		sendResponse(res, 200, true, "Success", market);
 	} catch (error) {
 		console.error("Get market error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching market",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching market", error.message);
 	}
 };
 
@@ -385,16 +349,12 @@ exports.updateMarket = async (req, res) => {
 	try {
 		const { id } = req.params;
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res
-				.status(400)
-				.json({ success: false, message: "Invalid market ID" });
+			return sendError(res, 400, "Invalid market ID");
 		}
 
 		const market = await Market.findById(id).select("+password");
 		if (!market) {
-			return res
-				.status(404)
-				.json({ success: false, message: "Market not found" });
+			return sendError(res, 404, "Market not found");
 		}
 
 		const isAdmin = ["admin", "manager"].includes(req.user.role);
@@ -403,9 +363,7 @@ exports.updateMarket = async (req, res) => {
 			String(req.user.marketId) === String(id);
 
 		if (!isAdmin && !isSelf) {
-			return res
-				.status(403)
-				.json({ success: false, message: "Not authorized" });
+			return sendError(res, 403, "Not authorized");
 		}
 
 		const updatable = isAdmin
@@ -438,10 +396,7 @@ exports.updateMarket = async (req, res) => {
 			{ type: "market", id },
 		);
 		if (duplicate) {
-			return res.status(400).json({
-				success: false,
-				message: duplicateAccountMessage(duplicate),
-			});
+			return sendError(res, 400, duplicateAccountMessage(duplicate));
 		}
 
 		updatable.forEach((field) => {
@@ -474,11 +429,7 @@ exports.updateMarket = async (req, res) => {
 				market.logoPublicId = uploadResult.public_id;
 			} catch (uploadError) {
 				console.error("Error uploading market logo:", uploadError);
-				return res.status(500).json({
-					success: false,
-					message: "Error uploading market logo",
-					error: uploadError.message,
-				});
+				return sendError(res, 500, "Error uploading market logo", uploadError.message);
 			}
 		}
 
@@ -486,17 +437,11 @@ exports.updateMarket = async (req, res) => {
 		if (req.body.password) {
 			if (isSelf) {
 				if (!req.body.currentPassword) {
-					return res.status(400).json({
-						success: false,
-						message: "Current password is required",
-					});
+					return sendError(res, 400, "Current password is required");
 				}
 				const ok = await market.comparePassword(req.body.currentPassword);
 				if (!ok) {
-					return res.status(401).json({
-						success: false,
-						message: "Current password is incorrect",
-					});
+					return sendError(res, 401, "Current password is incorrect");
 				}
 			}
 			market.password = req.body.password;
@@ -504,20 +449,11 @@ exports.updateMarket = async (req, res) => {
 
 		await market.save();
 
-		res.json({
-			success: true,
-			message: "Market updated successfully",
-			data: market.toSafeObject(),
-		});
+		sendResponse(res, 200, true, "Market updated successfully", market.toSafeObject());
 	} catch (error) {
 		console.error("Update market error:", error);
 		const errorResponse = marketErrorResponse(error, "Error updating market");
-		res.status(400).json({
-			success: false,
-			message: errorResponse.message,
-			errors: errorResponse.errors,
-			error: error.message,
-		});
+		sendResponse(res, 400, false, errorResponse.message, null, { errors: error.message, errors: errorResponse.errors });
 	}
 };
 
@@ -529,32 +465,20 @@ exports.deleteMarket = async (req, res) => {
 	try {
 		const { id } = req.params;
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res
-				.status(400)
-				.json({ success: false, message: "Invalid market ID" });
+			return sendError(res, 400, "Invalid market ID");
 		}
 		const market = await Market.findById(id);
 		if (!market) {
-			return res
-				.status(404)
-				.json({ success: false, message: "Market not found" });
+			return sendError(res, 404, "Market not found");
 		}
 		market.isActive = false;
 		await market.save();
 		// Also deactivate this market's products
 		await Product.updateMany({ market: market._id }, { isActive: false });
-		res.json({
-			success: true,
-			message: "Market deactivated successfully",
-			data: market.toSafeObject(),
-		});
+		sendResponse(res, 200, true, "Market deactivated successfully", market.toSafeObject());
 	} catch (error) {
 		console.error("Delete market error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error deleting market",
-			error: error.message,
-		});
+		sendError(res, 500, "Error deleting market", error.message);
 	}
 };
 
@@ -562,21 +486,14 @@ exports.permanentDeleteMarket = async (req, res) => {
 	try {
 		const { id } = req.params;
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res
-				.status(400)
-				.json({ success: false, message: "Invalid market ID" });
+			return sendError(res, 400, "Invalid market ID");
 		}
 		const market = await Market.findById(id);
 		if (!market) {
-			return res
-				.status(404)
-				.json({ success: false, message: "Market not found" });
+			return sendError(res, 404, "Market not found");
 		}
 		if (market.isActive) {
-			return res.status(400).json({
-				success: false,
-				message: "Only inactive markets can be permanently deleted. Deactivate this market first.",
-			});
+			return sendError(res, 400, "Only inactive markets can be permanently deleted. Deactivate this market first.");
 		}
 
 		await market.deleteOne();
@@ -585,17 +502,10 @@ exports.permanentDeleteMarket = async (req, res) => {
 			{ market: id },
 			{ $set: { market: null, isActive: false } },
 		);
-		res.json({
-			success: true,
-			message: "Market permanently deleted",
-		});
+		sendResponse(res, 200, true, "Market permanently deleted", null);
 	} catch (error) {
 		console.error("Permanent delete market error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error permanently deleting market",
-			error: error.message,
-		});
+		sendError(res, 500, "Error permanently deleting market", error.message);
 	}
 };
 
@@ -607,10 +517,7 @@ exports.marketLogin = async (req, res) => {
 		const { username, email, password } = req.body;
 		const identifier = String(username || email || "").toLowerCase().trim();
 		if (!identifier || !password) {
-			return res.status(400).json({
-				success: false,
-				message: "Username or email and password are required",
-			});
+			return sendError(res, 400, "Username or email and password are required");
 		}
 
 		const market = await Market.findOne({
@@ -618,31 +525,21 @@ exports.marketLogin = async (req, res) => {
 		}).select("+password +loginAttempts +lockUntil");
 
 		if (!market) {
-			return res
-				.status(401)
-				.json({ success: false, message: "Invalid credentials" });
+			return sendError(res, 401, "Invalid credentials");
 		}
 
 		if (market.isLocked) {
-			return res.status(423).json({
-				success: false,
-				message:
-					"Account temporarily locked due to multiple failed login attempts. Try again later.",
-			});
+			return sendError(res, 423, "Account temporarily locked due to multiple failed login attempts. Try again later.");
 		}
 
 		if (!market.isActive) {
-			return res
-				.status(401)
-				.json({ success: false, message: "Market account is deactivated" });
+			return sendError(res, 401, "Market account is deactivated");
 		}
 
 		const ok = await market.comparePassword(password);
 		if (!ok) {
 			await market.incLoginAttempts();
-			return res
-				.status(401)
-				.json({ success: false, message: "Invalid credentials" });
+			return sendError(res, 401, "Invalid credentials");
 		}
 
 		if (market.loginAttempts > 0 || market.lockUntil) {
@@ -657,21 +554,14 @@ exports.marketLogin = async (req, res) => {
 			isMarket: true,
 		});
 
-		res.json({
-			success: true,
-			message: "Login successful",
-			data: {
+		sendResponse(res, 200, true, "Login successful", {
 				market: market.toSafeObject(),
 				token,
 				refreshToken,
-			},
-		});
+			});
 	} catch (error) {
 		console.error("Market login error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Server error during market login",
-		});
+		sendError(res, 500, "Server error during market login");
 	}
 };
 
@@ -684,18 +574,12 @@ exports.getMyMarket = async (req, res) => {
 			"totalItems",
 		);
 		if (!market) {
-			return res
-				.status(404)
-				.json({ success: false, message: "Market not found" });
+			return sendError(res, 404, "Market not found");
 		}
-		res.json({ success: true, data: market });
+		sendResponse(res, 200, true, "Success", market);
 	} catch (error) {
 		console.error("getMyMarket error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching market",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching market", error.message);
 	}
 };
 
@@ -706,17 +590,13 @@ exports.getMarketStats = async (req, res) => {
 	try {
 		const { id } = req.params;
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res
-				.status(400)
-				.json({ success: false, message: "Invalid market ID" });
+			return sendError(res, 400, "Invalid market ID");
 		}
 		if (
 			req.user.role === "market" &&
 			String(req.user.marketId) !== String(id)
 		) {
-			return res
-				.status(403)
-				.json({ success: false, message: "Not authorized" });
+			return sendError(res, 403, "Not authorized");
 		}
 
 		const marketObjectId = new mongoose.Types.ObjectId(id);
@@ -757,21 +637,14 @@ exports.getMarketStats = async (req, res) => {
 			deliveredSales: 0,
 		};
 
-		res.json({
-			success: true,
-			data: {
+		sendResponse(res, 200, true, "Success", {
 				totalItems,
 				totalActiveItems,
 				...stats,
-			},
-		});
+			});
 	} catch (error) {
 		console.error("Market stats error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching market stats",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching market stats", error.message);
 	}
 };
 
@@ -795,17 +668,10 @@ exports.getPublicMarkets = async (req, res) => {
 			.select("name username logo location cities")
 			.sort({ name: 1 });
 
-		res.json({
-success: true,
-data: markets,
-});
+		sendResponse(res, 200, true, "Success", markets);
 	} catch (error) {
 		console.error("Get public markets error:", error);
-		res.status(500).json({
-success: false,
-message: "Error fetching markets",
-error: error.message,
-});
+		sendError(res, 500, "Error fetching markets", error.message);
 	}
 };
 
@@ -814,10 +680,7 @@ exports.getMarketCategories = async (req, res) => {
 	try {
 		const { id } = req.params;
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid market id",
-			});
+			return sendError(res, 400, "Invalid market id");
 		}
 
 		const MarketCategory = require("../models/MarketCategory");
@@ -851,14 +714,10 @@ exports.getMarketCategories = async (req, res) => {
 			subcategories: byCategory.get(String(cat._id)) || [],
 		}));
 
-		res.json({ success: true, data, subcategories });
+		sendResponse(res, 200, true, "Success", data, { subcategories: subcategories });
 	} catch (error) {
 		console.error("Get market categories error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching market categories",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching market categories", error.message);
 	}
 };
 
@@ -867,20 +726,14 @@ exports.getMarketProducts = async (req, res) => {
 	try {
 		const { id } = req.params;
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid market id",
-			});
+			return sendError(res, 400, "Invalid market id");
 		}
 
 		const market = await Market.findOne({ _id: id, isActive: true }).select(
 			"name username logo location"
 		);
 		if (!market) {
-			return res.status(404).json({
-				success: false,
-				message: "Market not found",
-			});
+			return sendError(res, 404, "Market not found");
 		}
 
 		const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
@@ -903,24 +756,15 @@ exports.getMarketProducts = async (req, res) => {
 			Product.countDocuments(filter),
 		]);
 
-		res.json({
-			success: true,
-			market,
-			data: products,
-			pagination: {
+		sendResponse(res, 200, true, "Success", products, { market: market, pagination: {
 				page,
 				limit,
 				total,
 				totalPages: Math.ceil(total / limit),
 				hasNextPage: page * limit < total,
-			},
-		});
+			} });
 	} catch (error) {
 		console.error("Get market products error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching market products",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching market products", error.message);
 	}
 };

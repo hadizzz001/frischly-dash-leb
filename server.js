@@ -142,8 +142,8 @@ app.use(
 					"https://unpkg.com",
 					// Add onrender.com domains
 					"https://*.onrender.com",
-					//"https://frischly-dash-leb.onrender.com",
-					"https://frischly-dash-leb.onrender.com",
+					//"https://freshlylb.onrender.com",
+					"https://freshlylb.onrender.com",
 				],
 				scriptSrcAttr: ["'unsafe-inline'"], // Allow inline event handlers in both dev and production
 				styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
@@ -153,8 +153,8 @@ app.use(
 					"http://localhost:*",
 					"https://localhost:*",
 					// Add production API URLs
-					//"https://frischly-dash-leb.onrender.com",
-					"https://frischly-dash-leb.onrender.com",
+					//"https://freshlylb.onrender.com",
+					"https://freshlylb.onrender.com",
 				], // Allow API calls
 				fontSrc: [
 					"'self'",
@@ -341,9 +341,10 @@ app.get("/ordermanagement", (req, res) => {
 	res.sendFile(__dirname + "/public/ordermanagement.html");
 });
 
-// Route for rider dashboard page
+// The Rider Dashboard page was removed — its features (live location,
+// deliveries) now live on the Profile page, so redirect old links there.
 app.get("/rider", (req, res) => {
-	res.sendFile(__dirname + "/public/rider.html");
+	res.redirect("/profile");
 });
 
 // Route for dashboard page

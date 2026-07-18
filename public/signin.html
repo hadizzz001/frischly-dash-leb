@@ -376,8 +376,8 @@
 								dashboardUrl = "https://frischlyshop.com";
 								dashboardText = "Go to Shop";
 							} else if (userRole === "rider" || userRole === "market_driver") {
-								dashboardUrl = "/rider";
-								dashboardText = "Go to Rider Dashboard";
+								dashboardUrl = "/profile";
+								dashboardText = "Go to Profile";
 							} else if (userRole === "staff") {
 								dashboardUrl = "/ordermanagement";
 								dashboardText = "Go to Staff Dashboard";
@@ -503,7 +503,7 @@
 								(result.data.user.role === "rider" ||
 									result.data.user.role === "market_driver")
 							) {
-								redirectUrl = "/rider";
+								redirectUrl = "/profile";
 							} else if (
 								result.data.user &&
 								result.data.user.role === "staff"

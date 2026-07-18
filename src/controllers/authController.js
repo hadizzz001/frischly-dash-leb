@@ -11,6 +11,7 @@ const sendEmail = require("../utils/sendEmail");
 const { sendVerificationLink } = require("../utils/sendSms");
 const { normalizeLebanonPhone, isPhoneLike } = require("../utils/phone");
 const { sanitizeEmail } = require("../utils/sanitize");
+const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
 const {
 	findDuplicateAccount,
 	duplicateAccountMessage,
@@ -24,14 +25,10 @@ const register = async (req, res) => {
 		// Check for validation errors
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
-			return res.status(400).json({
-				success: false,
-				message: `Validation failed: ${errors
+			return sendError(res, 400, `Validation failed: ${errors
 					.array()
 					.map((e) => e.msg)
-					.join(", ")}`,
-				errors: errors.array(),
-			});
+					.join(", ")}`, errors.array());
 		}
 
 		const { name, phoneNumber, email, password, address } = req.body;
@@ -45,10 +42,7 @@ const register = async (req, res) => {
 			phoneNumber: normalizedPhone,
 		});
 		if (duplicate) {
-			return res.status(400).json({
-				success: false,
-				message: duplicateAccountMessage(duplicate),
-			});
+			return sendError(res, 400, duplicateAccountMessage(duplicate));
 		}
 
 		// ✅ Phone verification is now the primary (required) channel — a
@@ -128,20 +122,12 @@ const register = async (req, res) => {
 			}
 		}
 
-		res.status(201).json({
-			success: true,
-			message:
-				"Registration successful. Please check your phone for a verification link sent via SMS or WhatsApp to confirm your account.",
-			data: {
+		sendResponse(res, 201, true, "Registration successful. Please check your phone for a verification link sent via SMS or WhatsApp to confirm your account.", {
 				userId: user._id,
-			},
-		});
+			});
 	} catch (error) {
 		console.error("Register error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Server error during registration",
-		});
+		sendError(res, 500, "Server error during registration");
 	}
 };
 
@@ -454,14 +440,10 @@ const login = async (req, res) => {
 		// Check for validation errors
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
-			return res.status(400).json({
-				success: false,
-				message: `Validation failed: ${errors
+			return sendError(res, 400, `Validation failed: ${errors
 					.array()
 					.map((e) => e.msg)
-					.join(", ")}`,
-				errors: errors.array(),
-			});
+					.join(", ")}`, errors.array());
 		}
 
 		const { email, password } = req.body;
@@ -469,10 +451,7 @@ const login = async (req, res) => {
 		// Sanitize email input to prevent NoSQL injection
 		const sanitizedEmail = sanitizeEmail(email);
 		if (!sanitizedEmail) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid email format",
-			});
+			return sendError(res, 400, "Invalid email format");
 		}
 
 		// Check for user and include password, loginAttempts, and lockUntil
@@ -480,10 +459,7 @@ const login = async (req, res) => {
 			"+password +loginAttempts +lockUntil"
 		);
 		if (!user) {
-			return res.status(401).json({
-				success: false,
-				message: "Invalid credentials",
-			});
+			return sendError(res, 401, "Invalid credentials");
 		}
 
 		// Check if account is locked
@@ -492,19 +468,12 @@ const login = async (req, res) => {
 			console.warn(
 				`🔒 Login attempt on locked account: ${sanitizedEmail}. Locked for ${minutesRemaining} more minutes.`
 			);
-			return res.status(423).json({
-				success: false,
-				message: `The account is temporarily locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minute(s).`,
-				lockTimeRemaining: minutesRemaining,
-			});
+			return sendResponse(res, 423, false, `The account is temporarily locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minute(s).`, null, { lockTimeRemaining: minutesRemaining });
 		}
 
 		// Check if user is active
 		if (!user.isActive) {
-			return res.status(401).json({
-				success: false,
-				message: "Account is deactivated",
-			});
+			return sendError(res, 401, "Account is deactivated");
 		}
 
 		// Check password
@@ -523,42 +492,22 @@ const login = async (req, res) => {
 			);
 
 			if (attemptsLeft <= 0) {
-				return res.status(401).json({
-					success: false,
-					message:
-						"Invalid credentials. Your account has been temporarily locked for 15 minutes due to multiple failed login attempts.",
-				});
+				return sendError(res, 401, "Invalid credentials. Your account has been temporarily locked for 15 minutes due to multiple failed login attempts.");
 			} else if (attemptsLeft <= 2) {
-				return res.status(401).json({
-					success: false,
-					message: `Invalid credentials. ${attemptsLeft} attempt(s) remaining before account lockout.`,
-					attemptsRemaining: attemptsLeft,
-				});
+				return sendResponse(res, 401, false, `Invalid credentials. ${attemptsLeft} attempt(s) remaining before account lockout.`, null, { attemptsRemaining: attemptsLeft });
 			} else {
-				return res.status(401).json({
-					success: false,
-					message: "Invalid credentials",
-				});
+				return sendError(res, 401, "Invalid credentials");
 			}
 		}
 
 		if (user.emailConfirmed === false) {
-			return res.status(403).json({
-				success: false,
-				message:
-					"Please confirm your email (it may be in the spam folder) before logging in.",
-				needsConfirmation: true,
-			});
+			return sendResponse(res, 403, false, "Please confirm your email (it may be in the spam folder) before logging in.", null, { needsConfirmation: true });
 		}
 
 		// Check if user has required role for  access
 		const allowedRoles = ["manager", "admin", "customer", "rider", "staff", "market_driver"];
 		if (!allowedRoles.includes(user.role)) {
-			return res.status(403).json({
-				success: false,
-				message:
-					"Access denied. Access is restricted to managers, administrators, customers, and riders only.",
-			});
+			return sendError(res, 403, "Access denied. Access is restricted to managers, administrators, customers, and riders only.");
 		}
 
 		// Reset login attempts on successful login
@@ -577,21 +526,14 @@ const login = async (req, res) => {
 		const token = generateToken({ id: user._id });
 		const refreshToken = generateRefreshToken({ id: user._id });
 
-		res.json({
-			success: true,
-			message: "Login successful",
-			data: {
+		sendResponse(res, 200, true, "Login successful", {
 				user: user.toSafeObject(),
 				token,
 				refreshToken,
-			},
-		});
+			});
 	} catch (error) {
 		console.error("Login error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Server error during login",
-		});
+		sendError(res, 500, "Server error during login");
 	}
 };
 
@@ -605,15 +547,10 @@ const getMe = async (req, res) => {
 		if (req.user && req.user.isMarket) {
 			const market = req.market;
 			if (!market) {
-				return res.status(404).json({
-					success: false,
-					message: "Market not found",
-				});
+				return sendError(res, 404, "Market not found");
 			}
 
-			return res.json({
-				success: true,
-				data: {
+			return sendResponse(res, 200, true, "Success", {
 					user: {
 						_id: market._id,
 						id: market._id,
@@ -633,31 +570,21 @@ const getMe = async (req, res) => {
 						isMarket: true,
 						marketId: market._id,
 					},
-				},
-			});
+				});
 		}
 
 		const user = await User.findById(req.user._id);
 
 		if (!user) {
-			return res.status(404).json({
-				success: false,
-				message: "User not found",
-			});
+			return sendError(res, 404, "User not found");
 		}
 
-		res.json({
-			success: true,
-			data: {
+		sendResponse(res, 200, true, "Success", {
 				user: user.toMaskedObject(),
-			},
-		});
+			});
 	} catch (error) {
 		console.error("Get me error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Server error",
-		});
+		sendError(res, 500, "Server error");
 	}
 };
 
@@ -669,14 +596,10 @@ const updateProfile = async (req, res) => {
 		// Check for validation errors
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
-			return res.status(400).json({
-				success: false,
-				message: `Validation failed: ${errors
+			return sendError(res, 400, `Validation failed: ${errors
 					.array()
 					.map((e) => e.msg)
-					.join(", ")}`,
-				errors: errors.array(),
-			});
+					.join(", ")}`, errors.array());
 		}
 
 		const fieldsToUpdate = {};
@@ -691,10 +614,7 @@ const updateProfile = async (req, res) => {
 				_id: { $ne: req.user._id },
 			});
 			if (existingUser) {
-				return res.status(400).json({
-					success: false,
-					message: "Email is already in use",
-				});
+				return sendError(res, 400, "Email is already in use");
 			}
 			fieldsToUpdate.email = email;
 		}
@@ -719,19 +639,12 @@ const updateProfile = async (req, res) => {
 			runValidators: true,
 		});
 
-		res.json({
-			success: true,
-			message: "Profile updated successfully",
-			data: {
+		sendResponse(res, 200, true, "Profile updated successfully", {
 				user: user.toSafeObject(),
-			},
-		});
+			});
 	} catch (error) {
 		console.error("Update profile error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Server error during profile update",
-		});
+		sendError(res, 500, "Server error during profile update");
 	}
 };
 
@@ -743,14 +656,10 @@ const changePassword = async (req, res) => {
 		// Check for validation errors
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
-			return res.status(400).json({
-				success: false,
-				message: `Validation failed: ${errors
+			return sendError(res, 400, `Validation failed: ${errors
 					.array()
 					.map((e) => e.msg)
-					.join(", ")}`,
-				errors: errors.array(),
-			});
+					.join(", ")}`, errors.array());
 		}
 
 		const { currentPassword, newPassword } = req.body;
@@ -761,26 +670,17 @@ const changePassword = async (req, res) => {
 		// Check current password
 		const isMatch = await user.comparePassword(currentPassword);
 		if (!isMatch) {
-			return res.status(400).json({
-				success: false,
-				message: "Current password is incorrect",
-			});
+			return sendError(res, 400, "Current password is incorrect");
 		}
 
 		// Update password
 		user.password = newPassword;
 		await user.save();
 
-		res.json({
-			success: true,
-			message: "Password changed successfully",
-		});
+		sendResponse(res, 200, true, "Password changed successfully", null);
 	} catch (error) {
 		console.error("Change password error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Server error while changing password",
-		});
+		sendError(res, 500, "Server error while changing password");
 	}
 };
 
@@ -792,23 +692,16 @@ const loginProfile = async (req, res) => {
 		// Check for validation errors
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
-			return res.status(400).json({
-				success: false,
-				message: `Validation failed: ${errors
+			return sendError(res, 400, `Validation failed: ${errors
 					.array()
 					.map((e) => e.msg)
-					.join(", ")}`,
-				errors: errors.array(),
-			});
+					.join(", ")}`, errors.array());
 		}
 
 		const { email, phone, password } = req.body;
 		const rawIdentifier = String(phone || email || "").trim();
 		if (!rawIdentifier) {
-			return res.status(400).json({
-				success: false,
-				message: "Phone number, email, or username is required",
-			});
+			return sendError(res, 400, "Phone number, email, or username is required");
 		}
 
 		const identifierIsEmail = rawIdentifier.includes("@");
@@ -836,10 +729,7 @@ const loginProfile = async (req, res) => {
 			// Phone-based logins never fall back to the market/username flow —
 			// markets always log in with a username, never a customer phone number.
 			if (identifierIsPhone) {
-				return res.status(401).json({
-					success: false,
-					message: "Invalid credentials",
-				});
+				return sendError(res, 401, "Invalid credentials");
 			}
 
 			const marketQuery = sanitizedEmail
@@ -850,34 +740,21 @@ const loginProfile = async (req, res) => {
 			);
 
 			if (!market) {
-				return res.status(401).json({
-					success: false,
-					message: "Invalid credentials",
-				});
+				return sendError(res, 401, "Invalid credentials");
 			}
 
 			if (market.isLocked) {
-				return res.status(423).json({
-					success: false,
-					message:
-						"Account temporarily locked due to multiple failed login attempts. Try again later.",
-				});
+				return sendError(res, 423, "Account temporarily locked due to multiple failed login attempts. Try again later.");
 			}
 
 			if (!market.isActive) {
-				return res.status(401).json({
-					success: false,
-					message: "Market account is deactivated",
-				});
+				return sendError(res, 401, "Market account is deactivated");
 			}
 
 			const marketPasswordMatches = await market.comparePassword(password);
 			if (!marketPasswordMatches) {
 				await market.incLoginAttempts();
-				return res.status(401).json({
-					success: false,
-					message: "Invalid credentials",
-				});
+				return sendError(res, 401, "Invalid credentials");
 			}
 
 			if (market.loginAttempts > 0 || market.lockUntil) {
@@ -892,10 +769,7 @@ const loginProfile = async (req, res) => {
 				isMarket: true,
 			});
 
-			return res.json({
-				success: true,
-				message: "Login successful",
-				data: {
+			return sendResponse(res, 200, true, "Login successful", {
 					user: {
 						id: market._id,
 						_id: market._id,
@@ -910,8 +784,7 @@ const loginProfile = async (req, res) => {
 					token,
 					refreshToken,
 					redirectUrl: "/market",
-				},
-			});
+				});
 		}
 
 		// Check if account is locked
@@ -920,19 +793,12 @@ const loginProfile = async (req, res) => {
 			console.warn(
 				`🔒 Login attempt on locked account: ${sanitizedEmail}. Locked for ${minutesRemaining} more minutes.`
 			);
-			return res.status(423).json({
-				success: false,
-				message: `The account is temporarily locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minute(s).`,
-				lockTimeRemaining: minutesRemaining,
-			});
+			return sendResponse(res, 423, false, `The account is temporarily locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minute(s).`, null, { lockTimeRemaining: minutesRemaining });
 		}
 
 		// Check if user is active
 		if (!user.isActive) {
-			return res.status(401).json({
-				success: false,
-				message: "Account is deactivated",
-			});
+			return sendError(res, 401, "Account is deactivated");
 		}
 
 		// Check password
@@ -951,32 +817,16 @@ const loginProfile = async (req, res) => {
 			);
 
 			if (attemptsLeft <= 0) {
-				return res.status(401).json({
-					success: false,
-					message:
-						"Invalid credentials. Your account has been temporarily locked for 15 minutes due to multiple failed login attempts.",
-				});
+				return sendError(res, 401, "Invalid credentials. Your account has been temporarily locked for 15 minutes due to multiple failed login attempts.");
 			} else if (attemptsLeft <= 2) {
-				return res.status(401).json({
-					success: false,
-					message: `Invalid credentials. ${attemptsLeft} attempt(s) remaining before account lockout.`,
-					attemptsRemaining: attemptsLeft,
-				});
+				return sendResponse(res, 401, false, `Invalid credentials. ${attemptsLeft} attempt(s) remaining before account lockout.`, null, { attemptsRemaining: attemptsLeft });
 			} else {
-				return res.status(401).json({
-					success: false,
-					message: "Invalid credentials",
-				});
+				return sendError(res, 401, "Invalid credentials");
 			}
 		}
 
 		if (!user.emailConfirmed && !user.phoneVerified) {
-			return res.status(403).json({
-				success: false,
-				message:
-					"Please verify your phone number (check the SMS/WhatsApp link) before logging in.",
-				needsConfirmation: true,
-			});
+			return sendResponse(res, 403, false, "Please verify your phone number (check the SMS/WhatsApp link) before logging in.", null, { needsConfirmation: true });
 		}
 
 		// Reset login attempts on successful login
@@ -995,10 +845,7 @@ const loginProfile = async (req, res) => {
 		const token = generateToken({ id: user._id });
 		const refreshToken = generateRefreshToken({ id: user._id });
 
-		res.json({
-			success: true,
-			message: "Login successful",
-			data: {
+		sendResponse(res, 200, true, "Login successful", {
 				user: user.toMaskedObject(),
 				token,
 				refreshToken,
@@ -1006,16 +853,12 @@ const loginProfile = async (req, res) => {
 					user.role === "manager" || user.role === "admin"
 						? "dashboard.html"
 						: user.role === "rider" || user.role === "market_driver"
-						? "/rider"
+						? "/profile"
 						: "profile.html",
-			},
-		});
+			});
 	} catch (error) {
 		console.error("Login profile error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Server error during login",
-		});
+		sendError(res, 500, "Server error during login");
 	}
 };
 
@@ -1028,10 +871,7 @@ const refreshToken = async (req, res) => {
 
 		// Check if refresh token is provided
 		if (!refreshToken) {
-			return res.status(400).json({
-				success: false,
-				message: "Refresh token is required",
-			});
+			return sendError(res, 400, "Refresh token is required");
 		}
 
 		try {
@@ -1041,17 +881,11 @@ const refreshToken = async (req, res) => {
 			if (decoded && decoded.isMarket) {
 				const market = await Market.findById(decoded.id);
 				if (!market) {
-					return res.status(401).json({
-						success: false,
-						message: "Invalid refresh token",
-					});
+					return sendError(res, 401, "Invalid refresh token");
 				}
 
 				if (!market.isActive) {
-					return res.status(401).json({
-						success: false,
-						message: "Market account is deactivated",
-					});
+					return sendError(res, 401, "Market account is deactivated");
 				}
 
 				const newAccessToken = generateToken({
@@ -1063,10 +897,7 @@ const refreshToken = async (req, res) => {
 					isMarket: true,
 				});
 
-				return res.json({
-					success: true,
-					message: "Token refreshed successfully",
-					data: {
+				return sendResponse(res, 200, true, "Token refreshed successfully", {
 						token: newAccessToken,
 						refreshToken: newRefreshToken,
 						user: {
@@ -1088,33 +919,22 @@ const refreshToken = async (req, res) => {
 							lastLogin: market.lastLogin,
 							createdAt: market.createdAt,
 						},
-					},
-				});
+					});
 			}
 
 			// Get user from token
 			const user = await User.findById(decoded.id);
 			if (!user) {
-				return res.status(401).json({
-					success: false,
-					message: "Invalid refresh token",
-				});
+				return sendError(res, 401, "Invalid refresh token");
 			}
 
 			// Check if user is active
 			if (!user.isActive) {
-				return res.status(401).json({
-					success: false,
-					message: "User account is deactivated",
-				});
+				return sendError(res, 401, "User account is deactivated");
 			}
 
 			if (user.emailConfirmed === false) {
-				return res.status(403).json({
-					success: false,
-					message: "Please confirm your email before continuing.",
-					needsConfirmation: true,
-				});
+				return sendResponse(res, 403, false, "Please confirm your email before continuing.", null, { needsConfirmation: true });
 			}
 
 			// Generate new access token
@@ -1123,27 +943,17 @@ const refreshToken = async (req, res) => {
 			// Optionally generate new refresh token for better security (token rotation)
 			const newRefreshToken = generateRefreshToken({ id: user._id });
 
-			res.json({
-				success: true,
-				message: "Token refreshed successfully",
-				data: {
+			sendResponse(res, 200, true, "Token refreshed successfully", {
 					token: newAccessToken,
 					refreshToken: newRefreshToken,
 					user: user.toSafeObject(),
-				},
-			});
+				});
 		} catch (error) {
-			return res.status(401).json({
-				success: false,
-				message: "Invalid refresh token",
-			});
+			return sendError(res, 401, "Invalid refresh token");
 		}
 	} catch (error) {
 		console.error("Refresh token error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Server error during token refresh",
-		});
+		sendError(res, 500, "Server error during token refresh");
 	}
 };
 
@@ -1156,11 +966,7 @@ const getAllUsers = async (req, res) => {
 		// Check if user has appropriate permissions
 		const allowedRoles = ["admin", "manager", "staff", "market"];
 		if (!allowedRoles.includes(req.user.role)) {
-			return res.status(403).json({
-				success: false,
-				message:
-					"Access denied. Administrator, manager, or staff permissions required.",
-			});
+			return sendError(res, 403, "Access denied. Administrator, manager, or staff permissions required.");
 		}
 
 		// Build query object
@@ -1192,19 +998,13 @@ const getAllUsers = async (req, res) => {
 			.select("-password")
 			.sort({ createdAt: -1 });
 
-		res.json({
-			success: true,
-			data: {
+		sendResponse(res, 200, true, "Success", {
 				users,
 				count: users.length,
-			},
-		});
+			});
 	} catch (error) {
 		console.error("Get all users error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Server error fetching users",
-		});
+		sendError(res, 500, "Server error fetching users");
 	}
 };
 
@@ -1219,18 +1019,12 @@ const createUser = async (req, res) => {
 			req.user.role !== "manager" &&
 			req.user.role !== "market"
 		) {
-			return res.status(403).json({
-				success: false,
-				message: "Access denied. Administrator permissions required.",
-			});
+			return sendError(res, 403, "Access denied. Administrator permissions required.");
 		}
 
 		// Managers cannot create admin users
 		if (req.user.role === "manager" && req.body.role === "admin") {
-			return res.status(403).json({
-				success: false,
-				message: "Managers are not allowed to create admin users.",
-			});
+			return sendError(res, 403, "Managers are not allowed to create admin users.");
 		}
 
 		// Market admins cannot create global admin / manager users
@@ -1238,33 +1032,23 @@ const createUser = async (req, res) => {
 			req.user.role === "market" &&
 			["admin", "manager"].includes(req.body.role)
 		) {
-			return res.status(403).json({
-				success: false,
-				message: "Markets are not allowed to create admin/manager users.",
-			});
+			return sendError(res, 403, "Markets are not allowed to create admin/manager users.");
 		}
 
 		// Check for validation errors
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
-			return res.status(400).json({
-				success: false,
-				message: `Validation failed: ${errors
+			return sendError(res, 400, `Validation failed: ${errors
 					.array()
 					.map((e) => e.msg)
-					.join(", ")}`,
-				errors: errors.array(),
-			});
+					.join(", ")}`, errors.array());
 		}
 
 		const { name, phoneNumber, email, password, address, role } = req.body;
 
 		const duplicate = await findDuplicateAccount({ name, email });
 		if (duplicate) {
-			return res.status(400).json({
-				success: false,
-				message: duplicateAccountMessage(duplicate),
-			});
+			return sendError(res, 400, duplicateAccountMessage(duplicate));
 		}
 
 		// Create user
@@ -1280,19 +1064,12 @@ const createUser = async (req, res) => {
 			emailConfirmedAt: new Date(),
 		});
 
-		res.status(201).json({
-			success: true,
-			message: "User created successfully",
-			data: {
+		sendResponse(res, 201, true, "User created successfully", {
 				user: user.toSafeObject(),
-			},
-		});
+			});
 	} catch (error) {
 		console.error("Create user error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Server error during user creation",
-		});
+		sendError(res, 500, "Server error during user creation");
 	}
 };
 
@@ -1307,18 +1084,12 @@ const updateUser = async (req, res) => {
 			req.user.role !== "manager" &&
 			req.user.role !== "market"
 		) {
-			return res.status(403).json({
-				success: false,
-				message: "Access denied. Administrator permissions required.",
-			});
+			return sendError(res, 403, "Access denied. Administrator permissions required.");
 		}
 
 		// Managers cannot promote anyone to admin
 		if (req.user.role === "manager" && req.body.role === "admin") {
-			return res.status(403).json({
-				success: false,
-				message: "Managers are not allowed to assign the admin role.",
-			});
+			return sendError(res, 403, "Managers are not allowed to assign the admin role.");
 		}
 
 		// Market admins cannot assign global admin / manager roles
@@ -1326,10 +1097,7 @@ const updateUser = async (req, res) => {
 			req.user.role === "market" &&
 			["admin", "manager"].includes(req.body.role)
 		) {
-			return res.status(403).json({
-				success: false,
-				message: "Markets are not allowed to assign admin/manager roles.",
-			});
+			return sendError(res, 403, "Markets are not allowed to assign admin/manager roles.");
 		}
 
 		const userId = req.params.id;
@@ -1338,18 +1106,12 @@ const updateUser = async (req, res) => {
 		// Check if user exists
 		let user = await User.findById(userId);
 		if (!user) {
-			return res.status(404).json({
-				success: false,
-				message: "User not found",
-			});
+			return sendError(res, 404, "User not found");
 		}
 
 		// Managers cannot modify admin users
 		if (req.user.role === "manager" && user.role === "admin") {
-			return res.status(403).json({
-				success: false,
-				message: "Managers are not allowed to edit admin users.",
-			});
+			return sendError(res, 403, "Managers are not allowed to edit admin users.");
 		}
 
 		if (req.user.role === "market") {
@@ -1358,18 +1120,11 @@ const updateUser = async (req, res) => {
 				!user.market ||
 				String(user.market) !== String(req.user.marketId)
 			) {
-				return res.status(403).json({
-					success: false,
-					message: "Not authorized to edit this user.",
-				});
+				return sendError(res, 403, "Not authorized to edit this user.");
 			}
 		} else if (user.market) {
 			// Non-market roles cannot touch market-tied users.
-			return res.status(403).json({
-				success: false,
-				message:
-					"Market users are read-only here. Manage them from the market dashboard.",
-			});
+			return sendError(res, 403, "Market users are read-only here. Manage them from the market dashboard.");
 		}
 
 		const duplicate = await findDuplicateAccount(
@@ -1377,10 +1132,7 @@ const updateUser = async (req, res) => {
 			{ type: "user", id: userId },
 		);
 		if (duplicate) {
-			return res.status(400).json({
-				success: false,
-				message: duplicateAccountMessage(duplicate),
-			});
+			return sendError(res, 400, duplicateAccountMessage(duplicate));
 		}
 
 		// Update fields
@@ -1397,19 +1149,12 @@ const updateUser = async (req, res) => {
 			runValidators: true,
 		});
 
-		res.json({
-			success: true,
-			message: "User updated successfully",
-			data: {
+		sendResponse(res, 200, true, "User updated successfully", {
 				user: user.toSafeObject(),
-			},
-		});
+			});
 	} catch (error) {
 		console.error("Update user error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Server error during user update",
-		});
+		sendError(res, 500, "Server error during user update");
 	}
 };
 
@@ -1424,10 +1169,7 @@ const deleteUser = async (req, res) => {
 			req.user.role !== "manager" &&
 			req.user.role !== "market"
 		) {
-			return res.status(403).json({
-				success: false,
-				message: "Access denied. Administrator permissions required.",
-			});
+			return sendError(res, 403, "Access denied. Administrator permissions required.");
 		}
 
 		const userId = req.params.id;
@@ -1435,18 +1177,12 @@ const deleteUser = async (req, res) => {
 		// Check if user exists
 		const user = await User.findById(userId);
 		if (!user) {
-			return res.status(404).json({
-				success: false,
-				message: "User not found",
-			});
+			return sendError(res, 404, "User not found");
 		}
 
 		// Managers cannot delete admin users
 		if (req.user.role === "manager" && user.role === "admin") {
-			return res.status(403).json({
-				success: false,
-				message: "Managers are not allowed to delete admin users.",
-			});
+			return sendError(res, 403, "Managers are not allowed to delete admin users.");
 		}
 
 		if (req.user.role === "market") {
@@ -1455,40 +1191,24 @@ const deleteUser = async (req, res) => {
 				!user.market ||
 				String(user.market) !== String(req.user.marketId)
 			) {
-				return res.status(403).json({
-					success: false,
-					message: "Not authorized to delete this user.",
-				});
+				return sendError(res, 403, "Not authorized to delete this user.");
 			}
 		} else if (user.market) {
 			// Non-market roles cannot touch market-tied users.
-			return res.status(403).json({
-				success: false,
-				message:
-					"Market users are read-only here. Manage them from the market dashboard.",
-			});
+			return sendError(res, 403, "Market users are read-only here. Manage them from the market dashboard.");
 		}
 
 		// Prevent admin from deleting themselves
 		if (userId === req.user._id.toString()) {
-			return res.status(400).json({
-				success: false,
-				message: "You cannot delete your own account",
-			});
+			return sendError(res, 400, "You cannot delete your own account");
 		}
 
 		await User.findByIdAndDelete(userId);
 
-		res.json({
-			success: true,
-			message: "User deleted successfully",
-		});
+		sendResponse(res, 200, true, "User deleted successfully", null);
 	} catch (error) {
 		console.error("Delete user error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Server error while deleting user",
-		});
+		sendError(res, 500, "Server error while deleting user");
 	}
 };
 
@@ -1499,19 +1219,13 @@ const getUserById = async (req, res) => {
 	try {
 		const allowedRoles = ["admin", "manager", "market"];
 		if (!allowedRoles.includes(req.user.role)) {
-			return res.status(403).json({
-				success: false,
-				message: "Not authorized to access this resource",
-			});
+			return sendError(res, 403, "Not authorized to access this resource");
 		}
 
 		const user = await User.findById(req.params.id);
 
 		if (!user) {
-			return res.status(404).json({
-				success: false,
-				message: "User not found",
-			});
+			return sendError(res, 404, "User not found");
 		}
 
 		// Market admins can only fetch their own market's users
@@ -1519,22 +1233,13 @@ const getUserById = async (req, res) => {
 			req.user.role === "market" &&
 			(!user.market || String(user.market) !== String(req.user.marketId))
 		) {
-			return res.status(403).json({
-				success: false,
-				message: "Not authorized to access this user",
-			});
+			return sendError(res, 403, "Not authorized to access this user");
 		}
 
-		res.status(200).json({
-			success: true,
-			data: user.toSafeObject(),
-		});
+		sendResponse(res, 200, true, "Success", user.toSafeObject());
 	} catch (error) {
 		console.error("Error in getUserById:", error);
-		res.status(500).json({
-			success: false,
-			message: "Server error",
-		});
+		sendError(res, 500, "Server error");
 	}
 };
 
@@ -1549,19 +1254,13 @@ const getCustomerCount = async (req, res) => {
 			isActive: true,
 		});
 
-		res.json({
-			success: true,
-			data: {
+		sendResponse(res, 200, true, "Success", {
 				customerCount: customerCount,
 				message: `Total number of active customers: ${customerCount}`,
-			},
-		});
+			});
 	} catch (error) {
 		console.error("Get customer count error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Server error fetching customer count",
-		});
+		sendError(res, 500, "Server error fetching customer count");
 	}
 };
 
@@ -1575,34 +1274,22 @@ const deleteAccount = async (req, res) => {
 		// Get user with password
 		const user = await User.findById(req.user._id).select("+password");
 		if (!user) {
-			return res.status(404).json({
-				success: false,
-				message: "User not found",
-			});
+			return sendError(res, 404, "User not found");
 		}
 
 		// Check password
 		const isMatch = await user.comparePassword(password);
 		if (!isMatch) {
-			return res.status(401).json({
-				success: false,
-				message: "Invalid password",
-			});
+			return sendError(res, 401, "Invalid password");
 		}
 
 		// Delete the user
 		await User.findByIdAndDelete(req.user._id);
 
-		res.json({
-			success: true,
-			message: "Account deleted successfully",
-		});
+		sendResponse(res, 200, true, "Account deleted successfully", null);
 	} catch (error) {
 		console.error("Delete account error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Server error while deleting account",
-		});
+		sendError(res, 500, "Server error while deleting account");
 	}
 };
 
@@ -1614,14 +1301,10 @@ const requestPasswordReset = async (req, res) => {
 		// Check for validation errors
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
-			return res.status(400).json({
-				success: false,
-				message: `Validation failed: ${errors
+			return sendError(res, 400, `Validation failed: ${errors
 					.array()
 					.map((e) => e.msg)
-					.join(", ")}`,
-				errors: errors.array(),
-			});
+					.join(", ")}`, errors.array());
 		}
 
 		const { email } = req.body;
@@ -1629,30 +1312,19 @@ const requestPasswordReset = async (req, res) => {
 		// Sanitize email input
 		const sanitizedEmail = sanitizeEmail(email);
 		if (!sanitizedEmail) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid email format",
-			});
+			return sendError(res, 400, "Invalid email format");
 		}
 
 		// Check if user exists
 		const user = await User.findOne({ email: sanitizedEmail });
 		if (!user) {
 			// Don't reveal if email exists or not for security
-			return res.status(200).json({
-				success: true,
-				message:
-					"If an account exists with this email, a password reset link has been sent.",
-			});
+			return sendResponse(res, 200, true, "If an account exists with this email, a password reset link has been sent.", null);
 		}
 
 		// Check if user is active
 		if (!user.isActive) {
-			return res.status(200).json({
-				success: true,
-				message:
-					"If an account exists with this email, a password reset link has been sent.",
-			});
+			return sendResponse(res, 200, true, "If an account exists with this email, a password reset link has been sent.", null);
 		}
 
 		// Generate reset token
@@ -1693,24 +1365,13 @@ const requestPasswordReset = async (req, res) => {
 			user.passwordResetToken = undefined;
 			user.passwordResetExpires = undefined;
 			await user.save();
-			return res.status(500).json({
-				success: false,
-				message:
-					"Failed to send password reset email. Please try again.",
-			});
+			return sendError(res, 500, "Failed to send password reset email. Please try again.");
 		}
 
-		res.status(200).json({
-			success: true,
-			message:
-				"If an account exists with this email, a password reset link has been sent.",
-		});
+		sendResponse(res, 200, true, "If an account exists with this email, a password reset link has been sent.", null);
 	} catch (error) {
 		console.error("Request password reset error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Server error during password reset request",
-		});
+		sendError(res, 500, "Server error during password reset request");
 	}
 };
 
@@ -1722,23 +1383,16 @@ const resetPassword = async (req, res) => {
 		// Check for validation errors
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
-			return res.status(400).json({
-				success: false,
-				message: `Validation failed: ${errors
+			return sendError(res, 400, `Validation failed: ${errors
 					.array()
 					.map((e) => e.msg)
-					.join(", ")}`,
-				errors: errors.array(),
-			});
+					.join(", ")}`, errors.array());
 		}
 
 		const { token, newPassword } = req.body;
 
 		if (!token) {
-			return res.status(400).json({
-				success: false,
-				message: "Reset token is required",
-			});
+			return sendError(res, 400, "Reset token is required");
 		}
 
 		// Find user with valid reset token
@@ -1748,18 +1402,12 @@ const resetPassword = async (req, res) => {
 		});
 
 		if (!user) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid or expired reset token",
-			});
+			return sendError(res, 400, "Invalid or expired reset token");
 		}
 
 		// Check if user is active
 		if (!user.isActive) {
-			return res.status(400).json({
-				success: false,
-				message: "Account is deactivated",
-			});
+			return sendError(res, 400, "Account is deactivated");
 		}
 
 		// Update password and clear reset token
@@ -1768,16 +1416,10 @@ const resetPassword = async (req, res) => {
 		user.passwordResetExpires = undefined;
 		await user.save();
 
-		res.json({
-			success: true,
-			message: "Password reset successfully",
-		});
+		sendResponse(res, 200, true, "Password reset successfully", null);
 	} catch (error) {
 		console.error("Reset password error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Server error during password reset",
-		});
+		sendError(res, 500, "Server error during password reset");
 	}
 };
 
@@ -1788,10 +1430,7 @@ const resetCustomerPassword = async (req, res) => {
 	try {
 		// Check if user is admin
 		if (req.user.role !== "admin") {
-			return res.status(403).json({
-				success: false,
-				message: "Access denied. Administrator permissions required.",
-			});
+			return sendError(res, 403, "Access denied. Administrator permissions required.");
 		}
 
 		const userId = req.params.id;
@@ -1799,33 +1438,21 @@ const resetCustomerPassword = async (req, res) => {
 		// Check if user exists and is a customer
 		const user = await User.findById(userId);
 		if (!user) {
-			return res.status(404).json({
-				success: false,
-				message: "User not found",
-			});
+			return sendError(res, 404, "User not found");
 		}
 
 		if (user.role !== "customer") {
-			return res.status(400).json({
-				success: false,
-				message: "Password reset is only allowed for customers",
-			});
+			return sendError(res, 400, "Password reset is only allowed for customers");
 		}
 
 		// Reset password to "123456789"
 		user.password = "123456789";
 		await user.save();
 
-		res.json({
-			success: true,
-			message: "Customer password reset successfully",
-		});
+		sendResponse(res, 200, true, "Customer password reset successfully", null);
 	} catch (error) {
 		console.error("Reset customer password error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Server error during password reset",
-		});
+		sendError(res, 500, "Server error during password reset");
 	}
 };
 

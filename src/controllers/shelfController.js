@@ -2,6 +2,7 @@ const Shelf = require("../models/Shelf");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
 const mongoose = require("mongoose");
+const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
 
 // @desc    Get all shelves
 // @route   GET /api/shelves
@@ -75,25 +76,17 @@ exports.getShelves = async (req, res) => {
 		const hasNextPage = pageNumber < totalPages;
 		const hasPrevPage = pageNumber > 1;
 
-		res.json({
-			success: true,
-			data: shelves,
-			pagination: {
+		sendResponse(res, 200, true, "Success", shelves, { pagination: {
 				currentPage: pageNumber,
 				totalPages,
 				totalShelves: total,
 				hasNextPage,
 				hasPrevPage,
 				limit: limitNumber,
-			},
-		});
+			} });
 	} catch (error) {
 		console.error("Error getting shelves:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching shelves",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching shelves", error.message);
 	}
 };
 
@@ -106,10 +99,7 @@ exports.getShelf = async (req, res) => {
 		const { withDetails = false } = req.query;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid shelf ID",
-			});
+			return sendError(res, 400, "Invalid shelf ID");
 		}
 
 		let query = Shelf.findById(id).populate("createdBy", "name email");
@@ -134,23 +124,13 @@ exports.getShelf = async (req, res) => {
 		const shelf = await query;
 
 		if (!shelf) {
-			return res.status(404).json({
-				success: false,
-				message: "Shelf not found",
-			});
+			return sendError(res, 404, "Shelf not found");
 		}
 
-		res.json({
-			success: true,
-			data: shelf,
-		});
+		sendResponse(res, 200, true, "Success", shelf);
 	} catch (error) {
 		console.error("Error getting shelf:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching shelf",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching shelf", error.message);
 	}
 };
 
@@ -182,23 +162,13 @@ exports.getShelfByNumber = async (req, res) => {
 		const shelf = await query;
 
 		if (!shelf) {
-			return res.status(404).json({
-				success: false,
-				message: "Shelf with this shelf number not found",
-			});
+			return sendError(res, 404, "Shelf with this shelf number not found");
 		}
 
-		res.json({
-			success: true,
-			data: shelf,
-		});
+		sendResponse(res, 200, true, "Success", shelf);
 	} catch (error) {
 		console.error("Error getting shelf by number:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching shelf by number",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching shelf by number", error.message);
 	}
 };
 
@@ -219,27 +189,16 @@ exports.createShelf = async (req, res) => {
 		// Populate the created shelf
 		await shelf.populate("createdBy", "name email");
 
-		res.status(201).json({
-			success: true,
-			message: "Shelf created successfully",
-			data: shelf,
-		});
+		sendResponse(res, 201, true, "Shelf created successfully", shelf);
 	} catch (error) {
 		console.error("Error creating shelf:", error);
 
 		// Handle duplicate shelf number error
 		if (error.code === 11000 && error.keyPattern?.shelfNumber) {
-			return res.status(400).json({
-				success: false,
-				message: "A shelf with this shelf number already exists",
-			});
+			return sendError(res, 400, "A shelf with this shelf number already exists");
 		}
 
-		res.status(400).json({
-			success: false,
-			message: "Error creating shelf",
-			error: error.message,
-		});
+		sendError(res, 400, "Error creating shelf", error.message);
 	}
 };
 
@@ -251,18 +210,12 @@ exports.updateShelf = async (req, res) => {
 		const { id } = req.params;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid shelf ID",
-			});
+			return sendError(res, 400, "Invalid shelf ID");
 		}
 
 		const shelf = await Shelf.findById(id);
 		if (!shelf) {
-			return res.status(404).json({
-				success: false,
-				message: "Shelf not found",
-			});
+			return sendError(res, 404, "Shelf not found");
 		}
 
 		const updateData = { ...req.body };
@@ -272,27 +225,16 @@ exports.updateShelf = async (req, res) => {
 			runValidators: true,
 		}).populate("createdBy", "name email");
 
-		res.json({
-			success: true,
-			message: "Shelf updated successfully",
-			data: updatedShelf,
-		});
+		sendResponse(res, 200, true, "Shelf updated successfully", updatedShelf);
 	} catch (error) {
 		console.error("Error updating shelf:", error);
 
 		// Handle duplicate shelf number error
 		if (error.code === 11000 && error.keyPattern?.shelfNumber) {
-			return res.status(400).json({
-				success: false,
-				message: "A shelf with this shelf number already exists",
-			});
+			return sendError(res, 400, "A shelf with this shelf number already exists");
 		}
 
-		res.status(400).json({
-			success: false,
-			message: "Error updating shelf",
-			error: error.message,
-		});
+		sendError(res, 400, "Error updating shelf", error.message);
 	}
 };
 
@@ -304,27 +246,18 @@ exports.deleteShelf = async (req, res) => {
 		const { id } = req.params;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid shelf ID",
-			});
+			return sendError(res, 400, "Invalid shelf ID");
 		}
 
 		const shelf = await Shelf.findById(id);
 
 		if (!shelf) {
-			return res.status(404).json({
-				success: false,
-				message: "Shelf not found",
-			});
+			return sendError(res, 404, "Shelf not found");
 		}
 
 		// Check if shelf has products or orders
 		if (shelf.products.length > 0 || shelf.orders.length > 0) {
-			return res.status(400).json({
-				success: false,
-				message: `Shelf cannot be deleted because it contains ${shelf.products.length} products and ${shelf.orders.length} orders. Please remove them first.`,
-			});
+			return sendError(res, 400, `Shelf cannot be deleted because it contains ${shelf.products.length} products and ${shelf.orders.length} orders. Please remove them first.`);
 		}
 
 		const updatedShelf = await Shelf.findByIdAndUpdate(
@@ -333,18 +266,10 @@ exports.deleteShelf = async (req, res) => {
 			{ new: true }
 		);
 
-		res.json({
-			success: true,
-			message: "Shelf deleted successfully",
-			data: updatedShelf,
-		});
+		sendResponse(res, 200, true, "Shelf deleted successfully", updatedShelf);
 	} catch (error) {
 		console.error("Error deleting shelf:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error deleting shelf",
-			error: error.message,
-		});
+		sendError(res, 500, "Error deleting shelf", error.message);
 	}
 };
 
@@ -356,43 +281,27 @@ exports.permanentDeleteShelf = async (req, res) => {
 		const { id } = req.params;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid shelf ID",
-			});
+			return sendError(res, 400, "Invalid shelf ID");
 		}
 
 		const shelf = await Shelf.findById(id);
 
 		if (!shelf) {
-			return res.status(404).json({
-				success: false,
-				message: "Shelf not found",
-			});
+			return sendError(res, 404, "Shelf not found");
 		}
 
 		// Check if shelf has products or orders
 		if (shelf.products.length > 0 || shelf.orders.length > 0) {
-			return res.status(400).json({
-				success: false,
-				message: `Shelf cannot be permanently deleted because it contains ${shelf.products.length} products and ${shelf.orders.length} orders`,
-			});
+			return sendError(res, 400, `Shelf cannot be permanently deleted because it contains ${shelf.products.length} products and ${shelf.orders.length} orders`);
 		}
 
 		// Permanently delete the shelf
 		await Shelf.findByIdAndDelete(id);
 
-		res.json({
-			success: true,
-			message: "Shelf permanently deleted",
-		});
+		sendResponse(res, 200, true, "Shelf permanently deleted", null);
 	} catch (error) {
 		console.error("Error permanently deleting shelf:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error permanently deleting shelf",
-			error: error.message,
-		});
+		sendError(res, 500, "Error permanently deleting shelf", error.message);
 	}
 };
 
@@ -407,52 +316,33 @@ exports.addProductToShelf = async (req, res) => {
 			!mongoose.Types.ObjectId.isValid(id) ||
 			!mongoose.Types.ObjectId.isValid(productId)
 		) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid shelf or product ID",
-			});
+			return sendError(res, 400, "Invalid shelf or product ID");
 		}
 
 		// Check if product exists
 		const product = await Product.findById(productId);
 		if (!product) {
-			return res.status(404).json({
-				success: false,
-				message: "Product not found",
-			});
+			return sendError(res, 404, "Product not found");
 		}
 
 		// Get shelf and check if it has space
 		const shelf = await Shelf.findById(id);
 		if (!shelf) {
-			return res.status(404).json({
-				success: false,
-				message: "Shelf not found",
-			});
+			return sendError(res, 404, "Shelf not found");
 		}
 
 		if (!shelf.isActive) {
-			return res.status(400).json({
-				success: false,
-				message:
-					"Products cannot be added to an inactive shelf",
-			});
+			return sendError(res, 400, "Products cannot be added to an inactive shelf");
 		}
 
 		// Check if shelf has space
 		if (!shelf.hasSpace()) {
-			return res.status(400).json({
-				success: false,
-				message: "Shelf is at full capacity",
-			});
+			return sendError(res, 400, "Shelf is at full capacity");
 		}
 
 		// Check if product is already on shelf
 		if (shelf.products.includes(productId)) {
-			return res.status(400).json({
-				success: false,
-				message: "Product is already on this shelf",
-			});
+			return sendError(res, 400, "Product is already on this shelf");
 		}
 
 		// Add product to shelf
@@ -464,18 +354,10 @@ exports.addProductToShelf = async (req, res) => {
 			{ path: "products", select: "name sku price" },
 		]);
 
-		res.json({
-			success: true,
-			message: "Product added to shelf successfully",
-			data: shelf,
-		});
+		sendResponse(res, 200, true, "Product added to shelf successfully", shelf);
 	} catch (error) {
 		console.error("Error adding product to shelf:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error adding product to shelf",
-			error: error.message,
-		});
+		sendError(res, 500, "Error adding product to shelf", error.message);
 	}
 };
 
@@ -490,26 +372,17 @@ exports.removeProductFromShelf = async (req, res) => {
 			!mongoose.Types.ObjectId.isValid(id) ||
 			!mongoose.Types.ObjectId.isValid(productId)
 		) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid shelf or product ID",
-			});
+			return sendError(res, 400, "Invalid shelf or product ID");
 		}
 
 		const shelf = await Shelf.findById(id);
 		if (!shelf) {
-			return res.status(404).json({
-				success: false,
-				message: "Shelf not found",
-			});
+			return sendError(res, 404, "Shelf not found");
 		}
 
 		// Check if product is on shelf
 		if (!shelf.products.includes(productId)) {
-			return res.status(400).json({
-				success: false,
-				message: "Product is not on this shelf",
-			});
+			return sendError(res, 400, "Product is not on this shelf");
 		}
 
 		// Remove product from shelf
@@ -521,18 +394,10 @@ exports.removeProductFromShelf = async (req, res) => {
 			{ path: "products", select: "name sku price" },
 		]);
 
-		res.json({
-			success: true,
-			message: "Product removed from shelf successfully",
-			data: shelf,
-		});
+		sendResponse(res, 200, true, "Product removed from shelf successfully", shelf);
 	} catch (error) {
 		console.error("Error removing product from shelf:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error removing product from shelf",
-			error: error.message,
-		});
+		sendError(res, 500, "Error removing product from shelf", error.message);
 	}
 };
 
@@ -547,52 +412,33 @@ exports.addOrderToShelf = async (req, res) => {
 			!mongoose.Types.ObjectId.isValid(id) ||
 			!mongoose.Types.ObjectId.isValid(orderId)
 		) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid shelf or order ID",
-			});
+			return sendError(res, 400, "Invalid shelf or order ID");
 		}
 
 		// Check if order exists
 		const order = await Order.findById(orderId);
 		if (!order) {
-			return res.status(404).json({
-				success: false,
-				message: "Order not found",
-			});
+			return sendError(res, 404, "Order not found");
 		}
 
 		// Get shelf and check if it has space
 		const shelf = await Shelf.findById(id);
 		if (!shelf) {
-			return res.status(404).json({
-				success: false,
-				message: "Shelf not found",
-			});
+			return sendError(res, 404, "Shelf not found");
 		}
 
 		if (!shelf.isActive) {
-			return res.status(400).json({
-				success: false,
-				message:
-					"Orders cannot be added to an inactive shelf",
-			});
+			return sendError(res, 400, "Orders cannot be added to an inactive shelf");
 		}
 
 		// Check if shelf has space
 		if (!shelf.hasSpace()) {
-			return res.status(400).json({
-				success: false,
-				message: "Shelf is at full capacity",
-			});
+			return sendError(res, 400, "Shelf is at full capacity");
 		}
 
 		// Check if order is already on shelf
 		if (shelf.orders.includes(orderId)) {
-			return res.status(400).json({
-				success: false,
-				message: "Order is already on this shelf",
-			});
+			return sendError(res, 400, "Order is already on this shelf");
 		}
 
 		// Add order to shelf
@@ -604,18 +450,10 @@ exports.addOrderToShelf = async (req, res) => {
 			{ path: "orders", select: "orderNumber status totalAmount" },
 		]);
 
-		res.json({
-			success: true,
-			message: "Order added to shelf successfully",
-			data: shelf,
-		});
+		sendResponse(res, 200, true, "Order added to shelf successfully", shelf);
 	} catch (error) {
 		console.error("Error adding order to shelf:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error adding order to shelf",
-			error: error.message,
-		});
+		sendError(res, 500, "Error adding order to shelf", error.message);
 	}
 };
 
@@ -630,26 +468,17 @@ exports.removeOrderFromShelf = async (req, res) => {
 			!mongoose.Types.ObjectId.isValid(id) ||
 			!mongoose.Types.ObjectId.isValid(orderId)
 		) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid shelf or order ID",
-			});
+			return sendError(res, 400, "Invalid shelf or order ID");
 		}
 
 		const shelf = await Shelf.findById(id);
 		if (!shelf) {
-			return res.status(404).json({
-				success: false,
-				message: "Shelf not found",
-			});
+			return sendError(res, 404, "Shelf not found");
 		}
 
 		// Check if order is on shelf
 		if (!shelf.orders.includes(orderId)) {
-			return res.status(400).json({
-				success: false,
-				message: "Order is not on this shelf",
-			});
+			return sendError(res, 400, "Order is not on this shelf");
 		}
 
 		// Remove order from shelf
@@ -661,18 +490,10 @@ exports.removeOrderFromShelf = async (req, res) => {
 			{ path: "orders", select: "orderNumber status totalAmount" },
 		]);
 
-		res.json({
-			success: true,
-			message: "Order removed from shelf successfully",
-			data: shelf,
-		});
+		sendResponse(res, 200, true, "Order removed from shelf successfully", shelf);
 	} catch (error) {
 		console.error("Error removing order from shelf:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error removing order from shelf",
-			error: error.message,
-		});
+		sendError(res, 500, "Error removing order from shelf", error.message);
 	}
 };
 
@@ -742,17 +563,10 @@ exports.getShelfStats = async (req, res) => {
 			emptyShelves: stats[0].emptyShelves[0]?.count || 0,
 		};
 
-		res.json({
-			success: true,
-			data: result,
-		});
+		sendResponse(res, 200, true, "Success", result);
 	} catch (error) {
 		console.error("Error getting shelf statistics:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching shelf statistics",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching shelf statistics", error.message);
 	}
 };
 
@@ -765,18 +579,10 @@ exports.getAvailableShelves = async (req, res) => {
 			.populate("createdBy", "name email")
 			.lean();
 
-		res.json({
-			success: true,
-			data: shelves,
-			total: shelves.length,
-		});
+		sendResponse(res, 200, true, "Success", shelves, { total: shelves.length });
 	} catch (error) {
 		console.error("Error getting available shelves:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching available shelves",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching available shelves", error.message);
 	}
 };
 
@@ -788,18 +594,12 @@ exports.clearShelf = async (req, res) => {
 		const { id } = req.params;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid shelf ID",
-			});
+			return sendError(res, 400, "Invalid shelf ID");
 		}
 
 		const shelf = await Shelf.findById(id);
 		if (!shelf) {
-			return res.status(404).json({
-				success: false,
-				message: "Shelf not found",
-			});
+			return sendError(res, 404, "Shelf not found");
 		}
 
 		// Clear products and orders
@@ -811,18 +611,10 @@ exports.clearShelf = async (req, res) => {
 		// Populate and return updated shelf
 		await shelf.populate("createdBy", "name email");
 
-		res.json({
-			success: true,
-			message: "Shelf cleared successfully",
-			data: shelf,
-		});
+		sendResponse(res, 200, true, "Shelf cleared successfully", shelf);
 	} catch (error) {
 		console.error("Error clearing shelf:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error clearing shelf",
-			error: error.message,
-		});
+		sendError(res, 500, "Error clearing shelf", error.message);
 	}
 };
 
@@ -835,17 +627,11 @@ exports.bulkAddProductsToShelf = async (req, res) => {
 		const { productIds } = req.body;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid shelf ID",
-			});
+			return sendError(res, 400, "Invalid shelf ID");
 		}
 
 		if (!Array.isArray(productIds) || productIds.length === 0) {
-			return res.status(400).json({
-				success: false,
-				message: "productIds muss ein nicht-leeres Array sein",
-			});
+			return sendError(res, 400, "productIds muss ein nicht-leeres Array sein");
 		}
 
 		// Validate all product IDs
@@ -853,27 +639,16 @@ exports.bulkAddProductsToShelf = async (req, res) => {
 			(pid) => !mongoose.Types.ObjectId.isValid(pid)
 		);
 		if (invalidIds.length > 0) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid product IDs found",
-				invalidIds,
-			});
+			return sendResponse(res, 400, false, "Invalid product IDs found", null, { invalidIds: invalidIds });
 		}
 
 		const shelf = await Shelf.findById(id);
 		if (!shelf) {
-			return res.status(404).json({
-				success: false,
-				message: "Shelf not found",
-			});
+			return sendError(res, 404, "Shelf not found");
 		}
 
 		if (!shelf.isActive) {
-			return res.status(400).json({
-				success: false,
-				message:
-					"Products cannot be added to an inactive shelf",
-			});
+			return sendError(res, 400, "Products cannot be added to an inactive shelf");
 		}
 
 		// Check if shelf has enough space
@@ -881,19 +656,13 @@ exports.bulkAddProductsToShelf = async (req, res) => {
 			(pid) => !shelf.products.includes(pid)
 		).length;
 		if (!shelf.hasSpace(newProductsCount)) {
-			return res.status(400).json({
-				success: false,
-				message: `Shelf does not have enough capacity. Available: ${shelf.availableCapacity}, Required: ${newProductsCount}`,
-			});
+			return sendError(res, 400, `Shelf does not have enough capacity. Available: ${shelf.availableCapacity}, Required: ${newProductsCount}`);
 		}
 
 		// Verify all products exist
 		const products = await Product.find({ _id: { $in: productIds } });
 		if (products.length !== productIds.length) {
-			return res.status(404).json({
-				success: false,
-				message: "Some products were not found",
-			});
+			return sendError(res, 404, "Some products were not found");
 		}
 
 		// Add products to shelf
@@ -916,22 +685,14 @@ exports.bulkAddProductsToShelf = async (req, res) => {
 			{ path: "products", select: "name sku price" },
 		]);
 
-		res.json({
-			success: true,
-			message: `${added.length} products added to shelf, ${skipped.length} were already present`,
-			data: {
+		sendResponse(res, 200, true, `${added.length} products added to shelf, ${skipped.length} were already present`, {
 				shelf,
 				added: added.length,
 				skipped: skipped.length,
-			},
-		});
+			});
 	} catch (error) {
 		console.error("Error bulk adding products to shelf:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error bulk-adding products to shelf",
-			error: error.message,
-		});
+		sendError(res, 500, "Error bulk-adding products to shelf", error.message);
 	}
 };
 
@@ -944,17 +705,11 @@ exports.bulkAddOrdersToShelf = async (req, res) => {
 		const { orderIds } = req.body;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid shelf ID",
-			});
+			return sendError(res, 400, "Invalid shelf ID");
 		}
 
 		if (!Array.isArray(orderIds) || orderIds.length === 0) {
-			return res.status(400).json({
-				success: false,
-				message: "orderIds muss ein nicht-leeres Array sein",
-			});
+			return sendError(res, 400, "orderIds muss ein nicht-leeres Array sein");
 		}
 
 		// Validate all order IDs
@@ -962,27 +717,16 @@ exports.bulkAddOrdersToShelf = async (req, res) => {
 			(oid) => !mongoose.Types.ObjectId.isValid(oid)
 		);
 		if (invalidIds.length > 0) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid order IDs found",
-				invalidIds,
-			});
+			return sendResponse(res, 400, false, "Invalid order IDs found", null, { invalidIds: invalidIds });
 		}
 
 		const shelf = await Shelf.findById(id);
 		if (!shelf) {
-			return res.status(404).json({
-				success: false,
-				message: "Shelf not found",
-			});
+			return sendError(res, 404, "Shelf not found");
 		}
 
 		if (!shelf.isActive) {
-			return res.status(400).json({
-				success: false,
-				message:
-					"Orders cannot be added to an inactive shelf",
-			});
+			return sendError(res, 400, "Orders cannot be added to an inactive shelf");
 		}
 
 		// Check if shelf has enough space
@@ -990,19 +734,13 @@ exports.bulkAddOrdersToShelf = async (req, res) => {
 			(oid) => !shelf.orders.includes(oid)
 		).length;
 		if (!shelf.hasSpace(newOrdersCount)) {
-			return res.status(400).json({
-				success: false,
-				message: `Shelf does not have enough capacity. Available: ${shelf.availableCapacity}, Required: ${newOrdersCount}`,
-			});
+			return sendError(res, 400, `Shelf does not have enough capacity. Available: ${shelf.availableCapacity}, Required: ${newOrdersCount}`);
 		}
 
 		// Verify all orders exist
 		const orders = await Order.find({ _id: { $in: orderIds } });
 		if (orders.length !== orderIds.length) {
-			return res.status(404).json({
-				success: false,
-				message: "Some orders were not found",
-			});
+			return sendError(res, 404, "Some orders were not found");
 		}
 
 		// Add orders to shelf
@@ -1025,22 +763,14 @@ exports.bulkAddOrdersToShelf = async (req, res) => {
 			{ path: "orders", select: "orderNumber status totalAmount" },
 		]);
 
-		res.json({
-			success: true,
-			message: `${added.length} orders added to shelf, ${skipped.length} were already present`,
-			data: {
+		sendResponse(res, 200, true, `${added.length} orders added to shelf, ${skipped.length} were already present`, {
 				shelf,
 				added: added.length,
 				skipped: skipped.length,
-			},
-		});
+			});
 	} catch (error) {
 		console.error("Error bulk adding orders to shelf:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error bulk-adding orders to shelf",
-			error: error.message,
-		});
+		sendError(res, 500, "Error bulk-adding orders to shelf", error.message);
 	}
 };
 

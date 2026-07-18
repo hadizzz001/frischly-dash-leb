@@ -4,6 +4,7 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const cloudinary = require("cloudinary").v2;
+const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
 const {
 	sanitizeQuery,
 	sanitizePagination,
@@ -263,10 +264,7 @@ exports.getProducts = async (req, res) => {
 				}
 
 				if (!marketCategoryDoc) {
-					return res.status(404).json({
-						success: false,
-						message: `Category "${category}" not found`,
-					});
+					return sendError(res, 404, `Category "${category}" not found`);
 				}
 
 				const marketSubcategories = await MarketSubcategory.find({
@@ -276,19 +274,14 @@ exports.getProducts = async (req, res) => {
 				}).select("_id");
 
 				if (marketSubcategories.length === 0) {
-					return res.json({
-						success: true,
-						data: [],
-						pagination: {
+					return sendResponse(res, 200, true, `No subcategories found in category "${marketCategoryDoc.name}"`, [], { pagination: {
 							currentPage: parseInt(page),
 							totalPages: 0,
 							totalProducts: 0,
 							hasNextPage: false,
 							hasPrevPage: false,
 							limit: parseInt(limit),
-						},
-						message: `No subcategories found in category "${marketCategoryDoc.name}"`,
-					});
+						} });
 				}
 
 				filter.subcategory = {
@@ -308,10 +301,7 @@ exports.getProducts = async (req, res) => {
 				}
 
 				if (!categoryDoc) {
-					return res.status(404).json({
-						success: false,
-						message: `Category "${category}" not found`,
-					});
+					return sendError(res, 404, `Category "${category}" not found`);
 				}
 
 				// Find all subcategories in this category
@@ -322,19 +312,14 @@ exports.getProducts = async (req, res) => {
 				}).select("_id");
 
 				if (subcategories.length === 0) {
-					return res.json({
-						success: true,
-						data: [],
-						pagination: {
+					return sendResponse(res, 200, true, `No subcategories found in category "${categoryDoc.name}"`, [], { pagination: {
 							currentPage: parseInt(page),
 							totalPages: 0,
 							totalProducts: 0,
 							hasNextPage: false,
 							hasPrevPage: false,
 							limit: parseInt(limit),
-						},
-						message: `No subcategories found in category "${categoryDoc.name}"`,
-					});
+						} });
 				}
 
 				const subcategoryIds = subcategories.map((sub) => sub._id);
@@ -356,10 +341,7 @@ exports.getProducts = async (req, res) => {
 				if (subcat) {
 					filter.subcategory = subcat._id;
 				} else {
-					return res.status(404).json({
-						success: false,
-						message: `Subcategory "${subcategory}" not found`,
-					});
+					return sendError(res, 404, `Subcategory "${subcategory}" not found`);
 				}
 			}
 		}
@@ -570,25 +552,17 @@ exports.getProducts = async (req, res) => {
 		const hasNextPage = pageNumber < totalPages;
 		const hasPrevPage = pageNumber > 1;
 
-		res.json({
-			success: true,
-			data: products,
-			pagination: {
+		sendResponse(res, 200, true, "Success", products, { pagination: {
 				currentPage: pageNumber,
 				totalPages,
 				totalProducts: total,
 				hasNextPage,
 				hasPrevPage,
 				limit: limitNumber,
-			},
-		});
+			} });
 	} catch (error) {
 		console.error("Error getting products:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching products",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching products", error.message);
 	}
 };
 
@@ -600,10 +574,7 @@ exports.getProduct = async (req, res) => {
 		const { id } = req.params;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid product ID",
-			});
+			return sendError(res, 400, "Invalid product ID");
 		}
 
 		const product = await Product.findById(id)
@@ -621,26 +592,16 @@ exports.getProduct = async (req, res) => {
 			.lean();
 
 		if (!product) {
-			return res.status(404).json({
-				success: false,
-				message: "Product not found",
-			});
+			return sendError(res, 404, "Product not found");
 		}
 
 		// Backfill subcategory for market-owned products (see helper).
 		await resolveMarketSubcategories([product]);
 
-		res.json({
-			success: true,
-			data: product,
-		});
+		sendResponse(res, 200, true, "Success", product);
 	} catch (error) {
 		console.error("Error getting product:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching product",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching product", error.message);
 	}
 };
 
@@ -678,23 +639,13 @@ exports.getProductByBarcode = async (req, res) => {
 		}
 
 		if (!product) {
-			return res.status(404).json({
-				success: false,
-				message: "Product with this barcode not found",
-			});
+			return sendError(res, 404, "Product with this barcode not found");
 		}
 
-		res.json({
-			success: true,
-			data: product,
-		});
+		sendResponse(res, 200, true, "Success", product);
 	} catch (error) {
 		console.error("Error getting product by barcode:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching product by barcode",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching product by barcode", error.message);
 	}
 };
 
@@ -747,11 +698,7 @@ exports.createProduct = async (req, res) => {
 				productData.imagePublicId = uploadResult.public_id;
 			} catch (uploadError) {
 				console.error("Error uploading image to Cloudinary:", uploadError);
-				return res.status(500).json({
-					success: false,
-					message: "Error uploading image",
-					error: uploadError.message,
-				});
+				return sendError(res, 500, "Error uploading image", uploadError.message);
 			}
 		}
 
@@ -790,27 +737,16 @@ exports.createProduct = async (req, res) => {
 			{ path: "market", select: "name username location logo" },
 		]);
 
-		res.status(201).json({
-			success: true,
-			message: "Product created successfully",
-			data: product,
-		});
+		sendResponse(res, 201, true, "Product created successfully", product);
 	} catch (error) {
 		console.error("Error creating product:", error);
 
 		// Handle duplicate barcode error
 		if (error.code === 11000 && error.keyPattern?.barcode) {
-			return res.status(400).json({
-				success: false,
-				message: "A product with this barcode already exists",
-			});
+			return sendError(res, 400, "A product with this barcode already exists");
 		}
 
-		res.status(400).json({
-			success: false,
-			message: "Error creating product",
-			error: error.message,
-		});
+		sendError(res, 400, "Error creating product", error.message);
 	}
 };
 
@@ -822,18 +758,12 @@ exports.updateProduct = async (req, res) => {
 		const { id } = req.params;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid product ID",
-			});
+			return sendError(res, 400, "Invalid product ID");
 		}
 
 		const product = await Product.findById(id);
 		if (!product) {
-			return res.status(404).json({
-				success: false,
-				message: "Product not found",
-			});
+			return sendError(res, 404, "Product not found");
 		}
 
 		// Market admins may only modify their own products and cannot reassign market
@@ -842,21 +772,14 @@ exports.updateProduct = async (req, res) => {
 				!product.market ||
 				String(product.market) !== String(req.user.marketId)
 			) {
-				return res.status(403).json({
-					success: false,
-					message: "Not authorized to update this product",
-				});
+				return sendError(res, 403, "Not authorized to update this product");
 			}
 			// Prevent changing the market on update
 			delete req.body.market;
 		} else if (product.market) {
 			// Non-market roles (admin, manager, staff) cannot edit products that
 			// belong to a market — those are managed inside the market dashboard.
-			return res.status(403).json({
-				success: false,
-				message:
-					"Market products are read-only here. Manage them from the market dashboard.",
-			});
+			return sendError(res, 403, "Market products are read-only here. Manage them from the market dashboard.");
 		}
 
 		// Managers are not allowed to modify pricing-related fields.
@@ -883,11 +806,7 @@ exports.updateProduct = async (req, res) => {
 				updateData.imagePublicId = uploadResult.public_id;
 			} catch (uploadError) {
 				console.error("Error uploading image to Cloudinary:", uploadError);
-				return res.status(500).json({
-					success: false,
-					message: "Error uploading image",
-					error: uploadError.message,
-				});
+				return sendError(res, 500, "Error uploading image", uploadError.message);
 			}
 		}
 
@@ -907,27 +826,16 @@ exports.updateProduct = async (req, res) => {
 			.populate("createdBy", "name email")
 			.populate("market", "name username location logo");
 
-		res.json({
-			success: true,
-			message: "Product updated successfully",
-			data: updatedProduct,
-		});
+		sendResponse(res, 200, true, "Product updated successfully", updatedProduct);
 	} catch (error) {
 		console.error("Error updating product:", error);
 
 		// Handle duplicate barcode error
 		if (error.code === 11000 && error.keyPattern?.barcode) {
-			return res.status(400).json({
-				success: false,
-				message: "A product with this barcode already exists",
-			});
+			return sendError(res, 400, "A product with this barcode already exists");
 		}
 
-		res.status(400).json({
-			success: false,
-			message: "Error updating product",
-			error: error.message,
-		});
+		sendError(res, 400, "Error updating product", error.message);
 	}
 };
 
@@ -940,26 +848,17 @@ exports.updateProductStock = async (req, res) => {
 		const { quantity, operation = "set" } = req.body;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid product ID",
-			});
+			return sendError(res, 400, "Invalid product ID");
 		}
 
 		if (typeof quantity !== "number" || quantity < 0) {
-			return res.status(400).json({
-				success: false,
-				message: "Menge muss eine nicht-negative Zahl sein",
-			});
+			return sendError(res, 400, "Menge muss eine nicht-negative Zahl sein");
 		}
 
 		const product = await Product.findById(id);
 
 		if (!product) {
-			return res.status(404).json({
-				success: false,
-				message: "Product not found",
-			});
+			return sendError(res, 404, "Product not found");
 		}
 
 		if (
@@ -968,10 +867,7 @@ exports.updateProductStock = async (req, res) => {
 			(!product.market ||
 				String(product.market) !== String(req.user.marketId))
 		) {
-			return res.status(403).json({
-				success: false,
-				message: "Not authorized",
-			});
+			return sendError(res, 403, "Not authorized");
 		}
 
 		await product.updateStock(quantity, operation);
@@ -996,18 +892,10 @@ exports.updateProductStock = async (req, res) => {
 			{ path: "market", select: "name username location logo" },
 		]);
 
-		res.json({
-			success: true,
-			message: `Product stock ${operation}ed successfully`,
-			data: product,
-		});
+		sendResponse(res, 200, true, `Product stock ${operation}ed successfully`, product);
 	} catch (error) {
 		console.error("Error updating product stock:", error);
-		res.status(400).json({
-			success: false,
-			message: "Error updating product stock",
-			error: error.message,
-		});
+		sendError(res, 400, "Error updating product stock", error.message);
 	}
 };
 
@@ -1020,26 +908,17 @@ exports.updateProductShelfNumber = async (req, res) => {
 		const { shelfNumber } = req.body;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid product ID",
-			});
+			return sendError(res, 400, "Invalid product ID");
 		}
 
 		if (!shelfNumber || typeof shelfNumber !== "string") {
-			return res.status(400).json({
-				success: false,
-				message: "Shelf number is required and must be a string",
-			});
+			return sendError(res, 400, "Shelf number is required and must be a string");
 		}
 
 		const product = await Product.findById(id);
 
 		if (!product) {
-			return res.status(404).json({
-				success: false,
-				message: "Product not found",
-			});
+			return sendError(res, 404, "Product not found");
 		}
 
 		if (
@@ -1048,10 +927,7 @@ exports.updateProductShelfNumber = async (req, res) => {
 			(!product.market ||
 				String(product.market) !== String(req.user.marketId))
 		) {
-			return res.status(403).json({
-				success: false,
-				message: "Not authorized",
-			});
+			return sendError(res, 403, "Not authorized");
 		}
 
 		product.shelfNumber = shelfNumber.trim();
@@ -1072,18 +948,10 @@ exports.updateProductShelfNumber = async (req, res) => {
 			{ path: "market", select: "name username location logo" },
 		]);
 
-		res.json({
-			success: true,
-			message: "Product shelf number updated successfully",
-			data: product,
-		});
+		sendResponse(res, 200, true, "Product shelf number updated successfully", product);
 	} catch (error) {
 		console.error("Error updating product shelf number:", error);
-		res.status(400).json({
-			success: false,
-			message: "Error updating product shelf number",
-			error: error.message,
-		});
+		sendError(res, 400, "Error updating product shelf number", error.message);
 	}
 };
 
@@ -1095,18 +963,12 @@ exports.deleteProduct = async (req, res) => {
 		const { id } = req.params;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid product ID",
-			});
+			return sendError(res, 400, "Invalid product ID");
 		}
 
 		const existing = await Product.findById(id);
 		if (!existing) {
-			return res.status(404).json({
-				success: false,
-				message: "Product not found",
-			});
+			return sendError(res, 404, "Product not found");
 		}
 		if (
 			req.user &&
@@ -1114,18 +976,11 @@ exports.deleteProduct = async (req, res) => {
 			(!existing.market ||
 				String(existing.market) !== String(req.user.marketId))
 		) {
-			return res.status(403).json({
-				success: false,
-				message: "Not authorized",
-			});
+			return sendError(res, 403, "Not authorized");
 		}
 
 		if (req.user && req.user.role !== "market" && existing.market) {
-			return res.status(403).json({
-				success: false,
-				message:
-					"Market products are read-only here. Manage them from the market dashboard.",
-			});
+			return sendError(res, 403, "Market products are read-only here. Manage them from the market dashboard.");
 		}
 
 		const product = await Product.findByIdAndUpdate(
@@ -1135,24 +990,13 @@ exports.deleteProduct = async (req, res) => {
 		);
 
 		if (!product) {
-			return res.status(404).json({
-				success: false,
-				message: "Product not found",
-			});
+			return sendError(res, 404, "Product not found");
 		}
 
-		res.json({
-			success: true,
-			message: "Product deleted successfully",
-			data: product,
-		});
+		sendResponse(res, 200, true, "Product deleted successfully", product);
 	} catch (error) {
 		console.error("Error deleting product:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error deleting product",
-			error: error.message,
-		});
+		sendError(res, 500, "Error deleting product", error.message);
 	}
 };
 
@@ -1164,27 +1008,17 @@ exports.permanentDeleteProduct = async (req, res) => {
 		const { id } = req.params;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid product ID",
-			});
+			return sendError(res, 400, "Invalid product ID");
 		}
 
 		const product = await Product.findById(id);
 
 		if (!product) {
-			return res.status(404).json({
-				success: false,
-				message: "Product not found",
-			});
+			return sendError(res, 404, "Product not found");
 		}
 
 		if (req.user && req.user.role !== "market" && product.market) {
-			return res.status(403).json({
-				success: false,
-				message:
-					"Market products are read-only here. Manage them from the market dashboard.",
-			});
+			return sendError(res, 403, "Market products are read-only here. Manage them from the market dashboard.");
 		}
 
 		// Delete image from Cloudinary if it exists
@@ -1200,17 +1034,10 @@ exports.permanentDeleteProduct = async (req, res) => {
 		// Permanently delete the product
 		await Product.findByIdAndDelete(id);
 
-		res.json({
-			success: true,
-			message: "Product permanently deleted",
-		});
+		sendResponse(res, 200, true, "Product permanently deleted", null);
 	} catch (error) {
 		console.error("Error permanently deleting product:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error permanently deleting product",
-			error: error.message,
-		});
+		sendError(res, 500, "Error permanently deleting product", error.message);
 	}
 };
 
@@ -1243,31 +1070,20 @@ exports.permanentDeleteProduct = async (req, res) => {
 exports.uploadImage = async (req, res) => {
 	try {
 		if (!req.file) {
-			return res.status(400).json({
-				success: false,
-				message: "Keine Bilddatei bereitgestellt",
-			});
+			return sendError(res, 400, "Keine Bilddatei bereitgestellt");
 		}
 
 		// Upload image to Cloudinary
 		const uploadResult = await uploadToCloudinary(req.file.buffer);
 
-		res.json({
-			success: true,
-			message: "Image uploaded successfully",
-			data: {
+		sendResponse(res, 200, true, "Image uploaded successfully", {
 				url: uploadResult.url,
 				public_id: uploadResult.public_id,
 				size: req.file.size,
-			},
-		});
+			});
 	} catch (error) {
 		console.error("Error uploading image:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error uploading image",
-			error: error.message,
-		});
+		sendError(res, 500, "Error uploading image", error.message);
 	}
 };
 
@@ -1290,10 +1106,7 @@ exports.getProductsByCategory = async (req, res) => {
 		} = req.query;
 
 		if (!categoryName) {
-			return res.status(400).json({
-				success: false,
-				message: "Category name is required",
-			});
+			return sendError(res, 400, "Category name is required");
 		}
 
 		// First, find the category by name to get its ID
@@ -1304,10 +1117,7 @@ exports.getProductsByCategory = async (req, res) => {
 		});
 
 		if (!category) {
-			return res.status(404).json({
-				success: false,
-				message: `Category "${categoryName}" not found`,
-			});
+			return sendError(res, 404, `Category "${categoryName}" not found`);
 		}
 
 		// Find all subcategories in this category
@@ -1318,19 +1128,14 @@ exports.getProductsByCategory = async (req, res) => {
 		}).select("_id");
 
 		if (subcategories.length === 0) {
-			return res.json({
-				success: true,
-				data: [],
-				pagination: {
+			return sendResponse(res, 200, true, `No subcategories found in category "${categoryName}"`, [], { pagination: {
 					currentPage: parseInt(page),
 					totalPages: 0,
 					totalProducts: 0,
 					hasNextPage: false,
 					hasPrevPage: false,
 					limit: parseInt(limit),
-				},
-				message: `No subcategories found in category "${categoryName}"`,
-			});
+				} });
 		}
 
 		const subcategoryIds = subcategories.map((sub) => sub._id);
@@ -1425,26 +1230,17 @@ exports.getProductsByCategory = async (req, res) => {
 		const hasNextPage = pageNumber < totalPages;
 		const hasPrevPage = pageNumber > 1;
 
-		res.json({
-			success: true,
-			data: products,
-			pagination: {
+		sendResponse(res, 200, true, `${total} products found in category "${categoryName}"`, products, { pagination: {
 				currentPage: pageNumber,
 				totalPages,
 				totalProducts: total,
 				hasNextPage,
 				hasPrevPage,
 				limit: limitNumber,
-			},
-			message: `${total} products found in category "${categoryName}"`,
-		});
+			} });
 	} catch (error) {
 		console.error("Error getting products by category:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching products by category",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching products by category", error.message);
 	}
 };
 
@@ -1466,10 +1262,7 @@ exports.getProductsBySubcategory = async (req, res) => {
 		} = req.query;
 
 		if (!subcategoryName) {
-			return res.status(400).json({
-				success: false,
-				message: "Subcategory name is required",
-			});
+			return sendError(res, 400, "Subcategory name is required");
 		}
 
 		// First, find the subcategory by name to get its ID
@@ -1480,10 +1273,7 @@ exports.getProductsBySubcategory = async (req, res) => {
 		}).populate("parentCategory", "name");
 
 		if (!subcategory) {
-			return res.status(404).json({
-				success: false,
-				message: `Subcategory "${subcategoryName}" not found`,
-			});
+			return sendError(res, 404, `Subcategory "${subcategoryName}" not found`);
 		}
 
 		// Build base filter with the subcategory ID
@@ -1576,26 +1366,17 @@ exports.getProductsBySubcategory = async (req, res) => {
 		const hasNextPage = pageNumber < totalPages;
 		const hasPrevPage = pageNumber > 1;
 
-		res.json({
-			success: true,
-			data: products,
-			pagination: {
+		sendResponse(res, 200, true, `${total} Produkte in Unterkategorie "${subcategoryName}" gefunden`, products, { pagination: {
 				currentPage: pageNumber,
 				totalPages,
 				totalProducts: total,
 				hasNextPage,
 				hasPrevPage,
 				limit: limitNumber,
-			},
-			message: `${total} Produkte in Unterkategorie "${subcategoryName}" gefunden`,
-		});
+			} });
 	} catch (error) {
 		console.error("Error getting products by subcategory:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching products by subcategory",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching products by subcategory", error.message);
 	}
 };
 
@@ -1764,26 +1545,17 @@ exports.getProductsWithDiscount = async (req, res) => {
 		const hasNextPage = pageNumber < totalPages;
 		const hasPrevPage = pageNumber > 1;
 
-		res.json({
-			success: true,
-			data: products,
-			pagination: {
+		sendResponse(res, 200, true, `${total} products with discount greater than ${minDiscount}% found`, products, { pagination: {
 				currentPage: pageNumber,
 				totalPages,
 				totalProducts: total,
 				hasNextPage,
 				hasPrevPage,
 				limit: limitNumber,
-			},
-			message: `${total} products with discount greater than ${minDiscount}% found`,
-		});
+			} });
 	} catch (error) {
 		console.error("Error getting products with discount:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching discounted products",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching discounted products", error.message);
 	}
 };
 
@@ -1793,18 +1565,10 @@ exports.getProductsCount = async (req, res) => {
 	try {
 		const totalProducts = await Product.countDocuments({ isActive: true });
 
-		res.json({
-			success: true,
-			count: totalProducts,
-			message: `Total number of active products: ${totalProducts}`,
-		});
+		sendResponse(res, 200, true, `Total number of active products: ${totalProducts}`, null, { count: totalProducts });
 	} catch (error) {
 		console.error("Error getting products count:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error fetching product count",
-			error: error.message,
-		});
+		sendError(res, 500, "Error fetching product count", error.message);
 	}
 };
 
@@ -1816,10 +1580,7 @@ exports.bulkUpdateProductStatus = async (req, res) => {
 
 		// Validate status
 		if (!status || !["active", "inactive"].includes(status)) {
-			return res.status(400).json({
-				success: false,
-				message: "Invalid status. Must be 'active' or 'inactive'",
-			});
+			return sendError(res, 400, "Invalid status. Must be 'active' or 'inactive'");
 		}
 
 		// Update all products
@@ -1831,19 +1592,10 @@ exports.bulkUpdateProductStatus = async (req, res) => {
 			},
 		);
 
-		res.json({
-			success: true,
-			message: `Successfully updated ${result.modifiedCount} products to ${status} status`,
-			modifiedCount: result.modifiedCount,
-			matchedCount: result.matchedCount,
-		});
+		sendResponse(res, 200, true, `Successfully updated ${result.modifiedCount} products to ${status} status`, null, { modifiedCount: result.modifiedCount, matchedCount: result.matchedCount });
 	} catch (error) {
 		console.error("Error updating product status:", error);
-		res.status(500).json({
-			success: false,
-			message: "Error updating product status",
-			error: error.message,
-		});
+		sendError(res, 500, "Error updating product status", error.message);
 	}
 };
 

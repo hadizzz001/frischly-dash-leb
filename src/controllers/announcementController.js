@@ -1,4 +1,5 @@
 const Announcement = require("../models/Announcement");
+const { sendSuccess, sendError, sendResponse } = require("../utils/apiResponse");
 
 // @desc    Get all announcements
 // @route   GET /api/announcements
@@ -7,17 +8,11 @@ exports.getAnnouncements = async (req, res) => {
 	try {
 		const announcements = await Announcement.find().sort({ createdAt: -1 });
 
-		res.status(200).json({
-			success: true,
+		sendResponse(res, 200, true, "Announcements fetched", announcements, {
 			count: announcements.length,
-			data: announcements,
 		});
 	} catch (err) {
-		res.status(500).json({
-			success: false,
-			message: "Server Error",
-			error: err.message,
-		});
+		sendError(res, 500, "Server Error", err.message);
 	}
 };
 
@@ -29,22 +24,12 @@ exports.getAnnouncement = async (req, res) => {
 		const announcement = await Announcement.findById(req.params.id);
 
 		if (!announcement) {
-			return res.status(404).json({
-				success: false,
-				message: "Announcement not found",
-			});
+			return sendError(res, 404, "Announcement not found");
 		}
 
-		res.status(200).json({
-			success: true,
-			data: announcement,
-		});
+		sendSuccess(res, announcement);
 	} catch (err) {
-		res.status(500).json({
-			success: false,
-			message: "Server Error",
-			error: err.message,
-		});
+		sendError(res, 500, "Server Error", err.message);
 	}
 };
 
@@ -58,17 +43,11 @@ exports.getActiveAnnouncements = async (req, res) => {
 			.sort({ createdAt: -1 })
 			.limit(20);
 
-		res.status(200).json({
-			success: true,
+		sendResponse(res, 200, true, "Announcements fetched", announcements, {
 			count: announcements.length,
-			data: announcements,
 		});
 	} catch (err) {
-		res.status(500).json({
-			success: false,
-			message: "Server Error",
-			error: err.message,
-		});
+		sendError(res, 500, "Server Error", err.message);
 	}
 };
 
@@ -85,17 +64,9 @@ exports.createAnnouncement = async (req, res) => {
 			isActive,
 		});
 
-		res.status(201).json({
-			success: true,
-			data: announcement,
-			message: "Announcement created successfully",
-		});
+		sendSuccess(res, announcement, "Announcement created successfully", 201);
 	} catch (err) {
-		res.status(500).json({
-			success: false,
-			message: "Server Error",
-			error: err.message,
-		});
+		sendError(res, 500, "Server Error", err.message);
 	}
 };
 
@@ -107,10 +78,7 @@ exports.updateAnnouncement = async (req, res) => {
 		let announcement = await Announcement.findById(req.params.id);
 
 		if (!announcement) {
-			return res.status(404).json({
-				success: false,
-				message: "Announcement not found",
-			});
+			return sendError(res, 404, "Announcement not found");
 		}
 
 		announcement = await Announcement.findByIdAndUpdate(
@@ -122,17 +90,9 @@ exports.updateAnnouncement = async (req, res) => {
 			},
 		);
 
-		res.status(200).json({
-			success: true,
-			data: announcement,
-			message: "Announcement updated successfully",
-		});
+		sendSuccess(res, announcement, "Announcement updated successfully");
 	} catch (err) {
-		res.status(500).json({
-			success: false,
-			message: "Server Error",
-			error: err.message,
-		});
+		sendError(res, 500, "Server Error", err.message);
 	}
 };
 
@@ -144,24 +104,13 @@ exports.deleteAnnouncement = async (req, res) => {
 		const announcement = await Announcement.findById(req.params.id);
 
 		if (!announcement) {
-			return res.status(404).json({
-				success: false,
-				message: "Announcement not found",
-			});
+			return sendError(res, 404, "Announcement not found");
 		}
 
 		await announcement.deleteOne();
 
-		res.status(200).json({
-			success: true,
-			data: {},
-			message: "Announcement deleted successfully",
-		});
+		sendSuccess(res, {}, "Announcement deleted successfully");
 	} catch (err) {
-		res.status(500).json({
-			success: false,
-			message: "Server Error",
-			error: err.message,
-		});
+		sendError(res, 500, "Server Error", err.message);
 	}
 };

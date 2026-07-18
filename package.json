@@ -33,7 +33,9 @@
 		"send-test-notification": "node scripts/send-test-notification.js",
 		"remove-postal-codes": "node scripts/remove-postal-codes.js",
 		"build": "echo Build complete - static files ready",
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"test": "jest",
+		"test:watch": "jest --watch",
+		"test:coverage": "jest --coverage"
 	},
 	"keywords": [
 		"nodejs",
@@ -70,6 +72,7 @@
 		"twilio": "^6.0.2"
 	},
 	"devDependencies": {
+		"jest": "^29.7.0",
 		"nodemon": "^3.0.1"
 	}
 }

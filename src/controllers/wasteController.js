@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Waste = require("../models/Waste");
 const Product = require("../models/Product");
+const { sendSuccess, sendError, sendResponse } = require("../utils/apiResponse");
 
 // @desc    Get product by barcode
 // @route   GET /api/waste/product/:barcode
@@ -10,10 +11,7 @@ exports.getProductByBarcode = async (req, res) => {
 		const { barcode } = req.params;
 
 		if (!barcode) {
-			return res.status(400).json({
-				success: false,
-				error: "Please provide a barcode",
-			});
+			return sendError(res, 400, "Please provide a barcode");
 		}
 
 		// Only main-store products (market: null) are wasteable from the admin
@@ -27,21 +25,12 @@ exports.getProductByBarcode = async (req, res) => {
 		});
 
 		if (!product) {
-			return res.status(404).json({
-				success: false,
-				error: "Product not found with this barcode",
-			});
+			return sendError(res, 404, "Product not found with this barcode");
 		}
 
-		res.status(200).json({
-			success: true,
-			data: product,
-		});
+		sendSuccess(res, product);
 	} catch (error) {
-		res.status(400).json({
-			success: false,
-			error: error.message,
-		});
+		sendError(res, 400, error.message);
 	}
 };
 
@@ -100,15 +89,9 @@ exports.createWaste = async (req, res) => {
 			}
 		}
 
-		res.status(201).json({
-			success: true,
-			data: waste,
-		});
+		sendSuccess(res, waste, "Success", 201);
 	} catch (error) {
-		res.status(400).json({
-			success: false,
-			error: error.message,
-		});
+		sendError(res, 400, error.message);
 	}
 };
 
@@ -149,8 +132,7 @@ exports.getAllWaste = async (req, res) => {
 		// Get total count
 		const total = await Waste.countDocuments(query);
 
-		res.status(200).json({
-			success: true,
+		sendResponse(res, 200, true, "Success", waste, {
 			count: waste.length,
 			total,
 			pagination: {
@@ -158,13 +140,9 @@ exports.getAllWaste = async (req, res) => {
 				limit: parseInt(limit),
 				totalPages: Math.ceil(total / parseInt(limit)),
 			},
-			data: waste,
 		});
 	} catch (error) {
-		res.status(400).json({
-			success: false,
-			error: error.message,
-		});
+		sendError(res, 400, error.message);
 	}
 };
 
@@ -178,21 +156,12 @@ exports.getWasteById = async (req, res) => {
 			.populate("productId", "name barcode");
 
 		if (!waste) {
-			return res.status(404).json({
-				success: false,
-				error: "Waste record not found",
-			});
+			return sendError(res, 404, "Waste record not found");
 		}
 
-		res.status(200).json({
-			success: true,
-			data: waste,
-		});
+		sendSuccess(res, waste);
 	} catch (error) {
-		res.status(400).json({
-			success: false,
-			error: error.message,
-		});
+		sendError(res, 400, error.message);
 	}
 };
 
@@ -205,10 +174,7 @@ exports.updateWaste = async (req, res) => {
 
 		const existing = await Waste.findById(req.params.id);
 		if (!existing) {
-			return res.status(404).json({
-				success: false,
-				error: "Waste record not found",
-			});
+			return sendError(res, 404, "Waste record not found");
 		}
 
 		// Only allow updating certain fields
@@ -241,15 +207,9 @@ exports.updateWaste = async (req, res) => {
 			}
 		}
 
-		res.status(200).json({
-			success: true,
-			data: waste,
-		});
+		sendSuccess(res, waste);
 	} catch (error) {
-		res.status(400).json({
-			success: false,
-			error: error.message,
-		});
+		sendError(res, 400, error.message);
 	}
 };
 
@@ -261,10 +221,7 @@ exports.deleteWaste = async (req, res) => {
 		const waste = await Waste.findById(req.params.id);
 
 		if (!waste) {
-			return res.status(404).json({
-				success: false,
-				error: "Waste record not found",
-			});
+			return sendError(res, 404, "Waste record not found");
 		}
 
 		// Restock the product (add the wasted quantity back). Guard on isActive so
@@ -279,15 +236,9 @@ exports.deleteWaste = async (req, res) => {
 		waste.isActive = false;
 		await waste.save();
 
-		res.status(200).json({
-			success: true,
-			data: {},
-		});
+		sendSuccess(res, {});
 	} catch (error) {
-		res.status(400).json({
-			success: false,
-			error: error.message,
-		});
+		sendError(res, 400, error.message);
 	}
 };
 
@@ -349,21 +300,15 @@ exports.getWasteStats = async (req, res) => {
 			},
 		]);
 
-		res.status(200).json({
-			success: true,
-			data: {
-				byReason: reasonSummary,
-				byDate: dateTrend,
-				total:
-					totalWaste.length > 0
-						? totalWaste[0]
-						: { totalQuantity: 0, count: 0 },
-			},
+		sendSuccess(res, {
+			byReason: reasonSummary,
+			byDate: dateTrend,
+			total:
+				totalWaste.length > 0
+					? totalWaste[0]
+					: { totalQuantity: 0, count: 0 },
 		});
 	} catch (error) {
-		res.status(400).json({
-			success: false,
-			error: error.message,
-		});
+		sendError(res, 400, error.message);
 	}
 };

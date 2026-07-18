@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const archiver = require("archiver");
+const { sendError } = require("../utils/apiResponse");
 
 /**
  * Download a full database backup as a ZIP file.
@@ -15,18 +16,12 @@ exports.downloadBackup = async (req, res) => {
 		// Block driver roles explicitly (defense-in-depth in addition to router auth)
 		const role = req.user && req.user.role;
 		if (role === "rider" || role === "market_driver") {
-			return res.status(403).json({
-				success: false,
-				message: "Drivers are not allowed to download backups",
-			});
+			return sendError(res, 403, "Drivers are not allowed to download backups");
 		}
 
 		const db = mongoose.connection && mongoose.connection.db;
 		if (!db) {
-			return res.status(500).json({
-				success: false,
-				message: "Database connection is not ready",
-			});
+			return sendError(res, 500, "Database connection is not ready");
 		}
 
 		// Build a friendly file name with a timestamp.
@@ -110,11 +105,7 @@ exports.downloadBackup = async (req, res) => {
 	} catch (error) {
 		console.error("[backup] downloadBackup error:", error);
 		if (!res.headersSent) {
-			return res.status(500).json({
-				success: false,
-				message: "Failed to generate backup",
-				error: error.message,
-			});
+			return sendError(res, 500, "Failed to generate backup", error.message);
 		}
 		try {
 			res.end();

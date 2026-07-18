@@ -3,6 +3,7 @@ const multer = require("multer");
 const cloudinary = require("cloudinary").v2;
 const KitchenCategory = require("../models/KitchenCategory");
 const Kitchen = require("../models/Kitchen");
+const { sendSuccess, sendError } = require("../utils/apiResponse");
 
 // Cloudinary is configured elsewhere on require, but reconfigure defensively in
 // case this module is loaded first.
@@ -46,10 +47,8 @@ const safeDestroy = (publicId) => {
 	});
 };
 
-const ok = (res, data, message = "OK") =>
-	res.json({ success: true, message, data });
-const fail = (res, code, message) =>
-	res.status(code).json({ success: false, message });
+const ok = (res, data, message = "OK") => sendSuccess(res, data, message);
+const fail = (res, code, message) => sendError(res, code, message);
 
 // Build a market-scoping filter so the main admin sees everything but market
 // admins only see their own categories.
@@ -193,11 +192,7 @@ exports.createKitchenCategory = async (req, res) => {
 		const populated = await KitchenCategory.findById(category._id)
 			.populate("market", "name username location cities")
 			.lean();
-		res.status(201).json({
-			success: true,
-			message: "Kitchen category created successfully",
-			data: populated,
-		});
+		sendSuccess(res, populated, "Kitchen category created successfully", 201);
 	} catch (err) {
 		console.error("createKitchenCategory:", err);
 		fail(res, 500, err.message || "Server Error");
@@ -310,15 +305,11 @@ exports.uploadImage = async (req, res) => {
 			req.file.buffer,
 			"kitchen-categories",
 		);
-		res.json({
-			success: true,
-			message: "Image uploaded successfully",
-			data: {
-				url: result.url,
-				public_id: result.public_id,
-				size: req.file.size,
-			},
-		});
+		sendSuccess(res, {
+			url: result.url,
+			public_id: result.public_id,
+			size: req.file.size,
+		}, "Image uploaded successfully");
 	} catch (err) {
 		console.error("uploadImage (kitchen category):", err);
 		fail(res, 500, err.message || "Error uploading image");
