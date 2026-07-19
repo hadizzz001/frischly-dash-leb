@@ -105,7 +105,14 @@ const userSchema = new mongoose.Schema(
 			},
 			city: {
 				type: String,
-				required: [true, "Please provide a city"],
+				// City is required for local accounts only. Google sign-in users
+				// have no address at creation and can add it later in their profile.
+				required: [
+					function () {
+						return this.authProvider !== "google" && !this.googleId;
+					},
+					"Please provide a city",
+				],
 				trim: true,
 				maxlength: [100, "City cannot be more than 100 characters"],
 			},
