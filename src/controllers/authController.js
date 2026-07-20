@@ -1518,6 +1518,8 @@ const googleSignIn = async (req, res) => {
 			user = await User.findOne({ email });
 		}
 
+		const isNewUser = !user;
+
 		if (user) {
 			// Link Google to an existing (e.g. local) account if not linked yet.
 			if (!user.googleId) {
@@ -1549,6 +1551,7 @@ const googleSignIn = async (req, res) => {
 			user: user.toSafeObject(),
 			token,
 			refreshToken,
+			isNewUser,
 		});
 	} catch (error) {
 		console.error("Google sign-in error:", error);

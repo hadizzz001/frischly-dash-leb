@@ -34,8 +34,8 @@ const registerValidation = [
 		.withMessage("Name muss zwischen 2 und 100 Zeichen lang sein"),
 	body("phoneNumber")
 		.trim()
-		.matches(/^[\+]?[1-9][\d]{0,15}$/)
-		.withMessage("Please provide a valid phone number"),
+		.matches(/^\+961\d{7,8}$/)
+		.withMessage("Phone number must be a Lebanese number (+961) with 7 or 8 digits"),
 	body("email")
 		.optional({ checkFalsy: true })
 		.isEmail()
