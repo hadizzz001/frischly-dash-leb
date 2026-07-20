@@ -91,7 +91,6 @@ const register = async (req, res) => {
 			await sendVerificationLink({
 				phoneNumber: normalizedPhone,
 				link: phoneConfirmUrl,
-				name,
 			});
 		} catch (smsError) {
 			console.error("Phone verification send error:", smsError);

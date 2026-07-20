@@ -69,10 +69,10 @@ const sendSms = async ({ to, body, whatsapp = false }) => {
  * Never throws — best effort. If Twilio isn't configured, the link is
  * logged to the console so registration still succeeds in development.
  */
-const sendVerificationLink = async ({ phoneNumber, link, name }) => {
-	const body = `Hi ${
-		name || "there"
-	}, welcome to Freshly lb! Please verify your phone number by tapping this link: ${link}\n\nIf you did not create this account, you can ignore this message.`;
+const sendVerificationLink = async ({ phoneNumber, link }) => {
+	// Kept short on purpose (single 160-char SMS segment) to avoid multi-segment
+	// billing — just the link, no extra copy.
+	const body = link;
 
 	const preferWhatsapp =
 		String(process.env.PREFERRED_VERIFICATION_CHANNEL || "sms").toLowerCase() ===
