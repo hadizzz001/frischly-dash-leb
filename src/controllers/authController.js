@@ -499,10 +499,11 @@ const login = async (req, res) => {
 			}
 		}
 
-		// Phone verification is the primary, required gate — block login until
-		// the shopper has confirmed the SMS/WhatsApp link, unless the account
-		// never had a phone number (e.g. Google sign-in only accounts).
-		if (user.phoneNumber && !user.phoneVerified) {
+		// Phone verification is the primary, required gate for mobile-app
+		// shoppers only — block login until the shopper has confirmed the
+		// SMS/WhatsApp link. Admins, managers, staff, riders, and market
+		// drivers (server dashboard logins) are exempt.
+		if (user.role === "customer" && user.phoneNumber && !user.phoneVerified) {
 			return sendResponse(res, 403, false, "Please verify your phone number (check the SMS/WhatsApp link) before logging in.", null, { needsConfirmation: true });
 		}
 
@@ -827,10 +828,11 @@ const loginProfile = async (req, res) => {
 			}
 		}
 
-		// Phone verification is the primary, required gate — block login until
-		// the shopper has confirmed the SMS/WhatsApp link, unless the account
-		// never had a phone number (e.g. Google sign-in only accounts).
-		if (user.phoneNumber && !user.phoneVerified) {
+		// Phone verification is the primary, required gate for mobile-app
+		// shoppers only — block login until the shopper has confirmed the
+		// SMS/WhatsApp link. Admins, managers, staff, riders, and market
+		// drivers (server dashboard logins) are exempt.
+		if (user.role === "customer" && user.phoneNumber && !user.phoneVerified) {
 			return sendResponse(res, 403, false, "Please verify your phone number (check the SMS/WhatsApp link) before logging in.", null, { needsConfirmation: true });
 		}
 
