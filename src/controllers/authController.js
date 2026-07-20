@@ -500,8 +500,11 @@ const login = async (req, res) => {
 			}
 		}
 
-		if (user.emailConfirmed === false) {
-			return sendResponse(res, 403, false, "Please confirm your email (it may be in the spam folder) before logging in.", null, { needsConfirmation: true });
+		// Phone verification is the primary, required gate — block login until
+		// the shopper has confirmed the SMS/WhatsApp link, unless the account
+		// never had a phone number (e.g. Google sign-in only accounts).
+		if (user.phoneNumber && !user.phoneVerified) {
+			return sendResponse(res, 403, false, "Please verify your phone number (check the SMS/WhatsApp link) before logging in.", null, { needsConfirmation: true });
 		}
 
 		// Check if user has required role for  access
@@ -825,7 +828,10 @@ const loginProfile = async (req, res) => {
 			}
 		}
 
-		if (!user.emailConfirmed && !user.phoneVerified) {
+		// Phone verification is the primary, required gate — block login until
+		// the shopper has confirmed the SMS/WhatsApp link, unless the account
+		// never had a phone number (e.g. Google sign-in only accounts).
+		if (user.phoneNumber && !user.phoneVerified) {
 			return sendResponse(res, 403, false, "Please verify your phone number (check the SMS/WhatsApp link) before logging in.", null, { needsConfirmation: true });
 		}
 
