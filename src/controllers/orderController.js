@@ -516,18 +516,18 @@ exports.createOrder = async (req, res) => {
 			? new Date(deliveryTime)
 			: new Date();
 
-		// Validate required fields
+		// Validate required fields — email is optional (phone is the primary
+		// required contact channel), so it's intentionally excluded here.
 		const dbCustomer = await User.findById(customer.id);
 		console.log("Customer found:", dbCustomer ? dbCustomer._id : "Not found");
 		if (
 			!dbCustomer ||
 			!dbCustomer.name ||
 			!dbCustomer.id ||
-			!dbCustomer.email ||
 			!dbCustomer.phoneNumber
 		) {
 			console.log("Customer validation failed. Missing required fields.");
-			return sendError(res, 400, "Customer name, ID, email and phone are required");
+			return sendError(res, 400, "Customer name, ID and phone are required");
 		}
 
 		// Handle new address if provided
@@ -869,8 +869,14 @@ exports.createOrder = async (req, res) => {
 						process.env.SERVER_URL || "https://freshlylb.onrender.com"
 					}/payment/cancel.html?order=${populatedOrder._id}`,
 					client_reference_id: populatedOrder._id.toString(),
-					customer_email: populatedOrder.customer.email,
 				};
+
+				// Only pass customer_email to Stripe when the customer actually has
+				// one on file — email is optional at registration, and Stripe
+				// rejects invalid/empty email values if sent explicitly.
+				if (populatedOrder.customer?.email) {
+					sessionOptions.customer_email = populatedOrder.customer.email;
+				}
 
 				// Apply promo code discount if present (admin or market promo)
 				const appliedPromoDoc = promoCodeDoc || marketPromoDoc;
@@ -1058,12 +1064,16 @@ exports.createOrder = async (req, res) => {
 				</div>
 			`;
 
-			await sendEmail({
-				to: populatedOrder.customer.email,
-				subject: emailSubject,
-				html: emailHtml,
-			});
-			console.log("Confirmation email sent.");
+			if (populatedOrder.customer?.email) {
+				await sendEmail({
+					to: populatedOrder.customer.email,
+					subject: emailSubject,
+					html: emailHtml,
+				});
+				console.log("Confirmation email sent.");
+			} else {
+				console.log("Skipping confirmation email — customer has no email on file.");
+			}
 		} catch (emailError) {
 			console.error("Error sending order confirmation email:", emailError);
 			// Don't fail the order creation if email fails
@@ -1504,12 +1514,14 @@ exports.cancelOrder = async (req, res) => {
 								</div>
 							`;
 
-							await sendEmail({
-								to: order.customer.email,
-								subject: emailSubject,
-								html: emailHtml,
-							});
-							console.log(`✅ Refund email sent to ${order.customer.email}`);
+							if (order.customer?.email) {
+								await sendEmail({
+									to: order.customer.email,
+									subject: emailSubject,
+									html: emailHtml,
+								});
+								console.log(`✅ Refund email sent to ${order.customer.email}`);
+							}
 						} catch (emailError) {
 							console.error("Error sending refund email:", emailError);
 						}
