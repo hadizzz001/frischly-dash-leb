@@ -4,7 +4,6 @@ const {
 	googleSignIn,
 	register,
 	confirmEmail,
-	confirmPhone,
 	login,
 	loginProfile,
 	refreshToken,
@@ -33,11 +32,11 @@ const registerValidation = [
 		.isLength({ min: 2, max: 100 })
 		.withMessage("Name muss zwischen 2 und 100 Zeichen lang sein"),
 	body("phoneNumber")
+		.optional({ checkFalsy: true })
 		.trim()
 		.matches(/^\+961\d{7,8}$/)
 		.withMessage("Phone number must be a Lebanese number (+961) with 7 or 8 digits"),
 	body("email")
-		.optional({ checkFalsy: true })
 		.isEmail()
 		.normalizeEmail()
 		.withMessage("Please provide a valid email address"),
@@ -201,7 +200,6 @@ const resetPasswordValidation = [
 // Public routes
 router.post("/register", registerValidation, register);
 router.get("/confirm/:token", confirmEmail);
-router.get("/confirm-phone/:token", confirmPhone);
 router.post("/login", loginValidation, login);
 router.post("/google", googleSignIn);
 router.post("/login-profile", loginProfileValidation, loginProfile);

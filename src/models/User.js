@@ -11,26 +11,25 @@ const userSchema = new mongoose.Schema(
 		},
 		phoneNumber: {
 			type: String,
-			// Phone required for local accounts; Google sign-in users may add it later.
-			required: [
-				function () {
-					return this.authProvider !== "google" && !this.googleId;
-				},
-				"Please provide a phone number",
-			],
+			// Phone is optional — email is the primary verification channel.
+			required: false,
 			trim: true,
 			match: [/^[\+]?[1-9][\d]{0,15}$/, "Please provide a valid phone number"],
 		},
 		dateOfBirth: {
 			type: Date,
 		},
-		// ✅ Email is optional now that phone number (verified via SMS/WhatsApp)
-		// is the primary identifier for registration/login. `sparse: true` on
-		// the unique index (below) means any number of users can have no email
-		// at all without conflicting with each other.
+		// ✅ Email (verified via confirmation link) is the primary identifier for
+		// registration/login. Required for local accounts; Google sign-in accounts
+		// get their email directly from Google.
 		email: {
 			type: String,
-			required: false,
+			required: [
+				function () {
+					return this.authProvider !== "google" && !this.googleId;
+				},
+				"Please provide an email address",
+			],
 			lowercase: true,
 			match: [
 				/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,

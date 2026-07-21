@@ -516,18 +516,19 @@ exports.createOrder = async (req, res) => {
 			? new Date(deliveryTime)
 			: new Date();
 
-		// Validate required fields — email is optional (phone is the primary
-		// required contact channel), so it's intentionally excluded here.
+		// Validate required fields — a customer needs a name and at least one
+		// contact channel (phone OR email). Google-only accounts have no phone
+		// number, so phone alone can't be a hard requirement here.
 		const dbCustomer = await User.findById(customer.id);
 		console.log("Customer found:", dbCustomer ? dbCustomer._id : "Not found");
 		if (
 			!dbCustomer ||
 			!dbCustomer.name ||
 			!dbCustomer.id ||
-			!dbCustomer.phoneNumber
+			(!dbCustomer.phoneNumber && !dbCustomer.email)
 		) {
 			console.log("Customer validation failed. Missing required fields.");
-			return sendError(res, 400, "Customer name, ID and phone are required");
+			return sendError(res, 400, "Customer name and either a phone number or email are required");
 		}
 
 		// Handle new address if provided

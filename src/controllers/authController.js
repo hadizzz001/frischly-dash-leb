@@ -8,7 +8,6 @@ const {
 	verifyRefreshToken,
 } = require("../utils/jwt");
 const sendEmail = require("../utils/sendEmail");
-const { sendVerificationLink } = require("../utils/sendSms");
 const { normalizeLebanonPhone, isPhoneLike } = require("../utils/phone");
 const { sanitizeEmail } = require("../utils/sanitize");
 const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
@@ -33,7 +32,7 @@ const register = async (req, res) => {
 
 		const { name, phoneNumber, email, password, address } = req.body;
 
-		const normalizedPhone = normalizeLebanonPhone(phoneNumber);
+		const normalizedPhone = phoneNumber ? normalizeLebanonPhone(phoneNumber) : "";
 		const normalizedEmail = email ? String(email).toLowerCase().trim() : "";
 
 		const duplicate = await findDuplicateAccount({
@@ -45,30 +44,24 @@ const register = async (req, res) => {
 			return sendError(res, 400, duplicateAccountMessage(duplicate));
 		}
 
-		// ✅ Phone verification is now the primary (required) channel — a
-		// verification link is sent via SMS/WhatsApp to the phone number.
-		const phoneVerificationToken = crypto.randomBytes(32).toString("hex");
-		const phoneVerificationExpires = Date.now() + 24 * 60 * 60 * 1000;
+		// ✅ Email verification is the primary (required) channel — a
+		// confirmation link is sent via email.
+		const emailToken = crypto.randomBytes(32).toString("hex");
+		const emailTokenExpires = Date.now() + 24 * 60 * 60 * 1000;
 
 		const userDoc = {
 			name,
-			phoneNumber: normalizedPhone,
+			email: normalizedEmail,
 			password,
 			address,
-			phoneVerificationToken,
-			phoneVerificationExpires,
-			phoneVerified: false,
+			emailToken,
+			emailTokenExpires,
+			emailConfirmed: false,
 		};
 
-		// ✅ Email is optional — only store it (and only send a confirmation
-		// email) if the shopper actually provided one.
-		let emailToken = null;
-		if (normalizedEmail) {
-			emailToken = crypto.randomBytes(32).toString("hex");
-			userDoc.email = normalizedEmail;
-			userDoc.emailToken = emailToken;
-			userDoc.emailTokenExpires = Date.now() + 24 * 60 * 60 * 1000;
-			userDoc.emailConfirmed = false;
+		// ✅ Phone number is optional — only store it if the shopper provided one.
+		if (normalizedPhone) {
+			userDoc.phoneNumber = normalizedPhone;
 		}
 
 		const user = await User.create(userDoc);
@@ -82,46 +75,30 @@ const register = async (req, res) => {
 			`http://localhost:${process.env.PORT || 3001}`;
 		const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
 
-		// ✅ Send the phone verification link via SMS/WhatsApp. Best-effort: if
-		// the messaging provider (Twilio) isn't configured yet, this just logs
-		// the link to the console instead of blocking registration — see
-		// src/utils/sendSms.js. Configure TWILIO_* env vars to go live.
-		const phoneConfirmUrl = `${normalizedBaseUrl}/api/auth/confirm-phone/${phoneVerificationToken}`;
+		// ✅ Send the confirmation email. Best-effort: failure here doesn't block
+		// registration itself, but the account stays unverified until the
+		// shopper clicks the link.
+		const confirmUrl = `${normalizedBaseUrl}/api/auth/confirm/${emailToken}`;
+		const emailSubject = "Confirm your Freshly lb email";
+		const emailText = `Hi ${
+			name || "there"
+		},\n\nPlease confirm your email by visiting the link below:\n${confirmUrl}\n\nIf you did not create an account, you can ignore this email.`;
+		const emailHtml = `<!doctype html><html><body><p>Hi ${
+			name || "there"
+		},</p><p>Please confirm your email by clicking the button below.</p><p><a href="${confirmUrl}">Confirm Email</a></p><p>If you did not create an account, you can ignore this email.</p></body></html>`;
+
 		try {
-			await sendVerificationLink({
-				phoneNumber: normalizedPhone,
-				link: phoneConfirmUrl,
+			await sendEmail({
+				to: normalizedEmail,
+				subject: emailSubject,
+				text: emailText,
+				html: emailHtml,
 			});
-		} catch (smsError) {
-			console.error("Phone verification send error:", smsError);
+		} catch (emailError) {
+			console.error("Email confirmation send error:", emailError);
 		}
 
-		// Best-effort confirmation email (only if an email was provided).
-		// Failure here no longer blocks registration — phone is now the primary,
-		// required verification channel.
-		if (normalizedEmail && emailToken) {
-			const confirmUrl = `${normalizedBaseUrl}/api/auth/confirm/${emailToken}`;
-			const emailSubject = "Confirm your Freshly lb email";
-			const emailText = `Hi ${
-				name || "there"
-			},\n\nPlease confirm your email by visiting the link below:\n${confirmUrl}\n\nIf you did not create an account, you can ignore this email.`;
-			const emailHtml = `<!doctype html><html><body><p>Hi ${
-				name || "there"
-			},</p><p>Please confirm your email by clicking the button below.</p><p><a href="${confirmUrl}">Confirm Email</a></p><p>If you did not create an account, you can ignore this email.</p></body></html>`;
-
-			try {
-				await sendEmail({
-					to: normalizedEmail,
-					subject: emailSubject,
-					text: emailText,
-					html: emailHtml,
-				});
-			} catch (emailError) {
-				console.error("Email confirmation send error:", emailError);
-			}
-		}
-
-		sendResponse(res, 201, true, "Registration successful. Please check your phone for a verification link sent via SMS or WhatsApp to confirm your account.", {
+		sendResponse(res, 201, true, "Registration successful. Please check your email for a confirmation link.", {
 				userId: user._id,
 			});
 	} catch (error) {
@@ -330,107 +307,6 @@ const confirmEmail = async (req, res) => {
 	}
 };
 
-// @desc    Confirm a user's phone number via the SMS/WhatsApp verification link
-// @route   GET /api/auth/confirm-phone/:token
-// @access  Public
-const confirmPhone = async (req, res) => {
-	try {
-		const { token } = req.params;
-
-		if (!token) {
-			return res.status(400).send("Invalid confirmation link");
-		}
-
-		const user = await User.findOne({
-			phoneVerificationToken: token,
-			phoneVerificationExpires: { $gt: Date.now() },
-		});
-
-		if (!user) {
-			return res
-				.status(400)
-				.send("Invalid or expired confirmation link");
-		}
-
-		user.phoneVerified = true;
-		user.phoneVerifiedAt = new Date();
-		user.phoneVerificationToken = undefined;
-		user.phoneVerificationExpires = undefined;
-
-		await user.save();
-
-		if (process.env.EMAIL_CONFIRM_REDIRECT_SUCCESS) {
-			const normalizedRedirect =
-				process.env.EMAIL_CONFIRM_REDIRECT_SUCCESS.replace(/\/$/, "");
-			return res.redirect(`${normalizedRedirect}?status=confirmed`);
-		}
-
-		return res.send(`
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phone Verified - Freshly lb</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh; display: flex; align-items: center; justify-content: center; color: #333;
-        }
-        .container {
-            background: white; border-radius: 20px; padding: 3rem; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            text-align: center; max-width: 500px; width: 90%; position: relative; overflow: hidden;
-        }
-        .container::before {
-            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 5px;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-        }
-        .success-icon {
-            width: 80px; height: 80px; background: linear-gradient(135deg, #4CAF50, #45a049); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem;
-            box-shadow: 0 8px 20px rgba(76, 175, 80, 0.3); animation: bounce 0.6s ease-out;
-        }
-        .success-icon::after { content: '✓'; font-size: 40px; color: white; font-weight: bold; }
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-10px); }
-            60% { transform: translateY(-5px); }
-        }
-        h1 { color: #333; margin-bottom: 1rem; font-size: 2.2rem; font-weight: 700; }
-        .subtitle { color: #666; margin-bottom: 2rem; font-size: 1.1rem; line-height: 1.6; }
-        .login-btn {
-            background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 15px 40px;
-            border-radius: 50px; font-size: 1.1rem; font-weight: 600; cursor: pointer; text-decoration: none;
-            display: inline-block; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-        .footer { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #eee; color: #999; font-size: 0.9rem; }
-        @media (max-width: 600px) {
-            .container { padding: 2rem; margin: 1rem; }
-            h1 { font-size: 1.8rem; }
-            .login-btn { padding: 12px 30px; font-size: 1rem; }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="success-icon"></div>
-        <h1>Phone Verified!</h1>
-        <p class="subtitle">Your phone number has been successfully verified. You can now log in to your Freshly lb account using your phone number and password.</p>
-        <button onclick="window.close()" class="login-btn">Close</button>
-        <div class="footer">
-            <p>Willkommen bei Freshly lb!</p>
-        </div>
-    </div>
-</body>
-</html>`);
-	} catch (error) {
-		console.error("Phone confirmation error:", error);
-		return res.status(500).send("Server error");
-	}
-};
-
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
@@ -499,12 +375,12 @@ const login = async (req, res) => {
 			}
 		}
 
-		// Phone verification is the primary, required gate for mobile-app
+		// Email verification is the primary, required gate for mobile-app
 		// shoppers only — block login until the shopper has confirmed the
-		// SMS/WhatsApp link. Admins, managers, staff, riders, and market
-		// drivers (server dashboard logins) are exempt.
-		if (user.role === "customer" && user.phoneNumber && !user.phoneVerified) {
-			return sendResponse(res, 403, false, "Please verify your phone number (check the SMS/WhatsApp link) before logging in.", null, { needsConfirmation: true });
+		// email link. Admins, managers, staff, riders, and market drivers
+		// (server dashboard logins) are exempt.
+		if (user.role === "customer" && !user.emailConfirmed) {
+			return sendResponse(res, 403, false, "Please verify your email (check the confirmation link) before logging in.", null, { needsConfirmation: true });
 		}
 
 		// Check if user has required role for  access
@@ -828,12 +704,12 @@ const loginProfile = async (req, res) => {
 			}
 		}
 
-		// Phone verification is the primary, required gate for mobile-app
+		// Email verification is the primary, required gate for mobile-app
 		// shoppers only — block login until the shopper has confirmed the
-		// SMS/WhatsApp link. Admins, managers, staff, riders, and market
-		// drivers (server dashboard logins) are exempt.
-		if (user.role === "customer" && user.phoneNumber && !user.phoneVerified) {
-			return sendResponse(res, 403, false, "Please verify your phone number (check the SMS/WhatsApp link) before logging in.", null, { needsConfirmation: true });
+		// email link. Admins, managers, staff, riders, and market drivers
+		// (server dashboard logins) are exempt.
+		if (user.role === "customer" && !user.emailConfirmed) {
+			return sendResponse(res, 403, false, "Please verify your email (check the confirmation link) before logging in.", null, { needsConfirmation: true });
 		}
 
 		// Reset login attempts on successful login
@@ -1565,7 +1441,6 @@ module.exports = {
 	googleSignIn,
 	register,
 	confirmEmail,
-	confirmPhone,
 	login,
 	loginProfile,
 	refreshToken,
