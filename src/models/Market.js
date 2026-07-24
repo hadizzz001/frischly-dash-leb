@@ -57,6 +57,43 @@ const marketSchema = new mongoose.Schema(
 			type: [String],
 			default: [],
 		},
+		// Delivery/coverage zones (multi-select of this market's own Zone names,
+		// same concept as a driver's `zones` field on the Rider model). Each Zone
+		// document carries its own map pin + radius, configured on the Zones
+		// management page — this just records which of the market's zones the
+		// market itself claims to operate/deliver within.
+		deliveryZones: {
+			type: [String],
+			default: [],
+		},
+		// Multi-pin delivery coverage set directly on the "Create/Edit Market"
+		// page by the main admin (same concept as a driver's map picker): each
+		// entry is an independent map pin + radius circle. Distinct from
+		// `deliveryZones` (which references named Zone documents) — this is a
+		// quick, self-contained coverage definition that doesn't require
+		// creating Zone documents first.
+		deliveryRegions: {
+			type: [
+				{
+					latitude: {
+						type: Number,
+						min: [-90, "Latitude must be between -90 and 90"],
+						max: [90, "Latitude must be between -90 and 90"],
+					},
+					longitude: {
+						type: Number,
+						min: [-180, "Longitude must be between -180 and 180"],
+						max: [180, "Longitude must be between -180 and 180"],
+					},
+					radiusKm: {
+						type: Number,
+						min: [0.1, "Radius must be at least 0.1 km"],
+						max: [1000, "Radius cannot exceed 1000 km"],
+					},
+				},
+			],
+			default: [],
+		},
 		logo: {
 			type: String,
 			trim: true,

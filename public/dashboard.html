@@ -5,16 +5,13 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Dashboard - Freshly Server</title>
 
-		<!-- Leaflet (free OpenStreetMap renderer) -->
+		<!-- OpenLayers (free, battle-tested OSM raster map renderer) -->
 		<link
 			rel="stylesheet"
-			href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-			crossorigin=""
+			href="https://cdn.jsdelivr.net/npm/ol@9.2.4/ol.css"
 		/>
-		<script
-			src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-			crossorigin=""
-		></script>
+		<script src="https://cdn.jsdelivr.net/npm/ol@9.2.4/dist/ol.js"></script>
+		<script src="js/region-map-picker.js?v=2"></script>
 
 		<!-- Favicon and App Icons -->
 		<link
@@ -2340,9 +2337,17 @@
 							</button>
 						</div>
 					</div>
-				</div>
 
-				<!-- Announcements Section -->
+					<div class="user-card" id="delivery-zones-card">
+						<h2 style="color:#333;margin-bottom:20px;">🚚 Delivery Coverage Zones</h2>
+						<p style="color:#666;font-size:14px;margin:0 0 14px;">
+							Select which zones (configured on the Zones page) Freshly delivers to. Drivers assigned to an order must have at least one of these zones selected on their own profile in order to cover that delivery.
+						</p>
+						<div id="delivery-zones-list" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+							<span style="color:#999;font-size:13px;">Loading zones…</span>
+						</div>
+						<button class="btn btn-primary" onclick="saveDeliveryZones()">Save Coverage Zones</button>
+					</div>
 				<div id="announcements-section" class="content-section">
 					<div class="section-header">
 						<h2>Announcements Management</h2>
@@ -8371,12 +8376,54 @@
 				document.getElementById("zone-is-active").checked = true;
 				clearZoneFormValidation();
 				document.getElementById("zone-modal").style.display = "block";
+				initZoneMapPicker(null);
+			}
+
+			// Lazily (re)creates the zone map picker inside the zone modal. Leaflet
+			// maps must be initialized while their container is visible/sized, so
+			// this always runs right after the modal is shown. Keeps hidden
+			// #zone-latitude/#zone-longitude in sync with the dropped pin, and
+			// keeps the drawn circle's radius in sync with the Distance (km) field.
+			function initZoneMapPicker(initialPin) {
+				if (window.__zoneMapPicker) {
+					window.__zoneMapPicker.destroy();
+					window.__zoneMapPicker = null;
+				}
+				if (typeof createSinglePinPicker !== "function") return;
+				window.__zoneMapPicker = createSinglePinPicker({
+					mapContainerId: "zone-map",
+					initialPin,
+					onChange: (pin) => {
+						document.getElementById("zone-latitude").value = pin.latitude;
+						document.getElementById("zone-longitude").value = pin.longitude;
+						document.getElementById("zone-distance").value = pin.radiusKm;
+						const display = document.getElementById("zone-radius-display");
+						if (display) display.textContent = pin.radiusKm.toFixed(1);
+					},
+				});
+				if (initialPin && initialPin.radiusKm) {
+					const display = document.getElementById("zone-radius-display");
+					if (display) display.textContent = initialPin.radiusKm.toFixed(1);
+				}
+				// Extra safety net: force a resize/re-center/re-position shortly after
+				// the fullscreen modal finishes laying out (and again a couple more
+				// times to survive any CSS transition), so a previously-saved pin
+				// never appears mis-sized, mispositioned, or missing.
+				[100, 300, 600].forEach((delay) => {
+					setTimeout(() => {
+						if (window.__zoneMapPicker) window.__zoneMapPicker.invalidateSize();
+					}, delay);
+				});
 			}
 
 			function closeZoneModal() {
 				document.getElementById("zone-modal").style.display = "none";
 				document.getElementById("zone-form").reset();
 				clearZoneFormValidation();
+				if (window.__zoneMapPicker) {
+					window.__zoneMapPicker.destroy();
+					window.__zoneMapPicker = null;
+				}
 			}
 
 			function clearZoneFormValidation() {
@@ -8400,10 +8447,18 @@
 
 					// Validate required fields
 					const zoneName = formData.get("zoneName")?.trim();
-					const distance = formData.get("distance");
+					const pin = window.__zoneMapPicker
+						? window.__zoneMapPicker.getPin()
+						: null;
+					const distance = pin ? pin.radiusKm : formData.get("distance");
 
 					if (!zoneName) {
 						throw new Error("Zone name is required");
+					}
+					if (!pin) {
+						throw new Error(
+							"Please click on the map to set this zone's location and coverage radius"
+						);
 					}
 					if (
 						!distance ||
@@ -8434,6 +8489,13 @@
 						description: formData.get("description")?.trim() || undefined,
 						isActive: formData.get("isActive") === "on",
 					};
+
+					if (pin) {
+						zoneData.coordinates = {
+							latitude: pin.latitude,
+							longitude: pin.longitude,
+						};
+					}
 
 					const zoneId = formData.get("id");
 					const isEdit = zoneId && zoneId.trim() !== "";
@@ -8495,6 +8557,8 @@
 				document.getElementById("zone-id").value = zone._id;
 				document.getElementById("zone-name").value = zone.zoneName;
 				document.getElementById("zone-distance").value = zone.distance;
+				const radiusDisplay = document.getElementById("zone-radius-display");
+				if (radiusDisplay) radiusDisplay.textContent = (zone.distance || 0).toFixed(1);
 				document.getElementById("zone-delivery-fee").value =
 					zone.deliveryFee || "";
 				document.getElementById("zone-delivery-time").value =
@@ -8504,6 +8568,24 @@
 				document.getElementById("zone-is-active").checked = zone.isActive;
 				clearZoneFormValidation();
 				document.getElementById("zone-modal").style.display = "block";
+
+				const hasCoords =
+					zone.coordinates &&
+					typeof zone.coordinates.latitude === "number" &&
+					typeof zone.coordinates.longitude === "number";
+				initZoneMapPicker(
+					hasCoords
+						? {
+								latitude: zone.coordinates.latitude,
+								longitude: zone.coordinates.longitude,
+								radiusKm: zone.distance,
+						  }
+						: null
+				);
+				if (hasCoords) {
+					document.getElementById("zone-latitude").value = zone.coordinates.latitude;
+					document.getElementById("zone-longitude").value = zone.coordinates.longitude;
+				}
 			}
 
 			async function showZoneStats() {
@@ -9939,6 +10021,70 @@
 						userRoleEl.textContent = currentUser.role.toUpperCase();
 
 					setProfileCities(currentUser.cities || []);
+				}
+				loadDeliveryZonesCard();
+			}
+
+			// ===== Delivery Coverage Zones (main admin's own multi-zone coverage,
+			// same concept as a driver's zones list) =====
+			async function loadDeliveryZonesCard() {
+				const list = document.getElementById("delivery-zones-list");
+				if (!list) return;
+				list.innerHTML = '<span style="color:#999;font-size:13px;">Loading zones\u2026</span>';
+				try {
+					const [zonesRes, settingsRes] = await Promise.all([
+						fetch(`${API_BASE_URL}/zones?limit=100&isActive=true`, {
+							headers: { Authorization: `Bearer ${currentToken}` },
+						}),
+						fetch(`${API_BASE_URL}/admin/settings`, {
+							headers: { Authorization: `Bearer ${currentToken}` },
+						}),
+					]);
+					const zonesData = await zonesRes.json();
+					const settingsData = await settingsRes.json();
+					const zones = (zonesData.data || []).filter((z) => !z.market);
+					const selected = new Set(
+						(settingsData.data && settingsData.data.deliveryZones) || []
+					);
+					if (!zones.length) {
+						list.innerHTML =
+							'<span style="color:#999;font-size:13px;">No zones yet. Create one in the Zones section first.</span>';
+						return;
+					}
+					list.innerHTML = zones
+						.map((z) => {
+							const checked = selected.has(z.zoneName) ? "checked" : "";
+							return `<label style="display:flex;align-items:center;gap:6px;background:#f5f5f5;padding:6px 12px;border-radius:20px;font-size:13px;cursor:pointer;">
+								<input type="checkbox" value="${z.zoneName.replace(/"/g, "&quot;")}" ${checked} style="cursor:pointer;" />
+								${z.zoneName}
+							</label>`;
+						})
+						.join("");
+				} catch (e) {
+					list.innerHTML =
+						'<span style="color:#c0392b;font-size:13px;">Failed to load zones</span>';
+				}
+			}
+
+			async function saveDeliveryZones() {
+				const list = document.getElementById("delivery-zones-list");
+				if (!list) return;
+				const selected = Array.from(
+					list.querySelectorAll('input[type="checkbox"]:checked')
+				).map((cb) => cb.value);
+				try {
+					const res = await fetch(`${API_BASE_URL}/admin/settings`, {
+						method: "PUT",
+						headers: {
+							"Content-Type": "application/json",
+							Authorization: `Bearer ${currentToken}`,
+						},
+						body: JSON.stringify({ deliveryZones: selected }),
+					});
+					if (!res.ok) throw new Error("Failed to save");
+					showMessage("Delivery coverage zones updated", "success");
+				} catch (e) {
+					showMessage("Failed to save coverage zones", "error");
 				}
 			}
 
@@ -11941,7 +12087,7 @@
 				document.body.appendChild(overlay);
 			}
 
-			async function openAssignDriverModal(orderId, orderNumber) {
+			async function openAssignDriverModal(orderId, orderNumber, orderCity, orderLocation) {
 				assignOrderId = orderId;
 				assignOrderNumber = orderNumber;
 				ensureAssignDriverModal();
@@ -11950,7 +12096,20 @@
 				select.innerHTML = '<option value="">Loading drivers…</option>';
 				modal.style.display = "flex";
 				try {
-					const res = await fetch(`${API_BASE_URL}/riders?limit=200`, {
+					// Prefer the customer's EXACT map pin (captured on their profile) for
+					// the geofence filter — falls back to the delivery city's approximate
+					// center only if no exact pin was saved. Ranks remaining drivers by
+					// proximity (nearest first).
+					const hasPin =
+						orderLocation &&
+						typeof orderLocation.latitude === "number" &&
+						typeof orderLocation.longitude === "number";
+					const locationQS = hasPin
+						? `&lat=${orderLocation.latitude}&lng=${orderLocation.longitude}`
+						: orderCity
+						? `&city=${encodeURIComponent(orderCity)}`
+						: "";
+					const res = await fetch(`${API_BASE_URL}/riders?limit=200${locationQS}`, {
 						headers: {
 							Authorization: `Bearer ${currentToken}`,
 							"Content-Type": "application/json",
@@ -11961,15 +12120,20 @@
 					// Admin assigns ONLY its own (main-store) drivers, never a market's.
 					const adminRiders = riders.filter((r) => !r.market);
 					if (!adminRiders.length) {
-						select.innerHTML =
-							'<option value="">No drivers available. Add riders in the Riders section first.</option>';
+						select.innerHTML = orderCity
+							? `<option value="">No drivers cover "${orderCity}". Add/adjust a driver's zones first.</option>`
+							: '<option value="">No drivers available. Add riders in the Riders section first.</option>';
 						return;
 					}
 					select.innerHTML = adminRiders
 						.map((r) => {
 							const name = (r.userInfo && r.userInfo.name) || r.name || "Driver";
 							const zones = Array.isArray(r.zones) ? r.zones.join(", ") : r.zone || "";
-							return `<option value="${r._id}">${name}${zones ? " — " + zones : ""} (${r.status || "available"})</option>`;
+							const distance =
+								typeof r.distanceKm === "number" && isFinite(r.distanceKm)
+									? ` · ${r.distanceKm.toFixed(1)} km away`
+									: "";
+							return `<option value="${r._id}">${name}${zones ? " — " + zones : ""} (${r.status || "available"})${distance}</option>`;
 						})
 						.join("");
 				} catch (e) {
@@ -12507,7 +12671,12 @@
 						sendRiderBtn.style.display = "inline-flex";
 						sendRiderBtn.onclick = function () {
 							closeOrderDetails();
-							openAssignDriverModal(order._id, order.orderNumber);
+							openAssignDriverModal(
+								order._id,
+								order.orderNumber,
+								order.customer && order.customer.address && order.customer.address.city,
+								order.customer && order.customer.address && order.customer.address.location
+							);
 						};
 					} else {
 						sendRiderBtn.style.display = "none";
@@ -14240,18 +14409,7 @@
 							/>
 						</div>
 
-						<div class="form-group">
-							<label for="zone-distance">Distance (km) *</label>
-							<input
-								type="number"
-								id="zone-distance"
-								name="distance"
-								required
-								min="0"
-								step="0.1"
-								placeholder="Distance from main location"
-							/>
-						</div>
+						<input type="hidden" id="zone-distance" name="distance" />
 
 						<div class="form-group">
 							<label for="zone-delivery-fee">Delivery Fee ($)</label>
@@ -14296,6 +14454,22 @@
 								<span class="checkmark"></span>
 								Zone is active
 							</label>
+						</div>
+
+						<div class="form-group form-group-full">
+							<label>📍 Zone Location & Coverage Radius</label>
+							<p style="color:#666;font-size:13px;margin:4px 0 10px;">
+								Click on the map to drop a pin at this zone's center. Drag the round pin to reposition it, and drag the small square handle to grow/shrink the coverage circle. Drivers who select this zone will only be assigned orders whose delivery city falls inside this circle.
+							</p>
+							<div style="margin-bottom:8px;font-weight:600;color:#28a745;font-size:14px;">
+								Coverage radius: <span id="zone-radius-display">0</span> km
+							</div>
+							<input type="hidden" id="zone-latitude" name="latitude" />
+							<input type="hidden" id="zone-longitude" name="longitude" />
+							<div
+								id="zone-map"
+								style="width:100%;height:320px;border-radius:8px;border:1px solid #ddd;"
+							></div>
 						</div>
 					</div>
 

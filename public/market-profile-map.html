@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Delivery Coverage Regions — Freshly.lb</title>
+	<!-- Exact same map stack (OpenLayers + the shared multi-pin widget) used
+	     by the main admin's Markets Management page, so the market owner
+	     gets the identical, proven-working component — not a hand-copied
+	     clone that can drift out of sync or reintroduce bugs. -->
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@9.2.4/ol.css" />
+	<script src="https://cdn.jsdelivr.net/npm/ol@9.2.4/dist/ol.js"></script>
+	<script src="js/region-map-picker.js?v=2"></script>
+	<style>
+		:root { --brand: #ffc300; --brand-dark: #e6ad00; --ink: #000000; --muted: #666666; }
+		* { margin: 0; padding: 0; box-sizing: border-box; }
+		html, body { height: 100%; }
+		body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #ffffff; color: var(--ink); display: flex; flex-direction: column; }
+		.bar { background: var(--brand); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px rgba(244,187,38,.3); }
+		.bar h1 { font-size: 16px; }
+		.bar p { font-size: 12px; opacity: .85; margin-top: 2px; }
+		.btn { background: var(--brand); color: var(--ink); border: 2px solid var(--brand); padding: 9px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: transform .2s ease, background .2s ease, border-color .2s ease; font-size: 14px; }
+		.btn:hover { background: var(--brand-dark); border-color: var(--brand-dark); transform: translateY(-2px); }
+		.btn.secondary { background: #ffffff; color: var(--ink); border-color: var(--ink); }
+		.hint { padding: 10px 20px 0; color: var(--muted); font-size: 13px; }
+		#map { flex: 1; width: 100%; min-height: 320px; }
+		.footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 2px solid var(--brand); }
+		.toast { position: fixed; bottom: 20px; right: 20px; background: #111827; color: #fff; padding: 12px 20px; border-radius: 8px; opacity: 0; transition: opacity .25s; z-index: 100; }
+		.toast.show { opacity: 1; }
+		.toast.error { background: #dc2626; }
+		.loading { padding: 40px; text-align: center; color: var(--muted); }
+	</style>
+</head>
+<body>
+	<div class="bar">
+		<div>
+			<h1>📍 Delivery Coverage Regions</h1>
+			<p>Click the map to drop a pin — add as many as you need. Drag a pin's round center to move it, drag its square handle to resize the coverage circle, and click the red × to remove one.</p>
+		</div>
+		<button class="btn secondary" onclick="closeMe()">Close</button>
+	</div>
+	<div id="map"></div>
+	<div class="footer">
+		<button class="btn secondary" onclick="closeMe()">Cancel</button>
+		<button class="btn" onclick="submitRegions()">Save</button>
+	</div>
+	<div class="toast" id="toast"></div>
+
+	<script src="js/config.js"></script>
+	<script>
+		const API = (path) => `${API_BASE_URL}${path}`;
+		const token = localStorage.getItem('marketToken');
+		let picker = null;
+
+		function closeMe() {
+			// Works both as a standalone tab/window and embedded in an iframe:
+			// tell the parent (if any) we're done, then try to close/go back.
+			try { window.parent && window.parent.postMessage({ type: 'market-profile-map:close' }, '*'); } catch (_) {}
+			if (window.opener) { window.close(); return; }
+			if (window.parent && window.parent !== window) return; // parent handles hiding the iframe
+			history.back();
+		}
+
+		function toast(msg, isError) {
+			const t = document.getElementById('toast');
+			t.textContent = msg;
+			t.className = 'toast show' + (isError ? ' error' : '');
+			setTimeout(() => { t.className = 'toast'; }, 3000);
+		}
+
+		async function authedFetch(url, options = {}) {
+			options.headers = Object.assign({}, options.headers, {
+				Authorization: `Bearer ${token}`,
+			});
+			return fetch(url, options);
+		}
+
+		async function loadRegions() {
+			const mapEl = document.getElementById('map');
+			if (!token) {
+				mapEl.innerHTML = '<div class="loading">Not signed in — please close this window and sign in again.</div>';
+				return;
+			}
+			if (typeof createMultiPinPicker !== 'function') {
+				mapEl.innerHTML = '<div class="loading">Map library failed to load. Check your internet connection and reload.</div>';
+				return;
+			}
+			let initialRegions = [];
+			try {
+				const res = await authedFetch(API('/market-admin/profile'), { cache: 'no-store' });
+				const j = await res.json().catch(() => ({}));
+				if (res.status === 401) {
+					mapEl.innerHTML = '<div class="loading">Session expired — please close this window and sign in again.</div>';
+					return;
+				}
+				if (!res.ok || !j.success) {
+					toast(j.message || 'Failed to load delivery coverage regions', true);
+				} else {
+					initialRegions = Array.isArray(j.data && j.data.deliveryRegions) ? j.data.deliveryRegions : [];
+				}
+			} catch (e) {
+				console.warn('Failed to load delivery regions', e);
+				toast('Failed to load delivery coverage regions', true);
+			}
+			picker = createMultiPinPicker({ mapContainerId: 'map', initialRegions });
+		}
+
+		async function submitRegions() {
+			if (!picker) {
+				toast('Map is not ready yet — please wait a moment and try again', true);
+				return;
+			}
+			const deliveryRegions = picker.getRegions();
+			try {
+				const res = await authedFetch(API('/market-admin/profile'), {
+					method: 'PUT',
+					cache: 'no-store',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ deliveryRegions }),
+				});
+				const j = await res.json().catch(() => ({}));
+				if (!res.ok || !j.success) {
+					throw new Error(j.message || `Failed to save (HTTP ${res.status})`);
+				}
+				const savedRegions = Array.isArray(j.data && j.data.deliveryRegions) ? j.data.deliveryRegions : [];
+				try { window.parent && window.parent.postMessage({ type: 'market-profile-map:saved', deliveryRegions: savedRegions }, '*'); } catch (_) {}
+				if (savedRegions.length !== deliveryRegions.length) {
+					toast(`Saved ${savedRegions.length} of ${deliveryRegions.length} pin(s) — one or more pins were invalid and were not saved`, true);
+				} else {
+					toast('Delivery coverage regions updated', false);
+				}
+			} catch (e) {
+				toast(e.message || 'Failed to save coverage regions', true);
+			}
+		}
+
+		loadRegions();
+	</script>
+</body>
+</html>

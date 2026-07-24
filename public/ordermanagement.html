@@ -1385,7 +1385,7 @@
 							Mark Ready
 						</button>`;
 					case "ready for pickup":
-						return `<button class="action-btn edit" onclick="openAssignDriverModal('${order._id}', '${order.orderNumber}')">
+						return `<button class="action-btn edit" onclick="openAssignDriverModal('${order._id}', '${order.orderNumber}', '${encodeURIComponent((order.customer && order.customer.address && order.customer.address.city) || "")}')">
 							🚚 Mark OnTheWay
 						</button>`;
 					case "OnTheWay":
@@ -1488,9 +1488,10 @@
 				document.body.appendChild(overlay);
 			}
 
-			async function openAssignDriverModal(orderId, orderNumber) {
+			async function openAssignDriverModal(orderId, orderNumber, encodedOrderCity, lat, lng) {
 				assignOrderId = orderId;
 				assignOrderNumber = orderNumber;
+				const orderCity = encodedOrderCity ? decodeURIComponent(encodedOrderCity) : "";
 				ensureAssignDriverModal();
 				const modal = document.getElementById("assign-driver-modal");
 				const select = document.getElementById("assign-driver-select");
@@ -1498,9 +1499,20 @@
 				modal.style.display = "flex";
 				try {
 					// Market admins see their own market's drivers; main admin sees main-store drivers.
+					// Prefer the customer's EXACT map pin (captured on their profile) for the
+					// geofence filter — falls back to the delivery city's approximate center
+					// only if no exact pin was saved.
+					const exactLat = parseFloat(lat);
+					const exactLng = parseFloat(lng);
+					const hasPin = Number.isFinite(exactLat) && Number.isFinite(exactLng);
+					const locationQS = hasPin
+						? `lat=${exactLat}&lng=${exactLng}`
+						: orderCity
+						? `city=${encodeURIComponent(orderCity)}`
+						: "";
 					const driversUrl = IS_MARKET_CTX
-						? `${API_BASE_URL}/market-admin/drivers`
-						: `${API_BASE_URL}/riders?limit=200`;
+						? `${API_BASE_URL}/market-admin/drivers${locationQS ? "?" + locationQS : ""}`
+						: `${API_BASE_URL}/riders?limit=200${locationQS ? "&" + locationQS : ""}`;
 					const res = await fetch(driversUrl, {
 						headers: {
 							Authorization: `Bearer ${currentToken}`,
@@ -1517,8 +1529,9 @@
 						riders = all.filter((r) => !r.market);
 					}
 					if (!riders.length) {
-						select.innerHTML =
-							'<option value="">No drivers available. Add a driver first.</option>';
+						select.innerHTML = orderCity
+							? `<option value="">No drivers cover "${orderCity}". Add/adjust a driver's delivery regions first.</option>`
+							: '<option value="">No drivers available. Add a driver first.</option>';
 						return;
 					}
 					select.innerHTML = riders
@@ -1531,9 +1544,13 @@
 							const zones = Array.isArray(r.zones)
 								? r.zones.join(", ")
 								: r.zone || "";
+							const distance =
+								typeof r.distanceKm === "number" && isFinite(r.distanceKm)
+									? ` · ${r.distanceKm.toFixed(1)} km away`
+									: "";
 							return `<option value="${r._id}">${name}${
 								zones ? " — " + zones : ""
-							} (${r.status || "available"})</option>`;
+							} (${r.status || "available"})${distance}</option>`;
 						})
 						.join("");
 				} catch (e) {

@@ -1175,6 +1175,36 @@ exports.updateOrder = async (req, res) => {
 			return sendError(res, 400, "Delivered orders cannot be modified");
 		}
 
+		// Hard enforcement: reject assigning a driver whose configured
+		// delivery zone(s) don't cover the customer's location (exact map pin
+		// preferred, falls back to delivery city). This blocks the actual
+		// assignment even if called directly (not just filtering the dropdown).
+		if (
+			assignedRider !== undefined &&
+			assignedRider &&
+			assignedRider !== "unassigned"
+		) {
+			if (!mongoose.Types.ObjectId.isValid(assignedRider)) {
+				return sendError(res, 400, "Invalid rider ID");
+			}
+			const riderDoc = await Rider.findById(assignedRider).select(
+				"zones currentLocation market"
+			);
+			if (!riderDoc) {
+				return sendError(res, 404, "Rider not found");
+			}
+			const { riderCoversOrder } = require("../utils/zoneGeo");
+			const { covers, reason } = await riderCoversOrder(
+				riderDoc,
+				order,
+				Zone,
+				riderDoc.market || undefined
+			);
+			if (!covers) {
+				return sendError(res, 400, reason || "This driver's zone does not cover the customer's delivery location");
+			}
+		}
+
 		// Update fields
 		if (customer) order.customer = { ...order.customer, ...customer };
 		const __previousStatus = order.status;

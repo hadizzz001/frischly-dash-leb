@@ -603,6 +603,53 @@ exports.listMarketDrivers = async (req, res) => {
 		})
 			.populate("user", "name email phoneNumber address isActive role")
 			.sort({ createdAt: -1 });
+
+		// Optional geofence filter: only return drivers whose selected zones
+		// (each backed by a map pin + radius configured on the Zones management
+		// page) actually cover the customer's location. This is what keeps
+		// out-of-range drivers out of the "Assign Driver" dropdown.
+		//
+		// Prefers the customer's EXACT map pin (lat/lng, captured on their
+		// profile) when available — falls back to the delivery city's
+		// approximate center only if no exact pin was provided.
+		const { city, lat, lng } = req.query;
+		const exactLat = lat !== undefined ? parseFloat(lat) : NaN;
+		const exactLng = lng !== undefined ? parseFloat(lng) : NaN;
+		const hasExactPoint = Number.isFinite(exactLat) && Number.isFinite(exactLng);
+
+		if (hasExactPoint || city) {
+			const Zone = require("../models/Zone");
+			const { getCityCoords } = require("../utils/lebaneseCities");
+			const { namedZonesCoverPoint, riderDistanceToPoint } = require("../utils/zoneGeo");
+			const coords = hasExactPoint
+				? { lat: exactLat, lng: exactLng }
+				: getCityCoords(city);
+			if (coords) {
+				const allZoneNames = [
+					...new Set(riders.flatMap((r) => (Array.isArray(r.zones) ? r.zones : []))),
+				];
+				const zoneDocs = allZoneNames.length
+					? await Zone.find({
+							zoneName: { $in: allZoneNames },
+							isActive: true,
+							market: req.marketId,
+					  }).lean()
+					: [];
+				// Only keep drivers whose covering zone(s) reach this city, then
+				// rank them by proximity (live GPS if available, else nearest
+				// covering zone center) so the nearest driver appears first.
+				const covered = riders
+					.filter((r) => namedZonesCoverPoint(r.zones, zoneDocs, coords.lat, coords.lng))
+					.map((r) => {
+						const obj = typeof r.toObject === "function" ? r.toObject() : r;
+						obj.distanceKm = riderDistanceToPoint(r, zoneDocs, coords.lat, coords.lng);
+						return obj;
+					})
+					.sort((a, b) => a.distanceKm - b.distanceKm);
+				return ok(res, covered);
+			}
+		}
+
 		ok(res, riders);
 	} catch (err) {
 		handleErr(res, err);
@@ -1118,6 +1165,46 @@ exports.updateOrder = async (req, res) => {
 			if (req.body[key] !== undefined) update[key] = req.body[key];
 		}
 		if (req.user && req.user.id) update.updatedBy = req.user.id;
+
+		// Hard enforcement: reject assigning a driver whose configured
+		// delivery zone(s) don't cover the customer's location (exact map pin
+		// preferred, falls back to delivery city). This blocks the actual
+		// assignment even if called directly (not just filtering the dropdown).
+		if (
+			update.assignedRider !== undefined &&
+			update.assignedRider &&
+			update.assignedRider !== "unassigned"
+		) {
+			if (!mongoose.Types.ObjectId.isValid(update.assignedRider)) {
+				return fail(res, 400, "Invalid rider ID");
+			}
+			const Rider = require("../models/Rider");
+			const Zone = require("../models/Zone");
+			const { riderCoversOrder } = require("../utils/zoneGeo");
+			const [riderDoc, existingOrder] = await Promise.all([
+				Rider.findOne({
+					_id: update.assignedRider,
+					market: req.marketId,
+				}).select("zones currentLocation market"),
+				Order.findOne({ _id: req.params.id, market: req.marketId }),
+			]);
+			if (!riderDoc) {
+				return fail(res, 404, "Rider not found");
+			}
+			if (!existingOrder) {
+				return fail(res, 404, "Order not found");
+			}
+			const { covers, reason } = await riderCoversOrder(
+				riderDoc,
+				existingOrder,
+				Zone,
+				req.marketId
+			);
+			if (!covers) {
+				return fail(res, 400, reason || "This driver's zone does not cover the customer's delivery location");
+			}
+		}
+
 		const order = await Order.findOneAndUpdate(
 			{ _id: req.params.id, market: req.marketId },
 			update,
@@ -1994,6 +2081,10 @@ exports.updateSettings = async (req, res) => {
 // ───────────────────────── profile (Market doc) ─────────────────────────
 exports.getProfile = async (req, res) => {
 	try {
+		// Never let a browser/CDN cache this — a market owner who just saved new
+		// delivery-coverage pins must always see the true current DB state on
+		// their very next load/refresh, not a stale cached response.
+		res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
 		const market = await Market.findById(req.marketId);
 		if (!market) return fail(res, 404, "Market not found");
 		ok(res, market.toSafeObject());
@@ -2002,13 +2093,44 @@ exports.getProfile = async (req, res) => {
 	}
 };
 
+// Normalise the multi-pin "deliveryRegions" payload (JSON string via the
+// dashboard's Edit Profile form, or already an array). Mirrors the same
+// validation used on the main admin's Create/Edit Market page so a market
+// owner can self-service the exact same pin+radius coverage.
+const parseDeliveryRegionsForProfile = (regions) => {
+	let arr = regions;
+	if (typeof regions === "string") {
+		try {
+			arr = JSON.parse(regions);
+		} catch (error) {
+			return [];
+		}
+	}
+	if (!Array.isArray(arr)) return [];
+	return arr
+		.map((r) => ({
+			latitude: Number(r && r.latitude),
+			longitude: Number(r && r.longitude),
+			radiusKm: Number(r && r.radiusKm),
+		}))
+		.filter(
+			(r) =>
+				Number.isFinite(r.latitude) &&
+				Number.isFinite(r.longitude) &&
+				Number.isFinite(r.radiusKm) &&
+				r.radiusKm > 0
+		)
+		.slice(0, 30);
+};
+
 exports.updateProfile = async (req, res) => {
 	try {
+		res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
 		// Owner-only fields. Staff cannot edit profile.
 		if (!req.isMarketOwner) {
 			return fail(res, 403, "Only the market owner can update the profile");
 		}
-		const allowed = ["name", "email", "phoneNumber", "location", "logo", "cities"];
+		const allowed = ["name", "email", "phoneNumber", "location", "logo", "cities", "deliveryZones", "deliveryRegions"];
 		const data = {};
 		allowed.forEach((f) => {
 			if (req.body[f] !== undefined) data[f] = req.body[f];
@@ -2024,6 +2146,21 @@ exports.updateProfile = async (req, res) => {
 						),
 				  ].slice(0, 60)
 				: [];
+		}
+		if (data.deliveryZones !== undefined) {
+			data.deliveryZones = Array.isArray(data.deliveryZones)
+				? [
+						...new Set(
+							data.deliveryZones
+								.filter((z) => typeof z === "string")
+								.map((z) => z.trim())
+								.filter(Boolean)
+						),
+				  ].slice(0, 60)
+				: [];
+		}
+		if (data.deliveryRegions !== undefined) {
+			data.deliveryRegions = parseDeliveryRegionsForProfile(data.deliveryRegions);
 		}
 		const market = await Market.findByIdAndUpdate(req.marketId, data, {
 			new: true,

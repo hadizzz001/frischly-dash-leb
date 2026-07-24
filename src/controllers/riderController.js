@@ -1,8 +1,11 @@
 const Rider = require("../models/Rider");
 const User = require("../models/User");
 const Order = require("../models/Order");
+const Zone = require("../models/Zone");
 const mongoose = require("mongoose");
 const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
+const { namedZonesCoverPoint, riderDistanceToPoint } = require("../utils/zoneGeo");
+const { getCityCoords } = require("../utils/lebaneseCities");
 
 // @desc    Get all riders with stats
 // @route   GET /api/riders
@@ -13,7 +16,9 @@ exports.getRiders = async (req, res) => {
 			page = 1,
 			limit = 10,
 			zone,
-
+			city,
+			lat,
+			lng,
 			status,
 			vehicleType,
 			search,
@@ -198,12 +203,45 @@ exports.getRiders = async (req, res) => {
 			console.warn("[getRiders] diagnostic log failed:", logErr.message);
 		}
 
+		// Optional geofence filter: only keep riders whose selected zones (each
+		// backed by a map pin + radius configured on the Zones management page)
+		// actually cover the customer's location. Used by the "Assign Driver"
+		// dropdown so out-of-coverage drivers never show.
+		//
+		// Prefers the customer's EXACT map pin (lat/lng, captured on their
+		// profile) when available — falls back to the delivery city's
+		// approximate center only if no exact pin was provided.
+		let filteredRiders = enrichedRiders;
+		const exactLat = lat !== undefined ? parseFloat(lat) : NaN;
+		const exactLng = lng !== undefined ? parseFloat(lng) : NaN;
+		const hasExactPoint = Number.isFinite(exactLat) && Number.isFinite(exactLng);
+		if (hasExactPoint || city) {
+			const coords = hasExactPoint ? { lat: exactLat, lng: exactLng } : getCityCoords(city);
+			if (coords) {
+				const allZoneNames = [
+					...new Set(
+						enrichedRiders.flatMap((r) => (Array.isArray(r.zones) ? r.zones : []))
+					),
+				];
+				const zoneDocs = allZoneNames.length
+					? await Zone.find({ zoneName: { $in: allZoneNames }, isActive: true }).lean()
+					: [];
+				filteredRiders = enrichedRiders
+					.filter((r) => namedZonesCoverPoint(r.zones, zoneDocs, coords.lat, coords.lng))
+					.map((r) => ({
+						...r,
+						distanceKm: riderDistanceToPoint(r, zoneDocs, coords.lat, coords.lng),
+					}))
+					.sort((a, b) => a.distanceKm - b.distanceKm);
+			}
+		}
+
 		// Get total count for pagination
 		const totalRiders = await Rider.countDocuments(filter);
 		const totalPages = Math.ceil(totalRiders / limitNum);
 
-		sendResponse(res, 200, true, `Successfully retrieved ${enrichedRiders.length} riders`, {
-				riders: enrichedRiders,
+		sendResponse(res, 200, true, `Successfully retrieved ${filteredRiders.length} riders`, {
+				riders: filteredRiders,
 				pagination: {
 					currentPage: pageNum,
 					totalPages,
@@ -412,7 +450,7 @@ exports.updateRider = async (req, res) => {
 		// Populate user details for response
 		await rider.populate("user", "name email phoneNumber");
 
-		sendResponse(res, 200, true, "Rider profile updated successfully", rider);
+sendResponse(res, 200, true, "Rider profile updated successfully", rider);
 	} catch (error) {
 		console.error("Error updating rider:", error);
 		sendError(res, 500, "Error updating rider profile", error.message);
@@ -535,8 +573,34 @@ exports.updateRiderLocation = async (req, res) => {
 exports.getAvailableRiders = async (req, res) => {
 	try {
 		const { zone } = req.params;
+		const { city } = req.query;
 
-		const availableRiders = await Rider.findAvailableInZone(zone);
+		let availableRiders = await Rider.findAvailableInZone(zone);
+
+		// Optional geofence filter: only keep riders whose selected zones (each
+		// backed by a map pin + radius on the Zones management page) actually
+		// cover the requested delivery city.
+		if (city) {
+			const coords = getCityCoords(city);
+			if (coords) {
+				const allZoneNames = [
+					...new Set(
+						availableRiders.flatMap((r) => (Array.isArray(r.zones) ? r.zones : []))
+					),
+				];
+				const zoneDocs = allZoneNames.length
+					? await Zone.find({ zoneName: { $in: allZoneNames }, isActive: true }).lean()
+					: [];
+				availableRiders = availableRiders
+					.filter((r) => namedZonesCoverPoint(r.zones, zoneDocs, coords.lat, coords.lng))
+					.map((r) => {
+						const obj = typeof r.toObject === "function" ? r.toObject() : r;
+						obj.distanceKm = riderDistanceToPoint(r, zoneDocs, coords.lat, coords.lng);
+						return obj;
+					})
+					.sort((a, b) => a.distanceKm - b.distanceKm);
+			}
+		}
 
 		sendResponse(res, 200, true, `Found ${availableRiders.length} available riders in ${zone}`, availableRiders, { count: availableRiders.length });
 	} catch (error) {

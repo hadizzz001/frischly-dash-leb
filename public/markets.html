@@ -4,6 +4,10 @@
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<title>Markets Management — Freshly.lb Admin</title>
+	<!-- OpenLayers (free, battle-tested OSM raster map renderer) -->
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@9.2.4/ol.css" />
+	<script src="https://cdn.jsdelivr.net/npm/ol@9.2.4/dist/ol.js"></script>
+	<script src="js/region-map-picker.js?v=2"></script>
 	<style>
 		:root { --brand: #ffc300; --brand-dark: #e6ad00; --ink: #000000; --muted: #666666; }
 		* { margin: 0; padding: 0; box-sizing: border-box; }
@@ -54,8 +58,9 @@
 		.badge.inactive { background: #fee2e2; color: #991b1b; }
 		.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 50; }
 		.modal-overlay.show { display: flex; }
-		.modal { background: #ffffff; border: 3px solid var(--brand); border-radius: 15px; padding: 24px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 0 15px 35px rgba(244, 187, 38, 0.3); }
+		.modal { background: #ffffff; border: 3px solid var(--brand); border-radius: 0; padding: 24px 32px 32px; width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh; overflow-y: auto; box-shadow: none; }
 		.modal h2 { color: var(--brand); margin-bottom: 16px; }
+		.modal-inner { max-width: 900px; margin: 0 auto; }
 		.form-row { margin-bottom: 12px; }
 		.form-row label { display: block; font-weight: 500; font-size: 14px; margin-bottom: 5px; color: var(--ink); }
 		.logo-cell { width: 48px; height: 48px; border-radius: 10px; border: 2px solid var(--brand); object-fit: cover; background: #ffffff; }
@@ -119,7 +124,11 @@
 	<!-- Create / Edit modal -->
 	<div class="modal-overlay" id="modal">
 		<div class="modal">
-			<h2 id="modalTitle">Add Market</h2>
+			<div class="modal-inner">
+			<div style="display:flex;justify-content:space-between;align-items:center;">
+				<h2 id="modalTitle">Add Market</h2>
+				<span onclick="closeModal()" style="cursor:pointer;font-size:30px;color:#888;line-height:1;">&times;</span>
+			</div>
 			<form id="form" onsubmit="event.preventDefault(); submitForm();">
 				<input type="hidden" id="m_id" />
 				<div class="form-row"><label>Market Name *</label><input id="m_name" required /></div>
@@ -137,11 +146,19 @@
 					<div class="form-row"><label>Phone</label><input id="m_phone" /></div>
 				</div>
 				<div class="form-row"><label>Cities *</label><div id="m_cities" data-lebanese-city-multiselect data-placeholder="Select cities"></div></div>
+				<div class="form-row">
+					<label>📍 Delivery Coverage Regions (multi-pin)</label>
+					<p style="color:#666;font-size:12px;margin:2px 0 8px;">
+						Click the map to drop a pin — add as many as you need. Drag a pin's round center to move it, drag its square handle to resize the coverage circle, and click the red × to remove one.
+					</p>
+					<div id="m_map" style="width:100%;height:65vh;min-height:420px;border-radius:8px;border:2px solid var(--brand);"></div>
+				</div>
 				<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
 					<button type="button" class="btn secondary" onclick="closeModal()">Cancel</button>
 					<button type="submit" class="btn">Save</button>
 				</div>
 			</form>
+			</div>
 		</div>
 	</div>
 
@@ -343,6 +360,7 @@
 			if (citiesApi) citiesApi.setSelected([]);
 			setLogoPreview('');
 			document.getElementById('modal').classList.add('show');
+			initMarketMapPicker([]);
 		}
 
 		function openEdit(jsonStr) {
@@ -365,9 +383,37 @@
 			document.getElementById('m_logo').value = '';
 			setLogoPreview(m.logo || '');
 			document.getElementById('modal').classList.add('show');
+			initMarketMapPicker(Array.isArray(m.deliveryRegions) ? m.deliveryRegions : []);
 		}
 
-		function closeModal() { document.getElementById('modal').classList.remove('show'); }
+		function closeModal() {
+			document.getElementById('modal').classList.remove('show');
+			if (window.__marketMapPicker) {
+				window.__marketMapPicker.destroy();
+				window.__marketMapPicker = null;
+			}
+		}
+
+		function initMarketMapPicker(initialRegions) {
+			if (window.__marketMapPicker) {
+				window.__marketMapPicker.destroy();
+				window.__marketMapPicker = null;
+			}
+			if (typeof createMultiPinPicker !== 'function') return;
+			window.__marketMapPicker = createMultiPinPicker({
+				mapContainerId: 'm_map',
+				initialRegions: initialRegions || [],
+			});
+			// Extra safety net: force a resize/re-center/re-position shortly after
+			// the fullscreen modal finishes laying out (and again a couple more
+			// times to survive any CSS transition), so previously-saved pins
+			// never appear mis-sized, mispositioned, or missing.
+			[100, 300, 600].forEach((delay) => {
+				setTimeout(() => {
+					if (window.__marketMapPicker) window.__marketMapPicker.invalidateSize();
+				}, delay);
+			});
+		}
 
 		function setLogoPreview(src) {
 			const preview = document.getElementById('m_logo_preview');
@@ -409,6 +455,8 @@
 				city,
 			}));
 			body.append('cities', JSON.stringify(cities));
+			const deliveryRegions = window.__marketMapPicker ? window.__marketMapPicker.getRegions() : [];
+			body.append('deliveryRegions', JSON.stringify(deliveryRegions));
 			const email = document.getElementById('m_email').value;
 			const phone = document.getElementById('m_phone').value;
 			const logoFile = document.getElementById('m_logo').files[0];

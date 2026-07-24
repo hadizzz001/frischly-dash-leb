@@ -59,6 +59,18 @@ exports.updateSettings = async (req, res) => {
 		if (req.body.minimumOrderValue !== undefined) {
 			settings.minimumOrderValue = req.body.minimumOrderValue;
 		}
+		if (req.body.deliveryZones !== undefined) {
+			settings.deliveryZones = Array.isArray(req.body.deliveryZones)
+				? [
+						...new Set(
+							req.body.deliveryZones
+								.filter((z) => typeof z === "string")
+								.map((z) => z.trim())
+								.filter(Boolean)
+						),
+				  ].slice(0, 60)
+				: [];
+		}
 
 		await settings.save();
 

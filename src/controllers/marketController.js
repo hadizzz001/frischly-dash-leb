@@ -107,6 +107,35 @@ const parseCities = (cities) => {
 	].slice(0, 60);
 };
 
+// Normalise the multi-pin "deliveryRegions" payload (JSON string via
+// multipart FormData, or already an array). Each entry must have numeric
+// latitude/longitude/radiusKm; invalid entries are dropped.
+const parseDeliveryRegions = (regions) => {
+	let arr = regions;
+	if (typeof regions === "string") {
+		try {
+			arr = JSON.parse(regions);
+		} catch (error) {
+			return [];
+		}
+	}
+	if (!Array.isArray(arr)) return [];
+	return arr
+		.map((r) => ({
+			latitude: Number(r && r.latitude),
+			longitude: Number(r && r.longitude),
+			radiusKm: Number(r && r.radiusKm),
+		}))
+		.filter(
+			(r) =>
+				Number.isFinite(r.latitude) &&
+				Number.isFinite(r.longitude) &&
+				Number.isFinite(r.radiusKm) &&
+				r.radiusKm > 0
+		)
+		.slice(0, 30);
+};
+
 const buildMarketDuplicateQuery = ({ name, username, email }, excludeId) => {
 	const conditions = [];
 	if (name) conditions.push({ name: String(name).trim() });
@@ -174,6 +203,7 @@ exports.createMarket = async (req, res) => {
 			phoneNumber,
 			location: rawLocation,
 			cities: rawCities,
+			deliveryRegions: rawDeliveryRegions,
 			logo,
 		} = req.body;
 
@@ -205,6 +235,7 @@ exports.createMarket = async (req, res) => {
 			phoneNumber,
 			location,
 			cities,
+			deliveryRegions: parseDeliveryRegions(rawDeliveryRegions),
 			logo,
 			createdBy: req.user ? req.user.id : undefined,
 		};
@@ -374,6 +405,7 @@ exports.updateMarket = async (req, res) => {
 					"phoneNumber",
 					"location",
 					"cities",
+					"deliveryRegions",
 					"logo",
 					"logoPublicId",
 					"isActive",
@@ -385,6 +417,9 @@ exports.updateMarket = async (req, res) => {
 		}
 		if (req.body.cities !== undefined) {
 			req.body.cities = parseCities(req.body.cities);
+		}
+		if (req.body.deliveryRegions !== undefined) {
+			req.body.deliveryRegions = parseDeliveryRegions(req.body.deliveryRegions);
 		}
 
 		const duplicate = await findDuplicateAccount(

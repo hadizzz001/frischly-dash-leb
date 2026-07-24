@@ -1695,6 +1695,29 @@ body {
 	width: 95% !important;
 }
 
+/* Zone modal is fullscreen so its OpenLayers map picker always has a large,
+   stable, non-scroll-clipped area to render in (avoids the "pins not
+   visible/lost" issue caused by a small, animated, scrollable container). */
+#zone-modal .modal-content {
+	margin: 0;
+	width: 100vw;
+	max-width: 100vw;
+	height: 100vh;
+	max-height: 100vh;
+	border-radius: 0;
+	overflow-y: auto;
+}
+
+#zone-modal .modal-content > form {
+	max-width: 900px;
+	margin: 0 auto;
+}
+
+#zone-modal #zone-map {
+	height: 65vh !important;
+	min-height: 420px;
+}
+
 .modal-header {
 	display: flex;
 	justify-content: space-between;

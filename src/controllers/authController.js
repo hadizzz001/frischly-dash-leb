@@ -1136,11 +1136,12 @@ const getCustomerCount = async (req, res) => {
 			role: "customer",
 			isActive: true,
 		});
+		const ras = {
+			customerCount: customerCount,
+			message: `Total number of active customers: ${customerCount}`,
+		}
 
-		sendResponse(res, 200, true, "Success", {
-				customerCount: customerCount,
-				message: `Total number of active customers: ${customerCount}`,
-			});
+		sendResponse(res, 200, true, "Success", ras);  
 	} catch (error) {
 		console.error("Get customer count error:", error);
 		sendError(res, 500, "Server error fetching customer count");

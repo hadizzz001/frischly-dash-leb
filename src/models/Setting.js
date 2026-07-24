@@ -19,6 +19,14 @@ const SettingSchema = new mongoose.Schema(
 			type: Number,
 			default: 10,
 		},
+		// Delivery/coverage zones for the main (Freshly) admin store — the global
+		// equivalent of a market's `deliveryZones` and a driver's `zones`. Each
+		// name refers to a global Zone document (market: null) configured on the
+		// Zones management page.
+		deliveryZones: {
+			type: [String],
+			default: [],
+		},
 	},
 	{ timestamps: true }
 );

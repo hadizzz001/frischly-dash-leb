@@ -49,6 +49,14 @@ const orderSchema = new mongoose.Schema(
 			address: {
 				street: String,
 				city: String,
+				// ✅ Exact customer map pin (copied from the shopper's profile at
+				// order time). Used to check whether an assigned driver's
+				// delivery-region pin + radius actually covers this customer,
+				// instead of only matching by city name.
+				location: {
+					latitude: Number,
+					longitude: Number,
+				},
 			},
 		},
 		items: {

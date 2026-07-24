@@ -126,6 +126,23 @@ const userSchema = new mongoose.Schema(
 				default: "LB",
 				maxlength: [100, "Country cannot be more than 100 characters"],
 			},
+			// ✅ Exact map pin (auto-detected via GPS on registration, editable by
+			// the shopper afterwards). Used to precisely match the customer's
+			// location against a driver's delivery-region pin + radius when
+			// assigning a rider to an order — far more accurate than matching by
+			// city name alone.
+			location: {
+				latitude: {
+					type: Number,
+					min: [-90, "Latitude must be between -90 and 90"],
+					max: [90, "Latitude must be between -90 and 90"],
+				},
+				longitude: {
+					type: Number,
+					min: [-180, "Longitude must be between -180 and 180"],
+					max: [180, "Longitude must be between -180 and 180"],
+				},
+			},
 		},
 		// Service / coverage cities (multi-select of Lebanese cities). Optional,
 		// used by admin and market accounts to declare the areas they operate in.

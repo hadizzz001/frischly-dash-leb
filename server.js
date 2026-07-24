@@ -146,8 +146,18 @@ app.use(
 					"https://freshlylb.onrender.com",
 				],
 				scriptSrcAttr: ["'unsafe-inline'"], // Allow inline event handlers in both dev and production
-				styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
-				imgSrc: ["'self'", "data:", "https:"],
+				styleSrc: [
+					"'self'",
+					"'unsafe-inline'",
+					"https://cdnjs.cloudflare.com",
+					"https://cdn.jsdelivr.net", // OpenLayers (ol.css) map picker stylesheet
+				],
+				imgSrc: [
+					"'self'",
+					"data:",
+					"https:",
+					"blob:", // OpenLayers renders map tiles onto canvas via blob URLs
+				],
 				connectSrc: [
 					"'self'",
 					"http://localhost:*",
@@ -155,6 +165,8 @@ app.use(
 					// Add production API URLs
 					//"https://freshlylb.onrender.com",
 					"https://freshlylb.onrender.com",
+					"https://cdn.jsdelivr.net", // OpenLayers library + its (optional) source maps
+					"https://*.tile.openstreetmap.org", // OSM raster map tiles used by the delivery-region picker
 				], // Allow API calls
 				fontSrc: [
 					"'self'",
@@ -304,7 +316,19 @@ app.use(
 );
 
 // Serve static files
-app.use(express.static("public"));
+// JS files get no-cache so a bug fix (e.g. to the delivery-region map
+// picker) is guaranteed to reach every browser on next load instead of
+// being silently served from a stale disk cache, which previously made
+// fixed client-side validation bugs appear to still be happening.
+app.use(
+	express.static("public", {
+		setHeaders: (res, filePath) => {
+			if (filePath.endsWith(".js")) {
+				res.setHeader("Cache-Control", "no-cache, must-revalidate");
+			}
+		},
+	}),
+);
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -394,7 +418,22 @@ app.get("/market", (req, res) => {
 
 // Route for the full market-admin dashboard (after login)
 app.get("/market-dashboard", (req, res) => {
+	// Never let a browser cache this page — this dashboard has been edited
+	// repeatedly and a stale cached copy previously made fixed bugs appear
+	// to still be happening for some users.
+	res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
 	res.sendFile(__dirname + "/public/market-dashboard.html");
+});
+
+// Standalone delivery-coverage-regions map page for a market owner's own
+// Profile — literally the same createMultiPinPicker component/behavior as
+// the main admin's Markets Management page, embedded via iframe from the
+// market dashboard's Profile tab so both surfaces always share identical,
+// single-source-of-truth code (instead of two independently-maintained
+// clones that can drift out of sync).
+app.get("/market-profile-map", (req, res) => {
+	res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+	res.sendFile(__dirname + "/public/market-profile-map.html");
 });
 
 // Route for admin's markets management page
