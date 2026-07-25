@@ -164,16 +164,12 @@ const productSchema = new mongoose.Schema(
 				default: "cm",
 			},
 		},
+		// Optional free-form weight label shown to customers, e.g. "500g", "1.5kg", "250 ml".
+		// Applies to both Frischly (main store) and Market products.
 		weight: {
-			value: {
-				type: Number,
-				min: [0, "Weight cannot be negative"],
-			},
-			unit: {
-				type: String,
-				enum: ["g", "kg", "oz", "lb"],
-				default: "g",
-			},
+			type: String,
+			trim: true,
+			maxlength: [30, "Weight cannot be more than 30 characters"],
 		},
 		supplier: {
 			name: String,
