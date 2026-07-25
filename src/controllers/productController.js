@@ -527,7 +527,11 @@ exports.getProducts = async (req, res) => {
 					},
 				})
 				.populate("createdBy", "name email")
-				.populate("market", "name username location logo")
+				// Include `cities` and `deliveryRegions` so the client can apply
+				// its city + delivery-range visibility rules to global search
+				// results (previously omitted here, which silently let
+				// out-of-range/out-of-city market products leak into search).
+				.populate("market", "name username location logo cities deliveryRegions")
 				.sort(sortObj)
 				.skip(skip)
 				.limit(limitNumber)

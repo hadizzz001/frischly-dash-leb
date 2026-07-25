@@ -12629,6 +12629,15 @@
 				if (order.customer.email) {
 					customerInfo += `<br>📧 ${order.customer.email}`;
 				}
+				const custAddr = order.customer && order.customer.address;
+				if (custAddr && custAddr.city) {
+					customerInfo += `<br>📍 ${custAddr.street ? custAddr.street + ", " : ""}${custAddr.city}`;
+				}
+				const custLoc = custAddr && custAddr.location;
+				if (custLoc && isFinite(custLoc.latitude) && isFinite(custLoc.longitude)) {
+					const mapUrl = `https://www.openstreetmap.org/?mlat=${custLoc.latitude}&mlon=${custLoc.longitude}#map=16/${custLoc.latitude}/${custLoc.longitude}`;
+					customerInfo += `<br><a href="${mapUrl}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:4px 10px;background:#007bff;color:#fff;border-radius:6px;text-decoration:none;font-size:0.85em;font-weight:500;">🗺️ View Map Pin</a>`;
+				}
 				document.getElementById("modal-customer-info").innerHTML = customerInfo;
 
 				// Set customer phone
