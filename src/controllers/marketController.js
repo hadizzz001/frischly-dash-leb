@@ -13,6 +13,7 @@ const {
 	findDuplicateAccount,
 	duplicateAccountMessage,
 } = require("../utils/accountDuplicates");
+const { pointInAnyRegion } = require("../utils/geo");
 
 if (
 	!process.env.CLOUDINARY_CLOUD_NAME ||
@@ -686,6 +687,17 @@ exports.getMarketStats = async (req, res) => {
 exports.uploadLogoMiddleware = upload.single("logo");
 
 // Public: list active markets (id, name, logo, location) for the mobile app
+//
+// Optional ?lat=&lng= (the shopper's exact map pin): when present, a market
+// is only returned if that pin actually falls inside the market's own
+// delivery-range pin(s) + radius — the "green zone" configured either
+// directly on the market (`deliveryRegions`, drawn on the market's own
+// coverage map) or via named Zone documents it has opted into
+// (`deliveryZones`, each carrying its own map pin + radius, set on the
+// Zones management page). A market with NO range configured at all is not
+// filtered out here — it stays visible and is instead scoped by ?city= only
+// (matched client-side too), since it hasn't opted into precise-range
+// matching yet.
 exports.getPublicMarkets = async (req, res) => {
 	try {
 		// Optional ?city= filter: only markets located in that city.
@@ -699,9 +711,90 @@ exports.getPublicMarkets = async (req, res) => {
 			filter.$or = [{ cities: cityRegex }, { "location.city": cityRegex }];
 		}
 
-		const markets = await Market.find(filter)
-			.select("name username logo location cities")
-			.sort({ name: 1 });
+		let markets = await Market.find(filter)
+			.select("name username logo location cities deliveryRegions deliveryZones")
+			.sort({ name: 1 })
+			.lean();
+
+		const lat = parseFloat(req.query.lat);
+		const lng = parseFloat(req.query.lng);
+		const hasPin = Number.isFinite(lat) && Number.isFinite(lng);
+
+		if (hasPin && markets.length) {
+			const Zone = require("../models/Zone");
+			const escapeRegex = (v) => String(v).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+			const marketIds = markets.map((m) => m._id);
+			const zoneNames = [
+				...new Set(
+					markets.flatMap((m) =>
+						Array.isArray(m.deliveryZones) ? m.deliveryZones : []
+					)
+				),
+			];
+
+			let zoneDocs = [];
+			if (zoneNames.length) {
+				zoneDocs = await Zone.find({
+					market: { $in: marketIds },
+					isActive: true,
+					zoneName: {
+						$in: zoneNames.map(
+							(n) => new RegExp(`^${escapeRegex(n)}$`, "i")
+						),
+					},
+				})
+					.select("market zoneName coordinates distance distanceUnit")
+					.lean();
+			}
+
+			// Group each market's own named zones by market id for a quick lookup.
+			const zonesByMarket = {};
+			zoneDocs.forEach((z) => {
+				const key = String(z.market);
+				(zonesByMarket[key] = zonesByMarket[key] || []).push(z);
+			});
+
+			markets = markets.filter((m) => {
+				// Combine the market's own multi-pin regions with its named
+				// zones' pin+radius (converted to km) into one region list.
+				const regions = Array.isArray(m.deliveryRegions)
+					? m.deliveryRegions.slice()
+					: [];
+				const myZoneNames = new Set(
+					(Array.isArray(m.deliveryZones) ? m.deliveryZones : []).map((n) =>
+						String(n).trim().toLowerCase()
+					)
+				);
+				(zonesByMarket[String(m._id)] || []).forEach((z) => {
+					if (!myZoneNames.has(String(z.zoneName).trim().toLowerCase())) return;
+					if (
+						z.coordinates &&
+						typeof z.coordinates.latitude === "number" &&
+						typeof z.coordinates.longitude === "number" &&
+						typeof z.distance === "number" &&
+						z.distance > 0
+					) {
+						const radiusKm =
+							z.distanceUnit === "miles" ? z.distance * 1.60934 : z.distance;
+						regions.push({
+							latitude: z.coordinates.latitude,
+							longitude: z.coordinates.longitude,
+							radiusKm,
+						});
+					}
+				});
+
+				// No range configured at all -> don't exclude, city filter already applied.
+				if (!regions.length) return true;
+				const inRange = pointInAnyRegion(lat, lng, regions);
+				if (!inRange) {
+					console.log(
+						`[getPublicMarkets] Excluding "${m.name}" (${m._id}) — shopper pin (${lat}, ${lng}) is outside its ${regions.length} delivery region(s)`
+					);
+				}
+				return inRange;
+			});
+		}
 
 		sendResponse(res, 200, true, "Success", markets);
 	} catch (error) {
