@@ -436,6 +436,15 @@ app.get("/market-profile-map", (req, res) => {
 	res.sendFile(__dirname + "/public/market-profile-map.html");
 });
 
+// Standalone delivery-coverage-regions map page for the main (Freshly) admin's
+// own Profile — same createMultiPinPicker component as the market owner's
+// page above, just backed by /api/admin/settings instead of
+// /api/market-admin/profile.
+app.get("/admin-profile-map", (req, res) => {
+	res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+	res.sendFile(__dirname + "/public/admin-profile-map.html");
+});
+
 // Route for admin's markets management page
 app.get("/markets", (req, res) => {
 	res.sendFile(__dirname + "/public/markets.html");

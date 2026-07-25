@@ -71,6 +71,29 @@ exports.updateSettings = async (req, res) => {
 				  ].slice(0, 60)
 				: [];
 		}
+		if (req.body.deliveryRegions !== undefined) {
+			const isValidRegion = (r) =>
+				r &&
+				typeof r.latitude === "number" &&
+				r.latitude >= -90 &&
+				r.latitude <= 90 &&
+				typeof r.longitude === "number" &&
+				r.longitude >= -180 &&
+				r.longitude <= 180 &&
+				typeof r.radiusKm === "number" &&
+				r.radiusKm >= 0.1 &&
+				r.radiusKm <= 1000;
+			settings.deliveryRegions = Array.isArray(req.body.deliveryRegions)
+				? req.body.deliveryRegions
+						.filter(isValidRegion)
+						.map((r) => ({
+							latitude: r.latitude,
+							longitude: r.longitude,
+							radiusKm: r.radiusKm,
+						}))
+						.slice(0, 30)
+				: [];
+		}
 
 		await settings.save();
 
@@ -94,6 +117,11 @@ exports.getPublicSettings = async (req, res) => {
 			minimumOrderValue: settings.minimumOrderValue,
 			// Dash serving cities (array). Empty => main store shown everywhere.
 			cities,
+			// Dash multi-pin delivery coverage (map pin(s) + radius). Empty =>
+			// no range restriction (city rule above still applies).
+			deliveryRegions: Array.isArray(settings.deliveryRegions)
+				? settings.deliveryRegions
+				: [],
 		});
 	} catch (error) {
 		sendError(res, 500, "Server Error");
