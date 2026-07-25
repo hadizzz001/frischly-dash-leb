@@ -949,6 +949,7 @@ exports.createProduct = async (req, res) => {
 			"inAds",
 			"is18Plus",
 			"isActive",
+			"weight",
 		];
 		const data = { market: req.marketId };
 		allowed.forEach((f) => {
@@ -980,6 +981,7 @@ exports.updateProduct = async (req, res) => {
 			"inAds",
 			"is18Plus",
 			"isActive",
+			"weight",
 		];
 		const data = {};
 		allowed.forEach((f) => {
