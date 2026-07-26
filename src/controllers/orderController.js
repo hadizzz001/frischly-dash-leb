@@ -516,19 +516,21 @@ exports.createOrder = async (req, res) => {
 			? new Date(deliveryTime)
 			: new Date();
 
-		// Validate required fields — a customer needs a name and at least one
-		// contact channel (phone OR email). Google-only accounts have no phone
-		// number, so phone alone can't be a hard requirement here.
+		// Validate required fields — a customer needs a name and a valid
+		// Lebanese phone number (7 or 8 local digits, country code / leading
+		// zero optional) to place an order; delivery riders need a working
+		// contact number, so email alone is no longer sufficient here.
 		const dbCustomer = await User.findById(customer.id);
 		console.log("Customer found:", dbCustomer ? dbCustomer._id : "Not found");
-		if (
-			!dbCustomer ||
-			!dbCustomer.name ||
-			!dbCustomer.id ||
-			(!dbCustomer.phoneNumber && !dbCustomer.email)
-		) {
+		const customerPhoneDigits = String(dbCustomer?.phoneNumber || "")
+			.replace(/\D/g, "")
+			.replace(/^00961/, "")
+			.replace(/^961/, "")
+			.replace(/^0+/, "");
+		const hasValidPhone = /^\d{7,8}$/.test(customerPhoneDigits);
+		if (!dbCustomer || !dbCustomer.name || !dbCustomer.id || !hasValidPhone) {
 			console.log("Customer validation failed. Missing required fields.");
-			return sendError(res, 400, "Customer name and either a phone number or email are required");
+			return sendError(res, 400, "A valid phone number (7 or 8 digits) is required to place an order");
 		}
 
 		// Handle new address if provided

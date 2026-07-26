@@ -5,6 +5,7 @@ const {
 	getAllFeedback,
 	getFeedbackById,
 	getFeedbackStats,
+	getMyFeedbackOrderIds,
 } = require("../controllers/feedbackController");
 const { protect, authorize } = require("../middleware/auth");
 
@@ -12,6 +13,10 @@ const { protect, authorize } = require("../middleware/auth");
 // account may call this — ownership of the order is verified in the
 // controller, so no role restriction is needed here.
 router.post("/", protect, createFeedback);
+
+// Customer-facing: order ids the logged-in user has already rated, so the
+// app can permanently hide the prompt for those orders.
+router.get("/mine", protect, getMyFeedbackOrderIds);
 
 // Admin-only: list + view feedback in the dashboard. Not exposed to markets.
 router.get("/stats", protect, authorize("admin"), getFeedbackStats);

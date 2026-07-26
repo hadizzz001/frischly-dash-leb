@@ -170,6 +170,27 @@ exports.getFeedbackById = async (req, res) => {
 	}
 };
 
+// @desc    Get the order ids the logged-in customer has ALREADY submitted
+//          feedback for. Used by the app so a delivered order never shows
+//          the "rate your order" prompt again once feedback exists for it —
+//          regardless of what's cached on-device (reinstalls, new devices,
+//          cleared storage, etc.).
+// @route   GET /api/feedback/mine
+// @access  Private (any authenticated customer)
+exports.getMyFeedbackOrderIds = async (req, res) => {
+	try {
+		const customerId = req.user._id || req.user.id;
+		const feedback = await Feedback.find({ customer: customerId }).select(
+			"order"
+		);
+		const orderIds = feedback.map((f) => String(f.order));
+		sendSuccess(res, orderIds);
+	} catch (error) {
+		console.error("getMyFeedbackOrderIds error:", error);
+		sendError(res, 400, error.message || "Failed to load your feedback");
+	}
+};
+
 // @desc    Get feedback summary stats (totals + average ratings)
 // @route   GET /api/feedback/stats
 // @access  Private (Admin only)
