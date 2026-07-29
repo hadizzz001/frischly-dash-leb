@@ -14898,9 +14898,10 @@
 
 				data.data.forEach((waste) => {
 					const date = new Date(waste.createdAt).toLocaleDateString();
-					const recordedBy = waste.recordedBy
-						? waste.recordedBy.name
-						: "Unknown";
+					const recordedBy =
+						(waste.recordedBy && waste.recordedBy.name) ||
+						waste.recordedByName ||
+						"Unknown";
 
 					// Get product details from populated field or fallback
 					const productName = waste.productId
@@ -15065,7 +15066,7 @@
 							price,
 							record.quantity || 0,
 							record.reason || '',
-							record.recordedBy?.name || ''
+							record.recordedBy?.name || record.recordedByName || ''
 						];
 						// Escape commas and quotes in fields
 						const escapedRow = row.map(field => {
@@ -15364,11 +15365,25 @@
 
 					const data = await response.json();
 
+					// Normalize the payload so missing fields never break the UI
+					const safeData = {
+						total: {
+							totalQuantity: data?.data?.total?.totalQuantity ?? 0,
+							count: data?.data?.total?.count ?? 0,
+						},
+						byReason: Array.isArray(data?.data?.byReason)
+							? data.data.byReason
+							: [],
+						byDate: Array.isArray(data?.data?.byDate)
+							? data.data.byDate
+							: [],
+					};
+
 					// Update charts
-					updateWasteCharts(data.data);
+					updateWasteCharts(safeData);
 
 					// Update summary stats
-					updateWasteSummaryStats(data.data);
+					updateWasteSummaryStats(safeData);
 				} catch (error) {
 					console.error("Error loading waste statistics:", error);
 					showMessage(
@@ -15396,9 +15411,12 @@
 
 			// Create waste charts
 			function createWasteCharts(data) {
+				const byReason = Array.isArray(data?.byReason) ? data.byReason : [];
+				const byDate = Array.isArray(data?.byDate) ? data.byDate : [];
+
 				// Prepare data for reason chart
-				const reasonLabels = data.byReason.map((item) => item._id);
-				const reasonData = data.byReason.map((item) => item.totalQuantity);
+				const reasonLabels = byReason.map((item) => item._id);
+				const reasonData = byReason.map((item) => item.totalQuantity ?? 0);
 				const reasonColors = generateRandomColors(reasonLabels.length);
 
 				// Create or update reason chart
@@ -15444,8 +15462,8 @@
 				}
 
 				// Prepare data for trend chart
-				const dateLabels = data.byDate.map((item) => item._id);
-				const dateData = data.byDate.map((item) => item.totalQuantity);
+				const dateLabels = byDate.map((item) => item._id);
+				const dateData = byDate.map((item) => item.totalQuantity ?? 0);
 
 				// Create or update trend chart
 				const trendCtx = document
@@ -15497,6 +15515,13 @@
 			// Update waste summary statistics
 			function updateWasteSummaryStats(data) {
 				const summaryContainer = document.getElementById("waste-summary-stats");
+				if (!summaryContainer) return;
+
+				const total = data?.total ?? {};
+				const totalQuantity = Number(total.totalQuantity) || 0;
+				const totalCount = Number(total.count) || 0;
+				const byReason = Array.isArray(data?.byReason) ? data.byReason : [];
+				const byDate = Array.isArray(data?.byDate) ? data.byDate : [];
 
 				// Create summary cards
 				let html = "";
@@ -15506,7 +15531,7 @@
 					<div class="stat-card">
 						<div class="stat-icon">📊</div>
 						<div class="stat-info">
-							<div class="stat-value">${data.total.totalQuantity.toFixed(2)}</div>
+							<div class="stat-value">${totalQuantity.toFixed(2)}</div>
 							<div class="stat-label">Total Waste Units</div>
 						</div>
 					</div>
@@ -15517,19 +15542,19 @@
 					<div class="stat-card">
 						<div class="stat-icon">🧾</div>
 						<div class="stat-info">
-							<div class="stat-value">${data.total.count}</div>
+							<div class="stat-value">${totalCount}</div>
 							<div class="stat-label">Total Records</div>
 						</div>
 					</div>
 				`;
 
 				// Top waste reason
-				if (data.byReason.length > 0) {
+				if (byReason.length > 0) {
 					html += `
 						<div class="stat-card">
 							<div class="stat-icon">🔍</div>
 							<div class="stat-info">
-								<div class="stat-value">${data.byReason[0]._id}</div>
+								<div class="stat-value">${byReason[0]._id}</div>
 								<div class="stat-label">Top Waste Reason</div>
 							</div>
 						</div>
@@ -15537,8 +15562,8 @@
 				}
 
 				// Average waste per day
-				if (data.byDate.length > 0) {
-					const avgWaste = data.total.totalQuantity / data.byDate.length;
+				if (byDate.length > 0) {
+					const avgWaste = totalQuantity / byDate.length;
 					html += `
 						<div class="stat-card">
 							<div class="stat-icon">📈</div>
@@ -15565,24 +15590,26 @@
 
 					const data = await response.json();
 
+					const total = data?.data?.total ?? {};
+					const byReason = Array.isArray(data?.data?.byReason)
+						? data.data.byReason
+						: [];
+					const byDate = Array.isArray(data?.data?.byDate)
+						? data.data.byDate
+						: [];
+
 					// Update dashboard stats
 					document.getElementById("total-waste-count").textContent =
-						data.data.total.count || 0;
+						total.count || 0;
 
 					// Calculate this week's waste
-					const thisWeekWaste = calculateThisWeekWaste(data.data.byDate);
+					const thisWeekWaste = calculateThisWeekWaste(byDate);
 					document.getElementById("waste-this-week").textContent =
 						thisWeekWaste.toFixed(2);
 
 					// Count by reasons
-					const expiredCount = getWasteCountByReason(
-						data.data.byReason,
-						"Expired"
-					);
-					const damagedCount = getWasteCountByReason(
-						data.data.byReason,
-						"Damaged"
-					);
+					const expiredCount = getWasteCountByReason(byReason, "Expired");
+					const damagedCount = getWasteCountByReason(byReason, "Damaged");
 
 					document.getElementById("expired-items").textContent =
 						expiredCount.toFixed(2);
@@ -15600,20 +15627,22 @@
 				startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
 				startOfWeek.setHours(0, 0, 0, 0);
 
-				const weekWaste = dateData
+				const weekWaste = (Array.isArray(dateData) ? dateData : [])
 					.filter((item) => {
 						const itemDate = new Date(item._id);
 						return itemDate >= startOfWeek;
 					})
-					.reduce((sum, item) => sum + item.totalQuantity, 0);
+					.reduce((sum, item) => sum + (item.totalQuantity || 0), 0);
 
 				return weekWaste;
 			}
 
 			// Helper to get waste count by reason
 			function getWasteCountByReason(reasonData, reason) {
-				const found = reasonData.find((item) => item._id === reason);
-				return found ? found.totalQuantity : 0;
+				const found = (Array.isArray(reasonData) ? reasonData : []).find(
+					(item) => item._id === reason
+				);
+				return found ? found.totalQuantity || 0 : 0;
 			}
 
 			// Generate random colors for charts

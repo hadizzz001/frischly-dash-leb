@@ -160,6 +160,15 @@ const normalizeWastePayload = async (body, req) => {
 			out.productName = product.name;
 		}
 	}
+	// Stamp who recorded this waste entry. `req.user` is populated by the
+	// auth middleware for both market_staff accounts (User doc) and the
+	// market owner itself (unified shape with role "market"), so it's always
+	// present when this route is hit.
+	if (req.user) {
+		out.recordedBy = req.user._id || req.user.id;
+		out.recordedByModel = req.user.role === "market" ? "Market" : "User";
+		out.recordedByName = req.user.name || undefined;
+	}
 	return out;
 };
 
@@ -1161,6 +1170,7 @@ exports.updateOrder = async (req, res) => {
 			"deliveryTime",
 			"notes",
 			"assignedRider",
+			"shelfNumber",
 		];
 		const update = {};
 		for (const key of allowed) {
@@ -1916,11 +1926,15 @@ exports.waste = crud(
 		"costValue",
 		"notes",
 		"recordedAt",
+		"recordedBy",
+		"recordedByModel",
+		"recordedByName",
 	],
 	{
 		searchFields: ["productName", "barcode"],
 		defaultSort: { recordedAt: -1 },
 		normalize: normalizeWastePayload,
+		populate: [{ path: "recordedBy", select: "name email" }],
 		// Recording waste consumes stock; editing applies only the difference;
 		// deleting a record puts the quantity back (restock).
 		afterCreate: async (item, req) => {

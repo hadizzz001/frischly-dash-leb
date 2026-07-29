@@ -32,6 +32,21 @@ const marketWasteSchema = new mongoose.Schema(
 		costValue: { type: Number, default: 0, min: 0 },
 		notes: { type: String, trim: true, maxlength: 500 },
 		recordedAt: { type: Date, default: Date.now },
+		// Who recorded this waste entry. References the User doc for a
+		// market_staff account, or the Market itself when the market owner
+		// records it directly (see auth middleware's unified req.user shape).
+		recordedBy: {
+			type: mongoose.Schema.Types.ObjectId,
+			refPath: "recordedByModel",
+		},
+		recordedByModel: {
+			type: String,
+			enum: ["User", "Market"],
+			default: "User",
+		},
+		// Denormalized name snapshot so the dashboard can display who recorded
+		// the waste even if the user/market is later deleted or renamed.
+		recordedByName: { type: String, trim: true, maxlength: 200 },
 	},
 	{ timestamps: true },
 );

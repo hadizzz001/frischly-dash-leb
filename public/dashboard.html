@@ -15085,9 +15085,10 @@
 
 				data.data.forEach((waste) => {
 					const date = new Date(waste.createdAt).toLocaleDateString();
-					const recordedBy = waste.recordedBy
-						? waste.recordedBy.name
-						: "Unknown";
+					const recordedBy =
+						(waste.recordedBy && waste.recordedBy.name) ||
+						waste.recordedByName ||
+						"Unknown";
 
 					// Get product details from populated field or fallback
 					const productName = waste.productId
@@ -15252,7 +15253,7 @@
 							price,
 							record.quantity || 0,
 							record.reason || '',
-							record.recordedBy?.name || ''
+							record.recordedBy?.name || record.recordedByName || ''
 						];
 						// Escape commas and quotes in fields
 						const escapedRow = row.map(field => {
