@@ -20,7 +20,7 @@ const pickTrackingSchema = new mongoose.Schema(
     },
     userRole: {
       type: String,
-      enum: ["admin", "manager", "staff", "market", "rider", "market_driver"],
+      enum: ["admin", "manager", "staff", "market", "market_staff", "market_manager", "rider", "market_driver"],
       required: true,
     },
     totalItems: {

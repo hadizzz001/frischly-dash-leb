@@ -352,7 +352,7 @@ exports.getPickProgress = async (req, res) => {
 // @access  Private (staff, market, rider, market_driver)
 exports.completeOrder = async (req, res) => {
   try {
-    const { orderId, notes } = req.body;
+    const { orderId, notes, items: clientItems } = req.body;
 
     if (!orderId) {
       return sendError(res, 400, "orderId is required");
@@ -375,14 +375,75 @@ exports.completeOrder = async (req, res) => {
       }
     }
 
-    const pickTracking = await PickTracking.findOne({
+    let pickTracking = await PickTracking.findOne({
       orderId: orderId,
       userId: req.user.id,
     });
 
     const totalItems = order.items.length;
-    const pickedCount = pickTracking?.pickedItems?.length || 0;
-    const skippedCount = pickTracking?.skippedItems?.length || 0;
+    let pickedCount = pickTracking?.pickedItems?.length || 0;
+    let skippedCount = pickTracking?.skippedItems?.length || 0;
+
+    // ── Client-reported item state (authoritative) ─────────────────────────
+    // The scanner app records each pick via a fire-and-forget POST to
+    // /scanner/pick-item so the UI never blocks on a network round-trip
+    // per scan. That means by the time the operator finishes scanning the
+    // very last item and immediately taps "Save Shelf" (which calls this
+    // endpoint), one or more of those pick-item requests can still be in
+    // flight — so the PickTracking record above can under-report how many
+    // items were actually picked, even though every item was in fact
+    // physically scanned on the device. That race condition caused orders
+    // to get stuck on their previous status ("confirmed"/"processing")
+    // forever, with the app throwing "order was not fully completed" even
+    // though the operator really did scan everything.
+    //
+    // Fix: if the app sends its own authoritative per-item scanned state
+    // (`items: [{ itemId, picked }]`, reflecting exactly what the operator
+    // scanned on their screen), trust it as the source of truth for this
+    // completion instead of the possibly-still-catching-up PickTracking
+    // collection, and use it to backfill/repair PickTracking so it stays
+    // consistent for reporting purposes.
+    if (Array.isArray(clientItems) && clientItems.length > 0) {
+      const pickedIds = clientItems
+        .filter((i) => i && i.picked && i.itemId)
+        .map((i) => String(i.itemId));
+      const skippedIds = clientItems
+        .filter((i) => i && !i.picked && i.itemId)
+        .map((i) => String(i.itemId));
+
+      pickedCount = pickedIds.length;
+      skippedCount = skippedIds.length;
+
+      if (!pickTracking) {
+        pickTracking = await PickTracking.create({
+          orderId: orderId,
+          userId: req.user.id,
+          userName: req.user.name,
+          userRole: req.user.role,
+          totalItems: totalItems,
+          pickedItems: [],
+          skippedItems: [],
+        });
+      }
+
+      const existingPickedIds = new Set(
+        pickTracking.pickedItems.map((p) => p.itemId.toString())
+      );
+      const existingSkippedIds = new Set(
+        pickTracking.skippedItems.map((p) => p.itemId.toString())
+      );
+
+      for (const itemId of pickedIds) {
+        if (!existingPickedIds.has(itemId)) {
+          pickTracking.pickedItems.push({ itemId, quantity: 1, pickedAt: new Date() });
+        }
+      }
+      for (const itemId of skippedIds) {
+        if (!existingSkippedIds.has(itemId)) {
+          pickTracking.skippedItems.push({ itemId, reason: "unknown", skippedAt: new Date() });
+        }
+      }
+    }
 
     // Update order status based on pick results
     let newStatus = order.status;
