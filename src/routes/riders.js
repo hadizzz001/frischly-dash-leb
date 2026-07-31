@@ -29,7 +29,12 @@ router.get(
 	getAvailableRiders
 );
 
-router.get("/", protect, authorize("admin", "manager"), getRiders);
+// Read-only rider list. Also allow "staff" (warehouse/main-store scanner app
+// users) to fetch it — they need this to populate the "Assign Driver" dropdown
+// when marking a ready-for-pickup order OnTheWay (see scanner app order
+// detail screen), mirroring what the admin dashboard already does with an
+// admin token.
+router.get("/", protect, authorize("admin", "manager", "staff"), getRiders);
 
 router.get(
 	"/me",
