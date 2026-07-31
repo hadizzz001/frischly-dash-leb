@@ -1760,6 +1760,7 @@ exports.updateOrderStatus = async (req, res) => {
 			manager: validStatuses, // Manager can update to any status
 			staff: validStatuses, // Staff can update to any status
 			rider: ["ready for pickup", "OnTheWay", "delivered"], // Riders can only update delivery-related statuses
+			market_driver: ["ready for pickup", "OnTheWay", "delivered"], // Market drivers behave like riders for delivery-related statuses
 			market: [
 				"confirmed",
 				"processing",
@@ -1775,7 +1776,7 @@ exports.updateOrderStatus = async (req, res) => {
 		}
 
 		// Additional business logic for riders
-		if (userRole === "rider") {
+		if (userRole === "rider" || userRole === "market_driver") {
 			// Check if the rider is assigned to this order
 			const rider = await Rider.findOne({ user: req.user.id });
 
