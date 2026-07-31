@@ -16,7 +16,18 @@ const router = express.Router();
 
 // All scanner routes are protected and require staff, market, rider, or market_driver role
 router.use(protect);
-router.use(authorize("admin", "manager", "staff", "market", "rider", "market_driver"));
+router.use(
+	authorize(
+		"admin",
+		"manager",
+		"staff",
+		"market",
+		"rider",
+		"market_driver",
+		"market_staff",
+		"market_manager"
+	)
+);
 
 // Product scanning endpoint
 // Scan a product barcode and get product details
