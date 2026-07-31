@@ -737,6 +737,10 @@ const loginProfile = async (req, res) => {
 						? "dashboard.html"
 						: user.role === "rider" || user.role === "market_driver"
 						? "/profile"
+						: user.role === "market_staff" || user.role === "market_manager"
+						? "/ordermanagement?ctx=market"
+						: user.role === "staff"
+						? "/ordermanagement"
 						: "profile.html",
 			});
 	} catch (error) {

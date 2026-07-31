@@ -492,6 +492,17 @@
 									"marketData",
 									JSON.stringify(result.data.market || result.data.user)
 								);
+							} else if (
+								result.data.user &&
+								["market_staff", "market_manager"].includes(
+									result.data.user.role
+								)
+							) {
+								// Market-scoped staff/manager accounts also need a
+								// `marketToken` so ordermanagement.html (and any other
+								// page that keys off marketToken) recognizes them as
+								// operating in a market context.
+								localStorage.setItem("marketToken", result.data.token);
 							}
 
 							// Role-based redirect
@@ -520,6 +531,13 @@
 								result.data.user.role === "market"
 							) {
 								redirectUrl = "/market";
+							} else if (
+								result.data.user &&
+								["market_staff", "market_manager"].includes(
+									result.data.user.role
+								)
+							) {
+								redirectUrl = "/ordermanagement?ctx=market";
 							}
 							setTimeout(() => {
 								window.location.href = redirectUrl;
