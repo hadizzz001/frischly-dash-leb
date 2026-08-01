@@ -15932,11 +15932,25 @@
 						document.getElementById('maintenance-mode-toggle').checked = data.data.isMaintenanceMode;
 						document.getElementById('disable-orders-toggle').checked = data.data.areOrdersDisabled;
 						document.getElementById('maintenance-message-input').value = data.data.maintenanceMessage || '';
-						document.getElementById('minimum-order-value-input').value = data.data.minimumOrderValue || 10;
 					}
 				} catch (error) {
 					console.error('Error loading settings:', error);
 					showMessage('Error loading settings', 'error');
+				}
+
+				// Minimum Order Value is a PER-MARKET setting (MarketSetting.minOrderAmount),
+				// not the global admin Setting — market_staff/market users aren't even
+				// authorized to hit /admin/settings (admin-only route), which is why this
+				// value previously never loaded/saved correctly on this dashboard.
+				try {
+					const marketResponse = await authenticatedFetch(`${API_BASE_URL}/market-admin/settings`);
+					if (!marketResponse.ok) throw new Error('Failed to load market settings');
+					const marketData = await marketResponse.json();
+					if (marketData.success) {
+						document.getElementById('minimum-order-value-input').value = marketData.data.minOrderAmount || 0;
+					}
+				} catch (error) {
+					console.error('Error loading market minimum order value:', error);
 				}
 			}
 
@@ -15999,10 +16013,13 @@
 					return;
 				}
 				try {
-					const response = await authenticatedFetch(`${API_BASE_URL}/admin/settings`, {
+					// Save to THIS market's own settings (MarketSetting.minOrderAmount)
+					// via the market-scoped endpoint, not the global admin one — see
+					// loadSettings() above for why /admin/settings never worked here.
+					const response = await authenticatedFetch(`${API_BASE_URL}/market-admin/settings`, {
 						method: 'PUT',
 						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ minimumOrderValue: value })
+						body: JSON.stringify({ minOrderAmount: value })
 					});
 					if (!response.ok) throw new Error('Failed to update minimum order value');
 					showMessage('Minimum order value updated', 'success');

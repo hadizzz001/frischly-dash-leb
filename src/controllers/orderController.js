@@ -7,6 +7,7 @@ const mongoose = require("mongoose");
 const Zone = require("../models/Zone");
 const User = require("../models/User");
 const Setting = require("../models/Setting");
+const MarketSetting = require("../models/MarketSetting");
 const sendEmail = require("../utils/sendEmail");
 const NotificationService = require("../services/notifications");
 const { notifyCustomerOrderStatus } = require("../services/orderStatusNotification");
@@ -734,9 +735,21 @@ exports.createOrder = async (req, res) => {
 			discount,
 		);
 
-		if (total < settings.minimumOrderValue) {
-			console.log("Order total below minimum:", settings.minimumOrderValue);
-			return sendError(res, 400, `Minimum order value is $${settings.minimumOrderValue}`);
+		// Market orders enforce that market's OWN minimum order value
+		// (MarketSetting.minOrderAmount, set on the market dashboard's
+		// Settings page) instead of the global admin minimumOrderValue —
+		// previously this always checked the global value even for market
+		// orders, so a market's own minimum was silently ignored.
+		let minimumOrderValue = settings.minimumOrderValue;
+		if (orderMarket) {
+			const marketSettings = await MarketSetting.findOne({ market: orderMarket }).lean();
+			if (marketSettings && marketSettings.minOrderAmount > 0) {
+				minimumOrderValue = marketSettings.minOrderAmount;
+			}
+		}
+		if (total < minimumOrderValue) {
+			console.log("Order total below minimum:", minimumOrderValue);
+			return sendError(res, 400, `Minimum order value is $${minimumOrderValue}`);
 		}
 
 		// Determine initial status and payment status based on payment method
