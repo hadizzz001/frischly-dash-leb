@@ -1216,6 +1216,14 @@ exports.updateOrder = async (req, res) => {
 		}
 		if (req.user && req.user.id) update.updatedBy = req.user.id;
 
+		// Captured up front so we can tell after the update whether the status
+		// actually changed (needed to avoid re-notifying the customer on every
+		// unrelated field edit, e.g. saving a shelf number).
+		const previousOrderForStatus = update.status !== undefined
+			? await Order.findOne({ _id: req.params.id, market: req.marketId }).select("status")
+			: null;
+		const previousStatus = previousOrderForStatus ? previousOrderForStatus.status : undefined;
+
 		// Hard enforcement: reject assigning a driver whose configured
 		// delivery zone(s) don't cover the customer's location (exact map pin
 		// preferred, falls back to delivery city). This blocks the actual
@@ -1261,6 +1269,19 @@ exports.updateOrder = async (req, res) => {
 			{ new: true, runValidators: true },
 		);
 		if (!order) return fail(res, 404, "Order not found");
+
+		// Push-notify the customer (mirrors orderController.updateOrder) —
+		// this endpoint is also how the scannn app assigns a driver
+		// (status: "OnTheWay") and marks orders delivered for MARKET orders;
+		// without this, only main-store status changes (via /api/orders/:id)
+		// ever reached the customer's myMob app.
+		if (update.status && update.status !== previousStatus) {
+			const { notifyCustomerOrderStatus } = require("../services/orderStatusNotification");
+			notifyCustomerOrderStatus(order, update.status).catch((e) =>
+				console.error("Market order status notification failed:", e),
+			);
+		}
+
 		ok(res, order, "Order updated");
 	} catch (err) {
 		handleErr(res, err);
@@ -1317,12 +1338,27 @@ exports.updateOrderStatus = async (req, res) => {
 	try {
 		const { status } = req.body;
 		if (!status) return fail(res, 400, "status is required");
+		const previous = await Order.findOne({ _id: req.params.id, market: req.marketId }).select("status");
+		if (!previous) return fail(res, 404, "Order not found");
 		const order = await Order.findOneAndUpdate(
 			{ _id: req.params.id, market: req.marketId },
 			{ status },
 			{ new: true },
 		);
 		if (!order) return fail(res, 404, "Order not found");
+
+		// Push-notify the customer whenever the status actually changed — this
+		// is the market-scoped twin of orderController.updateOrderStatus, which
+		// already does this for main-store orders. Without it, market orders
+		// (e.g. status changes made from the scannn app or market dashboard)
+		// never reached the customer's myMob app.
+		if (status !== previous.status) {
+			const { notifyCustomerOrderStatus } = require("../services/orderStatusNotification");
+			notifyCustomerOrderStatus(order, status).catch((e) =>
+				console.error("Market order status notification failed:", e),
+			);
+		}
+
 		ok(res, order, "Status updated");
 	} catch (err) {
 		handleErr(res, err);
@@ -1356,6 +1392,11 @@ exports.cancelOrder = async (req, res) => {
 			: order.notes;
 		order.updatedBy = req.user && req.user._id;
 		await order.save();
+
+		const { notifyCustomerOrderStatus } = require("../services/orderStatusNotification");
+		notifyCustomerOrderStatus(order, "cancelled").catch((e) =>
+			console.error("Market order status notification failed:", e),
+		);
 
 		ok(res, order, "Order cancelled successfully");
 	} catch (err) {

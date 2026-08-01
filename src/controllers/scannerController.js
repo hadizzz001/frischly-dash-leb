@@ -4,6 +4,7 @@ const PickTracking = require("../models/PickTracking");
 const Rider = require("../models/Rider");
 const mongoose = require("mongoose");
 const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
+const { notifyCustomerOrderStatus } = require("../services/orderStatusNotification");
 
 // @desc    Scan barcode and retrieve product details
 // @route   POST /api/scanner/scan-product
@@ -446,6 +447,7 @@ exports.completeOrder = async (req, res) => {
     }
 
     // Update order status based on pick results
+    const previousStatus = order.status;
     let newStatus = order.status;
     const fulfillmentNotes = `Picked: ${pickedCount}/${totalItems} items. Skipped: ${skippedCount} items.`;
 
@@ -468,6 +470,18 @@ exports.completeOrder = async (req, res) => {
     order.notes = (order.notes || "") + "\n[Fulfillment] " + fulfillmentNotes;
 
     await order.save();
+
+    // Push-notify the customer (mirrors orderController.updateOrder /
+    // updateOrderStatus and marketAdminController's twins) — this endpoint
+    // is how the scannn app flips an order to "ready for pickup" once every
+    // item is scanned, and previously never told the customer's myMob app
+    // that their order was ready, even though every other status-change
+    // endpoint did.
+    if (newStatus !== previousStatus) {
+      notifyCustomerOrderStatus(order, newStatus).catch((e) =>
+        console.error("Scanner order status notification failed:", e),
+      );
+    }
 
     // Mark pick tracking as completed
     if (pickTracking) {
