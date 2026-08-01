@@ -2000,11 +2000,13 @@ exports.getWasteProductByBarcode = async (req, res) => {
 		if (!product) {
 			return fail(res, 404, "Product not found with this barcode");
 		}
-		// Flatten the populated category to its display name so the UI can render
-		// it directly instead of an ObjectId / [object Object].
-		if (product.category && typeof product.category === "object") {
-			product.category = product.category.name || "";
-		}
+		// NOTE: keep `category` as the populated { _id, name } object here —
+		// do NOT flatten it to a bare name string. The Edit Product screen
+		// (scannn app) needs the `_id` to preselect the category dropdown by
+		// id (see extractRefId in scannn/app1/app/_lib/services/api.ts);
+		// flattening to a name-only string previously made extractRefId()
+		// return undefined, so the category dropdown never showed a default
+		// selection even though the category *name* displayed correctly.
 		ok(res, product);
 	} catch (err) {
 		handleErr(res, err);
