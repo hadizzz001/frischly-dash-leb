@@ -118,9 +118,15 @@ router.delete("/announcements/:id", c.announcements.remove);
 router.get("/settings", c.getSettings);
 router.put("/settings", c.updateSettings);
 
+// Notifications — broadcast to this market's own customers only (see
+// notificationController for the app-wide /api/notifications/send/all,
+// which is admin-only and out of scope for a market).
+router.post("/notifications/send/all", c.sendNotificationToMarketCustomers);
+
 // Profile (the Market document itself; never allow create/list of markets)
 router.get("/profile", c.getProfile);
 router.put("/profile", c.updateProfile);
+router.post("/profile/logo", c.uploadLogoMiddleware, c.uploadLogo);
 router.patch("/profile/password", c.changeProfilePassword);
 
 module.exports = router;

@@ -16190,9 +16190,11 @@
 						body: JSON.stringify({ title, body: message })
 					});
 
-					if (!response.ok) throw new Error('Failed to send notifications');
+					const result = await response.json().catch(() => null);
+					if (!response.ok || !result || result.success === false) {
+						throw new Error(result?.message || 'Failed to send notifications');
+					}
 
-					const result = await response.json();
 					showMessage(`Notifications sent to ${result.data.totalSent} customers`, 'success');
 
 					// Clear the inputs
@@ -16200,7 +16202,7 @@
 					document.getElementById('fcm-message').value = '';
 				} catch (error) {
 					console.error('Error sending FCM notifications:', error);
-					showMessage('Error sending notifications', 'error');
+					showMessage(error.message || 'Error sending notifications', 'error');
 				}
 			}
 

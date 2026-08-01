@@ -327,6 +327,129 @@ class NotificationService {
 	}
 
 	/**
+	 * Send a notification to every customer who has placed at least one order
+	 * with a specific market. Used by the MARKET dashboard's "Send to All
+	 * Customers" button — a market admin should only be able to broadcast to
+	 * customers who've actually ordered from their store, not every customer
+	 * in the whole app (that's reserved for the main admin's own broadcast,
+	 * see sendToAllUsers above).
+	 * @param {string} marketId - Market ObjectId
+	 * @param {string} title - Notification title
+	 * @param {string} body - Notification body
+	 * @param {object} data - Additional data payload
+	 */
+	async sendToMarketCustomers(marketId, title, body, data = {}) {
+		try {
+			const Order = require("../models/Order");
+			const customerEmails = await Order.distinct("customer.email", {
+				market: marketId,
+			});
+			if (!customerEmails || customerEmails.length === 0) {
+				throw new Error("No customers found for this market");
+			}
+
+			const users = await User.find({
+				email: { $in: customerEmails },
+				role: "customer",
+				fcmToken: { $ne: null },
+				isActive: true,
+			});
+			if (users.length === 0) {
+				throw new Error("No active customers of this market have FCM tokens");
+			}
+
+			console.log(
+				`📤 Sending notifications to ${users.length} customers of market ${marketId} via Firebase & Expo...`
+			);
+
+			// Send through both Firebase and Expo simultaneously (mirrors
+			// sendToAllUsers above — kept in sync intentionally).
+			const [firebaseResult, expoResult] = await Promise.allSettled([
+				(async () => {
+					try {
+						const messages = users.map((user) => ({
+							token: user.fcmToken,
+							notification: { title, body },
+							data: { ...data, userId: user._id.toString() },
+						}));
+
+						const batchSize = 500;
+						const results = [];
+						for (let i = 0; i < messages.length; i += batchSize) {
+							const batch = messages.slice(i, i + batchSize);
+							const response = await admin.messaging().sendEach(batch);
+							results.push(...response.responses);
+						}
+
+						const successCount = results.filter((r) => r.success).length;
+						console.log(
+							`✅ Firebase: Sent to ${successCount}/${users.length} market customers`
+						);
+						return { success: true, totalSent: successCount, responses: results };
+					} catch (error) {
+						console.error(
+							"❌ Firebase: Failed to send to market customers:",
+							error.message
+						);
+						return { success: false, error: error.message };
+					}
+				})(),
+
+				(async () => {
+					try {
+						const expoMessages = users
+							.filter((user) => Expo.isExpoPushToken(user.fcmToken))
+							.map((user) => ({
+								to: user.fcmToken,
+								sound: "default",
+								title,
+								body,
+								data: { ...data, userId: user._id.toString() },
+							}));
+
+						if (expoMessages.length === 0) {
+							console.log("⚠️  Expo: No valid Expo push tokens found for market customers");
+							return { success: true, totalSent: 0, tickets: [] };
+						}
+
+						const chunks = expo.chunkPushNotifications(expoMessages);
+						const tickets = [];
+						for (const chunk of chunks) {
+							const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+							tickets.push(...ticketChunk);
+						}
+
+						console.log(`✅ Expo: Sent to ${expoMessages.length} market customers`);
+						return { success: true, totalSent: expoMessages.length, tickets };
+					} catch (error) {
+						console.error("❌ Expo: Failed to send to market customers:", error.message);
+						return { success: false, error: error.message };
+					}
+				})(),
+			]);
+
+			const firebaseData =
+				firebaseResult.status === "fulfilled" ? firebaseResult.value : { success: false };
+			const expoData =
+				expoResult.status === "fulfilled" ? expoResult.value : { success: false };
+
+			console.log("\n📊 Market Notification Results:");
+			console.log(`Firebase: ${firebaseData.success ? "✅ Success" : "❌ Failed"}`);
+			console.log(`Expo: ${expoData.success ? "✅ Success" : "❌ Failed"}\n`);
+
+			return {
+				success: true,
+				totalSent: users.length,
+				firebase: firebaseData,
+				expo: expoData,
+			};
+		} catch (error) {
+			console.error("❌ Error sending notifications to market customers:", error);
+			throw error;
+		}
+	}
+
+	/**
 	 * Update user's FCM token
 	 * @param {string} userId - User ID
 	 * @param {string} fcmToken - FCM token

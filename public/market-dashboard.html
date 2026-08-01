@@ -2130,6 +2130,30 @@
 						</p>
 					</div>
 
+					<div class="user-card" id="market-logo-card">
+						<h2 style="color:#333;margin-bottom:20px;">🖼️ Market Logo</h2>
+						<p style="color:#666;font-size:14px;margin:0 0 14px;">
+							This is the brand logo customers see for your market in the app.
+						</p>
+						<div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+							<img
+								id="market-logo-preview"
+								src=""
+								alt="Market logo"
+								style="width:96px;height:96px;border-radius:14px;object-fit:cover;border:2px solid #eee;display:none;background:#fafafa;"
+							/>
+							<div style="display:flex;flex-direction:column;gap:8px;">
+								<input
+									id="market-logo-input"
+									type="file"
+									accept="image/*"
+									onchange="onMarketLogoSelected(event)"
+								/>
+								<span id="market-logo-status" style="font-size:13px;color:#666;"></span>
+							</div>
+						</div>
+					</div>
+
 					<div class="stats">
 						<div class="stat-card">
 							<div class="stat-value" id="member-since">-</div>
@@ -10069,6 +10093,70 @@
 						userRoleEl.textContent = currentUser.role.toUpperCase();
 
 					setProfileCities(currentUser.cities || []);
+					setMarketLogoPreview(
+						(currentUser.market && currentUser.market.logo) || ""
+					);
+				}
+			}
+
+			// ===== Market Logo upload =====
+			function setMarketLogoPreview(src) {
+				const preview = document.getElementById("market-logo-preview");
+				if (!preview) return;
+				if (!src) {
+					preview.style.display = "none";
+					preview.removeAttribute("src");
+					return;
+				}
+				preview.src = src;
+				preview.style.display = "block";
+			}
+
+			async function onMarketLogoSelected(event) {
+				const file = event.target.files && event.target.files[0];
+				const statusEl = document.getElementById("market-logo-status");
+				if (!file) return;
+
+				// Instant local preview while the upload is in flight.
+				const reader = new FileReader();
+				reader.onload = () => setMarketLogoPreview(reader.result);
+				reader.readAsDataURL(file);
+
+				try {
+					if (statusEl) statusEl.textContent = "Uploading…";
+					const body = new FormData();
+					body.append("logo", file);
+
+					const response = await authenticatedFetch(
+						`${API_BASE_URL}/market-admin/profile/logo`,
+						{ method: "POST", body }
+					);
+					const result = await response.json();
+					if (!response.ok || !result.success) {
+						throw new Error(result.message || "Failed to upload logo");
+					}
+
+					const updatedMarket = result.data || {};
+					setMarketLogoPreview(updatedMarket.logo || "");
+					if (currentUser) {
+						currentUser.market = Object.assign(
+							{},
+							currentUser.market,
+							updatedMarket
+						);
+					}
+					if (statusEl) statusEl.textContent = "Logo updated ✓";
+					showMessage("Market logo updated", "success");
+				} catch (error) {
+					console.error("Logo upload error:", error);
+					if (statusEl) statusEl.textContent = "";
+					showMessage(error.message || "Failed to upload logo", "error");
+					// Revert preview to the last saved logo on failure.
+					setMarketLogoPreview(
+						(currentUser && currentUser.market && currentUser.market.logo) || ""
+					);
+				} finally {
+					event.target.value = "";
 				}
 			}
 
@@ -16043,15 +16131,21 @@
 				}
 
 				try {
-					const response = await authenticatedFetch(`${API_BASE_URL}/notifications/send/all`, {
+					// Market-scoped broadcast (only customers who've ordered from
+					// THIS market) — the global /notifications/send/all endpoint is
+					// admin-only (403 for a "market" role user), which is why this
+					// button previously did nothing on the market dashboard.
+					const response = await authenticatedFetch(`${API_BASE_URL}/market-admin/notifications/send/all`, {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
 						body: JSON.stringify({ title, body: message })
 					});
 
-					if (!response.ok) throw new Error('Failed to send notifications');
+					const result = await response.json().catch(() => null);
+					if (!response.ok || !result || result.success === false) {
+						throw new Error(result?.message || 'Failed to send notifications');
+					}
 
-					const result = await response.json();
 					showMessage(`Notifications sent to ${result.data.totalSent} customers`, 'success');
 
 					// Clear the inputs
@@ -16059,7 +16153,7 @@
 					document.getElementById('fcm-message').value = '';
 				} catch (error) {
 					console.error('Error sending FCM notifications:', error);
-					showMessage('Error sending notifications', 'error');
+					showMessage(error.message || 'Error sending notifications', 'error');
 				}
 			}
 

@@ -18,6 +18,8 @@
 
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
+const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
 
 const Market = require("../models/Market");
 const User = require("../models/User");
@@ -38,6 +40,42 @@ const ok = (res, data, message = "OK") =>
 	sendResponse(res, 200, true, message, data);
 const created = (res, data, message = "Created") =>
 	sendResponse(res, 201, true, message, data);
+
+// Cloudinary config (shared with category/product image uploads)
+cloudinary.config({
+	cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "dbgnsnrto",
+	api_key: process.env.CLOUDINARY_API_KEY || "431121896297761",
+	api_secret:
+		process.env.CLOUDINARY_API_SECRET || "omVgd2HdystgoGQ5yXngAZ40yTg",
+});
+
+const logoUploadStorage = multer.memoryStorage();
+const logoUpload = multer({
+	storage: logoUploadStorage,
+	limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+	fileFilter: (req, file, cb) => {
+		if (file.mimetype.startsWith("image/")) cb(null, true);
+		else cb(new Error("Only image files are allowed!"), false);
+	},
+});
+
+const uploadLogoToCloudinary = (buffer) =>
+	new Promise((resolve, reject) => {
+		const stream = cloudinary.uploader.upload_stream(
+			{
+				folder: "markets/logos",
+				resource_type: "image",
+				quality: "auto",
+				format: "webp",
+				transformation: [{ quality: "auto:eco", width: 500, crop: "scale" }],
+			},
+			(error, result) => {
+				if (error) reject(error);
+				else resolve({ url: result.secure_url, public_id: result.public_id });
+			}
+		);
+		stream.end(buffer);
+	});
 const fail = (res, code, message, errors) =>
 	sendError(res, code, message, errors || null);
 
@@ -2114,6 +2152,29 @@ exports.updateSettings = async (req, res) => {
 	}
 };
 
+// ───────────────────────── notifications ─────────────────────────
+// Broadcast a push notification to every customer who has ordered from THIS
+// market at least once. Deliberately scoped this way (rather than reusing
+// the admin-only /api/notifications/send/all) so a market can't blast every
+// customer in the whole app — see NotificationService.sendToMarketCustomers.
+exports.sendNotificationToMarketCustomers = async (req, res) => {
+	try {
+		const { title, body } = req.body;
+		if (!title || !body) {
+			return fail(res, 400, "title and body are required");
+		}
+		const NotificationService = require("../services/notifications");
+		const result = await NotificationService.sendToMarketCustomers(
+			req.marketId,
+			title,
+			body,
+		);
+		ok(res, result, `Notifications sent to ${result.totalSent} customers`);
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
 // ───────────────────────── profile (Market doc) ─────────────────────────
 exports.getProfile = async (req, res) => {
 	try {
@@ -2166,7 +2227,7 @@ exports.updateProfile = async (req, res) => {
 		if (!req.isMarketOwner) {
 			return fail(res, 403, "Only the market owner can update the profile");
 		}
-		const allowed = ["name", "email", "phoneNumber", "location", "logo", "cities", "deliveryZones", "deliveryRegions"];
+		const allowed = ["name", "email", "phoneNumber", "location", "logo", "logoPublicId", "cities", "deliveryZones", "deliveryRegions"];
 		const data = {};
 		allowed.forEach((f) => {
 			if (req.body[f] !== undefined) data[f] = req.body[f];
@@ -2204,6 +2265,40 @@ exports.updateProfile = async (req, res) => {
 		});
 		if (!market) return fail(res, 404, "Market not found");
 		ok(res, market.toSafeObject(), "Profile updated");
+	} catch (err) {
+		handleErr(res, err);
+	}
+};
+
+// @desc    Market admin: upload a new logo/profile image to Cloudinary
+// @route   POST /api/market-admin/profile/logo
+// @access  Market owner only
+exports.uploadLogoMiddleware = logoUpload.single("logo");
+exports.uploadLogo = async (req, res) => {
+	try {
+		if (!req.isMarketOwner) {
+			return fail(res, 403, "Only the market owner can update the profile");
+		}
+		if (!req.file) {
+			return fail(res, 400, "No image file provided");
+		}
+		const uploadResult = await uploadLogoToCloudinary(req.file.buffer);
+
+		const previous = await Market.findById(req.marketId).select("logoPublicId");
+		const oldPublicId = previous && previous.logoPublicId;
+
+		const market = await Market.findByIdAndUpdate(
+			req.marketId,
+			{ logo: uploadResult.url, logoPublicId: uploadResult.public_id },
+			{ new: true, runValidators: true }
+		);
+		if (!market) return fail(res, 404, "Market not found");
+
+		if (oldPublicId && oldPublicId !== uploadResult.public_id) {
+			cloudinary.uploader.destroy(oldPublicId, () => {});
+		}
+
+		ok(res, market.toSafeObject(), "Logo updated");
 	} catch (err) {
 		handleErr(res, err);
 	}
