@@ -169,6 +169,11 @@ const resolveMarketSubcategories = async (products) => {
 	return products;
 };
 
+// Exported so other controllers (e.g. marketAdminController's barcode-lookup
+// for the scannn app's Edit Product screen) can reuse this same market
+// category/subcategory resolution logic instead of duplicating it.
+exports.resolveMarketSubcategories = resolveMarketSubcategories;
+
 // @desc    Get all products with filter options including discount
 // @route   GET /api/products
 // @access  Public

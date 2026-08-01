@@ -1996,10 +1996,28 @@ exports.getWasteProductByBarcode = async (req, res) => {
 			isActive: true,
 		})
 			.populate("category", "name")
+			.populate({
+				path: "subcategory",
+				select: "name parentCategory",
+				populate: { path: "parentCategory", select: "name" },
+			})
 			.lean();
 		if (!product) {
 			return fail(res, 404, "Product not found with this barcode");
 		}
+		// Market-owned products' `category`/`subcategory` ObjectIds usually
+		// point into the tenant-scoped MarketCategory/MarketSubcategory
+		// collections, NOT the global Category/Subcategory collections used
+		// by the .populate() calls above — so for those products both
+		// populates above resolve to null even though the ids are valid.
+		// resolveMarketSubcategories (shared with productController.getProduct)
+		// re-reads the raw ids and looks them up in the Market* collections
+		// instead, backfilling both `subcategory` and `category` in place.
+		// Without this, the scannn app's Edit Product category dropdown
+		// never had a real match (categoryId came back undefined) even
+		// though the category *name* still showed correctly.
+		const { resolveMarketSubcategories } = require("./productController");
+		await resolveMarketSubcategories([product]);
 		// NOTE: keep `category` as the populated { _id, name } object here —
 		// do NOT flatten it to a bare name string. The Edit Product screen
 		// (scannn app) needs the `_id` to preselect the category dropdown by
