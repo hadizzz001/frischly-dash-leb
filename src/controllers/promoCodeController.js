@@ -2,7 +2,7 @@ const PromoCode = require("../models/PromoCode");
 const MarketPromoCode = require("../models/MarketPromoCode");
 const User = require("../models/User");
 const { t } = require("../utils/translations");
-const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
+const { sendResponse, sendError, sendSuccess, sendServerError } = require("../utils/apiResponse");
 
 // @desc    Get all promo codes (public - without code)
 // @route   GET /api/promocodes/public
@@ -13,9 +13,10 @@ exports.getPublicPromoCodes = async (req, res) => {
 			.select("-code")
 			.sort({ createdAt: -1 });
 
-		sendResponse(res, 200, true, "Success", promoCodes, { count: promoCodes.length });
+		const ras = { promoCodes, count: promoCodes.length };
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (err) {
-		sendError(res, 500, "Server Error", err.message);
+		sendServerError(res, err, "Server Error");
 	}
 };
 
@@ -82,21 +83,22 @@ exports.validatePromoCode = async (req, res) => {
 
 			const finalTotal = total - discountAmount;
 
-			return sendResponse(res, 200, true, t("promoCodeApplied", req), {
-					promoCode: {
-						id: marketPromo._id,
-						code: marketPromo.code,
-						market: marketPromo.market,
-						companyName: marketPromo.companyName,
-						description: marketPromo.description,
-						discountType: marketPromo.discountType,
-						discountValue: marketPromo.discountValue,
-					},
-					isMarketPromo: true,
-					discountAmount: parseFloat(discountAmount.toFixed(2)),
-					originalTotal: total,
-					finalTotal: parseFloat(finalTotal.toFixed(2)),
-				});
+			const ras = {
+				promoCode: {
+					id: marketPromo._id,
+					code: marketPromo.code,
+					market: marketPromo.market,
+					companyName: marketPromo.companyName,
+					description: marketPromo.description,
+					discountType: marketPromo.discountType,
+					discountValue: marketPromo.discountValue,
+				},
+				isMarketPromo: true,
+				discountAmount: parseFloat(discountAmount.toFixed(2)),
+				originalTotal: total,
+				finalTotal: parseFloat(finalTotal.toFixed(2)),
+			};
+			return sendResponse(res, 200, true, t("promoCodeApplied", req), ras);
 		}
 
 		// Main store cart -> admin own-company promo codes only.
@@ -124,23 +126,24 @@ exports.validatePromoCode = async (req, res) => {
 
 		const finalTotal = total - discountAmount;
 
-		sendResponse(res, 200, true, t("promoCodeApplied", req), {
-				promoCode: {
-					id: promoCode._id,
-					code: promoCode.code,
-					market: null,
-					companyName: promoCode.companyName,
-					description: promoCode.description,
-					discountType: promoCode.discountType,
-					discountValue: promoCode.discountValue,
-				},
-				isMarketPromo: false,
-				discountAmount: parseFloat(discountAmount.toFixed(2)),
-				originalTotal: total,
-				finalTotal: parseFloat(finalTotal.toFixed(2)),
-			});
+		const ras2 = {
+			promoCode: {
+				id: promoCode._id,
+				code: promoCode.code,
+				market: null,
+				companyName: promoCode.companyName,
+				description: promoCode.description,
+				discountType: promoCode.discountType,
+				discountValue: promoCode.discountValue,
+			},
+			isMarketPromo: false,
+			discountAmount: parseFloat(discountAmount.toFixed(2)),
+			originalTotal: total,
+			finalTotal: parseFloat(finalTotal.toFixed(2)),
+		};
+		sendResponse(res, 200, true, t("promoCodeApplied", req), ras2);
 	} catch (err) {
-		sendError(res, 500, t("serverError", req), err.message);
+		sendServerError(res, err, t("serverError", req));
 	}
 };
 
@@ -151,9 +154,10 @@ exports.getPromoCodes = async (req, res) => {
 	try {
 		const promoCodes = await PromoCode.find().sort({ createdAt: -1 });
 
-		sendResponse(res, 200, true, "Success", promoCodes, { count: promoCodes.length });
+		const ras = { promoCodes, count: promoCodes.length };
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (err) {
-		sendError(res, 500, t("serverError", req), err.message);
+		sendServerError(res, err, t("serverError", req));
 	}
 };
 
@@ -168,9 +172,10 @@ exports.getPromoCode = async (req, res) => {
 			return sendError(res, 404, t("promoCodeNotFound", req));
 		}
 
-		sendResponse(res, 200, true, "Success", promoCode);
+		const ras = { promoCode };
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (err) {
-		sendError(res, 500, t("serverError", req), err.message);
+		sendServerError(res, err, t("serverError", req));
 	}
 };
 
@@ -223,9 +228,10 @@ exports.createPromoCode = async (req, res) => {
 			isActive,
 		});
 
-		sendResponse(res, 201, true, t("promoCodeCreated", req), promoCode);
+		const ras = { promoCode };
+		sendResponse(res, 201, true, t("promoCodeCreated", req), ras);
 	} catch (err) {
-		sendError(res, 500, t("serverError", req), err.message);
+		sendServerError(res, err, t("serverError", req));
 	}
 };
 
@@ -245,9 +251,10 @@ exports.updatePromoCode = async (req, res) => {
 			runValidators: true,
 		});
 
-		sendResponse(res, 200, true, t("promoCodeUpdated", req), promoCode);
+		const ras = { promoCode };
+		sendResponse(res, 200, true, t("promoCodeUpdated", req), ras);
 	} catch (err) {
-		sendError(res, 500, t("serverError", req), err.message);
+		sendServerError(res, err, t("serverError", req));
 	}
 };
 
@@ -264,8 +271,9 @@ exports.deletePromoCode = async (req, res) => {
 
 		await promoCode.deleteOne();
 
-		sendResponse(res, 200, true, t("promoCodeDeleted", req), {});
+		const ras = {};
+		sendResponse(res, 200, true, t("promoCodeDeleted", req), ras);
 	} catch (err) {
-		sendError(res, 500, t("serverError", req), err.message);
+		sendServerError(res, err, t("serverError", req));
 	}
 };

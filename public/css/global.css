@@ -1,0 +1,499 @@
+/* Global shared styles used across multiple pages */
+
+.alert-success-box {
+	background: #d4edda;
+	color: #155724;
+	padding: 10px;
+	border-radius: 8px;
+	margin-bottom: 20px;
+}
+
+.text-center {
+	text-align: center;
+}
+
+.mt-30-block {
+	text-align: center;
+	margin: 30px 0;
+}
+
+.btn-inline-margin {
+	margin: 10px;
+	display: inline-block;
+	text-decoration: none;
+}
+
+.btn-secondary-gray {
+	margin: 10px;
+	background: #6c757d;
+}
+
+.link-yellow {
+	color: #ffc300;
+	text-decoration: none;
+	font-weight: 500;
+}
+
+.text-muted-gray {
+	color: #6c757d;
+}
+
+.hidden {
+	display: none;
+}
+
+.visible-block {
+	display: block;
+}
+
+.map-load-error {
+	padding: 16px;
+	color: #c0392b;
+	font-size: 13px;
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   Product table thumbnails — hard 40x40 cap.
+   Applies to every product/table image across the market dashboard,
+   the main Freshly admin dashboard, and the admin Market Products
+   viewer, regardless of which utility class the row markup uses.
+   Kept here (global) with !important so no page-level rule, browser
+   default, or stale cascade can inflate these thumbnails again.
+   ────────────────────────────────────────────────────────────────── */
+.mdx-146,
+.mdx-147,
+.mdx-265,
+.mdx-266,
+.dsx-151,
+.dsx-152,
+.dsx-293,
+.dsx-294,
+.thumb,
+#products-table-body img,
+#products-table-body .thumb,
+#unsold-products-table-body img,
+#unsold-products-table-body .thumb,
+.users-table tbody img,
+.data-table tbody img {
+	width: 40px !important;
+	height: 40px !important;
+	min-width: 40px !important;
+	min-height: 40px !important;
+	max-width: 40px !important;
+	max-height: 40px !important;
+	flex-shrink: 0 !important;
+	box-sizing: border-box !important;
+	object-fit: contain !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   Shared table polish — applies to every data table across the admin
+   and market dashboards and the standalone admin pages.
+   ────────────────────────────────────────────────────────────────── */
+.users-table,
+.data-table table,
+.waste-table-container .data-table {
+	border-collapse: separate;
+	border-spacing: 0;
+}
+
+.users-table th,
+.data-table th {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	white-space: nowrap;
+	font-size: 12px !important;
+	font-weight: 700 !important;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+	padding: 12px 14px !important;
+}
+
+.users-table td,
+.data-table td {
+	padding: 12px 14px !important;
+	vertical-align: middle !important;
+	line-height: 1.45;
+}
+
+/* Zebra striping + smoother hover for easier row scanning */
+.users-table tbody tr:nth-child(even),
+.data-table tbody tr:nth-child(even) {
+	background: #fcfcfd;
+}
+
+.users-table tbody tr,
+.data-table tbody tr {
+	transition: background-color 0.15s ease;
+}
+
+.users-table tbody tr:hover,
+.data-table tbody tr:hover {
+	background: rgba(255, 195, 0, 0.14) !important;
+}
+
+/* Numeric-ish columns read better without wrapping */
+.users-table td .status-badge,
+.users-table td .role-badge {
+	white-space: nowrap;
+}
+
+/* Keep action buttons on one tidy row */
+.action-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: center;
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   Price cell — final price is the hero, with base price and any
+   discount / tax / bottle-refund modifiers shown as small chips.
+   ────────────────────────────────────────────────────────────────── */
+.price-cell {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 130px;
+}
+
+.price-final {
+	font-size: 15px;
+	font-weight: 700;
+	color: #14532d;
+	line-height: 1.2;
+}
+
+.price-meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px;
+}
+
+.price-base {
+	font-size: 11px;
+	color: #6b7280;
+	text-decoration: line-through;
+	text-decoration-color: rgba(107, 114, 128, 0.6);
+}
+
+/* When the final price equals the base price there is nothing to
+   strike through — just show a plain muted label. */
+.price-base.is-muted {
+	text-decoration: none;
+	font-style: italic;
+	opacity: 0.85;
+}
+
+.price-tag {
+	display: inline-block;
+	padding: 1px 6px;
+	border-radius: 999px;
+	font-size: 10px;
+	font-weight: 700;
+	line-height: 1.6;
+	white-space: nowrap;
+	border: 1px solid transparent;
+}
+
+.price-tag.discount {
+	background: #fee2e2;
+	color: #b91c1c;
+	border-color: #fecaca;
+}
+
+.price-tag.tax {
+	background: #fff7ed;
+	color: #c2410c;
+	border-color: #fed7aa;
+}
+
+.price-tag.refund {
+	background: #ecfeff;
+	color: #0e7490;
+	border-color: #a5f3fc;
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   Stock badge — red when out of stock, amber when low, green when
+   available. Replaces the previously broken inline-style markup.
+   ────────────────────────────────────────────────────────────────── */
+.stock-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 5px;
+	min-width: 46px;
+	padding: 4px 10px;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 700;
+	line-height: 1.5;
+	white-space: nowrap;
+	border: 1px solid transparent;
+}
+
+.stock-badge::before {
+	content: "";
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: currentColor;
+	flex-shrink: 0;
+}
+
+/* Out of stock */
+.stock-badge.out {
+	background: #fee2e2;
+	color: #b91c1c;
+	border-color: #fecaca;
+}
+
+/* Low stock (1–10) */
+.stock-badge.low {
+	background: #fff7ed;
+	color: #c2410c;
+	border-color: #fed7aa;
+}
+
+/* Healthy stock */
+.stock-badge.in {
+	background: #dcfce7;
+	color: #15803d;
+	border-color: #bbf7d0;
+}
+
+/* Unknown / not applicable */
+.stock-badge.unknown {
+	background: #f3f4f6;
+	color: #6b7280;
+	border-color: #e5e7eb;
+}
+
+
+/* ==========================================================================
+   ORDER STATUS & PAYMENT BADGES
+   --------------------------------------------------------------------------
+   The inline-style extraction turned style="background-color: ${statusColor}"
+   into generated classes (.dsx-238 / .mdx-227 etc.) whose colour declarations
+   were invalid and had to be removed. That left the badges with NO background
+   while another .status-badge rule sets "color: white" - so the Status and
+   Payment cells rendered white-on-white and looked completely empty.
+
+   These semantic classes restore the colours in plain CSS. Light tinted
+   backgrounds with dark text are used (rather than saturated fills with white
+   text) so labels stay legible at small sizes and pass contrast checks.
+   !important guards against the older .status-badge rules that set a white
+   foreground.
+   ========================================================================== */
+
+.status-badge[class*="status-"],
+.status-badge[class*="pay-"] {
+	display: inline-block;
+	padding: 4px 10px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 700;
+	line-height: 1.6;
+	text-transform: uppercase;
+	letter-spacing: 0.4px;
+	white-space: nowrap;
+	border: 1px solid transparent;
+	/* Never inherit a white foreground from older rules. */
+	color: #374151 !important;
+	background: #f3f4f6 !important;
+}
+
+/* ---- Order status ---- */
+.status-badge.status-pending {
+	background: #fef9c3 !important;
+	color: #854d0e !important;
+	border-color: #fde68a;
+}
+.status-badge.status-confirmed {
+	background: #cffafe !important;
+	color: #155e75 !important;
+	border-color: #a5f3fc;
+}
+.status-badge.status-processing {
+	background: #ffedd5 !important;
+	color: #9a3412 !important;
+	border-color: #fed7aa;
+}
+.status-badge.status-ontheway {
+	background: #ede9fe !important;
+	color: #5b21b6 !important;
+	border-color: #ddd6fe;
+}
+.status-badge.status-delivered {
+	background: #dcfce7 !important;
+	color: #15803d !important;
+	border-color: #bbf7d0;
+}
+.status-badge.status-cancelled {
+	background: #fee2e2 !important;
+	color: #b91c1c !important;
+	border-color: #fecaca;
+}
+
+/* ---- Payment status ---- */
+.status-badge.pay-pending {
+	background: #fef9c3 !important;
+	color: #854d0e !important;
+	border-color: #fde68a;
+}
+.status-badge.pay-paid {
+	background: #dcfce7 !important;
+	color: #15803d !important;
+	border-color: #bbf7d0;
+}
+.status-badge.pay-failed {
+	background: #fee2e2 !important;
+	color: #b91c1c !important;
+	border-color: #fecaca;
+}
+.status-badge.pay-refunded {
+	background: #ffedd5 !important;
+	color: #9a3412 !important;
+	border-color: #fed7aa;
+}
+.status-badge.pay-ondelivery {
+	background: #cffafe !important;
+	color: #155e75 !important;
+	border-color: #a5f3fc;
+}
+.status-badge.pay-paidondelivery {
+	background: #ccfbf1 !important;
+	color: #115e59 !important;
+	border-color: #99f6e4;
+}
+.status-badge.pay-cancelled {
+	background: #f3f4f6 !important;
+	color: #4b5563 !important;
+	border-color: #e5e7eb;
+}
+
+/* ==========================================================================
+   TABLE LEGIBILITY SAFETY NET
+   --------------------------------------------------------------------------
+   Guards against the same failure mode elsewhere: anything left with a white
+   or transparent foreground by the extraction would be invisible. These rules
+   guarantee readable text in every table on every page.
+   ========================================================================== */
+
+/* Table cells always have a readable foreground. */
+.data-table tbody td,
+.users-table tbody td,
+.orders-table tbody td,
+table tbody td {
+	color: #1f2937;
+}
+
+/* A badge with no colour modifier still renders visibly instead of blank. */
+.status-badge:not([class*="status-"]):not([class*="pay-"]):not(.active):not(.inactive) {
+	background: #f3f4f6;
+	color: #374151;
+	border: 1px solid #e5e7eb;
+}
+
+/* Never allow white-on-white text inside a table cell. */
+table tbody td [style*="color: white"],
+table tbody td [style*="color:#fff"],
+table tbody td [style*="color: #fff"] {
+	color: #1f2937 !important;
+}
+
+
+/* ==========================================================================
+   REMAINING EXTRACTION GAPS
+   --------------------------------------------------------------------------
+   These generated classes were left with empty bodies when the invalid
+   template-literal declarations were stripped, so the elements rendered
+   unstyled (pagination buttons with no active state, star ratings with no
+   colour, inactive shelf rows indistinguishable from active ones).
+   ========================================================================== */
+
+/* Pagination active state (.dsx-267 / .dsx-278 / .mdx-250 / .mdx-261).
+   The markup already toggles an "active" class alongside these. */
+.btn-pagination {
+	background: #fff;
+	color: #374151;
+	border: 1px solid #d1d5db;
+	padding: 6px 12px;
+	border-radius: 6px;
+	cursor: pointer;
+	font-weight: 600;
+}
+.btn-pagination:hover:not(:disabled) {
+	background: #f3f4f6;
+	border-color: #9ca3af;
+}
+.btn-pagination.active {
+	background: #667eea !important;
+	color: #fff !important;
+	border-color: #667eea !important;
+}
+.btn-pagination:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* Star rating glyphs (.dsx-283) — were losing their colour entirely. */
+.dsx-283,
+.mdx-283,
+.star-filled {
+	color: #f4bb26;
+	font-size: 14px;
+}
+.star-empty {
+	color: #d9d9d9;
+	font-size: 14px;
+}
+
+/* Inactive shelf rows (.dsx-298 / .mdx-270). Dimming is applied via a real
+   class now instead of the malformed inline style that was emitted before. */
+tr.is-inactive {
+	opacity: 0.6;
+	background-color: #f8f9fa;
+}
+
+/* Utilization badges: these set white text with no background, which is
+   invisible if the background class is missing. Give them a safe default. */
+.dsx-util-badge,
+.mdx-util-badge {
+	background: #6b7280;
+	color: #fff;
+	padding: 3px 8px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 700;
+	display: inline-block;
+}
+.dsx-util-badge.low,
+.mdx-util-badge.low {
+	background: #16a34a;
+}
+.dsx-util-badge.medium,
+.mdx-util-badge.medium {
+	background: #f59e0b;
+}
+.dsx-util-badge.high,
+.mdx-util-badge.high {
+	background: #dc2626;
+}
+
+/* ---------------------------------------------------------------------------
+   Multi-line validation feedback
+   API errors now list every failing field on its own line ("• phoneNumber:
+   ...").  Without pre-line the newlines collapse and the user is back to an
+   unreadable run-on sentence.
+   --------------------------------------------------------------------------- */
+.message,
+.message .message-content,
+.alert,
+.error-message,
+.success-message {
+	white-space: pre-line;
+}

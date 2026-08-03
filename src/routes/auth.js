@@ -22,6 +22,7 @@ const {
 	getCustomerCount,
 } = require("../controllers/authController");
 const { protect, authorize } = require("../middleware/auth");
+const { normalizeLebanonPhone } = require("../utils/phone");
 
 const router = express.Router();
 
@@ -30,12 +31,21 @@ const registerValidation = [
 	body("name")
 		.trim()
 		.isLength({ min: 2, max: 100 })
-		.withMessage("Name muss zwischen 2 und 100 Zeichen lang sein"),
+		.withMessage("Name must be between 2 and 100 characters long"),
 	body("phoneNumber")
 		.optional({ checkFalsy: true })
 		.trim()
+		// Normalize BEFORE matching. The controller already called
+		// normalizeLebanonPhone(), but that runs after validation, so a
+		// perfectly valid number typed as "70123456", "03123456",
+		// "+961 70 123 456" or "00961..." was rejected before it ever got
+		// there. Sanitizing here accepts every common format and stores the
+		// canonical "+961XXXXXXXX" form.
+		.customSanitizer((value) => normalizeLebanonPhone(value))
 		.matches(/^\+961\d{7,8}$/)
-		.withMessage("Phone number must be a Lebanese number (+961) with 7 or 8 digits"),
+		.withMessage(
+			"Phone number must be a Lebanese number. Enter 7-8 digits, e.g. 70123456 or +96170123456."
+		),
 	body("email")
 		.isEmail()
 		.normalizeEmail()
@@ -88,10 +98,13 @@ const updateProfileValidation = [
 		.isLength({ min: 2, max: 100 })
 		.withMessage("Name must be between 2 and 100 characters long"),
 	body("phoneNumber")
-		.optional()
+		.optional({ checkFalsy: true })
 		.trim()
+		.customSanitizer((value) => normalizeLebanonPhone(value))
 		.matches(/^[\+]?[1-9][\d]{0,15}$/)
-		.withMessage("Please provide a valid phone number"),
+		.withMessage(
+			"Please provide a valid phone number, e.g. 70123456 or +96170123456."
+		),
 	body("email")
 		.optional()
 		.isEmail()
@@ -150,6 +163,49 @@ const updateProfileValidation = [
 		.withMessage(
 			"Card type must be one of: visa, mastercard, amex, discover, other"
 		),
+];
+
+// PUT /users/:id previously had no validation at all, so an admin could save
+// a malformed phone/email through the edit modal while the create modal
+// rejected it. Same rules as create, but every field is optional (partial
+// updates) and password is only checked when one is actually supplied.
+const updateUserValidation = [
+	body("name")
+		.optional()
+		.trim()
+		.isLength({ min: 2, max: 100 })
+		.withMessage("Name must be between 2 and 100 characters long"),
+	body("phoneNumber")
+		.optional({ checkFalsy: true })
+		.trim()
+		.customSanitizer((value) => normalizeLebanonPhone(value))
+		.matches(/^\+961\d{7,8}$/)
+		.withMessage(
+			"Phone number must be a Lebanese number. Enter 7-8 digits, e.g. 70123456 or +96170123456."
+		),
+	body("email")
+		.optional({ checkFalsy: true })
+		.isEmail()
+		.normalizeEmail()
+		.withMessage("Please provide a valid email address"),
+	body("password")
+		.optional({ checkFalsy: true })
+		.isLength({ min: 6 })
+		.withMessage("Password must be at least 6 characters long")
+		.matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+		.withMessage(
+			"Password must contain at least one lowercase letter, one uppercase letter, and one number"
+		),
+	body("address.street")
+		.optional({ checkFalsy: true })
+		.trim()
+		.isLength({ min: 1, max: 200 })
+		.withMessage("Street address must be less than 200 characters"),
+	body("address.city")
+		.optional({ checkFalsy: true })
+		.trim()
+		.isLength({ min: 1, max: 100 })
+		.withMessage("City must be less than 100 characters"),
 ];
 
 const changePasswordValidation = [
@@ -232,7 +288,7 @@ router.delete(
 router.get("/users", protect, getAllUsers);
 router.get("/users/:id", protect, getUserById);
 router.post("/users", protect, registerValidation, createUser);
-router.put("/users/:id", protect, updateUser);
+router.put("/users/:id", protect, updateUserValidation, updateUser);
 router.delete("/users/:id", protect, deleteUser);
 router.post("/reset-password/:id", protect, resetCustomerPassword);
 

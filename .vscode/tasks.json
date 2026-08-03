@@ -115,6 +115,16 @@
 			"label": "Untrack Admin Key And Final Status",
 			"type": "shell",
 			"command": "cd \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/myMob\" && D=\"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server/tests/_appcheck\" && git rm --cached 'frischlyshop-lb-firebase-adminsdk-fbsvc-df33fcd7b0.json' >/dev/null 2>&1; { echo '### admin key now untracked? ###'; git ls-files --error-unmatch 'frischlyshop-lb-firebase-adminsdk-fbsvc-df33fcd7b0.json' 2>/dev/null && echo 'STILL TRACKED (bad)' || echo 'UNTRACKED (good)'; echo; echo '### admin key now ignored? ###'; git check-ignore -v 'frischlyshop-lb-firebase-adminsdk-fbsvc-df33fcd7b0.json' >/dev/null 2>&1 && echo 'IGNORED (good)' || echo 'NOT ignored'; echo; echo '### FINAL staged changes to commit ###'; git status --porcelain; echo; echo '### confirm google-services in index = frischlyshop-lb + matching client ###'; git show :android/app/google-services.json | grep -o '\"project_id\"[^,]*'; git show :android/app/google-services.json | grep -c 'com.frischly.lebanon'; } > \"$D/final.txt\" 2>&1; echo DONE"
+		},
+		{
+			"label": "Settings Map Live Check",
+			"type": "shell",
+			"command": "zsh \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server/tests/_run-settings-check.sh\""
+		},
+		{
+			"label": "Restore Probe Settings",
+			"type": "shell",
+			"command": "zsh \"/Users/apple/Desktop/Hadiz/FRISCHLY leb/frischly-server/tests/_run-restore.sh\""
 		}
 	]
 }

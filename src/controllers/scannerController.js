@@ -3,7 +3,7 @@ const Product = require("../models/Product");
 const PickTracking = require("../models/PickTracking");
 const Rider = require("../models/Rider");
 const mongoose = require("mongoose");
-const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
+const { sendResponse, sendError, sendSuccess, sendServerError } = require("../utils/apiResponse");
 const { notifyCustomerOrderStatus } = require("../services/orderStatusNotification");
 
 // @desc    Scan barcode and retrieve product details
@@ -29,10 +29,11 @@ exports.scanProductBarcode = async (req, res) => {
     }).populate("market", "_id name");
 
     if (!product) {
-      return sendResponse(res, 404, false, "Product not found", null, { barcode: normalizedBarcode });
+      const ras = { barcode: normalizedBarcode };
+      return sendResponse(res, 404, false, "Product not found", ras);
     }
 
-    sendResponse(res, 200, true, "Success", null, { product: {
+    const ras = { product: {
         _id: product._id,
         name: product.name,
         barcode: product.barcode,
@@ -43,10 +44,11 @@ exports.scanProductBarcode = async (req, res) => {
         shelfNumber: product.shelfNumber,
         picture: product.picture,
         description: product.description,
-      } });
+      } };
+    sendResponse(res, 200, true, "Success", ras);
   } catch (error) {
     console.error("Error scanning product:", error);
-    sendError(res, 500, "Error scanning product", error.message);
+    sendServerError(res, error, "Error scanning product");
   }
 };
 
@@ -75,7 +77,8 @@ exports.scanOrderBarcode = async (req, res) => {
       .populate("assignedRider");
 
     if (!order) {
-      return sendResponse(res, 404, false, "Order not found", null, { barcode: normalizedBarcode });
+      const ras = { barcode: normalizedBarcode };
+      return sendResponse(res, 404, false, "Order not found", ras);
     }
 
     // Check if user has permission to access this order
@@ -93,7 +96,7 @@ exports.scanOrderBarcode = async (req, res) => {
     // Get pick progress for this order
     const pickProgress = await PickTracking.findOne({ orderId: order._id, userId: req.user.id });
 
-    sendResponse(res, 200, true, "Success", null, { order: {
+    const ras = { order: {
         _id: order._id,
         orderNumber: order.orderNumber,
         status: order.status,
@@ -114,10 +117,11 @@ exports.scanOrderBarcode = async (req, res) => {
         pickedItems: pickProgress.pickedItems,
         skippedItems: pickProgress.skippedItems,
         pickedDetails: pickProgress.pickedDetails,
-      } : null });
+      } : null };
+    sendResponse(res, 200, true, "Success", ras);
   } catch (error) {
     console.error("Error scanning order:", error);
-    sendError(res, 500, "Error scanning order", error.message);
+    sendServerError(res, error, "Error scanning order");
   }
 };
 
@@ -192,7 +196,7 @@ exports.pickItem = async (req, res) => {
     const pickedCount = pickTracking.pickedItems.length;
     const percentage = Math.round((pickedCount / totalOrderItems) * 100);
 
-    sendResponse(res, 200, true, "Item marked as picked", null, { progress: {
+    const ras = { progress: {
         pickedItems: pickedCount,
         totalItems: totalOrderItems,
         percentage: percentage,
@@ -201,10 +205,11 @@ exports.pickItem = async (req, res) => {
         _id: pickTracking._id,
         pickedItems: pickTracking.pickedItems,
         skippedItems: pickTracking.skippedItems,
-      } });
+      } };
+    sendResponse(res, 200, true, "Item marked as picked", ras);
   } catch (error) {
     console.error("Error picking item:", error);
-    sendError(res, 500, "Error picking item", error.message);
+    sendServerError(res, error, "Error picking item");
   }
 };
 
@@ -277,7 +282,7 @@ exports.skipItem = async (req, res) => {
     const pickedCount = pickTracking.pickedItems.length;
     const percentage = Math.round((pickedCount / totalOrderItems) * 100);
 
-    sendResponse(res, 200, true, "Item marked as skipped", null, { progress: {
+    const ras = { progress: {
         pickedItems: pickedCount,
         totalItems: totalOrderItems,
         percentage: percentage,
@@ -286,10 +291,11 @@ exports.skipItem = async (req, res) => {
         _id: pickTracking._id,
         pickedItems: pickTracking.pickedItems,
         skippedItems: pickTracking.skippedItems,
-      } });
+      } };
+    sendResponse(res, 200, true, "Item marked as skipped", ras);
   } catch (error) {
     console.error("Error skipping item:", error);
-    sendError(res, 500, "Error skipping item", error.message);
+    sendServerError(res, error, "Error skipping item");
   }
 };
 
@@ -330,7 +336,7 @@ exports.getPickProgress = async (req, res) => {
     const skippedCount = pickTracking?.skippedItems?.length || 0;
     const remainingCount = totalItems - pickedCount - skippedCount;
 
-    sendResponse(res, 200, true, "Success", null, { progress: {
+    const ras = { progress: {
         totalItems: totalItems,
         pickedItems: pickedCount,
         skippedItems: skippedCount,
@@ -341,10 +347,11 @@ exports.getPickProgress = async (req, res) => {
         orderNumber: order.orderNumber,
         status: order.status,
         items: order.items,
-      } });
+      } };
+    sendResponse(res, 200, true, "Success", ras);
   } catch (error) {
     console.error("Error getting pick progress:", error);
-    sendError(res, 500, "Error getting pick progress", error.message);
+    sendServerError(res, error, "Error getting pick progress");
   }
 };
 
@@ -489,7 +496,7 @@ exports.completeOrder = async (req, res) => {
       await pickTracking.save();
     }
 
-    sendResponse(res, 200, true, "Order fulfillment completed", null, { order: {
+    const ras = { order: {
         _id: order._id,
         orderNumber: order.orderNumber,
         status: newStatus,
@@ -498,10 +505,11 @@ exports.completeOrder = async (req, res) => {
         totalItems: totalItems,
         pickedItems: pickedCount,
         skippedItems: skippedCount,
-      } });
+      } };
+    sendResponse(res, 200, true, "Order fulfillment completed", ras);
   } catch (error) {
     console.error("Error completing order:", error);
-    sendError(res, 500, "Error completing order", error.message);
+    sendServerError(res, error, "Error completing order");
   }
 };
 
@@ -560,7 +568,7 @@ exports.getScannerOrders = async (req, res) => {
       };
     }
 
-    sendResponse(res, 200, true, "Success", null, { orders: orders.map((order) => ({
+    const ras = { orders: orders.map((order) => ({
         _id: order._id,
         orderNumber: order.orderNumber,
         status: order.status,
@@ -575,9 +583,10 @@ exports.getScannerOrders = async (req, res) => {
         page: pageNum,
         limit: limitNum,
         pages: Math.ceil(total / limitNum),
-      } });
+      } };
+    sendResponse(res, 200, true, "Success", ras);
   } catch (error) {
     console.error("Error getting scanner orders:", error);
-    sendError(res, 500, "Error retrieving orders", error.message);
+    sendServerError(res, error, "Error retrieving orders");
   }
 };

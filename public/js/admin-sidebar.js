@@ -31,6 +31,7 @@
 		{ key: "orders", icon: "🛒", label: "Orders", section: "orders" },
 		{ key: "statistics", icon: "📊", label: "Sales Statistics", section: "statistics" },
 		{ key: "riders", icon: "🏍️", label: "Riders Management", section: "riders" },
+		{ key: "feedback", icon: "💬", label: "Feedback", section: "feedback" },
 		{ key: "waste", icon: "♻️", label: "Waste Management", section: "waste" },
 		{ key: "promocodes", icon: "🏷️", label: "Promo Codes", section: "promocodes" },
 		{ key: "announcements", icon: "📢", label: "Announcements", section: "announcements" },

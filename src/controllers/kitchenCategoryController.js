@@ -1,71 +1,25 @@
 const mongoose = require("mongoose");
-const multer = require("multer");
-const cloudinary = require("cloudinary").v2;
 const KitchenCategory = require("../models/KitchenCategory");
 const Kitchen = require("../models/Kitchen");
-const { sendSuccess, sendError } = require("../utils/apiResponse");
+const { sendSuccess, sendError, sendResponse } = require("../utils/apiResponse");
+const { escapeRegex } = require("../utils/sanitize");
+const { marketScopeFilter } = require("../utils/marketScope");
+const {
+	imageUpload: upload,
+	uploadImageToCloudinary,
+	safeDeleteFromCloudinary: safeDestroy,
+} = require("../utils/cloudinaryUpload");
 
-// Cloudinary is configured elsewhere on require, but reconfigure defensively in
-// case this module is loaded first.
-cloudinary.config({
-	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-	api_key: process.env.CLOUDINARY_API_KEY,
-	api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-const upload = multer({
-	storage: multer.memoryStorage(),
-	limits: { fileSize: 5 * 1024 * 1024 },
-	fileFilter: (req, file, cb) => {
-		if (file.mimetype.startsWith("image/")) cb(null, true);
-		else cb(new Error("Only image files are allowed"), false);
-	},
-});
-
+// Cloudinary is configured centrally in ../utils/cloudinaryUpload.
 const uploadBufferToCloudinary = (buffer, folder = "kitchen-categories") =>
-	new Promise((resolve, reject) => {
-		const stream = cloudinary.uploader.upload_stream(
-			{
-				folder,
-				resource_type: "image",
-				quality: "auto",
-				format: "webp",
-				transformation: [{ quality: "auto:eco", width: 500, crop: "scale" }],
-			},
-			(err, result) => {
-				if (err) reject(err);
-				else resolve({ url: result.secure_url, public_id: result.public_id });
-			},
-		);
-		stream.end(buffer);
-	});
-
-const safeDestroy = (publicId) => {
-	if (!publicId) return Promise.resolve();
-	return new Promise((resolve) => {
-		cloudinary.uploader.destroy(publicId, () => resolve());
-	});
-};
+	uploadImageToCloudinary(buffer, folder);
 
 const ok = (res, data, message = "OK") => sendSuccess(res, data, message);
 const fail = (res, code, message) => sendError(res, code, message);
 
 // Build a market-scoping filter so the main admin sees everything but market
 // admins only see their own categories.
-const scope = (req, extra = {}) => {
-	if (req.user && req.user.role === "market") {
-		return { market: req.user.marketId, ...extra };
-	}
-	if (req.query && req.query.market !== undefined && req.query.market !== "all") {
-		if (req.query.market === "none" || req.query.market === "null") {
-			return { market: null, ...extra };
-		}
-		if (mongoose.Types.ObjectId.isValid(req.query.market)) {
-			return { market: req.query.market, ...extra };
-		}
-	}
-	return { ...extra };
-};
+const scope = marketScopeFilter;
 
 // Guard: market-owned categories are view-only for the main admin. Returns true
 // when the caller may proceed; when it returns false a response has already
@@ -101,7 +55,8 @@ exports.getPublicKitchenCategories = async (req, res) => {
 			.populate("market", "name username location logo cities")
 			.sort({ sortOrder: 1, createdAt: -1 })
 			.lean();
-		ok(res, categories);
+		const ras = { categories };
+		sendResponse(res, 200, true, "OK", ras);
 	} catch (err) {
 		console.error("getPublicKitchenCategories:", err);
 		fail(res, 500, err.message || "Server Error");
@@ -118,14 +73,15 @@ exports.getKitchenCategories = async (req, res) => {
 				req.query.isActive === "true" || req.query.isActive === true;
 		}
 		if (req.query.search) {
-			const safe = String(req.query.search).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+			const safe = escapeRegex(String(req.query.search));
 			filter.name = new RegExp(safe, "i");
 		}
 		const categories = await KitchenCategory.find(filter)
 			.populate("market", "name username location cities")
 			.sort({ sortOrder: 1, createdAt: -1 })
 			.lean();
-		ok(res, categories);
+		const ras = { categories };
+		sendResponse(res, 200, true, "OK", ras);
 	} catch (err) {
 		console.error("getKitchenCategories:", err);
 		fail(res, 500, err.message || "Server Error");
@@ -144,7 +100,8 @@ exports.getKitchenCategory = async (req, res) => {
 			.populate("market", "name username location cities")
 			.lean();
 		if (!category) return fail(res, 404, "Kitchen category not found");
-		ok(res, category);
+		const ras = { category };
+		sendResponse(res, 200, true, "OK", ras);
 	} catch (err) {
 		console.error("getKitchenCategory:", err);
 		fail(res, 500, err.message || "Server Error");
@@ -192,7 +149,8 @@ exports.createKitchenCategory = async (req, res) => {
 		const populated = await KitchenCategory.findById(category._id)
 			.populate("market", "name username location cities")
 			.lean();
-		sendSuccess(res, populated, "Kitchen category created successfully", 201);
+		const ras = { category: populated };
+		sendResponse(res, 201, true, "Kitchen category created successfully", ras);
 	} catch (err) {
 		console.error("createKitchenCategory:", err);
 		fail(res, 500, err.message || "Server Error");
@@ -256,7 +214,8 @@ exports.updateKitchenCategory = async (req, res) => {
 			.lean();
 
 		if (!category) return fail(res, 404, "Kitchen category not found");
-		ok(res, category, "Kitchen category updated successfully");
+		const ras = { category };
+		sendResponse(res, 200, true, "Kitchen category updated successfully", ras);
 	} catch (err) {
 		console.error("updateKitchenCategory:", err);
 		fail(res, 500, err.message || "Server Error");
@@ -289,7 +248,8 @@ exports.deleteKitchenCategory = async (req, res) => {
 		);
 
 		if (category.picturePublicId) safeDestroy(category.picturePublicId);
-		ok(res, { id: category._id }, "Kitchen category deleted successfully");
+		const ras = { id: category._id };
+		sendResponse(res, 200, true, "Kitchen category deleted successfully", ras);
 	} catch (err) {
 		console.error("deleteKitchenCategory:", err);
 		fail(res, 500, err.message || "Server Error");
@@ -305,11 +265,12 @@ exports.uploadImage = async (req, res) => {
 			req.file.buffer,
 			"kitchen-categories",
 		);
-		sendSuccess(res, {
+		const ras = {
 			url: result.url,
 			public_id: result.public_id,
 			size: req.file.size,
-		}, "Image uploaded successfully");
+		};
+		sendResponse(res, 200, true, "Image uploaded successfully", ras);
 	} catch (err) {
 		console.error("uploadImage (kitchen category):", err);
 		fail(res, 500, err.message || "Error uploading image");
@@ -357,11 +318,8 @@ exports.reorderKitchenCategories = async (req, res) => {
 			return fail(res, 403, "No categories accessible for reordering");
 
 		const result = await KitchenCategory.bulkWrite(ops);
-		ok(
-			res,
-			{ matched: result.matchedCount, modified: result.modifiedCount },
-			"Kitchen category order saved",
-		);
+		const ras = { matched: result.matchedCount, modified: result.modifiedCount };
+		sendResponse(res, 200, true, "Kitchen category order saved", ras);
 	} catch (err) {
 		console.error("reorderKitchenCategories:", err);
 		fail(res, 500, err.message || "Server Error");

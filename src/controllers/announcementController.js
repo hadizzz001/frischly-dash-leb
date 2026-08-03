@@ -1,5 +1,5 @@
 const Announcement = require("../models/Announcement");
-const { sendSuccess, sendError, sendResponse } = require("../utils/apiResponse");
+const { sendSuccess, sendError, sendResponse, sendServerError } = require("../utils/apiResponse");
 
 // @desc    Get all announcements
 // @route   GET /api/announcements
@@ -8,11 +8,10 @@ exports.getAnnouncements = async (req, res) => {
 	try {
 		const announcements = await Announcement.find().sort({ createdAt: -1 });
 
-		sendResponse(res, 200, true, "Announcements fetched", announcements, {
-			count: announcements.length,
-		});
+		const ras = { announcements, count: announcements.length };
+		sendResponse(res, 200, true, "Announcements fetched", ras);
 	} catch (err) {
-		sendError(res, 500, "Server Error", err.message);
+		sendServerError(res, err, "Server Error");
 	}
 };
 
@@ -27,9 +26,10 @@ exports.getAnnouncement = async (req, res) => {
 			return sendError(res, 404, "Announcement not found");
 		}
 
-		sendSuccess(res, announcement);
+		const ras = { announcement };
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (err) {
-		sendError(res, 500, "Server Error", err.message);
+		sendServerError(res, err, "Server Error");
 	}
 };
 
@@ -43,11 +43,10 @@ exports.getActiveAnnouncements = async (req, res) => {
 			.sort({ createdAt: -1 })
 			.limit(20);
 
-		sendResponse(res, 200, true, "Announcements fetched", announcements, {
-			count: announcements.length,
-		});
+		const ras = { announcements, count: announcements.length };
+		sendResponse(res, 200, true, "Announcements fetched", ras);
 	} catch (err) {
-		sendError(res, 500, "Server Error", err.message);
+		sendServerError(res, err, "Server Error");
 	}
 };
 
@@ -64,9 +63,10 @@ exports.createAnnouncement = async (req, res) => {
 			isActive,
 		});
 
-		sendSuccess(res, announcement, "Announcement created successfully", 201);
+		const ras = { announcement };
+		sendResponse(res, 201, true, "Announcement created successfully", ras);
 	} catch (err) {
-		sendError(res, 500, "Server Error", err.message);
+		sendServerError(res, err, "Server Error");
 	}
 };
 
@@ -90,9 +90,10 @@ exports.updateAnnouncement = async (req, res) => {
 			},
 		);
 
-		sendSuccess(res, announcement, "Announcement updated successfully");
+		const ras2 = { announcement };
+		sendResponse(res, 200, true, "Announcement updated successfully", ras2);
 	} catch (err) {
-		sendError(res, 500, "Server Error", err.message);
+		sendServerError(res, err, "Server Error");
 	}
 };
 
@@ -109,8 +110,9 @@ exports.deleteAnnouncement = async (req, res) => {
 
 		await announcement.deleteOne();
 
-		sendSuccess(res, {}, "Announcement deleted successfully");
+		const ras3 = {};
+		sendResponse(res, 200, true, "Announcement deleted successfully", ras3);
 	} catch (err) {
-		sendError(res, 500, "Server Error", err.message);
+		sendServerError(res, err, "Server Error");
 	}
 };

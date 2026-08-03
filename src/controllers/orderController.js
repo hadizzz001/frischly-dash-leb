@@ -9,12 +9,16 @@ const User = require("../models/User");
 const Setting = require("../models/Setting");
 const MarketSetting = require("../models/MarketSetting");
 const sendEmail = require("../utils/sendEmail");
+const {
+	orderConfirmationEmail,
+	orderDeliveredEmail,
+	refundProcessedEmail,
+} = require("../utils/emailTemplates");
 const NotificationService = require("../services/notifications");
 const { notifyCustomerOrderStatus } = require("../services/orderStatusNotification");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
-
-const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const { sendResponse, sendError, sendSuccess, sendServerError } = require("../utils/apiResponse");
+const { escapeRegex } = require("../utils/sanitize");
 
 // @desc    Get all orders with enhanced filtering options
 // @route   GET /api/orders
@@ -219,16 +223,21 @@ exports.getOrders = async (req, res) => {
 		const totalOrders = await Order.countDocuments(filter);
 		const totalPages = Math.ceil(totalOrders / limitNum);
 
-		sendResponse(res, 200, true, "Success", orders, { pagination: {
+		const ras = {
+			orders,
+			pagination: {
 				currentPage: pageNum,
 				totalPages,
 				totalOrders,
 				hasNextPage: pageNum < totalPages,
 				hasPrevPage: pageNum > 1,
-			} });
+			},
+		};
+
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Error fetching orders:", error);
-		sendError(res, 500, "Error fetching orders", error.message);
+		sendServerError(res, error, "Error fetching orders");
 	}
 };
 
@@ -272,7 +281,8 @@ exports.getOrderRiderLocation = async (req, res) => {
 		}
 
 		if (!order.assignedRider) {
-			return sendResponse(res, 200, true, "Success", { hasRider: false, hasLocation: false, orderStatus: order.status });
+			const ras = { hasRider: false, hasLocation: false, orderStatus: order.status };
+			return sendResponse(res, 200, true, "Success", ras);
 		}
 
 		const rider = order.assignedRider;
@@ -281,29 +291,31 @@ exports.getOrderRiderLocation = async (req, res) => {
 			typeof loc.latitude === "number" &&
 			typeof loc.longitude === "number";
 
-		return sendResponse(res, 200, true, "Success", {
-				hasRider: true,
-				hasLocation,
-				latitude: hasLocation ? loc.latitude : null,
-				longitude: hasLocation ? loc.longitude : null,
-				lastUpdated: loc.lastUpdated || null,
-				riderStatus: rider.status || null,
-				orderStatus: order.status,
-				rider: {
-					name: (rider.user && rider.user.name) || null,
-					phone: (rider.user && rider.user.phoneNumber) || null,
-					vehicleType: rider.vehicleType || null,
-					vehicleNumber: rider.vehicleNumber || null,
-				},
-				// Fallback location hints (used when there is no live GPS yet) so
-				// the client can geocode an approximate position, exactly like the
-				// admin riderslocation dashboard does.
-				address: (rider.user && rider.user.address) || null,
-				zones: Array.isArray(rider.zones) ? rider.zones : [],
-			});
+		const ras = {
+			hasRider: true,
+			hasLocation,
+			latitude: hasLocation ? loc.latitude : null,
+			longitude: hasLocation ? loc.longitude : null,
+			lastUpdated: loc.lastUpdated || null,
+			riderStatus: rider.status || null,
+			orderStatus: order.status,
+			rider: {
+				name: (rider.user && rider.user.name) || null,
+				phone: (rider.user && rider.user.phoneNumber) || null,
+				vehicleType: rider.vehicleType || null,
+				vehicleNumber: rider.vehicleNumber || null,
+			},
+			// Fallback location hints (used when there is no live GPS yet) so
+			// the client can geocode an approximate position, exactly like the
+			// admin riderslocation dashboard does.
+			address: (rider.user && rider.user.address) || null,
+			zones: Array.isArray(rider.zones) ? rider.zones : [],
+		};
+
+		return sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Error getting order rider location:", error);
-		return sendError(res, 500, "Error getting rider location");
+		return sendServerError(res, error, "Error getting rider location");
 	}
 };
 
@@ -395,16 +407,21 @@ exports.getOrdersForRiders = async (req, res) => {
 		const totalOrders = await Order.countDocuments(filter);
 		const totalPages = Math.ceil(totalOrders / limitNum);
 
-		sendResponse(res, 200, true, "Success", orders, { pagination: {
+		const ras = {
+			orders,
+			pagination: {
 				currentPage: pageNum,
 				totalPages,
 				totalOrders,
 				hasNextPage: pageNum < totalPages,
 				hasPrevPage: pageNum > 1,
-			} });
+			},
+		};
+
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Error fetching completed orders:", error);
-		sendError(res, 500, "Error fetching completed orders", error.message);
+		sendServerError(res, error, "Error fetching completed orders");
 	}
 };
 
@@ -469,10 +486,12 @@ exports.getOrder = async (req, res) => {
 			return sendError(res, 403, "You are not authorized to view this order");
 		}
 
-		sendResponse(res, 200, true, "Success", order);
+		const ras = { order };
+
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Error fetching order:", error);
-		sendError(res, 500, "Error fetching order", error.message);
+		sendServerError(res, error, "Error fetching order");
 	}
 };
 
@@ -931,154 +950,16 @@ exports.createOrder = async (req, res) => {
 		}
 
 		console.log("Sending response to client...");
-		sendResponse(res, 201, true, "Order created successfully", populatedOrder, { paymentUrl: paymentUrl });
+		const ras = { populatedOrder, paymentUrl: paymentUrl };
+		sendResponse(res, 201, true, "Order created successfully", ras);
 
 		// Send confirmation email to customer
 		console.log("Preparing confirmation email...");
 		try {
-			const emailSubject = `Order Confirmation - Order #${populatedOrder._id}`;
-			const emailHtml = `
-				<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-					<h2 style="color: #333; text-align: center;">Order Confirmation</h2>
-					<p>Dear ${populatedOrder.customer.name},</p>
-					<p>Thank you for your order! We have received your order and it is being processed. Here are the details:</p>
-					
-					<h3>Order Details</h3>
-					<p><strong>Order ID:</strong> ${populatedOrder._id}</p>
-					<p><strong>Order Date:</strong> ${new Date(
-						populatedOrder.createdAt,
-					).toLocaleDateString()}</p>
-					<p><strong>Status:</strong> ${populatedOrder.status}</p>
-					<p><strong>Payment Method:</strong> ${populatedOrder.paymentMethod}</p>
-					<p><strong>Complete your order at:</strong> <a href="${paymentUrl}" style="color: #007bff;">${paymentUrl}</a></p>
-					
-					<h3>Items Ordered</h3>
-					<table style="width: 100%; border-collapse: collapse;">
-						<thead>
-							<tr style="background-color: #f2f2f2;">
-								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Product</th>
-								<th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Quantity</th>
-								<th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Price</th>
-								<th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Total</th>
-							</tr>
-						</thead>
-						<tbody>
-							${populatedOrder.items
-								.map(
-									(item) => `
-								<tr>
-									<td style="border: 1px solid #ddd; padding: 8px;">${item.product.name}</td>
-									<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${
-										item.quantity
-									}</td>
-									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${item.totalPrice.toFixed(
-										2,
-									)}</td>
-									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${
-										item.totalPrice.toFixed(2) * item.quantity
-									}</td>
-								</tr>
-							`,
-								)
-								.join("")}
-						</tbody>
-					</table>
-					
-					<h3>Order Summary</h3>
-					<p><strong>Subtotal:</strong> $${populatedOrder.subtotal.toFixed(2)}</p>
-					<p><strong>Delivery Fee:</strong> $${populatedOrder.delivery.toFixed(2)}</p>
-					<p><strong>Processing Fee:</strong> $${(populatedOrder.fees || 0).toFixed(
-						2,
-					)}</p>
-					<p><strong>Total:</strong> $${populatedOrder.total.toFixed(2)}</p>
-					
-					${
-						populatedOrder.notes
-							? `<p><strong>Notes:</strong> ${populatedOrder.notes}</p>`
-							: ""
-					}
-					
-					<p>If the order contains alcohol, the rider will need to check your identity at delivery</p>
-					<p>If you have any questions about your order, please contact us at info@freshlylb.com .</p>
-					
-					<p>Thank you for choosing Freshly lb!</p>
-					
-					<p>Best regards,<br>The Freshly lb Team</p>
-					
-					<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-					
-					<h2 style="color: #333; text-align: center;">Order Confirmation</h2>
-					<p>Liebe/r ${populatedOrder.customer.name},</p>
-					<p>Thank you for your order! We have received your order and it is being processed. Here are the details:</p>
-					
-					<h3>Bestelldetails</h3>
-					<p><strong>Bestell-ID:</strong> ${populatedOrder._id}</p>
-					<p><strong>Bestelldatum:</strong> ${new Date(
-						populatedOrder.createdAt,
-					).toLocaleDateString("de-DE")}</p>
-					<p><strong>Status:</strong> ${populatedOrder.status}</p>
-					<p><strong>Zahlungsmethode:</strong> ${populatedOrder.paymentMethod}</p>
-					<p><strong>Complete your order at:</strong> <a href="${paymentUrl}" style="color: #007bff;">${paymentUrl}</a></p>
-					
-					<h3>Bestellte Artikel</h3>
-					<table style="width: 100%; border-collapse: collapse;">
-						<thead>
-							<tr style="background-color: #f2f2f2;">
-								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Produkt</th>
-								<th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Menge</th>
-								<th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Preis</th>
-								<th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Gesamt</th>
-							</tr>
-						</thead>
-						<tbody>
-							${populatedOrder.items
-								.map(
-									(item) => `
-								<tr>
-									<td style="border: 1px solid #ddd; padding: 8px;">${item.product.name}</td>
-									<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${
-										item.quantity
-									}</td>
-									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${item.totalPrice.toFixed(
-										2,
-									)}</td>
-									<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${
-										item.totalPrice.toFixed(2) * item.quantity
-									}</td>
-								</tr>
-							`,
-								)
-								.join("")}
-						</tbody>
-					</table>
-					
-					<h3>Order Summary</h3>
-					<p><strong>Zwischensumme:</strong> $${populatedOrder.subtotal.toFixed(2)}</p>
-					<p><strong>Delivery Fee:</strong> $${populatedOrder.delivery.toFixed(2)}</p>
-					<p><strong>Processing Fee:</strong> $${(populatedOrder.fees || 0).toFixed(
-						2,
-					)}</p>
-					<p><strong>Gesamt:</strong> $${populatedOrder.total.toFixed(2)}</p>
-					
-					${
-						populatedOrder.notes
-							? `<p><strong>Notizen:</strong> ${populatedOrder.notes}</p>`
-							: ""
-					}
-					
-					<p>If the order contains alcohol, the rider must verify your identity upon delivery.</p>
-					<p>For questions about your order, please contact us at info@freshlylb.com.</p>
-					
-					<p>Thank you for choosing Freshly lb!</p>
-					
-					<p>Best regards,<br>The Freshly lb Team</p>
-					
-					<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-					<p style="font-size: 12px; color: #666; text-align: center;">
-						This is an automated email. Please do not reply to this message.
-					</p>
-				</div>
-			`;
+			const { subject: emailSubject, html: emailHtml } = orderConfirmationEmail({
+				order: populatedOrder,
+				paymentUrl,
+			});
 
 			if (populatedOrder.customer?.email) {
 				await sendEmail({
@@ -1124,7 +1005,7 @@ exports.createOrder = async (req, res) => {
 		}
 	} catch (error) {
 		console.error("Error creating order:", error);
-		sendError(res, 500, "Error creating order", error.message);
+		sendServerError(res, error, "Error creating order");
 	}
 	console.log("createOrder finished.");
 };
@@ -1249,69 +1130,9 @@ exports.updateOrder = async (req, res) => {
 		// Send delivery confirmation email
 		if (status === "delivered") {
 			try {
-				const emailSubject = `Order Delivered - Order #${updatedOrder._id}`;
-
-				let promoCodeHtml = "";
-				if (updatedOrder.total > 100) {
-					promoCodeHtml = `
-						<div style="background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-left: 4px solid #28a745; border-radius: 4px;">
-							<h3 style="color: #28a745; margin-top: 0;">Congratulations! 🎉</h3>
-							<p>Since your order was over $100, you have won a special promo code for your next purchase!</p>
-							<p>We will send you the code in a separate email shortly.</p>
-							
-							<hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;">
-							
-							<h3 style="color: #28a745; margin-top: 0;">Congratulations! 🎉</h3>
-							<p>Because your order was over $100, you have won a special voucher code for your next purchase!</p>
-							<p>We will send you the code shortly in a separate email.</p>
-						</div>
-					`;
-				}
-
-				const emailHtml = `
-					<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-						<h2 style="color: #333; text-align: center;">Order Delivered</h2>
-						<p>Dear ${updatedOrder.customer.name},</p>
-						<p>Good news! Your order has been delivered successfully.</p>
-						
-						${promoCodeHtml}
-
-						<h3>Order Details</h3>
-						<p><strong>Order ID:</strong> ${updatedOrder._id}</p>
-						<p><strong>Delivery Date:</strong> ${new Date().toLocaleDateString()}</p>
-						
-						<p>We hope you enjoy your purchase!</p>
-						
-						<p>If you have any feedback or issues, please contact us at info@freshlylb.com.</p>
-						
-						<p>Thank you for choosing Freshly lb!</p>
-						
-						<p>Best regards,<br>The Freshly lb Team</p>
-						
-						<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-						
-						<h2 style="color: #333; text-align: center;">Order Delivered</h2>
-						<p>Liebe/r ${updatedOrder.customer.name},</p>
-						<p>Good news! Your order has been successfully delivered.</p>
-						
-						<h3>Bestelldetails</h3>
-						<p><strong>Bestell-ID:</strong> ${updatedOrder._id}</p>
-						<p><strong>Lieferdatum:</strong> ${new Date().toLocaleDateString("de-DE")}</p>
-						
-						<p>Wir hoffen, Sie haben Freude an Ihrem Einkauf!</p>
-						
-						<p>If you have any questions or issues, please contact us at info@freshlylb.com.</p>
-						
-						<p>Thank you for choosing Freshly lb!</p>
-						
-						<p>Best regards,<br>The Freshly lb Team</p>
-						
-						<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-						<p style="font-size: 12px; color: #666; text-align: center;">
-							This is an automated email. Please do not reply to this message.
-						</p>
-					</div>
-				`;
+				const { subject: emailSubject, html: emailHtml } = orderDeliveredEmail({
+					order: updatedOrder,
+				});
 
 				await sendEmail({
 					to: updatedOrder.customer.email,
@@ -1331,10 +1152,12 @@ exports.updateOrder = async (req, res) => {
 			);
 		}
 
-		sendResponse(res, 200, true, "Order updated successfully", updatedOrder);
+		const ras = { updatedOrder };
+
+		sendResponse(res, 200, true, "Order updated successfully", ras);
 	} catch (error) {
 		console.error("Error updating order:", error);
-		sendError(res, 500, "Error updating order", error.message);
+		sendServerError(res, error, "Error updating order");
 	}
 };
 
@@ -1359,10 +1182,12 @@ exports.deleteOrder = async (req, res) => {
 			return sendError(res, 404, "Order not found");
 		}
 
-		sendResponse(res, 200, true, "Order deleted successfully", order);
+		const ras = { order };
+
+		sendResponse(res, 200, true, "Order deleted successfully", ras);
 	} catch (error) {
 		console.error("Error deleting order:", error);
-		sendError(res, 500, "Error deleting order", error.message);
+		sendServerError(res, error, "Error deleting order");
 	}
 };
 
@@ -1404,15 +1229,17 @@ exports.getOrderStats = async (req, res) => {
 			},
 		]);
 
-		sendResponse(res, 200, true, "Success", {
-				...stats,
-				todayOrders,
-				monthlyOrders,
-				monthlyRevenue: monthlyRevenue[0]?.total || 0,
-			});
+		const ras = {
+			...stats,
+			todayOrders,
+			monthlyOrders,
+			monthlyRevenue: monthlyRevenue[0]?.total || 0,
+		};
+
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Error fetching order stats:", error);
-		sendError(res, 500, "Error fetching order statistics", error.message);
+		sendServerError(res, error, "Error fetching order statistics");
 	}
 };
 
@@ -1512,53 +1339,11 @@ exports.cancelOrder = async (req, res) => {
 						order.status = "cancelled";
 						// Send refund email
 						try {
-							const emailSubject = `Refund Processed - Order #${order._id}`;
 							const refundAmountUsd = refundValue.toFixed(2);
-							const emailHtml = `
-								<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-									<h2 style="color: #333; text-align: center;">Refund Processed</h2>
-									<p>Dear ${order.customer.name},</p>
-									<p>Your order #${
-										order._id
-									} has been cancelled and a refund has been processed.</p>
-									
-									<h3>Refund Details</h3>
-									<p><strong>Refund Amount:</strong> $${refundAmountUsd}</p>
-									<p><strong>Original Order Total:</strong> $${order.total.toFixed(2)}</p>
-									<p><strong>Processing Fees (Non-refundable):</strong> $${(
-										order.fees || 0
-									).toFixed(2)}</p>
-									
-									<p>Please note that the refund amount does not include the processing fees as they are non-refundable.</p>
-									<p>The refund should appear on your statement within 5-10 business days.</p>
-									
-									<p>If you have any questions, please contact us at info@freshlylb.com.</p>
-									
-									<p>Best regards,<br>The Freshly lb Team</p>
-
-									<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-									
-									<h2 style="color: #333; text-align: center;">Refund Processed</h2>
-									<p>Liebe/r ${order.customer.name},</p>
-									<p>Your order #${
-										order._id
-									} has been cancelled and a refund has been initiated.</p>
-									
-									<h3>Refund Details</h3>
-									<p><strong>Refund Amount:</strong> $${refundAmountUsd}</p>
-									<p><strong>Original Order Total:</strong> $${order.total.toFixed(2)}</p>
-									<p><strong>Processing Fees (non-refundable):</strong> $${(
-										order.fees || 0
-									).toFixed(2)}</p>
-									
-									<p>Please note that the refund amount does not include processing fees, as these are non-refundable.</p>
-									<p>The refund should appear on your statement within 5-10 business days.</p>
-									
-									<p>For questions, please contact us at info@freshlylb.com.</p>
-									
-									<p>Best regards,<br>The Freshly lb Team</p>
-								</div>
-							`;
+							const { subject: emailSubject, html: emailHtml } = refundProcessedEmail({
+								order,
+								refundAmountUsd,
+							});
 
 							if (order.customer?.email) {
 								await sendEmail({
@@ -1654,11 +1439,13 @@ exports.cancelOrder = async (req, res) => {
 			console.error("Order status notification failed:", e),
 		);
 
-		sendResponse(res, 200, true, "Order cancelled successfully", updatedOrder);
+		const ras = { updatedOrder };
+
+		sendResponse(res, 200, true, "Order cancelled successfully", ras);
 	} catch (error) {
 		console.log("=== ORDER CANCELLATION FAILED ===");
 		console.error("Error cancelling order:", error);
-		sendError(res, 500, "Error cancelling order", error.message);
+		sendServerError(res, error, "Error cancelling order");
 	}
 };
 
@@ -1711,10 +1498,12 @@ exports.updateOrderShelfNumber = async (req, res) => {
 				"name barcode shelfNumber price discount tax bottlerefund picture",
 			);
 
-		sendResponse(res, 200, true, "Order shelf number updated successfully", updatedOrder);
+		const ras = { updatedOrder };
+
+		sendResponse(res, 200, true, "Order shelf number updated successfully", ras);
 	} catch (error) {
 		console.error("Error updating order shelf number:", error);
-		sendError(res, 500, "Error updating order shelf number", error.message);
+		sendServerError(res, error, "Error updating order shelf number");
 	}
 };
 
@@ -1862,69 +1651,9 @@ exports.updateOrderStatus = async (req, res) => {
 		// Send delivery confirmation email
 		if (status === "delivered" && previousStatus !== "delivered") {
 			try {
-				const emailSubject = `Order Delivered - Order #${updatedOrder._id}`;
-
-				let promoCodeHtml = "";
-				if (updatedOrder.total > 100) {
-					promoCodeHtml = `
-						<div style="background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-left: 4px solid #28a745; border-radius: 4px;">
-							<h3 style="color: #28a745; margin-top: 0;">Congratulations! 🎉</h3>
-							<p>Since your order was over $100, you have won a special promo code for your next purchase!</p>
-							<p>We will send you the code in a separate email shortly.</p>
-							
-							<hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;">
-							
-							<h3 style="color: #28a745; margin-top: 0;">Congratulations! 🎉</h3>
-							<p>Because your order was over $100, you have won a special voucher code for your next purchase!</p>
-							<p>We will send you the code shortly in a separate email.</p>
-						</div>
-					`;
-				}
-
-				const emailHtml = `
-					<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-						<h2 style="color: #333; text-align: center;">Order Delivered</h2>
-						<p>Dear ${updatedOrder.customer.name},</p>
-						<p>Good news! Your order has been delivered successfully.</p>
-						
-						${promoCodeHtml}
-
-						<h3>Order Details</h3>
-						<p><strong>Order ID:</strong> ${updatedOrder._id}</p>
-						<p><strong>Delivery Date:</strong> ${new Date().toLocaleDateString()}</p>
-						
-						<p>We hope you enjoy your purchase!</p>
-						
-						<p>If you have any feedback or issues, please contact us at info@freshlylb.com.</p>
-						
-						<p>Thank you for choosing Freshly lb!</p>
-						
-						<p>Best regards,<br>The Freshly lb Team</p>
-						
-						<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-						
-						<h2 style="color: #333; text-align: center;">Order Delivered</h2>
-						<p>Liebe/r ${updatedOrder.customer.name},</p>
-						<p>Good news! Your order has been successfully delivered.</p>
-						
-						<h3>Bestelldetails</h3>
-						<p><strong>Bestell-ID:</strong> ${updatedOrder._id}</p>
-						<p><strong>Lieferdatum:</strong> ${new Date().toLocaleDateString("de-DE")}</p>
-						
-						<p>Wir hoffen, Sie haben Freude an Ihrem Einkauf!</p>
-						
-						<p>If you have any questions or issues, please contact us at info@freshlylb.com.</p>
-						
-						<p>Thank you for choosing Freshly lb!</p>
-						
-						<p>Best regards,<br>The Freshly lb Team</p>
-						
-						<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-						<p style="font-size: 12px; color: #666; text-align: center;">
-							This is an automated email. Please do not reply to this message.
-						</p>
-					</div>
-				`;
+				const { subject: emailSubject, html: emailHtml } = orderDeliveredEmail({
+					order: updatedOrder,
+				});
 
 				await sendEmail({
 					to: updatedOrder.customer.email,
@@ -1944,10 +1673,12 @@ exports.updateOrderStatus = async (req, res) => {
 			);
 		}
 
-		sendResponse(res, 200, true, `Order status updated from '${previousStatus}' to '${status}' successfully`, updatedOrder);
+		const ras = { updatedOrder };
+
+		sendResponse(res, 200, true, `Order status updated from '${previousStatus}' to '${status}' successfully`, ras);
 	} catch (error) {
 		console.error("Error updating order status:", error);
-		sendError(res, 500, "Error updating order status", error.message);
+		sendServerError(res, error, "Error updating order status");
 	}
 };
 
@@ -1958,10 +1689,12 @@ exports.getOrdersCount = async (req, res) => {
 	try {
 		const totalOrders = await Order.countDocuments({ isActive: true });
 
-		sendResponse(res, 200, true, `Total active orders: ${totalOrders}`, null, { count: totalOrders });
+		const ras = { count: totalOrders };
+
+		sendResponse(res, 200, true, `Total active orders: ${totalOrders}`, ras);
 	} catch (error) {
 		console.error("Error getting orders count:", error);
-		sendError(res, 500, "Error retrieving orders count", error.message);
+		sendServerError(res, error, "Error retrieving orders count");
 	}
 };
 
@@ -2136,21 +1869,28 @@ exports.getProductSalesStats = async (req, res) => {
 			uniqueProducts: 0,
 		};
 
-		sendResponse(res, 200, true, "Success", productSales, { summary: summary, pagination: {
+		const ras = {
+			productSales,
+			summary: summary,
+			pagination: {
 				currentPage: pageNum,
 				totalPages,
 				totalProducts,
 				hasNextPage: pageNum < totalPages,
 				hasPrevPage: pageNum > 1,
 				limit: limitNum,
-			}, filters: {
+			},
+			filters: {
 				timeRange: timeRange || "custom",
 				dateFrom: dateFilter.$gte || null,
 				dateTo: dateFilter.$lte || null,
-			} });
+			},
+		};
+
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Error fetching product sales statistics:", error);
-		sendError(res, 500, "Error fetching product sales statistics", error.message);
+		sendServerError(res, error, "Error fetching product sales statistics");
 	}
 };
 
@@ -2291,20 +2031,28 @@ exports.getMarketCommissionStats = async (req, res) => {
 		const grandTotalEarnings =
 			Math.round((ownSales.totalSales + totalCommission) * 100) / 100;
 
-		sendResponse(res, 200, true, "Success", data, { totals: {
+		const ras = {
+			data,
+			totals: {
 				marketCount: data.length,
 				totalOrders,
 				totalSales: Math.round(totalSales * 100) / 100,
 				totalCommission: Math.round(totalCommission * 100) / 100,
 				commissionRate: COMMISSION_RATE,
-			}, ownSales: ownSales, grandTotalEarnings: grandTotalEarnings, filters: {
+			},
+			ownSales: ownSales,
+			grandTotalEarnings: grandTotalEarnings,
+			filters: {
 				timeRange: timeRange || "custom",
 				dateFrom: dateFilter.$gte || null,
 				dateTo: dateFilter.$lte || null,
-			} });
+			},
+		};
+
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Error fetching market commission statistics:", error);
-		sendError(res, 500, "Error fetching market commission statistics", error.message);
+		sendServerError(res, error, "Error fetching market commission statistics");
 	}
 };
 
@@ -2425,21 +2173,27 @@ exports.getUnsoldProducts = async (req, res) => {
 			}),
 		);
 
-		sendResponse(res, 200, true, "Success", productsWithCategory, { pagination: {
+		const ras = {
+			productsWithCategory,
+			pagination: {
 				currentPage: pageNum,
 				totalPages,
 				totalProducts,
 				hasNextPage: pageNum < totalPages,
 				hasPrevPage: pageNum > 1,
 				limit: limitNum,
-			}, filters: {
+			},
+			filters: {
 				timeRange: timeRange || "custom",
 				dateFrom: dateFilter.$gte || null,
 				dateTo: dateFilter.$lte || null,
-			} });
+			},
+		};
+
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Error fetching unsold products:", error);
-		sendError(res, 500, "Error fetching unsold products", error.message);
+		sendServerError(res, error, "Error fetching unsold products");
 	}
 };
 
@@ -2490,14 +2244,15 @@ exports.verifyStripePayment = async (req, res) => {
 			}
 
 			console.log("Payment verification successful");
-			return sendResponse(res, 200, true, "Payment verified successfully", null);
+			const ras = {};
+			return sendResponse(res, 200, true, "Payment verified successfully", ras);
 		} else {
 			console.log("Payment not completed. Status:", session.payment_status);
 			return sendError(res, 400, "Payment not completed");
 		}
 	} catch (error) {
 		console.error("Error verifying payment:", error);
-		sendError(res, 500, "Error verifying payment", error.message);
+		sendServerError(res, error, "Error verifying payment");
 	}
 };
 
@@ -2525,9 +2280,11 @@ exports.getCustomerOrderCounts = async (req, res) => {
 			},
 		]);
 
-		sendResponse(res, 200, true, "Success", orderCounts);
+		const ras = { orderCounts };
+
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Error getting customer order counts:", error);
-		sendError(res, 500, "Error retrieving customer order counts", error.message);
+		sendServerError(res, error, "Error retrieving customer order counts");
 	}
 };

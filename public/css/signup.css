@@ -1,0 +1,294 @@
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+body {
+	font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+	background: #ffffff;
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 20px 0;
+}
+
+.container {
+	background: #ffffff;
+	border-radius: 15px;
+	box-shadow: 0 15px 35px rgba(255, 195, 0, 0.3);
+	width: 500px;
+	max-width: 95vw;
+	padding: 40px;
+	margin: 20px 0;
+	border: 3px solid #ffc300;
+}
+
+.header {
+	text-align: center;
+	margin-bottom: 30px;
+}
+
+.header h1 {
+	color: #ffc300;
+	margin-bottom: 10px;
+	font-size: 28px;
+}
+
+.header p {
+	color: #000000;
+	font-size: 16px;
+}
+
+.form-group {
+	margin-bottom: 20px;
+}
+
+.form-group label {
+	display: block;
+	margin-bottom: 5px;
+	color: #000000;
+	font-weight: 500;
+}
+
+.form-group input {
+	width: 100%;
+	padding: 12px;
+	border: 2px solid #ffc300;
+	border-radius: 8px;
+	font-size: 14px;
+	transition: border-color 0.3s ease;
+	background: #ffffff;
+	color: #000000;
+}
+
+.form-group input:focus {
+	outline: none;
+	border-color: #000000;
+}
+
+.password-wrap {
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+
+.password-wrap input {
+	padding-right: 46px;
+}
+
+.password-toggle {
+	position: absolute;
+	right: 6px;
+	top: 50%;
+	transform: translateY(-50%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	padding: 0;
+	background: transparent;
+	border: none;
+	border-radius: 8px;
+	color: #6c757d;
+	cursor: pointer;
+	transition: color 0.2s ease, background 0.2s ease;
+}
+
+.password-toggle:hover {
+	color: #000000;
+	background: rgba(255, 195, 0, 0.18);
+}
+
+.password-toggle:focus-visible {
+	outline: 2px solid #000000;
+	outline-offset: 1px;
+}
+
+.password-toggle .eye-closed {
+	display: none;
+}
+
+.password-toggle.is-visible .eye-open {
+	display: none;
+}
+
+.password-toggle.is-visible .eye-closed {
+	display: block;
+}
+
+.form-group select {
+	width: 100%;
+	padding: 12px;
+	border: 2px solid #ffc300;
+	border-radius: 8px;
+	font-size: 14px;
+	transition: border-color 0.3s ease;
+	background: #ffffff;
+	color: #000000;
+	cursor: pointer;
+}
+
+.form-group select:focus {
+	outline: none;
+	border-color: #000000;
+}
+
+.address-section {
+	background: rgba(255, 195, 0, 0.1);
+	padding: 25px;
+	border-radius: 10px;
+	margin-bottom: 25px;
+	border: 2px solid #ffc300;
+}
+
+.address-section h3 {
+	color: #000000;
+	margin-bottom: 20px;
+	font-size: 18px;
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+}
+
+.address-section h3::before {
+	content: "📍";
+	margin-right: 8px;
+	font-size: 16px;
+}
+
+.address-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 20px;
+}
+
+.address-grid .full-width {
+	grid-column: 1 / -1;
+}
+
+.address-grid .form-group {
+	margin-bottom: 0;
+}
+
+.address-grid input {
+	background: white;
+	border: 2px solid #dee2e6;
+}
+
+.address-grid input:focus {
+	border-color: #667eea;
+	box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+@media (max-width: 600px) {
+	.address-grid {
+		grid-template-columns: 1fr;
+		gap: 15px;
+	}
+
+	.address-grid .full-width {
+		grid-column: 1;
+	}
+}
+
+.btn {
+	width: 100%;
+	padding: 12px;
+	background: #ffc300;
+	color: #000000;
+	border: 2px solid #ffc300;
+	border-radius: 8px;
+	font-size: 16px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: transform 0.2s ease;
+	margin-bottom: 20px;
+}
+
+.btn:hover {
+	transform: translateY(-2px);
+}
+
+.btn:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	transform: none;
+}
+
+.message {
+	margin-bottom: 20px;
+	padding: 10px;
+	border-radius: 8px;
+	font-size: 14px;
+}
+
+.success {
+	background: #d4edda;
+	color: #155724;
+	border: 1px solid #c3e6cb;
+}
+
+.error {
+	background: #f8d7da;
+	color: #721c24;
+	border: 1px solid #f1b0b7;
+}
+
+.loading {
+	display: none;
+	text-align: center;
+	margin: 20px 0;
+}
+
+.loading-icon {
+	font-size: 24px;
+}
+
+.spinner {
+	border: 4px solid #f3f3f3;
+	border-top: 4px solid #667eea;
+	border-radius: 50%;
+	width: 30px;
+	height: 30px;
+	animation: spin 1s linear infinite;
+	margin: 0 auto;
+}
+
+@keyframes spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
+}
+
+.links {
+	text-align: center;
+	margin-top: 20px;
+}
+
+.links a {
+	color: #667eea;
+	text-decoration: none;
+	font-weight: 500;
+}
+
+.links a:hover {
+	text-decoration: underline;
+}
+
+.divider {
+	margin: 20px 0;
+	text-align: center;
+	color: #666;
+}
+
+.password-requirements {
+	font-size: 12px;
+	color: #666;
+	margin-top: 5px;
+}

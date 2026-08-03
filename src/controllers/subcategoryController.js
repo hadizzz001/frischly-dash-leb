@@ -23,7 +23,8 @@ exports.createSubcategory = async (req, res) => {
 			createdBy: req.user ? req.user.id : undefined,
 		});
 
-		sendSuccess(res, sub, "Subcategory created", 201);
+		const ras = { subcategory: sub };
+		sendResponse(res, 201, true, "Subcategory created", ras);
 	} catch (error) {
 		sendError(res, 400, error.message);
 	}
@@ -48,9 +49,8 @@ exports.getAllSubcategories = async (req, res) => {
 		const subcategories = await Subcategory.find(query)
 			.populate("parentCategory", "name image")
 			.sort({ sortorder: 1 });
-		sendResponse(res, 200, true, "Subcategories fetched", subcategories, {
-			count: subcategories.length,
-		});
+		const ras2 = { subcategories, count: subcategories.length };
+		sendResponse(res, 200, true, "Subcategories fetched", ras2);
 	} catch (error) {
 		sendError(res, 400, error.message);
 	}
@@ -64,7 +64,8 @@ exports.getSubcategoryById = async (req, res) => {
 			"name image"
 		);
 		if (!sub) return sendError(res, 404, "Subcategory not found");
-		sendSuccess(res, sub);
+		const ras3 = { subcategory: sub };
+		sendResponse(res, 200, true, "Success", ras3);
 	} catch (error) {
 		sendError(res, 400, error.message);
 	}
@@ -84,7 +85,8 @@ exports.updateSubcategory = async (req, res) => {
 			runValidators: true,
 		});
 		if (!sub) return sendError(res, 404, "Subcategory not found");
-		sendSuccess(res, sub);
+		const ras4 = { subcategory: sub };
+		sendResponse(res, 200, true, "Success", ras4);
 	} catch (error) {
 		sendError(res, 400, error.message);
 	}
@@ -99,7 +101,8 @@ exports.deleteSubcategory = async (req, res) => {
 			{ new: true }
 		);
 		if (!sub) return sendError(res, 404, "Subcategory not found");
-		sendSuccess(res, {});
+		const ras5 = {};
+		sendResponse(res, 200, true, "Success", ras5);
 	} catch (error) {
 		sendError(res, 400, error.message);
 	}

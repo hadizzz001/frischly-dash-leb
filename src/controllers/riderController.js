@@ -3,7 +3,7 @@ const User = require("../models/User");
 const Order = require("../models/Order");
 const Zone = require("../models/Zone");
 const mongoose = require("mongoose");
-const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
+const { sendResponse, sendError, sendSuccess, sendServerError } = require("../utils/apiResponse");
 const { namedZonesCoverPoint, riderDistanceToPoint } = require("../utils/zoneGeo");
 const { getCityCoords } = require("../utils/lebaneseCities");
 
@@ -240,19 +240,21 @@ exports.getRiders = async (req, res) => {
 		const totalRiders = await Rider.countDocuments(filter);
 		const totalPages = Math.ceil(totalRiders / limitNum);
 
-		sendResponse(res, 200, true, `Successfully retrieved ${filteredRiders.length} riders`, {
-				riders: filteredRiders,
-				pagination: {
-					currentPage: pageNum,
-					totalPages,
-					totalRiders,
-					hasNext: pageNum < totalPages,
-					hasPrev: pageNum > 1,
-				},
-			});
+		const ras = {
+			riders: filteredRiders,
+			pagination: {
+				currentPage: pageNum,
+				totalPages,
+				totalRiders,
+				hasNext: pageNum < totalPages,
+				hasPrev: pageNum > 1,
+			},
+		};
+
+		sendResponse(res, 200, true, `Successfully retrieved ${filteredRiders.length} riders`, ras);
 	} catch (error) {
 		console.error("Error getting riders:", error);
-		sendError(res, 500, "Error fetching riders", error.message);
+		sendServerError(res, error, "Error fetching riders");
 	}
 };
 
@@ -268,10 +270,11 @@ exports.getMyRiderProfile = async (req, res) => {
 		if (!rider) {
 			return sendError(res, 404, "No rider profile found for this account");
 		}
-		sendResponse(res, 200, true, "Rider profile retrieved successfully", rider);
+		const ras = { rider };
+		sendResponse(res, 200, true, "Rider profile retrieved successfully", ras);
 	} catch (error) {
 		console.error("Error getting my rider profile:", error);
-		sendError(res, 500, "Error fetching rider profile", error.message);
+		sendServerError(res, error, "Error fetching rider profile");
 	}
 };
 
@@ -306,10 +309,11 @@ exports.getRider = async (req, res) => {
 			return sendError(res, 403, "Not authorized to view this rider");
 		}
 
-		sendResponse(res, 200, true, "Rider retrieved successfully", rider);
+		const ras = { rider };
+		sendResponse(res, 200, true, "Rider retrieved successfully", ras);
 	} catch (error) {
 		console.error("Error getting rider:", error);
-		sendError(res, 500, "Error fetching rider", error.message);
+		sendServerError(res, error, "Error fetching rider");
 	}
 };
 
@@ -369,7 +373,8 @@ exports.createRider = async (req, res) => {
 		// Populate user details for response
 		await rider.populate("user", "name email phoneNumber");
 
-		sendResponse(res, 201, true, "Rider profile created successfully", rider);
+		const ras = { rider };
+		sendResponse(res, 201, true, "Rider profile created successfully", ras);
 	} catch (error) {
 		console.error("Error creating rider:", error);
 
@@ -377,7 +382,7 @@ exports.createRider = async (req, res) => {
 			return sendError(res, 400, "Rider profile already exists for this user");
 		}
 
-		sendError(res, 500, "Error creating rider profile", error.message);
+		sendServerError(res, error, "Error creating rider profile");
 	}
 };
 
@@ -450,10 +455,11 @@ exports.updateRider = async (req, res) => {
 		// Populate user details for response
 		await rider.populate("user", "name email phoneNumber");
 
-sendResponse(res, 200, true, "Rider profile updated successfully", rider);
+		const ras = { rider };
+		sendResponse(res, 200, true, "Rider profile updated successfully", ras);
 	} catch (error) {
 		console.error("Error updating rider:", error);
-		sendError(res, 500, "Error updating rider profile", error.message);
+		sendServerError(res, error, "Error updating rider profile");
 	}
 };
 
@@ -508,15 +514,17 @@ exports.updateRiderStatus = async (req, res) => {
 
 		await rider.save();
 
-		sendResponse(res, 200, true, "Rider status updated successfully", {
-				riderId: rider._id,
-				status: rider.status,
-				currentLocation: rider.currentLocation,
-				lastActiveAt: rider.lastActiveAt,
-			});
+		const ras = {
+			riderId: rider._id,
+			status: rider.status,
+			currentLocation: rider.currentLocation,
+			lastActiveAt: rider.lastActiveAt,
+		};
+
+		sendResponse(res, 200, true, "Rider status updated successfully", ras);
 	} catch (error) {
 		console.error("Error updating rider status:", error);
-		sendError(res, 500, "Error updating rider status", error.message);
+		sendServerError(res, error, "Error updating rider status");
 	}
 };
 
@@ -557,13 +565,15 @@ exports.updateRiderLocation = async (req, res) => {
 
 		await rider.save();
 
-		sendResponse(res, 200, true, "Rider location updated successfully", {
-				riderId: rider._id,
-				currentLocation: rider.currentLocation,
-			});
+		const ras = {
+			riderId: rider._id,
+			currentLocation: rider.currentLocation,
+		};
+
+		sendResponse(res, 200, true, "Rider location updated successfully", ras);
 	} catch (error) {
 		console.error("Error updating rider location:", error);
-		sendError(res, 500, "Error updating rider location", error.message);
+		sendServerError(res, error, "Error updating rider location");
 	}
 };
 
@@ -602,10 +612,11 @@ exports.getAvailableRiders = async (req, res) => {
 			}
 		}
 
-		sendResponse(res, 200, true, `Found ${availableRiders.length} available riders in ${zone}`, availableRiders, { count: availableRiders.length });
+		const ras = { availableRiders, count: availableRiders.length };
+		sendResponse(res, 200, true, `Found ${availableRiders.length} available riders in ${zone}`, ras);
 	} catch (error) {
 		console.error("Error getting available riders:", error);
-		sendError(res, 500, "Error fetching available riders", error.message);
+		sendServerError(res, error, "Error fetching available riders");
 	}
 };
 
@@ -666,24 +677,26 @@ exports.getRiderStats = async (req, res) => {
 			{ $sort: { count: -1 } },
 		]);
 
-		sendResponse(res, 200, true, "Rider statistics fetched successfully", {
-				overall: stats[0] || {
-					totalRiders: 0,
-					availableRiders: 0,
-					busyRiders: 0,
-					offlineRiders: 0,
-					verifiedRiders: 0,
-					totalOrdersPicked: 0,
-					totalOrdersDelivered: 0,
-					totalEarnings: 0,
-					averageRating: 0,
-				},
-				byZone: zoneStats,
-				byVehicleType: vehicleStats,
-			});
+		const ras = {
+			overall: stats[0] || {
+				totalRiders: 0,
+				availableRiders: 0,
+				busyRiders: 0,
+				offlineRiders: 0,
+				verifiedRiders: 0,
+				totalOrdersPicked: 0,
+				totalOrdersDelivered: 0,
+				totalEarnings: 0,
+				averageRating: 0,
+			},
+			byZone: zoneStats,
+			byVehicleType: vehicleStats,
+		};
+
+		sendResponse(res, 200, true, "Rider statistics fetched successfully", ras);
 	} catch (error) {
 		console.error("Error getting rider stats:", error);
-		sendError(res, 500, "Error fetching rider statistics", error.message);
+		sendServerError(res, error, "Error fetching rider statistics");
 	}
 };
 
@@ -724,9 +737,10 @@ exports.deleteRider = async (req, res) => {
 		// Permanent delete
 		await Rider.findByIdAndDelete(id);
 
-		sendResponse(res, 200, true, "Rider profile permanently deleted", null);
+		const ras = {};
+		sendResponse(res, 200, true, "Rider profile permanently deleted", ras);
 	} catch (error) {
 		console.error("Error deleting rider:", error);
-		sendError(res, 500, "Error deleting rider profile", error.message);
+		sendServerError(res, error, "Error deleting rider profile");
 	}
 };

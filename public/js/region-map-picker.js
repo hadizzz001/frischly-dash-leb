@@ -102,7 +102,7 @@
 		if (typeof ol === "undefined") {
 			console.error("[single-pin-picker] OpenLayers (ol) failed to load");
 			mapEl.innerHTML =
-				'<div style="padding:16px;color:#c0392b;font-size:13px;">Map library failed to load. Check your internet connection and reload the page.</div>';
+				'<div class="map-load-error">Map library failed to load. Check your internet connection and reload the page.</div>';
 			return null;
 		}
 
@@ -359,7 +359,7 @@
 		if (typeof ol === "undefined") {
 			console.error("[multi-pin-picker] OpenLayers (ol) failed to load");
 			mapEl.innerHTML =
-				'<div style="padding:16px;color:#c0392b;font-size:13px;">Map library failed to load. Check your internet connection and reload the page.</div>';
+				'<div class="map-load-error">Map library failed to load. Check your internet connection and reload the page.</div>';
 			return null;
 		}
 

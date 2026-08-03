@@ -179,6 +179,10 @@ app.use(
 					"https://maps.google.com",
 					"https://www.google.com",
 				], // Allow Google Maps and Google domains
+				workerSrc: [
+					"'self'",
+					"blob:", // OpenLayers (webgl.js) spins up its renderer in a worker created from a blob: URL
+				],
 			},
 		},
 	}),
@@ -303,6 +307,21 @@ app.use(limiter);
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
+// Snapshot the body exactly as the client sent it, BEFORE any express-validator
+// sanitizer rewrites it. Validation errors can then tell the user what *they*
+// typed ("12") instead of the normalized value the sanitizer produced
+// ("+96112"), which is confusing because they never entered it.
+app.use((req, res, next) => {
+	if (req.body && typeof req.body === "object") {
+		try {
+			req.rawBody = JSON.parse(JSON.stringify(req.body));
+		} catch {
+			req.rawBody = undefined;
+		}
+	}
+	next();
+});
+
 // Data sanitization against NoSQL injection attacks
 // This middleware removes any keys that start with $ or contain . from user input
 // Prevents attacks like: { "$gt": "" } or { "user.password": "secret" }
@@ -316,14 +335,17 @@ app.use(
 );
 
 // Serve static files
-// JS files get no-cache so a bug fix (e.g. to the delivery-region map
-// picker) is guaranteed to reach every browser on next load instead of
-// being silently served from a stale disk cache, which previously made
-// fixed client-side validation bugs appear to still be happening.
+// JS and CSS files get no-cache so a bug fix (e.g. to the delivery-region
+// map picker, or a table image-size tweak) is guaranteed to reach every
+// browser on next load instead of being silently served from a stale disk
+// cache, which previously made fixed client-side validation/style bugs
+// appear to still be happening (e.g. product thumbnails staying large
+// after the CSS was already fixed on the server, because the browser
+// never re-requested the unchanged-looking .css file).
 app.use(
 	express.static("public", {
 		setHeaders: (res, filePath) => {
-			if (filePath.endsWith(".js")) {
+			if (filePath.endsWith(".js") || filePath.endsWith(".css")) {
 				res.setHeader("Cache-Control", "no-cache, must-revalidate");
 			}
 		},
@@ -354,10 +376,33 @@ app.use("/api/translate", translateRoutes);
 app.use("/api/scanner", scannerRoutes);
 app.use("/api/feedback", feedbackRoutes);
 
-// Route for customer shop page
+// True when the request was made against a local development host. Used so
+// local development never bounces the developer out to the live public site.
+const isLocalRequest = (req) => {
+	const host = (req.hostname || "").toLowerCase();
+	return (
+		host === "localhost" ||
+		host === "127.0.0.1" ||
+		host === "::1" ||
+		host === "0.0.0.0" ||
+		host.endsWith(".localhost") ||
+		// LAN addresses used when testing from a phone on the same network
+		/^192\.168\./.test(host) ||
+		/^10\./.test(host) ||
+		/^172\.(1[6-9]|2\d|3[01])\./.test(host)
+	);
+};
+
+// Route for customer shop page.
+// On localhost we serve the bundled shop.html so the local build is testable;
+// anywhere else we send shoppers to the public storefront.
+// (Previously this called sendFile() AND redirect(), which threw
+// ERR_HTTP_HEADERS_SENT because only the first response can win.)
 app.get("/shop", (req, res) => {
-	res.sendFile(__dirname + "/public/shop.html");
-	res.redirect("https://frischlyshop.com");
+	if (isLocalRequest(req)) {
+		return res.sendFile(__dirname + "/public/shop.html");
+	}
+	return res.redirect("https://frischlyshop.com");
 });
 
 // Route for staff dashboard page
@@ -406,14 +451,22 @@ app.get("/payment/success", (req, res) => {
 	res.sendFile(__dirname + "/public/payment/success-pod.html");
 });
 
-// Route for shop1 page - redirect to frischlyshop.com
+// Route for shop1 page - redirect to frischlyshop.com (kept local on localhost)
 app.get("/shop1", (req, res) => {
-	res.redirect("https://frischlyshop.com");
+	if (isLocalRequest(req)) {
+		return res.sendFile(__dirname + "/public/shop1.html");
+	}
+	return res.redirect("https://frischlyshop.com");
 });
 
-// Route for market admin dashboard page (login)
+// There is now a SINGLE sign-in page for every role. The old market-only
+// login screen (/market) is retired: /api/auth/login-profile already
+// authenticates market accounts (it falls back to the Market collection by
+// username/email), so the shared page at /signin handles markets too and
+// then routes each role to its own dashboard.
+// Kept as a redirect so existing links, bookmarks and old QR codes still work.
 app.get("/market", (req, res) => {
-	res.sendFile(__dirname + "/public/market.html");
+	res.redirect(301, "/signin");
 });
 
 // Route for the full market-admin dashboard (after login)

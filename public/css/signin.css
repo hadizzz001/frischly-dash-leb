@@ -35,6 +35,73 @@ body {
 	margin-bottom: 10px;
 }
 
+.header {
+	text-align: center;
+	margin-bottom: 30px;
+}
+
+.header h1 {
+	color: #ffc300;
+	margin-bottom: 10px;
+	font-size: 28px;
+}
+
+.header p {
+	color: #000000;
+	font-size: 16px;
+}
+
+.password-wrap {
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+
+.password-wrap input {
+	padding-right: 46px;
+}
+
+.password-toggle {
+	position: absolute;
+	right: 6px;
+	top: 50%;
+	transform: translateY(-50%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	padding: 0;
+	background: transparent;
+	border: none;
+	border-radius: 8px;
+	color: #6c757d;
+	cursor: pointer;
+	transition: color 0.2s ease, background 0.2s ease;
+}
+
+.password-toggle:hover {
+	color: #000000;
+	background: rgba(255, 195, 0, 0.18);
+}
+
+.password-toggle:focus-visible {
+	outline: 2px solid #000000;
+	outline-offset: 1px;
+}
+
+.password-toggle .eye-closed {
+	display: none;
+}
+
+.password-toggle.is-visible .eye-open {
+	display: none;
+}
+
+.password-toggle.is-visible .eye-closed {
+	display: block;
+}
+
 .logo h1 {
 	color: #ffc300;
 	margin-bottom: 10px;

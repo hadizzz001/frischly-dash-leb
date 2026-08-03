@@ -18,7 +18,7 @@
 const os = require("os");
 const fs = require("fs");
 const path = require("path");
-const { sendError, sendResponse } = require("../utils/apiResponse");
+const { sendError, sendResponse, sendServerError } = require("../utils/apiResponse");
 
 const SUPPORTED = new Set(["en", "ar"]);
 const MAX_ITEMS = 400; // per request
@@ -208,7 +208,8 @@ exports.translate = async (req, res) => {
 		);
 
 		if (source === target) {
-			return sendResponse(res, 200, true, "Success", null, { translations: items });
+			const ras = { translations: items };
+			return sendResponse(res, 200, true, "Success", ras);
 		}
 
 		const out = new Array(items.length);
@@ -224,10 +225,11 @@ exports.translate = async (req, res) => {
 			Array.from({ length: Math.min(CONCURRENCY, items.length || 1) }, worker)
 		);
 
-		sendResponse(res, 200, true, "Success", null, { translations: out });
+		const ras = { translations: out };
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (err) {
 		console.error("translate error:", err);
-		sendError(res, 500, "Translation failed");
+		sendServerError(res, err, "Translation failed");
 	}
 };
 

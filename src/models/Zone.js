@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
-
-const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const { escapeRegex } = require("../utils/sanitize");
 
 const zoneSchema = new mongoose.Schema(
 	{

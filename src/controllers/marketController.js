@@ -2,9 +2,7 @@ const Market = require("../models/Market");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
 const mongoose = require("mongoose");
-const multer = require("multer");
-const cloudinary = require("cloudinary").v2;
-const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
+const { sendResponse, sendError, sendSuccess, sendServerError } = require("../utils/apiResponse");
 const {
 	generateToken,
 	generateRefreshToken,
@@ -14,62 +12,20 @@ const {
 	duplicateAccountMessage,
 } = require("../utils/accountDuplicates");
 const { pointInAnyRegion } = require("../utils/geo");
+const { escapeRegex } = require("../utils/sanitize");
+const {
+	imageUpload: upload,
+	uploadLogoToCloudinary: uploadLogoToCloudinaryShared,
+	deleteFromCloudinary,
+} = require("../utils/cloudinaryUpload");
 
-if (
-	!process.env.CLOUDINARY_CLOUD_NAME ||
-	!process.env.CLOUDINARY_API_KEY ||
-	!process.env.CLOUDINARY_API_SECRET
-) {
-	console.error(
-		"❌ CRITICAL: Cloudinary credentials are not configured properly in environment variables",
-	);
-}
-
-cloudinary.config({
-	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-	api_key: process.env.CLOUDINARY_API_KEY,
-	api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-const upload = multer({
-	storage: multer.memoryStorage(),
-	limits: { fileSize: 5 * 1024 * 1024 },
-	fileFilter: (req, file, cb) => {
-		if (file.mimetype.startsWith("image/")) cb(null, true);
-		else cb(new Error("Only image files are allowed!"), false);
-	},
-});
-
-const uploadLogoToCloudinary = (buffer) => {
-	return new Promise((resolve, reject) => {
-		const stream = cloudinary.uploader.upload_stream(
-			{
-				folder: "market-logos",
-				resource_type: "image",
-				quality: "auto",
-				format: "webp",
-				transformation: [
-					{ quality: "auto:eco", width: 500, height: 500, crop: "limit" },
-				],
-			},
-			(error, result) => {
-				if (error) reject(error);
-				else resolve({ url: result.secure_url, public_id: result.public_id });
-			},
-		);
-
-		stream.end(buffer);
-	});
-};
+// Cloudinary is configured centrally in ../utils/cloudinaryUpload.
+const uploadLogoToCloudinary = (buffer) =>
+	uploadLogoToCloudinaryShared(buffer, "market-logos");
 
 const deleteLogoFromCloudinary = (publicId) => {
-	return new Promise((resolve, reject) => {
-		if (!publicId) return resolve();
-		cloudinary.uploader.destroy(publicId, (error, result) => {
-			if (error) reject(error);
-			else resolve(result);
-		});
-	});
+	if (!publicId) return Promise.resolve();
+	return deleteFromCloudinary(publicId);
 };
 
 const parseLocation = (location) => {
@@ -248,17 +204,19 @@ exports.createMarket = async (req, res) => {
 				marketData.logoPublicId = uploadResult.public_id;
 			} catch (uploadError) {
 				console.error("Error uploading market logo:", uploadError);
-				return sendError(res, 500, "Error uploading market logo", uploadError.message);
+				return sendServerError(res, uploadError, "Error uploading market logo");
 			}
 		}
 
 		const market = await Market.create(marketData);
 
-		sendResponse(res, 201, true, "Market created successfully", market.toSafeObject());
+		const ras = { market: market.toSafeObject() };
+		sendResponse(res, 201, true, "Market created successfully", ras);
 	} catch (error) {
 		console.error("Create market error:", error);
 		const errorResponse = marketErrorResponse(error, "Error creating market");
-		sendResponse(res, 400, false, errorResponse.message, null, { errors: error.message, errors: errorResponse.errors });
+		const ras = { errors: errorResponse.errors };
+		sendResponse(res, 400, false, errorResponse.message, ras);
 	}
 };
 
@@ -328,16 +286,20 @@ exports.getMarkets = async (req, res) => {
 			m.totalSales = s ? s.totalSales : 0;
 		});
 
-		sendResponse(res, 200, true, "Success", markets, { pagination: {
+		const ras = {
+			markets,
+			pagination: {
 				currentPage: pageNum,
 				totalPages: Math.ceil(total / limitNum),
 				totalMarkets: total,
 				hasNextPage: pageNum * limitNum < total,
 				hasPrevPage: pageNum > 1,
-			} });
+			},
+		};
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Get markets error:", error);
-		sendError(res, 500, "Error fetching markets", error.message);
+		sendServerError(res, error, "Error fetching markets");
 	}
 };
 
@@ -367,10 +329,11 @@ exports.getMarket = async (req, res) => {
 			return sendError(res, 404, "Market not found");
 		}
 
-		sendResponse(res, 200, true, "Success", market);
+		const ras = { market };
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Get market error:", error);
-		sendError(res, 500, "Error fetching market", error.message);
+		sendServerError(res, error, "Error fetching market");
 	}
 };
 
@@ -465,7 +428,7 @@ exports.updateMarket = async (req, res) => {
 				market.logoPublicId = uploadResult.public_id;
 			} catch (uploadError) {
 				console.error("Error uploading market logo:", uploadError);
-				return sendError(res, 500, "Error uploading market logo", uploadError.message);
+				return sendServerError(res, uploadError, "Error uploading market logo");
 			}
 		}
 
@@ -485,11 +448,13 @@ exports.updateMarket = async (req, res) => {
 
 		await market.save();
 
-		sendResponse(res, 200, true, "Market updated successfully", market.toSafeObject());
+		const ras = { market: market.toSafeObject() };
+		sendResponse(res, 200, true, "Market updated successfully", ras);
 	} catch (error) {
 		console.error("Update market error:", error);
 		const errorResponse = marketErrorResponse(error, "Error updating market");
-		sendResponse(res, 400, false, errorResponse.message, null, { errors: error.message, errors: errorResponse.errors });
+		const ras = { errors: errorResponse.errors };
+		sendResponse(res, 400, false, errorResponse.message, ras);
 	}
 };
 
@@ -511,10 +476,11 @@ exports.deleteMarket = async (req, res) => {
 		await market.save();
 		// Also deactivate this market's products
 		await Product.updateMany({ market: market._id }, { isActive: false });
-		sendResponse(res, 200, true, "Market deactivated successfully", market.toSafeObject());
+		const ras = { market: market.toSafeObject() };
+		sendResponse(res, 200, true, "Market deactivated successfully", ras);
 	} catch (error) {
 		console.error("Delete market error:", error);
-		sendError(res, 500, "Error deleting market", error.message);
+		sendServerError(res, error, "Error deleting market");
 	}
 };
 
@@ -538,10 +504,11 @@ exports.permanentDeleteMarket = async (req, res) => {
 			{ market: id },
 			{ $set: { market: null, isActive: false } },
 		);
-		sendResponse(res, 200, true, "Market permanently deleted", null);
+		const ras = {};
+		sendResponse(res, 200, true, "Market permanently deleted", ras);
 	} catch (error) {
 		console.error("Permanent delete market error:", error);
-		sendError(res, 500, "Error permanently deleting market", error.message);
+		sendServerError(res, error, "Error permanently deleting market");
 	}
 };
 
@@ -590,14 +557,15 @@ exports.marketLogin = async (req, res) => {
 			isMarket: true,
 		});
 
-		sendResponse(res, 200, true, "Login successful", {
-				market: market.toSafeObject(),
-				token,
-				refreshToken,
-			});
+		const ras = {
+			market: market.toSafeObject(),
+			token,
+			refreshToken,
+		};
+		sendResponse(res, 200, true, "Login successful", ras);
 	} catch (error) {
 		console.error("Market login error:", error);
-		sendError(res, 500, "Server error during market login");
+		sendServerError(res, error, "Server error during market login");
 	}
 };
 
@@ -612,10 +580,11 @@ exports.getMyMarket = async (req, res) => {
 		if (!market) {
 			return sendError(res, 404, "Market not found");
 		}
-		sendResponse(res, 200, true, "Success", market);
+		const ras = { market };
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("getMyMarket error:", error);
-		sendError(res, 500, "Error fetching market", error.message);
+		sendServerError(res, error, "Error fetching market");
 	}
 };
 
@@ -673,14 +642,15 @@ exports.getMarketStats = async (req, res) => {
 			deliveredSales: 0,
 		};
 
-		sendResponse(res, 200, true, "Success", {
-				totalItems,
-				totalActiveItems,
-				...stats,
-			});
+		const ras = {
+			totalItems,
+			totalActiveItems,
+			...stats,
+		};
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Market stats error:", error);
-		sendError(res, 500, "Error fetching market stats", error.message);
+		sendServerError(res, error, "Error fetching market stats");
 	}
 };
 
@@ -704,7 +674,7 @@ exports.getPublicMarkets = async (req, res) => {
 		const filter = { isActive: true };
 		const city = (req.query.city || "").trim();
 		if (city) {
-			const escaped = city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+			const escaped = escapeRegex(city);
 			const cityRegex = new RegExp(`^${escaped}$`, "i");
 			// A market serves a city if it is listed in its `cities` array (the
 			// new multi-select) or matches the legacy single `location.city`.
@@ -722,7 +692,6 @@ exports.getPublicMarkets = async (req, res) => {
 
 		if (hasPin && markets.length) {
 			const Zone = require("../models/Zone");
-			const escapeRegex = (v) => String(v).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 			const marketIds = markets.map((m) => m._id);
 			const zoneNames = [
 				...new Set(
@@ -796,10 +765,11 @@ exports.getPublicMarkets = async (req, res) => {
 			});
 		}
 
-		sendResponse(res, 200, true, "Success", markets);
+		const ras = { markets };
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Get public markets error:", error);
-		sendError(res, 500, "Error fetching markets", error.message);
+		sendServerError(res, error, "Error fetching markets");
 	}
 };
 
@@ -842,10 +812,11 @@ exports.getMarketCategories = async (req, res) => {
 			subcategories: byCategory.get(String(cat._id)) || [],
 		}));
 
-		sendResponse(res, 200, true, "Success", data, { subcategories: subcategories });
+		const ras = { data, subcategories };
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Get market categories error:", error);
-		sendError(res, 500, "Error fetching market categories", error.message);
+		sendServerError(res, error, "Error fetching market categories");
 	}
 };
 
@@ -884,15 +855,20 @@ exports.getMarketProducts = async (req, res) => {
 			Product.countDocuments(filter),
 		]);
 
-		sendResponse(res, 200, true, "Success", products, { market: market, pagination: {
+		const ras = {
+			products,
+			market,
+			pagination: {
 				page,
 				limit,
 				total,
 				totalPages: Math.ceil(total / limit),
 				hasNextPage: page * limit < total,
-			} });
+			},
+		};
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Get market products error:", error);
-		sendError(res, 500, "Error fetching market products", error.message);
+		sendServerError(res, error, "Error fetching market products");
 	}
 };

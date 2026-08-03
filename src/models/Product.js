@@ -271,7 +271,11 @@ productSchema.methods.updateStock = function (quantity, operation = "set") {
 	} else {
 		this.stock = Math.max(0, quantity);
 	}
-	return this.save();
+	// Validate ONLY the fields we actually touched. A plain save() re-validates
+	// the whole document, so a single legacy field left over from an older
+	// schema (e.g. weight stored as { unit: "g" } when it is now a String) made
+	// every stock movement throw — which is what blocked recording waste.
+	return this.save({ validateModifiedOnly: true });
 };
 
 // Pre-save middleware to format barcode and shelf number

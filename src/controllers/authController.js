@@ -8,12 +8,18 @@ const {
 	verifyRefreshToken,
 } = require("../utils/jwt");
 const sendEmail = require("../utils/sendEmail");
+const {
+	registrationConfirmationEmail,
+	passwordResetEmail,
+} = require("../utils/emailTemplates");
 const { normalizeLebanonPhone, isPhoneLike } = require("../utils/phone");
 const { sanitizeEmail } = require("../utils/sanitize");
-const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
+const { sendResponse, sendError, sendSuccess, sendValidationError, sendServerError } = require("../utils/apiResponse");
 const {
 	findDuplicateAccount,
 	duplicateAccountMessage,
+	duplicateAccountError,
+	describeDuplicateKeyError,
 } = require("../utils/accountDuplicates");
 
 // @desc    Register user
@@ -24,10 +30,7 @@ const register = async (req, res) => {
 		// Check for validation errors
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
-			return sendError(res, 400, `Validation failed: ${errors
-					.array()
-					.map((e) => e.msg)
-					.join(", ")}`, errors.array());
+			return sendValidationError(res, errors, 400, req);
 		}
 
 		const { name, phoneNumber, email, password, address } = req.body;
@@ -41,7 +44,9 @@ const register = async (req, res) => {
 			phoneNumber: normalizedPhone,
 		});
 		if (duplicate) {
-			return sendError(res, 400, duplicateAccountMessage(duplicate));
+			return sendError(res, 409, duplicateAccountMessage(duplicate), [
+				duplicateAccountError(duplicate),
+			]);
 		}
 
 		// ✅ Email verification is the primary (required) channel — a
@@ -79,13 +84,8 @@ const register = async (req, res) => {
 		// registration itself, but the account stays unverified until the
 		// shopper clicks the link.
 		const confirmUrl = `${normalizedBaseUrl}/api/auth/confirm/${emailToken}`;
-		const emailSubject = "Confirm your Freshly lb email";
-		const emailText = `Hi ${
-			name || "there"
-		},\n\nPlease confirm your email by visiting the link below:\n${confirmUrl}\n\nIf you did not create an account, you can ignore this email.`;
-		const emailHtml = `<!doctype html><html><body><p>Hi ${
-			name || "there"
-		},</p><p>Please confirm your email by clicking the button below.</p><p><a href="${confirmUrl}">Confirm Email</a></p><p>If you did not create an account, you can ignore this email.</p></body></html>`;
+		const { subject: emailSubject, text: emailText, html: emailHtml } =
+			registrationConfirmationEmail({ name, confirmUrl });
 
 		try {
 			await sendEmail({
@@ -98,12 +98,18 @@ const register = async (req, res) => {
 			console.error("Email confirmation send error:", emailError);
 		}
 
-		sendResponse(res, 201, true, "Registration successful. Please check your email for a confirmation link.", {
-				userId: user._id,
-			});
+		const ras = {
+			userId: user._id,
+		};
+
+		sendResponse(res, 201, true, "Registration successful. Please check your email for a confirmation link.", ras);
 	} catch (error) {
 		console.error("Register error:", error);
-		sendError(res, 500, "Server error during registration");
+		// A unique index (phoneNumber/email) can still fire on a race even though
+		// we pre-check above. Report it as a readable field error, not a 500.
+		const dup = describeDuplicateKeyError(error);
+		if (dup) return sendError(res, dup.status, dup.message, dup.errors);
+		sendServerError(res, error, "Server error during registration");
 	}
 };
 
@@ -315,10 +321,7 @@ const login = async (req, res) => {
 		// Check for validation errors
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
-			return sendError(res, 400, `Validation failed: ${errors
-					.array()
-					.map((e) => e.msg)
-					.join(", ")}`, errors.array());
+			return sendValidationError(res, errors, 400, req);
 		}
 
 		const { email, password } = req.body;
@@ -343,7 +346,8 @@ const login = async (req, res) => {
 			console.warn(
 				`🔒 Login attempt on locked account: ${sanitizedEmail}. Locked for ${minutesRemaining} more minutes.`
 			);
-			return sendResponse(res, 423, false, `The account is temporarily locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minute(s).`, null, { lockTimeRemaining: minutesRemaining });
+			const ras = { lockTimeRemaining: minutesRemaining };
+			return sendResponse(res, 423, false, `The account is temporarily locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minute(s).`, ras);
 		}
 
 		// Check if user is active
@@ -369,7 +373,8 @@ const login = async (req, res) => {
 			if (attemptsLeft <= 0) {
 				return sendError(res, 401, "Invalid credentials. Your account has been temporarily locked for 15 minutes due to multiple failed login attempts.");
 			} else if (attemptsLeft <= 2) {
-				return sendResponse(res, 401, false, `Invalid credentials. ${attemptsLeft} attempt(s) remaining before account lockout.`, null, { attemptsRemaining: attemptsLeft });
+				const ras = { attemptsRemaining: attemptsLeft };
+				return sendResponse(res, 401, false, `Invalid credentials. ${attemptsLeft} attempt(s) remaining before account lockout.`, ras);
 			} else {
 				return sendError(res, 401, "Invalid credentials");
 			}
@@ -380,7 +385,8 @@ const login = async (req, res) => {
 		// email link. Admins, managers, staff, riders, and market drivers
 		// (server dashboard logins) are exempt.
 		if (user.role === "customer" && !user.emailConfirmed) {
-			return sendResponse(res, 403, false, "Please verify your email (check the confirmation link) before logging in.", null, { needsConfirmation: true });
+			const ras = { needsConfirmation: true };
+			return sendResponse(res, 403, false, "Please verify your email (check the confirmation link) before logging in.", ras);
 		}
 
 		// Check if user has required role for  access
@@ -405,14 +411,16 @@ const login = async (req, res) => {
 		const token = generateToken({ id: user._id });
 		const refreshToken = generateRefreshToken({ id: user._id });
 
-		sendResponse(res, 200, true, "Login successful", {
-				user: user.toSafeObject(),
-				token,
-				refreshToken,
-			});
+		const ras = {
+			user: user.toSafeObject(),
+			token,
+			refreshToken,
+		};
+
+		sendResponse(res, 200, true, "Login successful", ras);
 	} catch (error) {
 		console.error("Login error:", error);
-		sendError(res, 500, "Server error during login");
+		sendServerError(res, error, "Server error during login");
 	}
 };
 
@@ -429,27 +437,29 @@ const getMe = async (req, res) => {
 				return sendError(res, 404, "Market not found");
 			}
 
-			return sendResponse(res, 200, true, "Success", {
-					user: {
-						_id: market._id,
-						id: market._id,
-						name: market.name,
-						username: market.username,
-						email: market.email || `${market.username}@market.local`,
-						phoneNumber: market.phoneNumber || "",
-						role: "market",
-						address: {
-							city: market.location?.city || "",
-						},
-						cities: market.cities || [],
-						logo: market.logo || "",
-						isActive: market.isActive,
-						lastLogin: market.lastLogin,
-						createdAt: market.createdAt,
-						isMarket: true,
-						marketId: market._id,
+			const ras = {
+				user: {
+					_id: market._id,
+					id: market._id,
+					name: market.name,
+					username: market.username,
+					email: market.email || `${market.username}@market.local`,
+					phoneNumber: market.phoneNumber || "",
+					role: "market",
+					address: {
+						city: market.location?.city || "",
 					},
-				});
+					cities: market.cities || [],
+					logo: market.logo || "",
+					isActive: market.isActive,
+					lastLogin: market.lastLogin,
+					createdAt: market.createdAt,
+					isMarket: true,
+					marketId: market._id,
+				},
+			};
+
+			return sendResponse(res, 200, true, "Success", ras);
 		}
 
 		const user = await User.findById(req.user._id);
@@ -458,12 +468,14 @@ const getMe = async (req, res) => {
 			return sendError(res, 404, "User not found");
 		}
 
-		sendResponse(res, 200, true, "Success", {
-				user: user.toMaskedObject(),
-			});
+		const ras = {
+			user: user.toMaskedObject(),
+		};
+
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Get me error:", error);
-		sendError(res, 500, "Server error");
+		sendServerError(res, error, "Server error");
 	}
 };
 
@@ -475,10 +487,7 @@ const updateProfile = async (req, res) => {
 		// Check for validation errors
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
-			return sendError(res, 400, `Validation failed: ${errors
-					.array()
-					.map((e) => e.msg)
-					.join(", ")}`, errors.array());
+			return sendValidationError(res, errors, 400, req);
 		}
 
 		const fieldsToUpdate = {};
@@ -518,12 +527,14 @@ const updateProfile = async (req, res) => {
 			runValidators: true,
 		});
 
-		sendResponse(res, 200, true, "Profile updated successfully", {
-				user: user.toSafeObject(),
-			});
+		const ras = {
+			user: user.toSafeObject(),
+		};
+
+		sendResponse(res, 200, true, "Profile updated successfully", ras);
 	} catch (error) {
 		console.error("Update profile error:", error);
-		sendError(res, 500, "Server error during profile update");
+		sendServerError(res, error, "Server error during profile update");
 	}
 };
 
@@ -535,10 +546,7 @@ const changePassword = async (req, res) => {
 		// Check for validation errors
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
-			return sendError(res, 400, `Validation failed: ${errors
-					.array()
-					.map((e) => e.msg)
-					.join(", ")}`, errors.array());
+			return sendValidationError(res, errors, 400, req);
 		}
 
 		const { currentPassword, newPassword } = req.body;
@@ -556,10 +564,12 @@ const changePassword = async (req, res) => {
 		user.password = newPassword;
 		await user.save();
 
-		sendResponse(res, 200, true, "Password changed successfully", null);
+		const ras = {};
+
+		sendResponse(res, 200, true, "Password changed successfully", ras);
 	} catch (error) {
 		console.error("Change password error:", error);
-		sendError(res, 500, "Server error while changing password");
+		sendServerError(res, error, "Server error while changing password");
 	}
 };
 
@@ -571,10 +581,7 @@ const loginProfile = async (req, res) => {
 		// Check for validation errors
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
-			return sendError(res, 400, `Validation failed: ${errors
-					.array()
-					.map((e) => e.msg)
-					.join(", ")}`, errors.array());
+			return sendValidationError(res, errors, 400, req);
 		}
 
 		const { email, phone, password } = req.body;
@@ -648,22 +655,26 @@ const loginProfile = async (req, res) => {
 				isMarket: true,
 			});
 
-			return sendResponse(res, 200, true, "Login successful", {
-					user: {
-						id: market._id,
-						_id: market._id,
-						name: market.name,
-						username: market.username,
-						email: market.email || `${market.username}@market.local`,
-						role: "market",
-						marketId: market._id,
-						isMarket: true,
-					},
-					market: market.toSafeObject(),
-					token,
-					refreshToken,
-					redirectUrl: "/market",
-				});
+			const ras = {
+				user: {
+					id: market._id,
+					_id: market._id,
+					name: market.name,
+					username: market.username,
+					email: market.email || `${market.username}@market.local`,
+					role: "market",
+					marketId: market._id,
+					isMarket: true,
+				},
+				market: market.toSafeObject(),
+				token,
+				refreshToken,
+				// The old market-only login page at /market is retired; market
+				// accounts now sign in on the shared /signin page and land here.
+				redirectUrl: "/market-dashboard",
+			};
+
+			return sendResponse(res, 200, true, "Login successful", ras);
 		}
 
 		// Check if account is locked
@@ -672,7 +683,8 @@ const loginProfile = async (req, res) => {
 			console.warn(
 				`🔒 Login attempt on locked account: ${sanitizedEmail}. Locked for ${minutesRemaining} more minutes.`
 			);
-			return sendResponse(res, 423, false, `The account is temporarily locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minute(s).`, null, { lockTimeRemaining: minutesRemaining });
+			const ras = { lockTimeRemaining: minutesRemaining };
+			return sendResponse(res, 423, false, `The account is temporarily locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minute(s).`, ras);
 		}
 
 		// Check if user is active
@@ -698,7 +710,8 @@ const loginProfile = async (req, res) => {
 			if (attemptsLeft <= 0) {
 				return sendError(res, 401, "Invalid credentials. Your account has been temporarily locked for 15 minutes due to multiple failed login attempts.");
 			} else if (attemptsLeft <= 2) {
-				return sendResponse(res, 401, false, `Invalid credentials. ${attemptsLeft} attempt(s) remaining before account lockout.`, null, { attemptsRemaining: attemptsLeft });
+				const ras = { attemptsRemaining: attemptsLeft };
+				return sendResponse(res, 401, false, `Invalid credentials. ${attemptsLeft} attempt(s) remaining before account lockout.`, ras);
 			} else {
 				return sendError(res, 401, "Invalid credentials");
 			}
@@ -709,7 +722,8 @@ const loginProfile = async (req, res) => {
 		// email link. Admins, managers, staff, riders, and market drivers
 		// (server dashboard logins) are exempt.
 		if (user.role === "customer" && !user.emailConfirmed) {
-			return sendResponse(res, 403, false, "Please verify your email (check the confirmation link) before logging in.", null, { needsConfirmation: true });
+			const ras = { needsConfirmation: true };
+			return sendResponse(res, 403, false, "Please verify your email (check the confirmation link) before logging in.", ras);
 		}
 
 		// Reset login attempts on successful login
@@ -728,24 +742,26 @@ const loginProfile = async (req, res) => {
 		const token = generateToken({ id: user._id });
 		const refreshToken = generateRefreshToken({ id: user._id });
 
-		sendResponse(res, 200, true, "Login successful", {
-				user: user.toMaskedObject(),
-				token,
-				refreshToken,
-				redirectUrl:
-					user.role === "manager" || user.role === "admin"
-						? "dashboard.html"
-						: user.role === "rider" || user.role === "market_driver"
-						? "/profile"
-						: user.role === "market_staff" || user.role === "market_manager"
-						? "/ordermanagement?ctx=market"
-						: user.role === "staff"
-						? "/ordermanagement"
-						: "profile.html",
-			});
+		const ras = {
+			user: user.toMaskedObject(),
+			token,
+			refreshToken,
+			redirectUrl:
+				user.role === "manager" || user.role === "admin"
+					? "dashboard.html"
+					: user.role === "rider" || user.role === "market_driver"
+					? "/profile"
+					: user.role === "market_staff" || user.role === "market_manager"
+					? "/ordermanagement?ctx=market"
+					: user.role === "staff"
+					? "/ordermanagement"
+					: "profile.html",
+		};
+
+		sendResponse(res, 200, true, "Login successful", ras);
 	} catch (error) {
 		console.error("Login profile error:", error);
-		sendError(res, 500, "Server error during login");
+		sendServerError(res, error, "Server error during login");
 	}
 };
 
@@ -784,29 +800,31 @@ const refreshToken = async (req, res) => {
 					isMarket: true,
 				});
 
-				return sendResponse(res, 200, true, "Token refreshed successfully", {
-						token: newAccessToken,
-						refreshToken: newRefreshToken,
-						user: {
-							id: market._id,
-							_id: market._id,
-							name: market.name,
-							username: market.username,
-							email: market.email || `${market.username}@market.local`,
-							phoneNumber: market.phoneNumber || "",
-							role: "market",
-							marketId: market._id,
-							isMarket: true,
-							address: {
-								city: market.location?.city || "",
-							},
-							cities: market.cities || [],
-							logo: market.logo || "",
-							isActive: market.isActive,
-							lastLogin: market.lastLogin,
-							createdAt: market.createdAt,
+				const ras = {
+					token: newAccessToken,
+					refreshToken: newRefreshToken,
+					user: {
+						id: market._id,
+						_id: market._id,
+						name: market.name,
+						username: market.username,
+						email: market.email || `${market.username}@market.local`,
+						phoneNumber: market.phoneNumber || "",
+						role: "market",
+						marketId: market._id,
+						isMarket: true,
+						address: {
+							city: market.location?.city || "",
 						},
-					});
+						cities: market.cities || [],
+						logo: market.logo || "",
+						isActive: market.isActive,
+						lastLogin: market.lastLogin,
+						createdAt: market.createdAt,
+					},
+				};
+
+				return sendResponse(res, 200, true, "Token refreshed successfully", ras);
 			}
 
 			// Get user from token
@@ -821,7 +839,8 @@ const refreshToken = async (req, res) => {
 			}
 
 			if (user.emailConfirmed === false) {
-				return sendResponse(res, 403, false, "Please confirm your email before continuing.", null, { needsConfirmation: true });
+				const ras = { needsConfirmation: true };
+				return sendResponse(res, 403, false, "Please confirm your email before continuing.", ras);
 			}
 
 			// Generate new access token
@@ -830,17 +849,19 @@ const refreshToken = async (req, res) => {
 			// Optionally generate new refresh token for better security (token rotation)
 			const newRefreshToken = generateRefreshToken({ id: user._id });
 
-			sendResponse(res, 200, true, "Token refreshed successfully", {
-					token: newAccessToken,
-					refreshToken: newRefreshToken,
-					user: user.toSafeObject(),
-				});
+			const ras = {
+				token: newAccessToken,
+				refreshToken: newRefreshToken,
+				user: user.toSafeObject(),
+			};
+
+			sendResponse(res, 200, true, "Token refreshed successfully", ras);
 		} catch (error) {
 			return sendError(res, 401, "Invalid refresh token");
 		}
 	} catch (error) {
 		console.error("Refresh token error:", error);
-		sendError(res, 500, "Server error during token refresh");
+		sendServerError(res, error, "Server error during token refresh");
 	}
 };
 
@@ -885,13 +906,15 @@ const getAllUsers = async (req, res) => {
 			.select("-password")
 			.sort({ createdAt: -1 });
 
-		sendResponse(res, 200, true, "Success", {
-				users,
-				count: users.length,
-			});
+		const ras = {
+			users,
+			count: users.length,
+		};
+
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Get all users error:", error);
-		sendError(res, 500, "Server error fetching users");
+		sendServerError(res, error, "Server error fetching users");
 	}
 };
 
@@ -925,17 +948,19 @@ const createUser = async (req, res) => {
 		// Check for validation errors
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
-			return sendError(res, 400, `Validation failed: ${errors
-					.array()
-					.map((e) => e.msg)
-					.join(", ")}`, errors.array());
+			return sendValidationError(res, errors, 400, req);
 		}
 
 		const { name, phoneNumber, email, password, address, role } = req.body;
 
-		const duplicate = await findDuplicateAccount({ name, email });
+		// phoneNumber has a unique index, so it MUST be part of the pre-check.
+		// Leaving it out let a duplicate number reach Mongo and blow up with a
+		// raw E11000 error instead of a readable message.
+		const duplicate = await findDuplicateAccount({ name, email, phoneNumber });
 		if (duplicate) {
-			return sendError(res, 400, duplicateAccountMessage(duplicate));
+			return sendError(res, 409, duplicateAccountMessage(duplicate), [
+				duplicateAccountError(duplicate),
+			]);
 		}
 
 		// Create user
@@ -951,12 +976,16 @@ const createUser = async (req, res) => {
 			emailConfirmedAt: new Date(),
 		});
 
-		sendResponse(res, 201, true, "User created successfully", {
-				user: user.toSafeObject(),
-			});
+		const ras = {
+			user: user.toSafeObject(),
+		};
+
+		sendResponse(res, 201, true, "User created successfully", ras);
 	} catch (error) {
 		console.error("Create user error:", error);
-		sendError(res, 500, "Server error during user creation");
+		const dup = describeDuplicateKeyError(error);
+		if (dup) return sendError(res, dup.status, dup.message, dup.errors);
+		sendServerError(res, error, "Server error during user creation");
 	}
 };
 
@@ -965,6 +994,11 @@ const createUser = async (req, res) => {
 // @access  Private (Admin only)
 const updateUser = async (req, res) => {
 	try {
+		const errors = validationResult(req);
+		if (!errors.isEmpty()) {
+			return sendValidationError(res, errors, 400, req);
+		}
+
 		// Allow admin, manager and market admins to update users
 		if (
 			req.user.role !== "admin" &&
@@ -1015,11 +1049,13 @@ const updateUser = async (req, res) => {
 		}
 
 		const duplicate = await findDuplicateAccount(
-			{ name, email },
+			{ name, email, phoneNumber },
 			{ type: "user", id: userId },
 		);
 		if (duplicate) {
-			return sendError(res, 400, duplicateAccountMessage(duplicate));
+			return sendError(res, 409, duplicateAccountMessage(duplicate), [
+				duplicateAccountError(duplicate),
+			]);
 		}
 
 		// Update fields
@@ -1036,12 +1072,16 @@ const updateUser = async (req, res) => {
 			runValidators: true,
 		});
 
-		sendResponse(res, 200, true, "User updated successfully", {
-				user: user.toSafeObject(),
-			});
+		const ras = {
+			user: user.toSafeObject(),
+		};
+
+		sendResponse(res, 200, true, "User updated successfully", ras);
 	} catch (error) {
 		console.error("Update user error:", error);
-		sendError(res, 500, "Server error during user update");
+		const dup = describeDuplicateKeyError(error);
+		if (dup) return sendError(res, dup.status, dup.message, dup.errors);
+		sendServerError(res, error, "Server error during user update");
 	}
 };
 
@@ -1092,10 +1132,12 @@ const deleteUser = async (req, res) => {
 
 		await User.findByIdAndDelete(userId);
 
-		sendResponse(res, 200, true, "User deleted successfully", null);
+		const ras = {};
+
+		sendResponse(res, 200, true, "User deleted successfully", ras);
 	} catch (error) {
 		console.error("Delete user error:", error);
-		sendError(res, 500, "Server error while deleting user");
+		sendServerError(res, error, "Server error while deleting user");
 	}
 };
 
@@ -1123,10 +1165,12 @@ const getUserById = async (req, res) => {
 			return sendError(res, 403, "Not authorized to access this user");
 		}
 
-		sendResponse(res, 200, true, "Success", user.toSafeObject());
+		const ras = { ...user.toSafeObject() };
+
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Error in getUserById:", error);
-		sendError(res, 500, "Server error");
+		sendServerError(res, error, "Server error");
 	}
 };
 
@@ -1148,7 +1192,7 @@ const getCustomerCount = async (req, res) => {
 		sendResponse(res, 200, true, "Success", ras);  
 	} catch (error) {
 		console.error("Get customer count error:", error);
-		sendError(res, 500, "Server error fetching customer count");
+		sendServerError(res, error, "Server error fetching customer count");
 	}
 };
 
@@ -1174,10 +1218,12 @@ const deleteAccount = async (req, res) => {
 		// Delete the user
 		await User.findByIdAndDelete(req.user._id);
 
-		sendResponse(res, 200, true, "Account deleted successfully", null);
+		const ras = {};
+
+		sendResponse(res, 200, true, "Account deleted successfully", ras);
 	} catch (error) {
 		console.error("Delete account error:", error);
-		sendError(res, 500, "Server error while deleting account");
+		sendServerError(res, error, "Server error while deleting account");
 	}
 };
 
@@ -1189,10 +1235,7 @@ const requestPasswordReset = async (req, res) => {
 		// Check for validation errors
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
-			return sendError(res, 400, `Validation failed: ${errors
-					.array()
-					.map((e) => e.msg)
-					.join(", ")}`, errors.array());
+			return sendValidationError(res, errors, 400, req);
 		}
 
 		const { email } = req.body;
@@ -1207,12 +1250,14 @@ const requestPasswordReset = async (req, res) => {
 		const user = await User.findOne({ email: sanitizedEmail });
 		if (!user) {
 			// Don't reveal if email exists or not for security
-			return sendResponse(res, 200, true, "If an account exists with this email, a password reset link has been sent.", null);
+			const ras = {};
+			return sendResponse(res, 200, true, "If an account exists with this email, a password reset link has been sent.", ras);
 		}
 
 		// Check if user is active
 		if (!user.isActive) {
-			return sendResponse(res, 200, true, "If an account exists with this email, a password reset link has been sent.", null);
+			const ras = {};
+			return sendResponse(res, 200, true, "If an account exists with this email, a password reset link has been sent.", ras);
 		}
 
 		// Generate reset token
@@ -1235,10 +1280,8 @@ const requestPasswordReset = async (req, res) => {
 		const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
 		const resetUrl = `${normalizedBaseUrl}/reset-password.html?token=${resetToken}`;
 
-		const emailSubject =
-			"Reset your Freshly lb password";
-		const emailText = `Hi ${user.name},\n\nYou requested a password reset for your Freshly lb account. Click the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this password reset, please ignore this email.`;
-		const emailHtml = `<!doctype html><html><body><p>Hi ${user.name},</p><p>You requested a password reset for your Freshly lb account. Click the button below to reset your password.</p><p><a href="${resetUrl}">Reset Password</a></p><p>This link will expire in 1 hour.</p><p>If you didn't request this password reset, please ignore this email.</p></body></html>`;
+		const { subject: emailSubject, text: emailText, html: emailHtml } =
+			passwordResetEmail({ name: user.name, resetUrl });
 
 		try {
 			await sendEmail({
@@ -1253,13 +1296,15 @@ const requestPasswordReset = async (req, res) => {
 			user.passwordResetToken = undefined;
 			user.passwordResetExpires = undefined;
 			await user.save();
-			return sendError(res, 500, "Failed to send password reset email. Please try again.");
+			return sendServerError(res, emailError, "Failed to send password reset email. Please try again.");
 		}
 
-		sendResponse(res, 200, true, "If an account exists with this email, a password reset link has been sent.", null);
+		const ras = {};
+
+		sendResponse(res, 200, true, "If an account exists with this email, a password reset link has been sent.", ras);
 	} catch (error) {
 		console.error("Request password reset error:", error);
-		sendError(res, 500, "Server error during password reset request");
+		sendServerError(res, error, "Server error during password reset request");
 	}
 };
 
@@ -1271,10 +1316,7 @@ const resetPassword = async (req, res) => {
 		// Check for validation errors
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
-			return sendError(res, 400, `Validation failed: ${errors
-					.array()
-					.map((e) => e.msg)
-					.join(", ")}`, errors.array());
+			return sendValidationError(res, errors, 400, req);
 		}
 
 		const { token, newPassword } = req.body;
@@ -1304,10 +1346,12 @@ const resetPassword = async (req, res) => {
 		user.passwordResetExpires = undefined;
 		await user.save();
 
-		sendResponse(res, 200, true, "Password reset successfully", null);
+		const ras = {};
+
+		sendResponse(res, 200, true, "Password reset successfully", ras);
 	} catch (error) {
 		console.error("Reset password error:", error);
-		sendError(res, 500, "Server error during password reset");
+		sendServerError(res, error, "Server error during password reset");
 	}
 };
 
@@ -1337,10 +1381,12 @@ const resetCustomerPassword = async (req, res) => {
 		user.password = "123456789";
 		await user.save();
 
-		sendResponse(res, 200, true, "Customer password reset successfully", null);
+		const ras = {};
+
+		sendResponse(res, 200, true, "Customer password reset successfully", ras);
 	} catch (error) {
 		console.error("Reset customer password error:", error);
-		sendError(res, 500, "Server error during password reset");
+		sendServerError(res, error, "Server error during password reset");
 	}
 };
 
@@ -1430,15 +1476,17 @@ const googleSignIn = async (req, res) => {
 		const token = generateToken({ id: user._id });
 		const refreshToken = generateRefreshToken({ id: user._id });
 
-		sendResponse(res, 200, true, "Login successful", {
+		const ras = {
 			user: user.toSafeObject(),
 			token,
 			refreshToken,
 			isNewUser,
-		});
+		};
+
+		sendResponse(res, 200, true, "Login successful", ras);
 	} catch (error) {
 		console.error("Google sign-in error:", error);
-		sendError(res, 500, "Server error during Google sign-in");
+		sendServerError(res, error, "Server error during Google sign-in");
 	}
 };
 

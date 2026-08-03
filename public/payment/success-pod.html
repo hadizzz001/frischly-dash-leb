@@ -4,58 +4,12 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Order Confirmed - Freshly</title>
-		<style>
-			body {
-				font-family: Arial, sans-serif;
-				background-color: #f4f4f4;
-				margin: 0;
-				padding: 0;
-				display: flex;
-				justify-content: center;
-				align-items: center;
-				min-height: 100vh;
-			}
-			.container {
-				background-color: white;
-				padding: 40px;
-				border-radius: 8px;
-				box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-				text-align: center;
-				max-width: 500px;
-				width: 100%;
-			}
-			.success-icon {
-				color: #28a745;
-				font-size: 48px;
-				margin-bottom: 20px;
-			}
-			h1 {
-				color: #28a745;
-				margin-bottom: 20px;
-			}
-			p {
-				color: #666;
-				margin-bottom: 30px;
-				line-height: 1.6;
-			}
-			.btn {
-				display: inline-block;
-				padding: 12px 24px;
-				background-color: #007bff;
-				color: white;
-				text-decoration: none;
-				border-radius: 4px;
-				transition: background-color 0.3s;
-			}
-			.btn:hover {
-				background-color: #0056b3;
-			}
-		</style>
+		<link rel="stylesheet" href="../css/payment.css" />
 	</head>
 	<body>
 		<div class="container">
 			<div class="success-icon">✓</div>
-			<h1>Order Confirmed!</h1>
+			<h1 class="title-success">Order Confirmed!</h1>
 			<p>
 				Thank you for your order. Your order has been confirmed and is being
 				processed.
@@ -67,21 +21,14 @@
 				You will receive an email confirmation shortly with your order details.
 			</p>
 			<button
-				onclick="window.location.href='https://frischlyshop.com'"
+				onclick="window.location.href=SHOP_URL"
 				class="btn"
 			>
 				Close
 			</button>
 		</div>
 
-		<script>
-			// Get order ID from URL parameters
-			const urlParams = new URLSearchParams(window.location.search);
-			const orderId = urlParams.get("order");
-
-			if (orderId) {
-				console.log("Order confirmed (POD) for order:", orderId);
-			}
-		</script>
+		<script src="../js/config.js"></script>
+		<script src="../js/page-payment-success-pod.js"></script>
 	</body>
 </html>

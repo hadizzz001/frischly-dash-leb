@@ -12,7 +12,10 @@ const {
 	updateProductStock,
 	deleteProduct,
 	permanentDeleteProduct,
-	getShelfNumbers,
+	// getShelfNumbers — the controller export is commented out, so importing it
+	// here bound `undefined`. Its route is commented out too, so nothing broke
+	// yet; left disabled rather than dangling so re-enabling the route without
+	// the controller can't hand Express an undefined handler.
 	uploadImage,
 	uploadMiddleware,
 	getProductsCount,

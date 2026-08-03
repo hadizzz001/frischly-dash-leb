@@ -1,6 +1,6 @@
 const Setting = require("../models/Setting");
 const User = require("../models/User");
-const { sendSuccess, sendError } = require("../utils/apiResponse");
+const { sendSuccess, sendError, sendResponse, sendServerError } = require("../utils/apiResponse");
 
 // Main-store ("dash") coverage = the union of every admin account's service
 // cities (User.cities), with a Setting.cities fallback. The shop hides
@@ -33,9 +33,10 @@ const getAdminServiceCities = async () => {
 exports.getSettings = async (req, res) => {
 	try {
 		const settings = await Setting.getSettings();
-		sendSuccess(res, settings);
+		const ras = { settings };
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
-		sendError(res, 500, "Server Error");
+		sendServerError(res, error, "Server Error");
 	}
 };
 
@@ -97,9 +98,10 @@ exports.updateSettings = async (req, res) => {
 
 		await settings.save();
 
-		sendSuccess(res, settings);
+		const ras = { settings };
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
-		sendError(res, 500, "Server Error");
+		sendServerError(res, error, "Server Error");
 	}
 };
 
@@ -110,7 +112,7 @@ exports.getPublicSettings = async (req, res) => {
 	try {
 		const settings = await Setting.getSettings();
 		const cities = await getAdminServiceCities();
-		sendSuccess(res, {
+		const ras = {
 			isMaintenanceMode: settings.isMaintenanceMode,
 			areOrdersDisabled: settings.areOrdersDisabled,
 			maintenanceMessage: settings.maintenanceMessage,
@@ -122,8 +124,9 @@ exports.getPublicSettings = async (req, res) => {
 			deliveryRegions: Array.isArray(settings.deliveryRegions)
 				? settings.deliveryRegions
 				: [],
-		});
+		};
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
-		sendError(res, 500, "Server Error");
+		sendServerError(res, error, "Server Error");
 	}
 };

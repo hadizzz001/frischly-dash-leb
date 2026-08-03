@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const archiver = require("archiver");
-const { sendError } = require("../utils/apiResponse");
+const { sendError, sendServerError } = require("../utils/apiResponse");
 
 /**
  * Download a full database backup as a ZIP file.
@@ -105,7 +105,7 @@ exports.downloadBackup = async (req, res) => {
 	} catch (error) {
 		console.error("[backup] downloadBackup error:", error);
 		if (!res.headersSent) {
-			return sendError(res, 500, "Failed to generate backup", error.message);
+			return sendServerError(res, error, "Failed to generate backup");
 		}
 		try {
 			res.end();

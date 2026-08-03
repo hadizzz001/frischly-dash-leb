@@ -18,8 +18,6 @@
 
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
-const multer = require("multer");
-const cloudinary = require("cloudinary").v2;
 
 const Market = require("../models/Market");
 const User = require("../models/User");
@@ -35,47 +33,27 @@ const MarketAnnouncement = require("../models/MarketAnnouncement");
 const MarketSetting = require("../models/MarketSetting");
 const Shelf = require("../models/Shelf");
 const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
+const { escapeRegex } = require("../utils/sanitize");
+const {
+	imageUpload: logoUpload,
+	uploadImageToCloudinary,
+} = require("../utils/cloudinaryUpload");
 
-const ok = (res, data, message = "OK") =>
-	sendResponse(res, 200, true, message, data);
-const created = (res, data, message = "Created") =>
-	sendResponse(res, 201, true, message, data);
+const ok = (res, data, message = "OK") => {
+	const ras = data;
+	sendResponse(res, 200, true, message, ras);
+};
+const created = (res, data, message = "Created") => {
+	const ras = data;
+	sendResponse(res, 201, true, message, ras);
+};
 
-// Cloudinary config (shared with category/product image uploads)
-cloudinary.config({
-	cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "dbgnsnrto",
-	api_key: process.env.CLOUDINARY_API_KEY || "431121896297761",
-	api_secret:
-		process.env.CLOUDINARY_API_SECRET || "omVgd2HdystgoGQ5yXngAZ40yTg",
-});
-
-const logoUploadStorage = multer.memoryStorage();
-const logoUpload = multer({
-	storage: logoUploadStorage,
-	limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-	fileFilter: (req, file, cb) => {
-		if (file.mimetype.startsWith("image/")) cb(null, true);
-		else cb(new Error("Only image files are allowed!"), false);
-	},
-});
-
+// Cloudinary is configured centrally in ../utils/cloudinaryUpload.
+// NOTE: unlike marketController's logo upload (which fits within 500x500
+// via crop:"limit"), this one always used the standard scale/width:500
+// transform — preserved exactly via uploadImageToCloudinary.
 const uploadLogoToCloudinary = (buffer) =>
-	new Promise((resolve, reject) => {
-		const stream = cloudinary.uploader.upload_stream(
-			{
-				folder: "markets/logos",
-				resource_type: "image",
-				quality: "auto",
-				format: "webp",
-				transformation: [{ quality: "auto:eco", width: 500, crop: "scale" }],
-			},
-			(error, result) => {
-				if (error) reject(error);
-				else resolve({ url: result.secure_url, public_id: result.public_id });
-			}
-		);
-		stream.end(buffer);
-	});
+	uploadImageToCloudinary(buffer, "markets/logos");
 const fail = (res, code, message, errors) =>
 	sendError(res, code, message, errors || null);
 
@@ -114,8 +92,6 @@ const paginate = (q) => {
 
 const firstDefined = (...values) =>
 	values.find((value) => value !== undefined && value !== null && value !== "");
-
-const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const normalizeSubcategoryPayload = (body) => ({
 	...body,
@@ -756,7 +732,8 @@ const crud = (Model, allowedFields, opts = {}) => ({
 				Model.countDocuments(filter),
 			]);
 			const data = opts.transform ? items.map(opts.transform) : items;
-			sendResponse(res, 200, true, "OK", data, { meta: { total, page, limit } });
+			const ras = { items: data, meta: { total, page, limit } };
+			sendResponse(res, 200, true, "OK", ras);
 		} catch (err) {
 			handleErr(res, err);
 		}
@@ -964,14 +941,24 @@ exports.listProducts = async (req, res) => {
 					: item.subcategory,
 			};
 		});
-		sendResponse(res, 200, true, "OK", data, { meta: { total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) }, pagination: {
+		const ras = {
+			items: data,
+			meta: {
+				total,
+				page,
+				limit,
+				totalPages: Math.max(1, Math.ceil(total / limit)),
+			},
+			pagination: {
 				totalProducts: total,
 				total,
 				page,
 				currentPage: page,
 				limit,
 				totalPages: Math.max(1, Math.ceil(total / limit)),
-			} });
+			},
+		};
+		sendResponse(res, 200, true, "OK", ras);
 	} catch (err) {
 		handleErr(res, err);
 	}
@@ -1150,7 +1137,8 @@ exports.listOrders = async (req, res) => {
 			Order.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
 			Order.countDocuments(filter),
 		]);
-		sendResponse(res, 200, true, "OK", items, { meta: { total, page, limit } });
+		const ras = { items, meta: { total, page, limit } };
+		sendResponse(res, 200, true, "OK", ras);
 	} catch (err) {
 		handleErr(res, err);
 	}
@@ -1164,7 +1152,8 @@ exports.ordersCount = async (req, res) => {
 			market: req.marketId,
 			isActive: { $ne: false },
 		});
-		sendResponse(res, 200, true, "Success", null, { count: count, total: count });
+		const ras = { count: count, total: count };
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (err) {
 		handleErr(res, err);
 	}
@@ -1506,16 +1495,22 @@ exports.getProductSalesStats = async (req, res) => {
 			},
 		]);
 
-		sendResponse(res, 200, true, "Success", data, { summary: summaryResult[0] || {
+		const ras = {
+			items: data,
+			summary: summaryResult[0] || {
 				totalRevenue: 0,
 				totalQuantitySold: 0,
 				totalOrders: 0,
 				uniqueProducts: 0,
-			}, pagination: paginationMeta(page, limit, totalProducts), filters: {
+			},
+			pagination: paginationMeta(page, limit, totalProducts),
+			filters: {
 				timeRange: req.query.timeRange || "custom",
 				dateFrom: dateFilter.$gte || null,
 				dateTo: dateFilter.$lte || null,
-			} });
+			},
+		};
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (err) {
 		handleErr(res, err);
 	}
@@ -1568,11 +1563,16 @@ exports.getUnsoldProducts = async (req, res) => {
 			};
 		});
 
-		sendResponse(res, 200, true, "Success", data, { pagination: paginationMeta(page, limit, totalProducts), filters: {
+		const ras = {
+			items: data,
+			pagination: paginationMeta(page, limit, totalProducts),
+			filters: {
 				timeRange: req.query.timeRange || "custom",
 				dateFrom: dateFilter.$gte || null,
 				dateTo: dateFilter.$lte || null,
-			} });
+			},
+		};
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (err) {
 		handleErr(res, err);
 	}
@@ -1814,7 +1814,8 @@ exports.riders = {
 				);
 			}
 
-			sendResponse(res, 200, true, "OK", data, { meta: { total, page, limit } });
+			const ras = { items: data, meta: { total, page, limit } };
+			sendResponse(res, 200, true, "OK", ras);
 		} catch (err) {
 			handleErr(res, err);
 		}

@@ -79,7 +79,8 @@ exports.createFeedback = async (req, res) => {
 			driverDescription: String(driverDescription || "").trim(),
 		});
 
-		sendSuccess(res, feedback, "Thank you for your feedback!", 201);
+		const ras = { feedback };
+		sendResponse(res, 201, true, "Thank you for your feedback!", ras);
 	} catch (error) {
 		// Duplicate key (race condition on the unique `order` index).
 		if (error.code === 11000) {
@@ -131,7 +132,8 @@ exports.getAllFeedback = async (req, res) => {
 			.limit(parsedLimit)
 			.populate(FEEDBACK_POPULATE);
 
-		sendResponse(res, 200, true, "Feedback fetched", feedback, {
+		const ras2 = {
+			feedback,
 			count: feedback.length,
 			total,
 			pagination: {
@@ -140,7 +142,8 @@ exports.getAllFeedback = async (req, res) => {
 				totalPages: Math.ceil(total / parsedLimit) || 1,
 				hasNextPage: parsedPage * parsedLimit < total,
 			},
-		});
+		};
+		sendResponse(res, 200, true, "Feedback fetched", ras2);
 	} catch (error) {
 		console.error("getAllFeedback error:", error);
 		sendError(res, 400, error.message || "Failed to load feedback");
@@ -163,7 +166,8 @@ exports.getFeedbackById = async (req, res) => {
 			return sendError(res, 404, "Feedback not found");
 		}
 
-		sendSuccess(res, feedback);
+		const ras3 = { feedback };
+		sendResponse(res, 200, true, "Success", ras3);
 	} catch (error) {
 		console.error("getFeedbackById error:", error);
 		sendError(res, 400, error.message || "Failed to load feedback");
@@ -184,7 +188,8 @@ exports.getMyFeedbackOrderIds = async (req, res) => {
 			"order"
 		);
 		const orderIds = feedback.map((f) => String(f.order));
-		sendSuccess(res, orderIds);
+		const ras4 = { orderIds };
+		sendResponse(res, 200, true, "Success", ras4);
 	} catch (error) {
 		console.error("getMyFeedbackOrderIds error:", error);
 		sendError(res, 400, error.message || "Failed to load your feedback");
@@ -197,7 +202,8 @@ exports.getMyFeedbackOrderIds = async (req, res) => {
 exports.getFeedbackStats = async (req, res) => {
 	try {
 		const stats = await Feedback.getStats();
-		sendSuccess(res, stats);
+		const ras5 = { stats };
+		sendResponse(res, 200, true, "Success", ras5);
 	} catch (error) {
 		console.error("getFeedbackStats error:", error);
 		sendError(res, 400, error.message || "Failed to load feedback stats");

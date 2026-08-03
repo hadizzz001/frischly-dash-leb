@@ -228,6 +228,17 @@ const createSafeRegex = (text) => {
 };
 
 /**
+ * Escape special regex characters in a string so it can be safely embedded
+ * inside a custom RegExp/$regex pattern (e.g. anchored `^...$` matches, or
+ * combined with other pattern pieces). Unlike createSafeRegex above, this
+ * returns the escaped STRING itself rather than a compiled RegExp, so the
+ * caller stays in control of anchoring/flags.
+ * @param {*} value - Value to escape (coerced to string)
+ * @returns {String} Escaped string safe to embed in a regex pattern
+ */
+const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
  * Middleware to sanitize request body, query, and params
  * Use this as additional protection in sensitive routes
  */
@@ -259,5 +270,6 @@ module.exports = {
 	sanitizePagination,
 	sanitizeSort,
 	createSafeRegex,
+	escapeRegex,
 	sanitizeRequest,
 };

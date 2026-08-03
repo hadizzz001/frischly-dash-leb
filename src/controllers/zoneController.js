@@ -1,8 +1,7 @@
 const Zone = require("../models/Zone");
 const mongoose = require("mongoose");
-const { sendSuccess, sendError, sendResponse } = require("../utils/apiResponse");
-
-const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const { sendSuccess, sendError, sendResponse, sendServerError } = require("../utils/apiResponse");
+const { escapeRegex } = require("../utils/sanitize");
 
 // Returns the tenant scope filter for the current requester.
 // - Market token / market_* staff → { market: <theirMarketId> }
@@ -113,7 +112,8 @@ exports.getZones = async (req, res) => {
 		const totalZones = await Zone.countDocuments(filter);
 		const totalPages = Math.ceil(totalZones / limitNum);
 
-		sendResponse(res, 200, true, "Success", zones, {
+		const ras = {
+			zones,
 			pagination: {
 				current: pageNum,
 				pages: totalPages,
@@ -121,10 +121,12 @@ exports.getZones = async (req, res) => {
 				hasNext: pageNum < totalPages,
 				hasPrev: pageNum > 1,
 			},
-		});
+		};
+
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Error fetching zones:", error);
-		sendError(res, 500, "Server error while fetching zones");
+		sendServerError(res, error, "Server error while fetching zones");
 	}
 };
 
@@ -142,13 +144,14 @@ exports.getZone = async (req, res) => {
 			return sendError(res, 404, "Zone not found");
 		}
 
-		sendSuccess(res, zone);
+		const ras = { zone };
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Error fetching zone:", error);
 		if (error.name === "CastError") {
 			return sendError(res, 400, "Invalid zone ID format");
 		}
-		sendError(res, 500, "Server error while fetching zone");
+		sendServerError(res, error, "Server error while fetching zone");
 	}
 };
 
@@ -228,7 +231,8 @@ exports.createZone = async (req, res) => {
 		// Populate the created zone
 		await zone.populate("createdBy", "name email");
 
-		sendSuccess(res, zone, "Zone created successfully", 201);
+		const ras = { zone };
+		sendResponse(res, 201, true, "Zone created successfully", ras);
 	} catch (error) {
 		console.error("Error creating zone:", error);
 
@@ -244,7 +248,7 @@ exports.createZone = async (req, res) => {
 			return sendError(res, 400, `Zone with this ${field} already exists`);
 		}
 
-		sendError(res, 500, "Server error while creating zone");
+		sendServerError(res, error, "Server error while creating zone");
 	}
 };
 
@@ -312,7 +316,8 @@ exports.updateZone = async (req, res) => {
 			runValidators: true,
 		}).populate("createdBy updatedBy", "name email");
 
-		sendSuccess(res, zone, "Zone updated successfully");
+		const ras = { zone };
+		sendResponse(res, 200, true, "Zone updated successfully", ras);
 	} catch (error) {
 		console.error("Error updating zone:", error);
 
@@ -325,7 +330,7 @@ exports.updateZone = async (req, res) => {
 			return sendError(res, 400, "Invalid zone ID format");
 		}
 
-		sendError(res, 500, "Server error while updating zone");
+		sendServerError(res, error, "Server error while updating zone");
 	}
 };
 
@@ -354,7 +359,8 @@ exports.updateZoneStatus = async (req, res) => {
 			return sendError(res, 404, "Error", "Zone not found");
 		}
 
-		sendResponse(res, 200, true, `Zone ${isActive ? "activated" : "deactivated"} successfully`, zone);
+		const ras = { zone };
+		sendResponse(res, 200, true, `Zone ${isActive ? "activated" : "deactivated"} successfully`, ras);
 	} catch (error) {
 		console.error("Error updating zone status:", error);
 
@@ -362,7 +368,7 @@ exports.updateZoneStatus = async (req, res) => {
 			return sendError(res, 400, "Error", "Invalid zone ID format");
 		}
 
-		sendError(res, 500, "Error", "Server error while updating zone status");
+		sendServerError(res, error, "Error");
 	}
 };
 
@@ -385,7 +391,8 @@ exports.deleteZone = async (req, res) => {
 			return sendError(res, 404, "Error", "Zone not found");
 		}
 
-		sendResponse(res, 200, true, "Zone deactivated successfully", zone);
+		const ras = { zone };
+		sendResponse(res, 200, true, "Zone deactivated successfully", ras);
 	} catch (error) {
 		console.error("Error deleting zone:", error);
 
@@ -393,7 +400,7 @@ exports.deleteZone = async (req, res) => {
 			return sendError(res, 400, "Error", "Invalid zone ID format");
 		}
 
-		sendError(res, 500, "Error", "Server error while deleting zone");
+		sendServerError(res, error, "Error");
 	}
 };
 
@@ -411,7 +418,8 @@ exports.permanentDeleteZone = async (req, res) => {
 			return sendError(res, 404, "Error", "Zone not found");
 		}
 
-		sendResponse(res, 200, true, "Zone permanently deleted successfully", null);
+		const ras = {};
+		sendResponse(res, 200, true, "Zone permanently deleted successfully", ras);
 	} catch (error) {
 		console.error("Error permanently deleting zone:", error);
 
@@ -419,7 +427,7 @@ exports.permanentDeleteZone = async (req, res) => {
 			return sendError(res, 400, "Error", "Invalid zone ID format");
 		}
 
-		sendError(res, 500, "Error", "Server error while permanently deleting zone");
+		sendServerError(res, error, "Error");
 	}
 };
 
@@ -468,13 +476,14 @@ exports.getZoneStats = async (req, res) => {
 			},
 		]);
 
-		sendResponse(res, 200, true, "Success", {
-				...zoneStats,
-				distanceUnitBreakdown: distanceUnitStats,
-			});
+		const ras = {
+			...zoneStats,
+			distanceUnitBreakdown: distanceUnitStats,
+		};
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Error fetching zone statistics:", error);
-		sendError(res, 500, "Error", "Server error while fetching zone statistics");
+		sendServerError(res, error, "Error");
 	}
 };
 
@@ -497,12 +506,13 @@ exports.calculateDeliveryFee = async (req, res) => {
 
 		const deliveryFee = zone.deliveryFee ? zone.deliveryFee : 4;
 
-		sendResponse(res, 200, true, "Success", {
-				deliveryFee,
-				estimatedDeliveryTime: zone.estimatedDeliveryTime,
-			});
+		const ras = {
+			deliveryFee,
+			estimatedDeliveryTime: zone.estimatedDeliveryTime,
+		};
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Error calculating delivery fee:", error);
-		sendError(res, 500, "Error", "Server error while calculating delivery fee");
+		sendServerError(res, error, "Error");
 	}
 };

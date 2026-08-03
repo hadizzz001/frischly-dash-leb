@@ -1269,6 +1269,9 @@ body {
 .message .message-content {
 	flex: 1;
 	line-height: 1.4;
+	/* Validation errors are now multi-line ("• field: reason") — keep the
+	   newlines instead of collapsing everything onto one run-on line. */
+	white-space: pre-line;
 }
 
 .message .close-btn {
@@ -1619,6 +1622,13 @@ body {
 	border-radius: 4px;
 	font-size: 12px;
 	font-weight: 600;
+	/* Give the base badge a visible default. Without these, a badge whose
+	   colour modifier went missing (as happened to the order Status and
+	   Payment badges during the inline-style extraction) inherited a white
+	   foreground from a nearby rule and rendered white-on-white — the cell
+	   looked completely empty. */
+	background: #f3f4f6;
+	color: #374151;
 }
 
 .status-badge.active {
@@ -2332,7 +2342,14 @@ body {
 	display: inline-block;
 	padding: 4px 12px;
 	border-radius: 20px;
-	color: white;
+	/* THIS RULE CAUSED THE BLANK Status/Payment CELLS.
+	   It is the last `.status-badge` definition in this file, so it won.
+	   It set white text but no background; once the inline-style extraction
+	   removed the per-status background colours, every order badge became
+	   white text on a white cell — invisible. A visible default pairing is
+	   used instead; per-status colours live in global.css. */
+	background: #f3f4f6;
+	color: #374151;
 	font-size: 12px;
 	font-weight: 600;
 	text-transform: uppercase;
@@ -2823,4 +2840,10 @@ body {
 	filter: brightness(0.7) sepia(1) hue-rotate(180deg) saturate(2);
 	cursor: pointer;
 	transform: scale(1.05);
+}
+
+.map-load-error {
+	padding: 16px;
+	color: #c0392b;
+	font-size: 13px;
 }

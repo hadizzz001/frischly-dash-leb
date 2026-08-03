@@ -1,101 +1,24 @@
 const Product = require("../models/Product");
 const mongoose = require("mongoose");
-const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const cloudinary = require("cloudinary").v2;
-const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
+const { sendResponse, sendError, sendSuccess, sendServerError } = require("../utils/apiResponse");
 const {
 	sanitizeQuery,
 	sanitizePagination,
 	sanitizeSort,
 	createSafeRegex,
+	escapeRegex,
 } = require("../utils/sanitize");
+const {
+	imageUpload: upload,
+	uploadImageToCloudinary,
+	deleteFromCloudinary,
+} = require("../utils/cloudinaryUpload");
 
-// Configure Cloudinary
-// SECURITY: All credentials must be provided via environment variables
-if (
-	!process.env.CLOUDINARY_CLOUD_NAME ||
-	!process.env.CLOUDINARY_API_KEY ||
-	!process.env.CLOUDINARY_API_SECRET
-) {
-	console.error(
-		"❌ CRITICAL: Cloudinary credentials are not configured properly in environment variables",
-	);
-	console.error(
-		"Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in .env file",
-	);
-}
-
-cloudinary.config({
-	cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-	api_key: process.env.CLOUDINARY_API_KEY,
-	api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-// Configure multer for memory storage (for Cloudinary)
-const storage = multer.memoryStorage();
-
-// File filter for images only
-const fileFilter = (req, file, cb) => {
-	if (file.mimetype.startsWith("image/")) {
-		cb(null, true);
-	} else {
-		cb(new Error("Only image files are allowed!"), false);
-	}
-};
-
-const upload = multer({
-	storage: storage,
-	limits: {
-		fileSize: 5 * 1024 * 1024, // 5MB limit
-	},
-	fileFilter: fileFilter,
-});
-
-// Helper function to upload image to Cloudinary
-const uploadToCloudinary = (buffer, folder = "products") => {
-	return new Promise((resolve, reject) => {
-		const uploadOptions = {
-			folder: folder,
-			resource_type: "image",
-			quality: "auto",
-			format: "webp",
-			transformation: [
-				{ quality: "auto:eco", width: 500, crop: "scale" }, // Resize to the specified width, maintaining aspect ratio
-			],
-		};
-
-		const stream = cloudinary.uploader.upload_stream(
-			uploadOptions,
-			(error, result) => {
-				if (error) {
-					reject(error);
-				} else {
-					resolve({
-						url: result.secure_url,
-						public_id: result.public_id,
-					});
-				}
-			},
-		);
-
-		stream.end(buffer);
-	});
-};
-
-// Helper function to delete image from Cloudinary
-const deleteFromCloudinary = (publicId) => {
-	return new Promise((resolve, reject) => {
-		cloudinary.uploader.destroy(publicId, (error, result) => {
-			if (error) {
-				reject(error);
-			} else {
-				resolve(result);
-			}
-		});
-	});
-};
+// Helper function to upload image to Cloudinary (products folder)
+const uploadToCloudinary = (buffer, folder = "products") =>
+	uploadImageToCloudinary(buffer, folder);
 
 // Helper: for products that belong to a Market, the `subcategory` ObjectId
 // points to the MarketSubcategory collection (not the global Subcategory),
@@ -227,9 +150,7 @@ exports.getProducts = async (req, res) => {
 			// City scoping: show main-store products (no market) plus products
 			// from markets located in this city. Other cities are excluded.
 			const Market = require("../models/Market");
-			const escapedCity = String(city)
-				.trim()
-				.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+			const escapedCity = escapeRegex(String(city).trim());
 			const cityMarkets = await Market.find({
 				"location.city": new RegExp(`^${escapedCity}$`, "i"),
 			})
@@ -279,14 +200,18 @@ exports.getProducts = async (req, res) => {
 				}).select("_id");
 
 				if (marketSubcategories.length === 0) {
-					return sendResponse(res, 200, true, `No subcategories found in category "${marketCategoryDoc.name}"`, [], { pagination: {
+					const ras = {
+						products: [],
+						pagination: {
 							currentPage: parseInt(page),
 							totalPages: 0,
 							totalProducts: 0,
 							hasNextPage: false,
 							hasPrevPage: false,
 							limit: parseInt(limit),
-						} });
+						},
+					};
+					return sendResponse(res, 200, true, `No subcategories found in category "${marketCategoryDoc.name}"`, ras);
 				}
 
 				filter.subcategory = {
@@ -317,14 +242,18 @@ exports.getProducts = async (req, res) => {
 				}).select("_id");
 
 				if (subcategories.length === 0) {
-					return sendResponse(res, 200, true, `No subcategories found in category "${categoryDoc.name}"`, [], { pagination: {
+					const ras = {
+						products: [],
+						pagination: {
 							currentPage: parseInt(page),
 							totalPages: 0,
 							totalProducts: 0,
 							hasNextPage: false,
 							hasPrevPage: false,
 							limit: parseInt(limit),
-						} });
+						},
+					};
+					return sendResponse(res, 200, true, `No subcategories found in category "${categoryDoc.name}"`, ras);
 				}
 
 				const subcategoryIds = subcategories.map((sub) => sub._id);
@@ -561,17 +490,21 @@ exports.getProducts = async (req, res) => {
 		const hasNextPage = pageNumber < totalPages;
 		const hasPrevPage = pageNumber > 1;
 
-		sendResponse(res, 200, true, "Success", products, { pagination: {
+		const ras = {
+			products,
+			pagination: {
 				currentPage: pageNumber,
 				totalPages,
 				totalProducts: total,
 				hasNextPage,
 				hasPrevPage,
 				limit: limitNumber,
-			} });
+			},
+		};
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Error getting products:", error);
-		sendError(res, 500, "Error fetching products", error.message);
+		sendServerError(res, error, "Error fetching products");
 	}
 };
 
@@ -607,10 +540,11 @@ exports.getProduct = async (req, res) => {
 		// Backfill subcategory for market-owned products (see helper).
 		await resolveMarketSubcategories([product]);
 
-		sendResponse(res, 200, true, "Success", product);
+		const ras = { product };
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Error getting product:", error);
-		sendError(res, 500, "Error fetching product", error.message);
+		sendServerError(res, error, "Error fetching product");
 	}
 };
 
@@ -633,7 +567,7 @@ exports.getProductByBarcode = async (req, res) => {
 		// If not found, try to find by prefix (e.g. if check digit is missing in search)
 		if (!product) {
 			// Escape special regex characters to prevent ReDoS
-			const escapedBarcode = barcode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+			const escapedBarcode = escapeRegex(barcode);
 			product = await Product.findOne({
 				barcode: new RegExp(`^${escapedBarcode}`),
 				isActive: true,
@@ -651,10 +585,11 @@ exports.getProductByBarcode = async (req, res) => {
 			return sendError(res, 404, "Product with this barcode not found");
 		}
 
-		sendResponse(res, 200, true, "Success", product);
+		const ras = { product };
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Error getting product by barcode:", error);
-		sendError(res, 500, "Error fetching product by barcode", error.message);
+		sendServerError(res, error, "Error fetching product by barcode");
 	}
 };
 
@@ -707,7 +642,7 @@ exports.createProduct = async (req, res) => {
 				productData.imagePublicId = uploadResult.public_id;
 			} catch (uploadError) {
 				console.error("Error uploading image to Cloudinary:", uploadError);
-				return sendError(res, 500, "Error uploading image", uploadError.message);
+				return sendServerError(res, uploadError, "Error uploading image");
 			}
 		}
 
@@ -746,7 +681,8 @@ exports.createProduct = async (req, res) => {
 			{ path: "market", select: "name username location logo" },
 		]);
 
-		sendResponse(res, 201, true, "Product created successfully", product);
+		const ras = { product };
+		sendResponse(res, 201, true, "Product created successfully", ras);
 	} catch (error) {
 		console.error("Error creating product:", error);
 
@@ -815,7 +751,7 @@ exports.updateProduct = async (req, res) => {
 				updateData.imagePublicId = uploadResult.public_id;
 			} catch (uploadError) {
 				console.error("Error uploading image to Cloudinary:", uploadError);
-				return sendError(res, 500, "Error uploading image", uploadError.message);
+				return sendServerError(res, uploadError, "Error uploading image");
 			}
 		}
 
@@ -835,7 +771,8 @@ exports.updateProduct = async (req, res) => {
 			.populate("createdBy", "name email")
 			.populate("market", "name username location logo");
 
-		sendResponse(res, 200, true, "Product updated successfully", updatedProduct);
+		const ras = { product: updatedProduct };
+		sendResponse(res, 200, true, "Product updated successfully", ras);
 	} catch (error) {
 		console.error("Error updating product:", error);
 
@@ -901,7 +838,8 @@ exports.updateProductStock = async (req, res) => {
 			{ path: "market", select: "name username location logo" },
 		]);
 
-		sendResponse(res, 200, true, `Product stock ${operation}ed successfully`, product);
+		const ras = { product };
+		sendResponse(res, 200, true, `Product stock ${operation}ed successfully`, ras);
 	} catch (error) {
 		console.error("Error updating product stock:", error);
 		sendError(res, 400, "Error updating product stock", error.message);
@@ -957,7 +895,8 @@ exports.updateProductShelfNumber = async (req, res) => {
 			{ path: "market", select: "name username location logo" },
 		]);
 
-		sendResponse(res, 200, true, "Product shelf number updated successfully", product);
+		const ras = { product };
+		sendResponse(res, 200, true, "Product shelf number updated successfully", ras);
 	} catch (error) {
 		console.error("Error updating product shelf number:", error);
 		sendError(res, 400, "Error updating product shelf number", error.message);
@@ -1002,10 +941,11 @@ exports.deleteProduct = async (req, res) => {
 			return sendError(res, 404, "Product not found");
 		}
 
-		sendResponse(res, 200, true, "Product deleted successfully", product);
+		const ras = { product };
+		sendResponse(res, 200, true, "Product deleted successfully", ras);
 	} catch (error) {
 		console.error("Error deleting product:", error);
-		sendError(res, 500, "Error deleting product", error.message);
+		sendServerError(res, error, "Error deleting product");
 	}
 };
 
@@ -1043,10 +983,11 @@ exports.permanentDeleteProduct = async (req, res) => {
 		// Permanently delete the product
 		await Product.findByIdAndDelete(id);
 
-		sendResponse(res, 200, true, "Product permanently deleted", null);
+		const ras = {};
+		sendResponse(res, 200, true, "Product permanently deleted", ras);
 	} catch (error) {
 		console.error("Error permanently deleting product:", error);
-		sendError(res, 500, "Error permanently deleting product", error.message);
+		sendServerError(res, error, "Error permanently deleting product");
 	}
 };
 
@@ -1085,14 +1026,15 @@ exports.uploadImage = async (req, res) => {
 		// Upload image to Cloudinary
 		const uploadResult = await uploadToCloudinary(req.file.buffer);
 
-		sendResponse(res, 200, true, "Image uploaded successfully", {
-				url: uploadResult.url,
-				public_id: uploadResult.public_id,
-				size: req.file.size,
-			});
+		const ras = {
+			url: uploadResult.url,
+			public_id: uploadResult.public_id,
+			size: req.file.size,
+		};
+		sendResponse(res, 200, true, "Image uploaded successfully", ras);
 	} catch (error) {
 		console.error("Error uploading image:", error);
-		sendError(res, 500, "Error uploading image", error.message);
+		sendServerError(res, error, "Error uploading image");
 	}
 };
 
@@ -1137,14 +1079,18 @@ exports.getProductsByCategory = async (req, res) => {
 		}).select("_id");
 
 		if (subcategories.length === 0) {
-			return sendResponse(res, 200, true, `No subcategories found in category "${categoryName}"`, [], { pagination: {
+			const ras = {
+				products: [],
+				pagination: {
 					currentPage: parseInt(page),
 					totalPages: 0,
 					totalProducts: 0,
 					hasNextPage: false,
 					hasPrevPage: false,
 					limit: parseInt(limit),
-				} });
+				},
+			};
+			return sendResponse(res, 200, true, `No subcategories found in category "${categoryName}"`, ras);
 		}
 
 		const subcategoryIds = subcategories.map((sub) => sub._id);
@@ -1239,17 +1185,21 @@ exports.getProductsByCategory = async (req, res) => {
 		const hasNextPage = pageNumber < totalPages;
 		const hasPrevPage = pageNumber > 1;
 
-		sendResponse(res, 200, true, `${total} products found in category "${categoryName}"`, products, { pagination: {
+		const ras = {
+			products,
+			pagination: {
 				currentPage: pageNumber,
 				totalPages,
 				totalProducts: total,
 				hasNextPage,
 				hasPrevPage,
 				limit: limitNumber,
-			} });
+			},
+		};
+		sendResponse(res, 200, true, `${total} products found in category "${categoryName}"`, ras);
 	} catch (error) {
 		console.error("Error getting products by category:", error);
-		sendError(res, 500, "Error fetching products by category", error.message);
+		sendServerError(res, error, "Error fetching products by category");
 	}
 };
 
@@ -1375,17 +1325,21 @@ exports.getProductsBySubcategory = async (req, res) => {
 		const hasNextPage = pageNumber < totalPages;
 		const hasPrevPage = pageNumber > 1;
 
-		sendResponse(res, 200, true, `${total} Produkte in Unterkategorie "${subcategoryName}" gefunden`, products, { pagination: {
+		const ras = {
+			products,
+			pagination: {
 				currentPage: pageNumber,
 				totalPages,
 				totalProducts: total,
 				hasNextPage,
 				hasPrevPage,
 				limit: limitNumber,
-			} });
+			},
+		};
+		sendResponse(res, 200, true, `${total} Produkte in Unterkategorie "${subcategoryName}" gefunden`, ras);
 	} catch (error) {
 		console.error("Error getting products by subcategory:", error);
-		sendError(res, 500, "Error fetching products by subcategory", error.message);
+		sendServerError(res, error, "Error fetching products by subcategory");
 	}
 };
 
@@ -1490,9 +1444,7 @@ exports.getProductsWithDiscount = async (req, res) => {
 			}
 		} else if (city && String(city).trim() !== "") {
 			const Market = require("../models/Market");
-			const escapedCity = String(city)
-				.trim()
-				.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+			const escapedCity = escapeRegex(String(city).trim());
 			const cityMarkets = await Market.find({
 				"location.city": new RegExp(`^${escapedCity}$`, "i"),
 			})
@@ -1554,17 +1506,21 @@ exports.getProductsWithDiscount = async (req, res) => {
 		const hasNextPage = pageNumber < totalPages;
 		const hasPrevPage = pageNumber > 1;
 
-		sendResponse(res, 200, true, `${total} products with discount greater than ${minDiscount}% found`, products, { pagination: {
+		const ras = {
+			products,
+			pagination: {
 				currentPage: pageNumber,
 				totalPages,
 				totalProducts: total,
 				hasNextPage,
 				hasPrevPage,
 				limit: limitNumber,
-			} });
+			},
+		};
+		sendResponse(res, 200, true, `${total} products with discount greater than ${minDiscount}% found`, ras);
 	} catch (error) {
 		console.error("Error getting products with discount:", error);
-		sendError(res, 500, "Error fetching discounted products", error.message);
+		sendServerError(res, error, "Error fetching discounted products");
 	}
 };
 
@@ -1574,10 +1530,11 @@ exports.getProductsCount = async (req, res) => {
 	try {
 		const totalProducts = await Product.countDocuments({ isActive: true });
 
-		sendResponse(res, 200, true, `Total number of active products: ${totalProducts}`, null, { count: totalProducts });
+		const ras = { count: totalProducts };
+		sendResponse(res, 200, true, `Total number of active products: ${totalProducts}`, ras);
 	} catch (error) {
 		console.error("Error getting products count:", error);
-		sendError(res, 500, "Error fetching product count", error.message);
+		sendServerError(res, error, "Error fetching product count");
 	}
 };
 
@@ -1601,10 +1558,11 @@ exports.bulkUpdateProductStatus = async (req, res) => {
 			},
 		);
 
-		sendResponse(res, 200, true, `Successfully updated ${result.modifiedCount} products to ${status} status`, null, { modifiedCount: result.modifiedCount, matchedCount: result.matchedCount });
+		const ras = { modifiedCount: result.modifiedCount, matchedCount: result.matchedCount };
+		sendResponse(res, 200, true, `Successfully updated ${result.modifiedCount} products to ${status} status`, ras);
 	} catch (error) {
 		console.error("Error updating product status:", error);
-		sendError(res, 500, "Error updating product status", error.message);
+		sendServerError(res, error, "Error updating product status");
 	}
 };
 

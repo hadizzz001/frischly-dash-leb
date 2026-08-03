@@ -1,83 +1,18 @@
 const Category = require("../models/Category");
 const Product = require("../models/Product");
 const mongoose = require("mongoose");
-const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const cloudinary = require("cloudinary").v2;
-const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
+const { sendResponse, sendError, sendSuccess, sendServerError } = require("../utils/apiResponse");
+const {
+	imageUpload: upload,
+	uploadImageToCloudinary,
+	deleteFromCloudinary,
+} = require("../utils/cloudinaryUpload");
 
-// Configure Cloudinary
-cloudinary.config({
-	cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "dbgnsnrto",
-	api_key: process.env.CLOUDINARY_API_KEY || "431121896297761",
-	api_secret:
-		process.env.CLOUDINARY_API_SECRET || "omVgd2HdystgoGQ5yXngAZ40yTg",
-});
-
-// Configure multer for memory storage (for Cloudinary)
-const storage = multer.memoryStorage();
-
-// File filter for images only
-const fileFilter = (req, file, cb) => {
-	if (file.mimetype.startsWith("image/")) {
-		cb(null, true);
-	} else {
-		cb(new Error("Only image files are allowed!"), false);
-	}
-};
-
-const upload = multer({
-	storage: storage,
-	limits: {
-		fileSize: 5 * 1024 * 1024, // 5MB limit
-	},
-	fileFilter: fileFilter,
-});
-
-// Helper function to upload image to Cloudinary
-const uploadToCloudinary = (buffer, folder = "categories") => {
-	return new Promise((resolve, reject) => {
-		const uploadOptions = {
-			folder: folder,
-			resource_type: "image",
-			quality: "auto",
-			format: "webp",
-			transformation: [
-				{ quality: "auto:eco", width: 500, crop: "scale" }, // Resize to the specified width, maintaining aspect ratio
-			],
-		};
-
-		const stream = cloudinary.uploader.upload_stream(
-			uploadOptions,
-			(error, result) => {
-				if (error) {
-					reject(error);
-				} else {
-					resolve({
-						url: result.secure_url,
-						public_id: result.public_id,
-					});
-				}
-			}
-		);
-
-		stream.end(buffer);
-	});
-};
-
-// Helper function to delete image from Cloudinary
-const deleteFromCloudinary = (publicId) => {
-	return new Promise((resolve, reject) => {
-		cloudinary.uploader.destroy(publicId, (error, result) => {
-			if (error) {
-				reject(error);
-			} else {
-				resolve(result);
-			}
-		});
-	});
-};
+// Helper function to upload image to Cloudinary (categories folder)
+const uploadToCloudinary = (buffer, folder = "categories") =>
+	uploadImageToCloudinary(buffer, folder);
 
 // @desc    Get all categories
 // @route   GET /api/categories
@@ -135,17 +70,22 @@ exports.getCategories = async (req, res) => {
 		const hasNextPage = pageNumber < totalPages;
 		const hasPrevPage = pageNumber > 1;
 
-		sendResponse(res, 200, true, "Success", categories, { pagination: {
+		const ras = {
+			categories,
+			pagination: {
 				currentPage: pageNumber,
 				totalPages,
 				totalCategories: total,
 				hasNextPage,
 				hasPrevPage,
 				limit: limitNumber,
-			} });
+			},
+		};
+
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Error getting categories:", error);
-		sendError(res, 500, "Error fetching categories", error.message);
+		sendServerError(res, error, "Error fetching categories");
 	}
 };
 
@@ -173,10 +113,12 @@ exports.getCategory = async (req, res) => {
 			return sendError(res, 404, "Category not found");
 		}
 
-		sendResponse(res, 200, true, "Success", category);
+		const ras = { category };
+
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Error getting category:", error);
-		sendError(res, 500, "Error fetching category", error.message);
+		sendServerError(res, error, "Error fetching category");
 	}
 };
 
@@ -235,7 +177,7 @@ exports.createCategory = async (req, res) => {
 				categoryData.imagePublicId = uploadResult.public_id;
 			} catch (uploadError) {
 				console.error("Error uploading image to Cloudinary:", uploadError);
-				return sendError(res, 500, "Error uploading image", uploadError.message);
+				return sendServerError(res, uploadError, "Error uploading image");
 			}
 		}
 
@@ -249,7 +191,9 @@ exports.createCategory = async (req, res) => {
 		// Populate the created category
 		await category.populate("createdBy", "name email");
 
-		sendResponse(res, 201, true, "Category created successfully", category);
+		const ras = { category };
+
+		sendResponse(res, 201, true, "Category created successfully", ras);
 	} catch (error) {
 		console.error("Error creating category:", error);
 
@@ -294,7 +238,7 @@ exports.updateCategory = async (req, res) => {
 				updateData.imagePublicId = uploadResult.public_id;
 			} catch (uploadError) {
 				console.error("Error uploading image to Cloudinary:", uploadError);
-				return sendError(res, 500, "Error uploading image", uploadError.message);
+				return sendServerError(res, uploadError, "Error uploading image");
 			}
 		}
 
@@ -312,7 +256,9 @@ exports.updateCategory = async (req, res) => {
 			);
 		}
 
-		sendResponse(res, 200, true, "Category updated successfully", updatedCategory);
+		const ras = { category: updatedCategory };
+
+		sendResponse(res, 200, true, "Category updated successfully", ras);
 	} catch (error) {
 		console.error("Error updating category:", error);
 
@@ -369,10 +315,12 @@ exports.deleteCategory = async (req, res) => {
 			{ isActive: false, updatedAt: new Date() }
 		);
 
-		sendResponse(res, 200, true, "Category and its subcategories deleted successfully", category);
+		const ras = { category };
+
+		sendResponse(res, 200, true, "Category and its subcategories deleted successfully", ras);
 	} catch (error) {
 		console.error("Error deleting category:", error);
-		sendError(res, 500, "Error deleting category", error.message);
+		sendServerError(res, error, "Error deleting category");
 	}
 };
 
@@ -420,10 +368,12 @@ exports.permanentDeleteCategory = async (req, res) => {
 		// Permanently delete the category
 		await Category.findByIdAndDelete(id);
 
-		sendResponse(res, 200, true, "Category permanently deleted", null);
+		const ras = {};
+
+		sendResponse(res, 200, true, "Category permanently deleted", ras);
 	} catch (error) {
 		console.error("Error permanently deleting category:", error);
-		sendError(res, 500, "Error permanently deleting category", error.message);
+		sendServerError(res, error, "Error permanently deleting category");
 	}
 };
 
@@ -532,14 +482,16 @@ exports.uploadImage = async (req, res) => {
 		// Upload image to Cloudinary
 		const uploadResult = await uploadToCloudinary(req.file.buffer);
 
-		sendResponse(res, 200, true, "Image uploaded successfully", {
-				url: uploadResult.url,
-				public_id: uploadResult.public_id,
-				size: req.file.size,
-			});
+		const ras = {
+			url: uploadResult.url,
+			public_id: uploadResult.public_id,
+			size: req.file.size,
+		};
+
+		sendResponse(res, 200, true, "Image uploaded successfully", ras);
 	} catch (error) {
 		console.error("Error uploading image:", error);
-		sendError(res, 500, "Error uploading image", error.message);
+		sendServerError(res, error, "Error uploading image");
 	}
 };
 
@@ -578,14 +530,16 @@ exports.getCategoryProductCount = async (req, res) => {
 			isActive: true,
 		});
 
-		sendResponse(res, 200, true, `Category '${category.name}' has ${productCount} active products`, {
-				categoryId: id,
-				categoryName: category.name,
-				productCount: productCount,
-			});
+		const ras = {
+			categoryId: id,
+			categoryName: category.name,
+			productCount: productCount,
+		};
+
+		sendResponse(res, 200, true, `Category '${category.name}' has ${productCount} active products`, ras);
 	} catch (error) {
 		console.error("Error getting category product count:", error);
-		sendError(res, 500, "Error fetching category product count", error.message);
+		sendServerError(res, error, "Error fetching category product count");
 	}
 };
 
@@ -654,10 +608,15 @@ exports.getAllCategoriesProductCount = async (req, res) => {
 			},
 		]);
 
-		sendResponse(res, 200, true, `Product counts retrieved for ${categoryProductCounts.length} categories`, categoryProductCounts, { total: categoryProductCounts.length });
+		const ras = {
+			categoryProductCounts,
+			total: categoryProductCounts.length,
+		};
+
+		sendResponse(res, 200, true, `Product counts retrieved for ${categoryProductCounts.length} categories`, ras);
 	} catch (error) {
 		console.error("Error getting all categories product count:", error);
-		sendError(res, 500, "Error fetching category product counts", error.message);
+		sendServerError(res, error, "Error fetching category product counts");
 	}
 };
 

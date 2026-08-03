@@ -22,13 +22,32 @@ exports.getProductByBarcode = async (req, res) => {
 			barcode,
 			isActive: true,
 			market: null,
-		});
+		}).populate("category", "name");
 
 		if (!product) {
+			// Distinguish "this barcode is unknown" from "this product exists but
+			// is deactivated / belongs to a market". Both used to report "not
+			// found", which sent staff hunting for a barcode that was correct.
+			const other = await Product.findOne({ barcode }).select("name isActive market");
+			if (other && other.isActive === false) {
+				return sendError(
+					res,
+					404,
+					`"${other.name}" matches this barcode but is deactivated, so waste cannot be recorded against it`
+				);
+			}
+			if (other && other.market) {
+				return sendError(
+					res,
+					404,
+					`"${other.name}" belongs to a market, so its waste must be recorded from the market dashboard`
+				);
+			}
 			return sendError(res, 404, "Product not found with this barcode");
 		}
 
-		sendSuccess(res, product);
+		const ras = { product };
+		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		sendError(res, 400, error.message);
 	}
@@ -79,17 +98,28 @@ exports.createWaste = async (req, res) => {
 		// If a product was resolved, subtract the wasted quantity from its stock.
 		// Only main-store products reach this point (the lookups above exclude
 		// market-owned items), so admin waste never alters a market's inventory.
+		//
+		// The waste record is already persisted at this point, so a failure here
+		// used to return 400 while LEAVING THE RECORD BEHIND: the user saw an
+		// error, retried, and silently created duplicates. Roll back instead so
+		// the request stays all-or-nothing.
 		if (actualProductId) {
-			const product = await Product.findById(actualProductId);
-			if (product) {
-				await product.updateStock(quantity, "subtract");
-				console.log(
-					`Updated stock for product ${product.name} (${product.barcode}): -${quantity}`
-				);
+			try {
+				const product = await Product.findById(actualProductId);
+				if (product) {
+					await product.updateStock(quantity, "subtract");
+					console.log(
+						`Updated stock for product ${product.name} (${product.barcode}): -${quantity}`
+					);
+				}
+			} catch (stockError) {
+				await Waste.findByIdAndDelete(waste._id).catch(() => {});
+				throw stockError;
 			}
 		}
 
-		sendSuccess(res, waste, "Success", 201);
+		const ras2 = { waste };
+		sendResponse(res, 201, true, "Success", ras2);
 	} catch (error) {
 		sendError(res, 400, error.message);
 	}
@@ -100,7 +130,15 @@ exports.createWaste = async (req, res) => {
 // @access  Private (Admin, Staff)
 exports.getAllWaste = async (req, res) => {
 	try {
-		const { sortBy, sortOrder, limit = 10, page = 1, reason } = req.query;
+		const {
+			sortBy,
+			sortOrder,
+			limit = 10,
+			page = 1,
+			reason,
+			startDate,
+			endDate,
+		} = req.query;
 
 		// Build query
 		const query = { isActive: true };
@@ -108,6 +146,23 @@ exports.getAllWaste = async (req, res) => {
 		// Filter by reason if provided
 		if (reason) {
 			query.reason = reason;
+		}
+
+		// Filter by date range. The dashboard's "From"/"To" inputs have always
+		// sent startDate/endDate, but this controller never read them, so the
+		// date filter appeared to do nothing at all.
+		if (startDate || endDate) {
+			query.createdAt = {};
+			if (startDate) {
+				const from = new Date(startDate);
+				if (!isNaN(from)) query.createdAt.$gte = from;
+			}
+			if (endDate) {
+				const to = new Date(endDate);
+				if (!isNaN(to)) query.createdAt.$lte = to;
+			}
+			// Both dates unparseable — drop the key so we don't match nothing.
+			if (Object.keys(query.createdAt).length === 0) delete query.createdAt;
 		}
 
 		// Build sort options
@@ -132,7 +187,8 @@ exports.getAllWaste = async (req, res) => {
 		// Get total count
 		const total = await Waste.countDocuments(query);
 
-		sendResponse(res, 200, true, "Success", waste, {
+		const ras3 = {
+			waste,
 			count: waste.length,
 			total,
 			pagination: {
@@ -140,7 +196,8 @@ exports.getAllWaste = async (req, res) => {
 				limit: parseInt(limit),
 				totalPages: Math.ceil(total / parseInt(limit)),
 			},
-		});
+		};
+		sendResponse(res, 200, true, "Success", ras3);
 	} catch (error) {
 		sendError(res, 400, error.message);
 	}
@@ -159,7 +216,8 @@ exports.getWasteById = async (req, res) => {
 			return sendError(res, 404, "Waste record not found");
 		}
 
-		sendSuccess(res, waste);
+		const ras4 = { waste };
+		sendResponse(res, 200, true, "Success", ras4);
 	} catch (error) {
 		sendError(res, 400, error.message);
 	}
@@ -207,7 +265,8 @@ exports.updateWaste = async (req, res) => {
 			}
 		}
 
-		sendSuccess(res, waste);
+		const ras5 = { waste };
+		sendResponse(res, 200, true, "Success", ras5);
 	} catch (error) {
 		sendError(res, 400, error.message);
 	}
@@ -236,7 +295,8 @@ exports.deleteWaste = async (req, res) => {
 		waste.isActive = false;
 		await waste.save();
 
-		sendSuccess(res, {});
+		const ras6 = {};
+		sendResponse(res, 200, true, "Success", ras6);
 	} catch (error) {
 		sendError(res, 400, error.message);
 	}
@@ -300,14 +360,15 @@ exports.getWasteStats = async (req, res) => {
 			},
 		]);
 
-		sendSuccess(res, {
+		const ras7 = {
 			byReason: reasonSummary,
 			byDate: dateTrend,
 			total:
 				totalWaste.length > 0
 					? totalWaste[0]
 					: { totalQuantity: 0, count: 0 },
-		});
+		};
+		sendResponse(res, 200, true, "Success", ras7);
 	} catch (error) {
 		sendError(res, 400, error.message);
 	}
