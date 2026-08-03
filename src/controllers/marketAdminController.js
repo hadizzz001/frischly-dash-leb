@@ -1126,6 +1126,17 @@ exports.listOrders = async (req, res) => {
 		// orders without the field still appear.
 		const filter = { market: req.marketId, isActive: { $ne: false } };
 		if (req.query.status) filter.status = req.query.status;
+		// Date window, matching the main /api/orders contract so the shared
+		// Order Management page filters identically in either context.
+		if (req.query.dateFrom || req.query.dateTo) {
+			filter.createdAt = {};
+			if (req.query.dateFrom) filter.createdAt.$gte = new Date(req.query.dateFrom);
+			if (req.query.dateTo) {
+				const to = new Date(req.query.dateTo);
+				to.setHours(23, 59, 59, 999);
+				filter.createdAt.$lte = to;
+			}
+		}
 		if (search) {
 			filter.$or = [
 				{ orderNumber: new RegExp(search, "i") },
@@ -1137,7 +1148,27 @@ exports.listOrders = async (req, res) => {
 			Order.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
 			Order.countDocuments(filter),
 		]);
-		const ras = { items, meta: { total, page, limit } };
+		const totalPages = Math.max(1, Math.ceil(total / limit));
+		// Expose the collection under BOTH names, and pagination under both
+		// `meta` and `pagination`. Existing market-dashboard code reads
+		// items/meta; the shared Order Management page and the main admin
+		// dashboard read orders/pagination. Emitting both keeps either caller
+		// working instead of silently rendering an empty table.
+		const ras = {
+			items,
+			orders: items,
+			meta: { total, page, limit, totalPages },
+			pagination: {
+				currentPage: page,
+				page,
+				limit,
+				totalPages,
+				totalOrders: total,
+				total,
+				hasNextPage: page < totalPages,
+				hasPrevPage: page > 1,
+			},
+		};
 		sendResponse(res, 200, true, "OK", ras);
 	} catch (err) {
 		handleErr(res, err);

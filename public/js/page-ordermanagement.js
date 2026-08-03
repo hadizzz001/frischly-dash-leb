@@ -6,11 +6,47 @@
 			const _ctxParam = new URLSearchParams(location.search).get("ctx");
 			const _authToken = localStorage.getItem("authToken");
 			const _marketToken = localStorage.getItem("marketToken");
+
+			// Read the role out of a JWT without verifying it. The signature is the
+			// server's business; here we only need to know which orders endpoint the
+			// holder is actually allowed to call.
+			//
+			// This matters because market_staff / market_manager sign in through the
+			// SAME form as admins and therefore hold an `authToken` too. Deciding the
+			// context from token presence alone classed them as main-store users, so
+			// the page called the admin-only /api/orders, got 403 and rendered an
+			// empty table — the exact symptom being fixed. Reading the role makes the
+			// page correct no matter which URL (or bookmark) it was opened from.
+			const MARKET_ROLES = [
+				"market",
+				"market_staff",
+				"market_manager",
+				"market_driver",
+			];
+			function roleFromToken(token) {
+				if (!token) return null;
+				try {
+					const part = token.split(".")[1];
+					if (!part) return null;
+					const json = atob(part.replace(/-/g, "+").replace(/_/g, "/"));
+					const payload = JSON.parse(json);
+					if (payload.isMarket) return "market";
+					return payload.role || null;
+				} catch (_) {
+					return null;
+				}
+			}
+
+			const _authRole = roleFromToken(_authToken);
 			const IS_MARKET_CTX =
 				_ctxParam === "market" ||
-				(_ctxParam !== "admin" && !_authToken && !!_marketToken);
+				(_ctxParam !== "admin" &&
+					(MARKET_ROLES.includes(_authRole) ||
+						(!_authToken && !!_marketToken)));
 			let currentToken = IS_MARKET_CTX
-				? _marketToken || _authToken
+				? (MARKET_ROLES.includes(_authRole) ? _authToken : _marketToken) ||
+				  _marketToken ||
+				  _authToken
 				: _authToken || _marketToken;
 			let currentUser = null;
 			// Always route order CRUD through the market-scoped API when the page
@@ -154,31 +190,67 @@
 						params.append("dateTo", dateToFilter);
 					}
 
-					const response = await fetch(`${ordersEndpoint()}?${params}`, {
-						method: "GET",
-						headers: {
-							Authorization: `Bearer ${currentToken}`,
-							"Content-Type": "application/json",
-						},
-					});
+					const request = (url) =>
+						fetch(`${url}?${params}`, {
+							method: "GET",
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+						});
+
+					let response = await request(ordersEndpoint());
+
+					// Safety net: if the role was misclassified (an unusual token, an
+					// old bookmark, a future market role), the correct endpoint is the
+					// other one. Retry it rather than showing an empty table, which
+					// gives the user no clue that anything went wrong.
+					if (response.status === 401 || response.status === 403) {
+						const fallback = IS_MARKET_CTX
+							? `${API_BASE_URL}/orders`
+							: `${API_BASE_URL}/market-admin/orders`;
+						const retry = await request(fallback);
+						if (retry.ok) response = retry;
+					}
 
 					const result = await response.json();
 
 					if (response.ok) {
-						allOrders = (result.data && result.data.orders) || [];
+						// The two order endpoints do NOT share an envelope:
+						//   /api/orders              -> { data: { orders, pagination } }
+						//   /api/market-admin/orders -> { data: { items,  meta } }
+						// Reading `data.orders` therefore yielded undefined for every
+						// market role, the list fell back to [] and the table showed
+						// "No orders found" with no error anywhere. listFrom() accepts
+						// both shapes (and a bare array), so the page works for all
+						// roles regardless of which endpoint answered.
+						allOrders = listFrom(result, "orders");
 						filteredOrders = [...allOrders];
 
-						// Update pagination info
-						const pagination = (result.data && result.data.pagination) || {};
-						currentPage = pagination.currentPage || 1;
-						totalPages = pagination.totalPages || 1;
-						totalOrders = pagination.totalOrders || 0;
+						// Pagination is likewise named differently per endpoint, and
+						// the market `meta` block carries neither currentPage nor
+						// totalPages. Normalise both, deriving anything missing from
+						// the values we do have so the pager and the "Showing X to Y
+						// of N" label stay correct on either endpoint.
+						const meta =
+							(result.data && (result.data.pagination || result.data.meta)) || {};
+						const total =
+							meta.totalOrders ?? meta.total ?? allOrders.length;
+						const perPage = Number(meta.limit) || pageSize;
+
+						currentPage = meta.currentPage ?? meta.page ?? page;
+						totalOrders = total;
+						totalPages =
+							meta.totalPages ?? Math.max(1, Math.ceil(total / perPage));
 
 						displayOrders(filteredOrders);
 						updatePaginationControls();
 						updateStats();
 					} else {
-						showMessage("Failed to load orders", "error");
+						showMessage(
+							(result && result.message) || "Failed to load orders",
+							"error"
+						);
 					}
 				} catch (error) {
 					console.error("Error loading orders:", error);
