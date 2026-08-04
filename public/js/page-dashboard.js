@@ -9993,10 +9993,10 @@
 			function renderStarsHtml(rating, size) {
 				size = size || 15;
 				const value = Math.max(0, Math.min(5, Math.round(Number(rating) || 0)));
-				let html = '<span class="dsx-282">';
+				let html = `<span class="dsx-282" style="font-size:${size}px;">`;
 				for (let i = 1; i <= 5; i++) {
-					html +=
-						'<span class="dsx-283">\u2605</span>';
+					const filled = i <= value;
+					html += `<span class="dsx-283" style="color:${filled ? '#f5b301' : '#d9dce1'};">${filled ? '\u2605' : '\u2606'}</span>`;
 				}
 				html += '</span>';
 				return html;

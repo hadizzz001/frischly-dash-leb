@@ -1390,12 +1390,74 @@ const resetCustomerPassword = async (req, res) => {
 	}
 };
 
+// ---------------------------------------------------------------------------
+// Google sign-in address defaults
+// ---------------------------------------------------------------------------
+// Google accounts never go through the registration city picker, so they used
+// to land in the database with an empty address — which the dashboards then
+// rendered as "Not provided". We FORCE every missing address field to the
+// Beirut default (city/state/street + the exact Beirut map pin) on every
+// single Google sign-in / sign-up, so a Google user is never stored without an
+// address.
+const DEFAULT_GOOGLE_CITY = "Beirut";
+const DEFAULT_GOOGLE_STATE = "Beirut";
+const DEFAULT_GOOGLE_STREET = "Beirut";
+// Exact Beirut city-center pin, used when the device refused to share its
+// location (permission denied) so the customer still has a usable map pin.
+const DEFAULT_GOOGLE_PIN = { latitude: 33.8938, longitude: 35.5018 };
+
+// A value counts as "missing" when it is null/undefined/empty/0 or one of the
+// placeholder strings that used to leak into the database.
+const isMissingValue = (value) => {
+	if (value === null || value === undefined) return true;
+	if (typeof value === "number") return value === 0;
+	const str = String(value).trim().toLowerCase();
+	return (
+		str === "" ||
+		str === "0" ||
+		str === "not provided" ||
+		str === "n/a" ||
+		str === "null" ||
+		str === "undefined"
+	);
+};
+
+/**
+ * Builds a complete address object for a Google account: keeps whatever the
+ * caller/user already has and forces the Beirut default into every field that
+ * is still missing. `clientAddress` is the optional address the mobile app
+ * sends along with the Google id token (GPS-detected when the shopper allowed
+ * location access).
+ */
+const buildGoogleAddress = (existing = {}, clientAddress = {}) => {
+	const pick = (...values) => values.find((v) => !isMissingValue(v));
+
+	const latitude = pick(
+		existing?.location?.latitude,
+		clientAddress?.location?.latitude,
+		DEFAULT_GOOGLE_PIN.latitude
+	);
+	const longitude = pick(
+		existing?.location?.longitude,
+		clientAddress?.location?.longitude,
+		DEFAULT_GOOGLE_PIN.longitude
+	);
+
+	return {
+		street: pick(existing?.street, clientAddress?.street, DEFAULT_GOOGLE_STREET),
+		city: pick(existing?.city, clientAddress?.city, DEFAULT_GOOGLE_CITY),
+		state: pick(existing?.state, clientAddress?.state, DEFAULT_GOOGLE_STATE),
+		country: pick(existing?.country, clientAddress?.country, "LB"),
+		location: { latitude, longitude },
+	};
+};
+
 // @desc    Sign in / sign up with a Google account
 // @route   POST /api/auth/google
 // @access  Public
 const googleSignIn = async (req, res) => {
 	try {
-		const { idToken } = req.body;
+		const { idToken, address: clientAddress } = req.body;
 		if (!idToken) {
 			return sendError(res, 400, "Missing Google idToken");
 		}
@@ -1458,6 +1520,13 @@ const googleSignIn = async (req, res) => {
 				user.emailConfirmed = true;
 				user.emailConfirmedAt = new Date();
 			}
+			// Backfill/force the address so an older Google account that was
+			// created without one stops showing "Not provided".
+			user.address = buildGoogleAddress(
+				user.address ? user.address.toObject?.() ?? user.address : {},
+				clientAddress || {}
+			);
+			user.markModified("address");
 			user.lastLogin = new Date();
 			await user.save();
 		} else {
@@ -1467,6 +1536,7 @@ const googleSignIn = async (req, res) => {
 				email,
 				googleId,
 				authProvider: "google",
+				address: buildGoogleAddress({}, clientAddress || {}),
 				emailConfirmed: emailVerified,
 				emailConfirmedAt: emailVerified ? new Date() : undefined,
 				lastLogin: new Date(),
