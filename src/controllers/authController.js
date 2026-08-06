@@ -14,6 +14,10 @@ const {
 } = require("../utils/emailTemplates");
 const { normalizeLebanonPhone, isPhoneLike } = require("../utils/phone");
 const { sanitizeEmail } = require("../utils/sanitize");
+const {
+	verifyAppleIdentityToken,
+	isApplePrivateRelayEmail,
+} = require("../utils/appleAuth");
 const { sendResponse, sendError, sendSuccess, sendValidationError, sendServerError } = require("../utils/apiResponse");
 const {
 	findDuplicateAccount,
@@ -1209,10 +1213,25 @@ const deleteAccount = async (req, res) => {
 			return sendError(res, 404, "User not found");
 		}
 
-		// Check password
-		const isMatch = await user.comparePassword(password);
-		if (!isMatch) {
-			return sendError(res, 401, "Invalid password");
+		// Social accounts (Google / Sign in with Apple) have no password, so a
+		// password prompt would make account deletion impossible for them — which
+		// Apple's own review guidelines forbid. Their identity is already proven
+		// by the bearer token used to reach this protected route.
+		const isSocialAccount =
+			!user.password ||
+			user.authProvider === "google" ||
+			user.authProvider === "apple" ||
+			Boolean(user.googleId) ||
+			Boolean(user.appleId);
+
+		if (!isSocialAccount) {
+			if (!password) {
+				return sendError(res, 400, "Password is required for account deletion");
+			}
+			const isMatch = await user.comparePassword(password);
+			if (!isMatch) {
+				return sendError(res, 401, "Invalid password");
+			}
 		}
 
 		// Delete the user
@@ -1560,8 +1579,138 @@ const googleSignIn = async (req, res) => {
 	}
 };
 
+// ---------------------------------------------------------------------------
+// Sign in with Apple
+// ---------------------------------------------------------------------------
+// App Store Review guideline 4.8 requires an equivalent login option next to
+// Google sign-in. Sign in with Apple qualifies: it only shares the name and
+// email, lets the shopper hide their real email behind an
+// @privaterelay.appleid.com alias, and does not track them for advertising.
+//
+// IMPORTANT Apple quirk: the full name and the email are ONLY delivered the
+// very first time a given Apple ID authorizes the app. On every later sign-in
+// the client sends just the identity token (which still contains `sub`, and
+// usually the email). So the `sub` claim — stored as `appleId` — is the only
+// reliable lookup key, and we must never overwrite a stored name/email with an
+// empty value.
+//
+// @desc    Sign in / sign up with an Apple account
+// @route   POST /api/auth/apple
+// @access  Public
+const appleSignIn = async (req, res) => {
+	try {
+		const {
+			identityToken,
+			idToken, // tolerated alias
+			fullName,
+			name: rawName,
+			email: clientEmail,
+			address: clientAddress,
+		} = req.body || {};
+
+		const token = identityToken || idToken;
+		if (!token) {
+			return sendError(res, 400, "Missing Apple identityToken");
+		}
+
+		let payload;
+		try {
+			payload = await verifyAppleIdentityToken(token);
+		} catch (e) {
+			console.error("Apple token verify error:", e.message);
+			return sendError(res, 401, "Could not verify Apple token");
+		}
+
+		const appleId = payload.sub;
+		// The token normally carries the email; on some first-authorization flows
+		// only the native credential has it, so fall back to the client value.
+		// (Never trusted for identity — `sub` alone decides who the user is.)
+		const email =
+			payload.email ||
+			(typeof clientEmail === "string" && clientEmail.includes("@")
+				? clientEmail.trim().toLowerCase()
+				: undefined);
+		const isPrivateRelay =
+			payload.is_private_email || isApplePrivateRelayEmail(email);
+
+		// Apple sends the name only on the first authorization. The mobile app
+		// forwards it either as a plain string (`fullName` / `name`) or as the
+		// raw `{ givenName, familyName }` object — accept both.
+		const nameFromApple =
+			(typeof rawName === "string" && rawName.trim()) ||
+			(typeof fullName === "string" && fullName.trim()) ||
+			[fullName?.givenName, fullName?.familyName]
+				.filter((p) => typeof p === "string" && p.trim())
+				.join(" ")
+				.trim() ||
+			"";
+
+		// Look up by appleId first, then link by email (a shopper who registered
+		// locally or with Google and now taps "Sign in with Apple" must land in
+		// the same account — unless they hid their email, in which case Apple
+		// gives us an alias that cannot be matched and a new account is correct).
+		let user = await User.findOne({ appleId });
+		if (!user && email && !isPrivateRelay) {
+			user = await User.findOne({ email });
+		}
+
+		const isNewUser = !user;
+
+		if (user) {
+			if (!user.appleId) user.appleId = appleId;
+			if (!user.name && nameFromApple) user.name = nameFromApple;
+			// Apple has already verified the address it hands us.
+			if (payload.email_verified && !user.emailConfirmed) {
+				user.emailConfirmed = true;
+				user.emailConfirmedAt = new Date();
+			}
+			if (isPrivateRelay) user.appleEmailIsPrivateRelay = true;
+			// Same address backfill as Google so the dashboards never show
+			// "Not provided" for a social account.
+			user.address = buildGoogleAddress(
+				user.address ? user.address.toObject?.() ?? user.address : {},
+				clientAddress || {}
+			);
+			user.markModified("address");
+			user.lastLogin = new Date();
+			await user.save();
+		} else {
+			user = await User.create({
+				name:
+					nameFromApple ||
+					(email && !isPrivateRelay ? email.split("@")[0] : "Apple User"),
+				// Email may legitimately be absent (repeat authorization without a
+				// stored account) — the schema allows that for social accounts.
+				email: email || undefined,
+				appleId,
+				appleEmailIsPrivateRelay: isPrivateRelay,
+				authProvider: "apple",
+				address: buildGoogleAddress({}, clientAddress || {}),
+				emailConfirmed: Boolean(email) && payload.email_verified,
+				emailConfirmedAt:
+					Boolean(email) && payload.email_verified ? new Date() : undefined,
+				lastLogin: new Date(),
+			});
+		}
+
+		const accessToken = generateToken({ id: user._id });
+		const refresh = generateRefreshToken({ id: user._id });
+
+		sendResponse(res, 200, true, "Login successful", {
+			user: user.toSafeObject(),
+			token: accessToken,
+			refreshToken: refresh,
+			isNewUser,
+		});
+	} catch (error) {
+		console.error("Apple sign-in error:", error);
+		sendServerError(res, error, "Server error during Apple sign-in");
+	}
+};
+
 module.exports = {
 	googleSignIn,
+	appleSignIn,
 	register,
 	confirmEmail,
 	login,

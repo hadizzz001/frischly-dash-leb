@@ -20,13 +20,15 @@ const userSchema = new mongoose.Schema(
 			type: Date,
 		},
 		// ✅ Email (verified via confirmation link) is the primary identifier for
-		// registration/login. Required for local accounts; Google sign-in accounts
-		// get their email directly from Google.
+		// registration/login. Required for local accounts; social sign-in accounts
+		// (Google / Sign in with Apple) get their email from the provider. Apple
+		// may also return no email at all on repeat sign-ins, or a private relay
+		// alias when the user chose "Hide My Email".
 		email: {
 			type: String,
 			required: [
 				function () {
-					return this.authProvider !== "google" && !this.googleId;
+					return this.isSocialAccount ? false : true;
 				},
 				"Please provide an email address",
 			],
@@ -38,11 +40,11 @@ const userSchema = new mongoose.Schema(
 		},
 		password: {
 			type: String,
-			// Password is required for local accounts only. Google sign-in
-			// users authenticate via their Google account, so no password.
+			// Password is required for local accounts only. Social sign-in users
+			// authenticate via Google / Apple, so they have no password.
 			required: [
 				function () {
-					return this.authProvider !== "google" && !this.googleId;
+					return this.isSocialAccount ? false : true;
 				},
 				"Please provide a password",
 			],
@@ -51,15 +53,31 @@ const userSchema = new mongoose.Schema(
 		},
 		// ✅ Google sign-in support. `googleId` is the Google account subject
 		// (`sub`) returned by Google's token verification. `authProvider`
-		// distinguishes local (phone/email + password) vs google accounts.
+		// distinguishes local (phone/email + password) vs social accounts.
 		googleId: {
 			type: String,
 			index: true,
 			sparse: true,
 		},
+		// ✅ Sign in with Apple support (required by App Store guideline 4.8 as an
+		// equivalent alternative to Google sign-in). `appleId` is the stable `sub`
+		// claim of Apple's identity token — it is the ONLY reliable identifier,
+		// because Apple only sends the email/name on the very first authorization.
+		appleId: {
+			type: String,
+			index: true,
+			sparse: true,
+		},
+		// True when the shopper used Apple's "Hide My Email" and the stored email
+		// is an @privaterelay.appleid.com alias. We must keep their real address
+		// private and never prompt for it.
+		appleEmailIsPrivateRelay: {
+			type: Boolean,
+			default: false,
+		},
 		authProvider: {
 			type: String,
-			enum: ["local", "google"],
+			enum: ["local", "google", "apple"],
 			default: "local",
 		},
 		emailConfirmed: {
@@ -104,11 +122,11 @@ const userSchema = new mongoose.Schema(
 			},
 			city: {
 				type: String,
-				// City is required for local accounts only. Google sign-in users
+				// City is required for local accounts only. Social sign-in users
 				// have no address at creation and can add it later in their profile.
 				required: [
 					function () {
-						return this.authProvider !== "google" && !this.googleId;
+						return this.isSocialAccount ? false : true;
 					},
 					"Please provide a city",
 				],
@@ -300,6 +318,18 @@ userSchema.methods.getLockTimeRemaining = function () {
 	const remainingMs = this.lockUntil - Date.now();
 	return Math.ceil(remainingMs / (60 * 1000)); // Convert to minutes
 };
+
+// ✅ Shared helper used by every conditional `required` above: an account is
+// "social" when it was created through Google or Sign in with Apple. Those
+// accounts have no password, and (for Apple) may have no email at all.
+userSchema.virtual("isSocialAccount").get(function () {
+	return (
+		this.authProvider === "google" ||
+		this.authProvider === "apple" ||
+		Boolean(this.googleId) ||
+		Boolean(this.appleId)
+	);
+});
 
 // Instance method to get user without password
 userSchema.methods.toSafeObject = function () {

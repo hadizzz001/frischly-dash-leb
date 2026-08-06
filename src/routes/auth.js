@@ -2,6 +2,7 @@ const express = require("express");
 const { body } = require("express-validator");
 const {
 	googleSignIn,
+	appleSignIn,
 	register,
 	confirmEmail,
 	login,
@@ -226,10 +227,12 @@ const refreshTokenValidation = [
 ];
 
 const deleteAccountValidation = [
+	// Optional here on purpose: Google / Sign in with Apple accounts have no
+	// password. The controller still requires it for local accounts.
 	body("password")
+		.optional({ checkFalsy: true })
 		.isString()
-		.notEmpty()
-		.withMessage("Password is required for account deletion"),
+		.withMessage("Password must be a string"),
 ];
 
 const requestPasswordResetValidation = [
@@ -258,6 +261,9 @@ router.post("/register", registerValidation, register);
 router.get("/confirm/:token", confirmEmail);
 router.post("/login", loginValidation, login);
 router.post("/google", googleSignIn);
+// Sign in with Apple — equivalent login option required by App Store
+// guideline 4.8 alongside Google sign-in.
+router.post("/apple", appleSignIn);
 router.post("/login-profile", loginProfileValidation, loginProfile);
 router.post("/refresh", refreshTokenValidation, refreshToken);
 router.post(

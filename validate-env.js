@@ -33,6 +33,9 @@ const requiredVars = {
 		"EMAIL_SERVICE",
 		"EMAIL_HOST",
 		"EMAIL_PORT",
+		// Social login audiences (ID-token verification)
+		"GOOGLE_CLIENT_ID",
+		"APPLE_CLIENT_ID",
 	],
 };
 
