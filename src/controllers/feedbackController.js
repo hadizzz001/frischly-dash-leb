@@ -63,19 +63,43 @@ exports.createFeedback = async (req, res) => {
 		// Match the same ownership rule the order list/history endpoint uses
 		// (getOrders scopes customers by `customer.email`, not just `createdBy`),
 		// so an order that shows up in "My Orders" never fails this check.
-		// Without the email fallback, orders placed by staff on a customer's
-		// behalf, or re-linked after an account recreation, would have a
-		// `createdBy` that doesn't match the logged-in user even though the
-		// order is unmistakably theirs (same email) — causing this exact error.
+		// Without the email/phone fallback, orders placed by staff on a
+		// customer's behalf, or re-linked after an account recreation, would
+		// have a `createdBy` that doesn't match the logged-in user even though
+		// the order is unmistakably theirs — causing this exact error. Email is
+		// optional in this app (phone is the primary identifier), so we also
+		// fall back to matching by phone number.
+		const normalizePhone = (p) =>
+			String(p || "")
+				.replace(/\D/g, "")
+				.replace(/^00961/, "")
+				.replace(/^961/, "")
+				.replace(/^0+/, "");
+
 		const requesterId = String(req.user._id || req.user.id);
 		const requesterEmail = String(req.user.email || "").toLowerCase().trim();
 		const orderOwnerEmail = String(order.customer?.email || "").toLowerCase().trim();
+		const requesterPhone = normalizePhone(req.user.phoneNumber);
+		const orderOwnerPhone = normalizePhone(order.customer?.phoneNumber);
 
 		const isOwner =
 			String(order.createdBy) === requesterId ||
-			(requesterEmail && orderOwnerEmail && requesterEmail === orderOwnerEmail);
+			(requesterEmail && orderOwnerEmail && requesterEmail === orderOwnerEmail) ||
+			(requesterPhone && orderOwnerPhone && requesterPhone === orderOwnerPhone);
 
 		if (!isOwner) {
+			// Diagnostic logging so we can see exactly why the check failed
+			// instead of guessing — check the server logs if this still
+			// happens for an order that's clearly the customer's own.
+			console.warn("createFeedback ownership mismatch:", {
+				orderId: String(order._id),
+				orderCreatedBy: String(order.createdBy),
+				requesterId,
+				requesterEmail,
+				orderOwnerEmail,
+				requesterPhone,
+				orderOwnerPhone,
+			});
 			return sendError(res, 403, "You can only leave feedback for your own orders");
 		}
 
