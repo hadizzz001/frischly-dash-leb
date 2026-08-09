@@ -60,7 +60,22 @@ exports.createFeedback = async (req, res) => {
 		}
 
 		// Only the customer who placed the order can leave feedback for it.
-		if (String(order.createdBy) !== String(req.user._id || req.user.id)) {
+		// Match the same ownership rule the order list/history endpoint uses
+		// (getOrders scopes customers by `customer.email`, not just `createdBy`),
+		// so an order that shows up in "My Orders" never fails this check.
+		// Without the email fallback, orders placed by staff on a customer's
+		// behalf, or re-linked after an account recreation, would have a
+		// `createdBy` that doesn't match the logged-in user even though the
+		// order is unmistakably theirs (same email) — causing this exact error.
+		const requesterId = String(req.user._id || req.user.id);
+		const requesterEmail = String(req.user.email || "").toLowerCase().trim();
+		const orderOwnerEmail = String(order.customer?.email || "").toLowerCase().trim();
+
+		const isOwner =
+			String(order.createdBy) === requesterId ||
+			(requesterEmail && orderOwnerEmail && requesterEmail === orderOwnerEmail);
+
+		if (!isOwner) {
 			return sendError(res, 403, "You can only leave feedback for your own orders");
 		}
 
