@@ -19,6 +19,23 @@ function zoneRadiusKm(zone) {
 }
 
 /**
+ * Does this zone have usable geofence geometry (a map pin + positive radius)?
+ * Zones created without picking a location on the map cannot be enforced
+ * geographically — they must be treated as "covers everywhere" rather than
+ * "covers nowhere", otherwise every driver in such a zone becomes
+ * permanently unassignable.
+ */
+function zoneHasGeometry(zone) {
+	return !!(
+		zone &&
+		zone.coordinates &&
+		typeof zone.coordinates.latitude === "number" &&
+		typeof zone.coordinates.longitude === "number" &&
+		zoneRadiusKm(zone) > 0
+	);
+}
+
+/**
  * Does this single zone document's pin+radius cover the given point?
  */
 function zoneCoversPoint(zone, lat, lng) {
@@ -53,7 +70,9 @@ function namedZonesCoverPoint(zoneNames, zoneDocs, lat, lng) {
 	return zoneDocs.some(
 		(zone) =>
 			wanted.has(String(zone.zoneName).toLowerCase()) &&
-			zoneCoversPoint(zone, lat, lng)
+			// A named zone with no map pin/radius cannot be geo-enforced — it
+			// grants coverage rather than silently blocking every assignment.
+			(!zoneHasGeometry(zone) || zoneCoversPoint(zone, lat, lng))
 	);
 }
 
@@ -160,28 +179,48 @@ async function riderCoversOrder(rider, order, ZoneModel, marketId) {
 	}
 
 	const zoneNames = Array.isArray(rider.zones) ? rider.zones : [];
-	if (!zoneNames.length) {
-		return {
-			covers: false,
-			reason: "This driver has no delivery zones configured",
-		};
+
+	// A driver always inherits the FULL zone coverage of their tenant — the
+	// market they belong to (market drivers) or the main store's global zones
+	// (Frischly drivers). So we check the driver's own zones first, and if
+	// those don't cover the point, we fall back to ALL of the tenant's active
+	// zones. This means: if the market/store can deliver there, any of its
+	// drivers can be assigned — the driver's personal zone list can only
+	// EXTEND coverage, never shrink it below the tenant's.
+	const tenantFilter = { isActive: true, market: marketId || null };
+	const tenantZoneDocs = await ZoneModel.find(tenantFilter).lean();
+
+	if (!tenantZoneDocs.length && !zoneNames.length) {
+		// No zones configured anywhere for this tenant — nothing to enforce.
+		return { covers: true, reason: null };
 	}
 
-	const query = { zoneName: { $in: zoneNames }, isActive: true };
-	if (marketId) query.market = marketId;
-	const zoneDocs = await ZoneModel.find(query).lean();
+	// Tenant-wide coverage (the market's own zones).
+	const tenantNames = tenantZoneDocs.map((z) => z.zoneName);
+	if (namedZonesCoverPoint(tenantNames, tenantZoneDocs, lat, lng)) {
+		return { covers: true, reason: null };
+	}
 
-	const covers = namedZonesCoverPoint(zoneNames, zoneDocs, lat, lng);
+	// Fall back to the driver's own (possibly cross-tenant-named) zones.
+	if (zoneNames.length) {
+		const query = { zoneName: { $in: zoneNames }, isActive: true };
+		if (marketId) query.market = marketId;
+		const zoneDocs = await ZoneModel.find(query).lean();
+		if (namedZonesCoverPoint(zoneNames, zoneDocs, lat, lng)) {
+			return { covers: true, reason: null };
+		}
+	}
+
 	return {
-		covers,
-		reason: covers
-			? null
-			: "This driver's delivery zone does not cover the customer's delivery location",
+		covers: false,
+		reason:
+			"This driver's delivery zone does not cover the customer's delivery location",
 	};
 }
 
 module.exports = {
 	zoneCoversPoint,
+	zoneHasGeometry,
 	namedZonesCoverPoint,
 	zoneRadiusKm,
 	riderDistanceToPoint,

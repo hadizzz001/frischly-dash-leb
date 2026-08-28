@@ -57,6 +57,24 @@ const uploadLogoToCloudinary = (buffer) =>
 const fail = (res, code, message, errors) =>
 	sendError(res, code, message, errors || null);
 
+// Resolve sensible default zones for a market's driver: the market's OWN
+// active Zone documents (each backed by a map pin + radius). Using these as
+// the default means a newly-created driver automatically covers the exact
+// same delivery area as the market — so assigning them to any order the
+// market can receive never fails the "outside customer zone" geofence check.
+// Falls back to ["Default"] only if the market has no zones configured yet.
+const defaultMarketZones = async (marketId) => {
+	try {
+		const Zone = require("../models/Zone");
+		const names = await Zone.find({ market: marketId, isActive: true })
+			.distinct("zoneName");
+		if (Array.isArray(names) && names.length) return names;
+	} catch (e) {
+		console.error("[market-admin] defaultMarketZones failed:", e.message);
+	}
+	return ["Default"];
+};
+
 const handleErr = (res, err) => {
 	console.error("[market-admin]", err);
 	if (err && err.name === "ValidationError") {
@@ -439,7 +457,9 @@ exports.createStaff = async (req, res) => {
 					user: user._id,
 					market: req.marketId,
 					zones:
-						Array.isArray(zones) && zones.length ? zones : ["Default"],
+						Array.isArray(zones) && zones.length
+							? zones
+							: await defaultMarketZones(req.marketId),
 					vehicleType: vehicleType || "motorbike",
 					vehicleNumber: vehicleNumber || undefined,
 					status: "available",
@@ -599,12 +619,15 @@ exports.listMarketDrivers = async (req, res) => {
 			const missing = driverUsers.filter(
 				(u) => !linkedSet.has(String(u._id))
 			);
+			const backfillZones = missing.length
+				? await defaultMarketZones(req.marketId)
+				: null;
 			for (const u of missing) {
 				try {
 					await Rider.create({
 						user: u._id,
 						market: req.marketId,
-						zones: ["Default"],
+						zones: backfillZones,
 						vehicleType: "motorbike",
 						status: "available",
 						isActive: true,
@@ -618,6 +641,30 @@ exports.listMarketDrivers = async (req, res) => {
 					);
 				}
 			}
+		}
+
+		// Self-heal legacy drivers stuck on the placeholder ["Default"] zone
+		// (created before drivers inherited the market's zones). If no actual
+		// Zone named "Default" exists for this market, remap them to the
+		// market's real zones so the geofence check stops rejecting them.
+		try {
+			const Zone = require("../models/Zone");
+			const hasDefaultZone = await Zone.exists({
+				market: req.marketId,
+				zoneName: "Default",
+				isActive: true,
+			});
+			if (!hasDefaultZone) {
+				const marketZones = await defaultMarketZones(req.marketId);
+				if (marketZones.length && marketZones[0] !== "Default") {
+					await Rider.updateMany(
+						{ market: req.marketId, zones: ["Default"] },
+						{ $set: { zones: marketZones } }
+					);
+				}
+			}
+		} catch (e) {
+			console.error("[market-admin] Zone self-heal failed:", e.message);
 		}
 
 		const riders = await Rider.find({
@@ -651,18 +698,30 @@ exports.listMarketDrivers = async (req, res) => {
 				const allZoneNames = [
 					...new Set(riders.flatMap((r) => (Array.isArray(r.zones) ? r.zones : []))),
 				];
-				const zoneDocs = allZoneNames.length
-					? await Zone.find({
-							zoneName: { $in: allZoneNames },
-							isActive: true,
-							market: req.marketId,
-					  }).lean()
-					: [];
+				// Fetch ALL of this market's active zones (not just the ones the
+				// drivers reference): drivers inherit the market's full coverage.
+				const zoneDocs = await Zone.find({
+					isActive: true,
+					market: req.marketId,
+				}).lean();
+				const marketZoneNames = zoneDocs.map((z) => z.zoneName);
+				const marketCovers = namedZonesCoverPoint(
+					marketZoneNames,
+					zoneDocs,
+					coords.lat,
+					coords.lng
+				);
 				// Only keep drivers whose covering zone(s) reach this city, then
 				// rank them by proximity (live GPS if available, else nearest
 				// covering zone center) so the nearest driver appears first.
+				// If the MARKET's zones cover the customer, every driver of the
+				// market qualifies (drivers inherit the market's coverage).
 				const covered = riders
-					.filter((r) => namedZonesCoverPoint(r.zones, zoneDocs, coords.lat, coords.lng))
+					.filter(
+						(r) =>
+							marketCovers ||
+							namedZonesCoverPoint(r.zones, zoneDocs, coords.lat, coords.lng)
+					)
 					.map((r) => {
 						const obj = typeof r.toObject === "function" ? r.toObject() : r;
 						obj.distanceKm = riderDistanceToPoint(r, zoneDocs, coords.lat, coords.lng);
@@ -1927,7 +1986,10 @@ exports.riders = {
 			} else {
 				rider = await Rider.create({
 					user: user._id,
-					zones: zones && zones.length ? zones : ["Default"],
+					zones:
+						zones && zones.length
+							? zones
+							: await defaultMarketZones(req.marketId),
 					vehicleType: patch.vehicleType || "motorbike",
 					vehicleNumber: patch.vehicleNumber,
 					status: patch.status || "available",

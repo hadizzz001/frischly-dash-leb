@@ -218,16 +218,35 @@ exports.getRiders = async (req, res) => {
 		if (hasExactPoint || city) {
 			const coords = hasExactPoint ? { lat: exactLat, lng: exactLng } : getCityCoords(city);
 			if (coords) {
-				const allZoneNames = [
-					...new Set(
-						enrichedRiders.flatMap((r) => (Array.isArray(r.zones) ? r.zones : []))
-					),
-				];
-				const zoneDocs = allZoneNames.length
-					? await Zone.find({ zoneName: { $in: allZoneNames }, isActive: true }).lean()
-					: [];
+				// Fetch ALL active zones — drivers inherit the full coverage of
+				// their tenant (their market's zones, or the main store's global
+				// zones for riders without a market).
+				const zoneDocs = await Zone.find({ isActive: true }).lean();
+				const tenantCoverCache = new Map();
+				const tenantCovers = (marketId) => {
+					const key = String(marketId || "");
+					if (!tenantCoverCache.has(key)) {
+						const docs = zoneDocs.filter(
+							(z) => String(z.market || "") === key
+						);
+						tenantCoverCache.set(
+							key,
+							namedZonesCoverPoint(
+								docs.map((z) => z.zoneName),
+								docs,
+								coords.lat,
+								coords.lng
+							)
+						);
+					}
+					return tenantCoverCache.get(key);
+				};
 				filteredRiders = enrichedRiders
-					.filter((r) => namedZonesCoverPoint(r.zones, zoneDocs, coords.lat, coords.lng))
+					.filter(
+						(r) =>
+							tenantCovers(r.market) ||
+							namedZonesCoverPoint(r.zones, zoneDocs, coords.lat, coords.lng)
+					)
 					.map((r) => ({
 						...r,
 						distanceKm: riderDistanceToPoint(r, zoneDocs, coords.lat, coords.lng),
@@ -593,16 +612,34 @@ exports.getAvailableRiders = async (req, res) => {
 		if (city) {
 			const coords = getCityCoords(city);
 			if (coords) {
-				const allZoneNames = [
-					...new Set(
-						availableRiders.flatMap((r) => (Array.isArray(r.zones) ? r.zones : []))
-					),
-				];
-				const zoneDocs = allZoneNames.length
-					? await Zone.find({ zoneName: { $in: allZoneNames }, isActive: true }).lean()
-					: [];
+				// Drivers inherit their tenant's full zone coverage (market zones
+				// or global zones), so fetch all active zones.
+				const zoneDocs = await Zone.find({ isActive: true }).lean();
+				const tenantCoverCache = new Map();
+				const tenantCovers = (marketId) => {
+					const key = String(marketId || "");
+					if (!tenantCoverCache.has(key)) {
+						const docs = zoneDocs.filter(
+							(z) => String(z.market || "") === key
+						);
+						tenantCoverCache.set(
+							key,
+							namedZonesCoverPoint(
+								docs.map((z) => z.zoneName),
+								docs,
+								coords.lat,
+								coords.lng
+							)
+						);
+					}
+					return tenantCoverCache.get(key);
+				};
 				availableRiders = availableRiders
-					.filter((r) => namedZonesCoverPoint(r.zones, zoneDocs, coords.lat, coords.lng))
+					.filter(
+						(r) =>
+							tenantCovers(r.market) ||
+							namedZonesCoverPoint(r.zones, zoneDocs, coords.lat, coords.lng)
+					)
 					.map((r) => {
 						const obj = typeof r.toObject === "function" ? r.toObject() : r;
 						obj.distanceKm = riderDistanceToPoint(r, zoneDocs, coords.lat, coords.lng);
