@@ -85,15 +85,19 @@ function getProductPageForRole(role) {
 		case "market":
 		case "market_manager":
 		case "market_staff":
-		case "market_driver":
 			return "/market-dashboard";
 
 		// Freshly admin-side roles use the main dashboard.
 		case "admin":
 		case "manager":
 		case "staff":
-		case "rider":
 			return "/dashboard";
+
+		// Drivers (market or freshly) always land on their profile page,
+		// matching the fresh sign-in redirect in page-signin.js.
+		case "rider":
+		case "market_driver":
+			return "/profile";
 
 		// Customers (and anything unrecognised) have no dashboard access.
 		default:
