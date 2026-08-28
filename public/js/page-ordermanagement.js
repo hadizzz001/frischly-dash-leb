@@ -1059,7 +1059,16 @@
 					const result = await response.json();
 
 					if (response.ok) {
-						const order = (result.data && result.data.order) || null;
+						// Admin API wraps the record as { data: { order } } while the
+						// market-scoped API returns it directly as { data: order } —
+						// objectFrom() normalizes both shapes (same fix as
+						// viewOrderDetails, otherwise market ctx got null and the
+						// modal threw "Error loading order details").
+						const order = objectFrom(result, "order");
+						if (!order) {
+							showMessage("Order details are unavailable.", "error");
+							return;
+						}
 						currentProcessingOrder = order;
 						processedItems.clear();
 						scanCounts.clear();
