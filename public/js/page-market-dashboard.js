@@ -7945,7 +7945,7 @@
 					const itemCount = order.items?.length || 0;
 
 					const row = `
-						<tr>
+						<tr data-order-id="${order._id}">
 							<td>${orderIndex}</td>
 							<td><strong>${order.orderNumber}</strong></td>
 							<td>
@@ -7955,6 +7955,7 @@
 										? `<small class="mdx-148">${order.customer.email}</small>`
 										: ""
 								}
+								<div class="mdx-coverage-slot" data-coverage-for="${order._id}"></div>
 							</td>
 							<td>${itemCount} item${itemCount !== 1 ? "s" : ""}</td>
 							<td><strong>$${order.total?.toFixed(2) || "0.00"}</strong></td>
@@ -7979,6 +7980,53 @@
 						</tr>
 					`;
 					tbody.innerHTML += row;
+				});
+
+				annotateDriverCoverage(orders);
+			}
+
+			// Flag orders none of this market's drivers can take. Runs after the rows
+			// are in the DOM, so a slow or failed lookup never holds up the table.
+			async function annotateDriverCoverage(orders) {
+				const ids = (orders || []).map((o) => o && o._id).filter(Boolean);
+				if (!ids.length) return;
+				let coverage;
+				try {
+					// Rewritten by the fetch shim to this market's own endpoint.
+					const res = await fetch(
+						`${API_BASE_URL}/orders/driver-coverage?ids=${encodeURIComponent(ids.join(","))}`,
+						{
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+						}
+					);
+					if (!res.ok) return;
+					const result = await res.json();
+					coverage = (result && result.data && result.data.coverage) || {};
+				} catch (e) {
+					return; // advisory only
+				}
+
+				const BADGES = {
+					"no-driver": { icon: "⚠️", text: "No driver covers this zone" },
+					"no-zone": { icon: "⚠️", text: "Outside all delivery zones" },
+					"no-location": { icon: "⚠️", text: "No delivery location on file" },
+				};
+
+				Object.keys(coverage).forEach((orderId) => {
+					const info = coverage[orderId];
+					const slot = document.querySelector(`[data-coverage-for="${orderId}"]`);
+					if (!slot || !info) return;
+					const badge = BADGES[info.state];
+					if (!badge) {
+						slot.innerHTML = "";
+						return;
+					}
+					slot.innerHTML = `<span class="mdx-coverage-warning" title="${escapeHtml(info.message || "")}">${badge.icon} ${escapeHtml(badge.text)}${
+						info.zoneName ? ` — ${escapeHtml(info.zoneName)}` : ""
+					}</span>`;
 				});
 			}
 
@@ -8008,135 +8056,11 @@
 				return colors[status] || "#6c757d";
 			}
 
-			// ===== Assign Driver → mark order On The Way =====
-			let assignOrderId = null;
-			let assignOrderNumber = null;
-
-			function ensureAssignDriverModal() {
-				if (document.getElementById("assign-driver-modal")) return;
-				const overlay = document.createElement("div");
-				overlay.id = "assign-driver-modal";
-				overlay.style.cssText =
-					"position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;z-index:3000;align-items:center;justify-content:center;padding:20px;";
-				overlay.innerHTML = `
-					<div class="mdx-229">
-						<div class="mdx-230">
-							<h3 class="mdx-82">🚚 Assign Driver</h3>
-							<span onclick="closeAssignDriverModal()" class="mdx-231">&times;</span>
-						</div>
-						<p class="mdx-67">Select a driver to deliver this order. It will be marked <strong>On The Way</strong>.</p>
-						<label class="mdx-232">Driver</label>
-						<select id="assign-driver-select" class="mdx-233"></select>
-						<div class="mdx-234">
-							<button class="btn btn-secondary" onclick="closeAssignDriverModal()">Cancel</button>
-							<button class="btn btn-primary" onclick="confirmAssignDriver()">Assign &amp; Send</button>
-						</div>
-					</div>`;
-				document.body.appendChild(overlay);
-			}
-
-			async function openAssignDriverModal(orderId, orderNumber, orderCity, orderLocation) {
-				assignOrderId = orderId;
-				assignOrderNumber = orderNumber;
-				ensureAssignDriverModal();
-				const modal = document.getElementById("assign-driver-modal");
-				const select = document.getElementById("assign-driver-select");
-				select.innerHTML = '<option value="">Loading drivers…</option>';
-				modal.style.display = "flex";
-				try {
-					// Market drivers are login-capable Rider docs scoped to this market.
-					// Prefer the customer's EXACT map pin (captured on their profile) for
-					// the geofence filter — falls back to the delivery city's approximate
-					// center only if no exact pin was saved.
-					const hasPin =
-						orderLocation &&
-						typeof orderLocation.latitude === "number" &&
-						typeof orderLocation.longitude === "number";
-					const locationQS = hasPin
-						? `?lat=${orderLocation.latitude}&lng=${orderLocation.longitude}`
-						: orderCity
-						? `?city=${encodeURIComponent(orderCity)}`
-						: "";
-					const url = `${API_BASE_URL}/market-admin/drivers${locationQS}`;
-					const res = await fetch(url, {
-						headers: {
-							Authorization: `Bearer ${currentToken}`,
-							"Content-Type": "application/json",
-						},
-					});
-					const data = await res.json();
-					// /riders answers { data: { riders } }, so data.data is the
-					// WRAPPER object and Array.isArray() is always false — the list
-					// silently became [] and the table rendered its empty state.
-					const riders = listFrom(data, "riders");
-					if (!riders.length) {
-						select.innerHTML = orderCity
-							? `<option value="">No drivers cover "${orderCity}". Add/adjust a driver's delivery regions first.</option>`
-							: '<option value="">No drivers yet. Add a driver in the Staff/Drivers section first.</option>';
-						return;
-					}
-					select.innerHTML = riders
-						.map((r) => {
-							const name = (r.user && r.user.name) || r.name || "Driver";
-							const zones = Array.isArray(r.zones) ? r.zones.join(", ") : r.zone || "";
-							const distance =
-								typeof r.distanceKm === "number" && isFinite(r.distanceKm)
-									? ` · ${r.distanceKm.toFixed(1)} km away`
-									: "";
-							return `<option value="${r._id}">${name}${zones ? " — " + zones : ""} (${r.status || "available"})${distance}</option>`;
-						})
-						.join("");
-				} catch (e) {
-					select.innerHTML = '<option value="">Failed to load drivers</option>';
-				}
-			}
-
-			function closeAssignDriverModal() {
-				const modal = document.getElementById("assign-driver-modal");
-				if (modal) modal.style.display = "none";
-				assignOrderId = null;
-				assignOrderNumber = null;
-			}
-
-			async function confirmAssignDriver() {
-				const select = document.getElementById("assign-driver-select");
-				const riderId = select ? select.value : "";
-				if (!riderId) {
-					showMessage("Please select a driver", "error");
-					return;
-				}
-				try {
-					const res = await fetch(`${API_BASE_URL}/orders/${assignOrderId}`, {
-						method: "PUT",
-						headers: {
-							Authorization: `Bearer ${currentToken}`,
-							"Content-Type": "application/json",
-						},
-						body: JSON.stringify({
-							status: "OnTheWay",
-							assignedRider: riderId,
-							riderAssignedAt: new Date().toISOString(),
-						}),
-					});
-					const result = await res.json();
-					if (res.ok) {
-						showMessage(
-							`Order "${assignOrderNumber}" assigned and marked On The Way`,
-							"success"
-						);
-						closeAssignDriverModal();
-						loadOrdersWithFilters(
-							currentOrdersPage,
-							ordersPageSize,
-							currentOrderFilters
-						);
-					} else {
-						showMessage(formatApiError(result, "Failed to assign driver"), "error");
-					}
-				} catch (e) {
-					showMessage("Error assigning driver: " + e.message, "error");
-				}
-			}
+			// Driver assignment has no UI at all, by design. An order is assigned and
+			// dispatched the moment it becomes ready for pickup, and anything that had
+			// no driver free at that moment is drained by the background sweep in
+			// src/services/autoAssignScheduler.js. The only thing the dashboard shows
+			// is WHY an order is still waiting — see annotateDriverCoverage().
 
 			// Update pagination
 			function updateOrdersPagination(pagination) {
@@ -8650,25 +8574,8 @@
 				setText("modal-delivery", money(order.delivery));
 				setText("modal-total", money(order.total));
 
-				// Show "Send Rider" only when the order is ready for pickup
-				const sendRiderBtn = document.getElementById("modal-send-rider-btn");
-				if (sendRiderBtn) {
-					if (order.status === "ready for pickup") {
-						sendRiderBtn.style.display = "inline-flex";
-						sendRiderBtn.onclick = function () {
-							closeOrderDetails();
-							openAssignDriverModal(
-								order._id,
-								order.orderNumber,
-								order.customer && order.customer.address && order.customer.address.city,
-								order.customer && order.customer.address && order.customer.address.location
-							);
-						};
-					} else {
-						sendRiderBtn.style.display = "none";
-						sendRiderBtn.onclick = null;
-					}
-				}
+				// Drivers are assigned automatically the moment an order becomes ready
+				// for pickup, so there is no "Send Rider" button here any more.
 
 				// Show the modal
 				document.getElementById("order-details-modal").style.display = "block";
@@ -9935,18 +9842,27 @@
 				document.getElementById('stats-total-orders').textContent = summary.totalOrders.toLocaleString();
 				document.getElementById('stats-unique-products').textContent = summary.uniqueProducts.toLocaleString();
 
-				// Total amount breakdown: 2% of gross product sales goes to the main admin.
-				const COMMISSION_RATE = 0.02;
+				// Total amount breakdown: the main admin's commission on gross product
+				// sales. The rate is set per market by the main admin and arrives on
+				// the summary as a percent (2 = 2%); it used to be hardcoded at 2%
+				// here, which quietly misreported earnings for any market on a
+				// different rate. Fall back to 2% only if the field is missing.
+				const rate = Number.isFinite(Number(summary.commissionRate))
+					? Number(summary.commissionRate)
+					: 2;
 				const gross = Number(summary.totalRevenue) || 0;
-				const commission = gross * COMMISSION_RATE;
-				const net = gross - commission;
+				const commission = Math.round(((gross * rate) / 100) * 100) / 100;
+				const net = Math.round((gross - commission) * 100) / 100;
 				const fmt = (n) => `$${(Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+				const fmtRate = (n) => `${(Number(n) || 0).toFixed(2).replace(/\.?0+$/, '')}%`;
 				const grossEl = document.getElementById('market-gross-sales');
 				const commEl = document.getElementById('market-commission-amount');
 				const netEl = document.getElementById('market-net-earnings');
+				const rateEl = document.getElementById('market-commission-rate');
 				if (grossEl) grossEl.textContent = fmt(gross);
 				if (commEl) commEl.textContent = `-${fmt(commission)}`;
 				if (netEl) netEl.textContent = fmt(net);
+				if (rateEl) rateEl.textContent = `(${fmtRate(rate)})`;
 			}
 
 			// Update pagination controls for sales statistics
@@ -11559,9 +11475,13 @@
 					const marketData = await marketResponse.json();
 					if (marketData.success) {
 						document.getElementById('minimum-order-value-input').value = marketData.data.minOrderAmount || 0;
+						// Delivery fee is per-market too (MarketSetting.deliveryFee).
+						document.getElementById('delivery-fee-input').value = marketData.data.deliveryFee || 0;
+						// Dynamic free-delivery threshold (MarketSetting.freeDeliveryThreshold).
+						document.getElementById('free-delivery-threshold-input').value = marketData.data.freeDeliveryThreshold || 0;
 					}
 				} catch (error) {
-					console.error('Error loading market minimum order value:', error);
+					console.error('Error loading market settings:', error);
 				}
 			}
 
@@ -11637,6 +11557,52 @@
 				} catch (error) {
 					console.error('Error updating minimum order value:', error);
 					showMessage('Error updating minimum order value', 'error');
+				}
+			}
+
+			// Flat delivery fee added at checkout to orders placed from THIS market
+			// (MarketSetting.deliveryFee) — the market-scoped counterpart of the
+			// admin's own delivery fee.
+			async function saveDeliveryFee() {
+				const value = parseFloat(document.getElementById('delivery-fee-input').value);
+				if (isNaN(value) || value < 0) {
+					showMessage('Please enter a valid delivery fee', 'error');
+					return;
+				}
+				try {
+					const response = await authenticatedFetch(`${API_BASE_URL}/market-admin/settings`, {
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ deliveryFee: value })
+					});
+					if (!response.ok) throw new Error('Failed to update delivery fee');
+					showMessage('Delivery fee updated', 'success');
+				} catch (error) {
+					console.error('Error updating delivery fee:', error);
+					showMessage('Error updating delivery fee', 'error');
+				}
+			}
+
+			// Dynamic delivery for THIS market: once a customer's subtotal reaches
+			// this amount the market's delivery fee is waived (free delivery). 0
+			// disables it (MarketSetting.freeDeliveryThreshold).
+			async function saveFreeDeliveryThreshold() {
+				const value = parseFloat(document.getElementById('free-delivery-threshold-input').value);
+				if (isNaN(value) || value < 0) {
+					showMessage('Please enter a valid free delivery threshold', 'error');
+					return;
+				}
+				try {
+					const response = await authenticatedFetch(`${API_BASE_URL}/market-admin/settings`, {
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ freeDeliveryThreshold: value })
+					});
+					if (!response.ok) throw new Error('Failed to update free delivery threshold');
+					showMessage('Free delivery threshold updated', 'success');
+				} catch (error) {
+					console.error('Error updating free delivery threshold:', error);
+					showMessage('Error updating free delivery threshold', 'error');
 				}
 			}
 

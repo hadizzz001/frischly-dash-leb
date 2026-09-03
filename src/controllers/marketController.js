@@ -93,6 +93,14 @@ const parseDeliveryRegions = (regions) => {
 		.slice(0, 30);
 };
 
+// Commission rate helpers — the rate is a percent (2 = 2%) stored per market.
+const {
+	parseCommissionRate,
+	MAX_COMMISSION_RATE,
+} = require("../utils/commission");
+
+const COMMISSION_RATE_ERROR = `Commission rate must be a number between 0 and ${MAX_COMMISSION_RATE}`;
+
 const buildMarketDuplicateQuery = ({ name, username, email }, excludeId) => {
 	const conditions = [];
 	if (name) conditions.push({ name: String(name).trim() });
@@ -161,6 +169,7 @@ exports.createMarket = async (req, res) => {
 			location: rawLocation,
 			cities: rawCities,
 			deliveryRegions: rawDeliveryRegions,
+			commissionRate: rawCommissionRate,
 			logo,
 		} = req.body;
 
@@ -178,6 +187,18 @@ exports.createMarket = async (req, res) => {
 			return sendError(res, 400, duplicateAccountMessage(duplicate));
 		}
 
+		// Commission is optional on create — omitting it leaves the schema
+		// default in place, but a value that was sent and is unusable is an error
+		// rather than something to silently discard.
+		const commissionRate = parseCommissionRate(rawCommissionRate);
+		if (
+			rawCommissionRate !== undefined &&
+			rawCommissionRate !== "" &&
+			commissionRate === null
+		) {
+			return sendError(res, 400, COMMISSION_RATE_ERROR);
+		}
+
 		const cities = parseCities(rawCities);
 		const location = parseLocation(rawLocation) || {};
 		// Keep a single representative city in location.city for legacy displays
@@ -193,6 +214,7 @@ exports.createMarket = async (req, res) => {
 			location,
 			cities,
 			deliveryRegions: parseDeliveryRegions(rawDeliveryRegions),
+			...(commissionRate === null ? {} : { commissionRate }),
 			logo,
 			createdBy: req.user ? req.user.id : undefined,
 		};
@@ -370,6 +392,7 @@ exports.updateMarket = async (req, res) => {
 					"location",
 					"cities",
 					"deliveryRegions",
+					"commissionRate",
 					"logo",
 					"logoPublicId",
 					"isActive",
@@ -384,6 +407,16 @@ exports.updateMarket = async (req, res) => {
 		}
 		if (req.body.deliveryRegions !== undefined) {
 			req.body.deliveryRegions = parseDeliveryRegions(req.body.deliveryRegions);
+		}
+		// Only an admin can change a market's commission; for anyone else the
+		// field is not in `updatable` and is dropped, so it is not validated here
+		// either (rejecting a value that would be ignored anyway helps nobody).
+		if (isAdmin && req.body.commissionRate !== undefined) {
+			const parsedRate = parseCommissionRate(req.body.commissionRate);
+			if (parsedRate === null) {
+				return sendError(res, 400, COMMISSION_RATE_ERROR);
+			}
+			req.body.commissionRate = parsedRate;
 		}
 
 		const duplicate = await findDuplicateAccount(
@@ -763,6 +796,43 @@ exports.getPublicMarkets = async (req, res) => {
 				}
 				return inRange;
 			});
+		}
+
+		// Attach each market's own delivery fee (MarketSetting.deliveryFee, set
+		// on the market dashboard's Settings page) so the app can show and add
+		// it at checkout. Markets without a settings document keep 0.
+		if (markets.length) {
+			try {
+				const MarketSetting = require("../models/MarketSetting");
+				const marketSettings = await MarketSetting.find({
+					market: { $in: markets.map((m) => m._id) },
+				})
+					.select("market deliveryFee freeDeliveryThreshold minOrderAmount")
+					.lean();
+				const settingsByMarket = new Map(
+					marketSettings.map((ms) => [
+						String(ms.market),
+						{
+							deliveryFee: Number(ms.deliveryFee) || 0,
+							freeDeliveryThreshold: Number(ms.freeDeliveryThreshold) || 0,
+							minOrderAmount: Number(ms.minOrderAmount) || 0,
+						},
+					])
+				);
+				markets = markets.map((m) => {
+					const cfg = settingsByMarket.get(String(m._id)) || {};
+					return {
+						...m,
+						deliveryFee: cfg.deliveryFee || 0,
+						// Dynamic delivery: free once subtotal reaches this (0 = disabled).
+						freeDeliveryThreshold: cfg.freeDeliveryThreshold || 0,
+						minOrderAmount: cfg.minOrderAmount || 0,
+					};
+				});
+			} catch (feeError) {
+				// A settings lookup failure must never hide the markets themselves.
+				console.warn("Delivery fee lookup failed:", feeError.message);
+			}
 		}
 
 		const ras = { markets };

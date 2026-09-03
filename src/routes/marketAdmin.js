@@ -4,6 +4,7 @@ const { marketOnly } = require("../middleware/marketAuth");
 const c = require("../controllers/marketAdminController");
 const categoryCtrl = require("../controllers/categoryController");
 const productCtrl = require("../controllers/productController");
+const orderCtrl = require("../controllers/orderController");
 
 const router = express.Router();
 
@@ -76,6 +77,13 @@ router.get("/orders/sales-stats", c.getProductSalesStats);
 router.get("/orders/unsold-products", c.getUnsoldProducts);
 router.get("/orders/customer-order-counts", c.getCustomerOrderCounts);
 router.get("/orders/count", c.ordersCount);
+// Automatic driver assignment, market-scoped. Both handlers read
+// req.marketId (set by marketOnly) and therefore work on this market's own
+// drivers and zones — the same code the main store runs, different tenant.
+// Declared before "/orders/:id" so these literal paths are not captured by
+// the param route.
+router.get("/orders/driver-coverage", orderCtrl.getOrderDriverCoverage);
+router.post("/orders/auto-assign-drivers", orderCtrl.autoAssignDrivers);
 router.get("/orders", c.listOrders);
 router.get("/orders/:id", c.getOrder);
 router.put("/orders/:id", c.updateOrder);

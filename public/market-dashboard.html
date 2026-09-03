@@ -1140,7 +1140,7 @@
 										<td id="market-gross-sales" class="mdx-38">$0.00</td>
 									</tr>
 									<tr>
-										<td class="mdx-37">Main Admin Commission (2%)</td>
+										<td class="mdx-37">Main Admin Commission <span id="market-commission-rate">(2%)</span></td>
 										<td id="market-commission-amount" class="mdx-39">-$0.00</td>
 									</tr>
 									<tr class="mdx-40">
@@ -1890,6 +1890,26 @@
 									</div>
 									<p class="setting-description" data-translation="Set the minimum order value required for customers to place orders.">
 										Set the minimum order value required for customers to place orders.
+									</p>
+								</div>
+								<div class="setting-item">
+									<label data-translation="Delivery Fee ($)">Delivery Fee ($)</label>
+									<div class="setting-actions mdx-63">
+										<input type="number" id="delivery-fee-input" class="form-control mdx-64" placeholder="0.00" min="0" step="0.01">
+										<button class="btn btn-primary" onclick="saveDeliveryFee()">Save</button>
+									</div>
+									<p class="setting-description" data-translation="Flat delivery fee added at checkout to orders placed from this market. 0 = free delivery.">
+										Flat delivery fee added at checkout to orders placed from this market. 0 = free delivery.
+									</p>
+								</div>
+								<div class="setting-item">
+									<label data-translation="Free Delivery Threshold ($)">Free Delivery Threshold ($)</label>
+									<div class="setting-actions mdx-63">
+										<input type="number" id="free-delivery-threshold-input" class="form-control mdx-64" placeholder="0.00" min="0" step="0.01">
+										<button class="btn btn-primary" onclick="saveFreeDeliveryThreshold()">Save</button>
+									</div>
+									<p class="setting-description" data-translation="Waive this market's delivery fee once a customer's subtotal reaches this amount. 0 = disabled (the flat fee above always applies).">
+										Waive this market's delivery fee once a customer's subtotal reaches this amount. 0 = disabled (the flat fee above always applies).
 									</p>
 								</div>
 							</div>
@@ -3868,9 +3888,6 @@
 					<h2>Order Details</h2>
 					<div class="order-number" id="modal-order-number"></div>
 					<div class="modal-actions">
-						<button id="modal-send-rider-btn" class="btn btn-primary mdx-220">
-							<span class="icon">🚚</span> Send Rider
-						</button>
 						<button class="btn btn-primary print-btn" onclick="printOrderInvoice()">
 							<span class="icon">🖨️</span> Print Invoice
 						</button>

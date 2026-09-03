@@ -269,7 +269,7 @@
 				if (orders.length === 0) {
 					tbody.innerHTML = `
 						<tr>
-							<td colspan="9" class="empty-state">
+							<td colspan="8" class="empty-state">
 								<div class="icon">📦</div>
 								<h3>No orders found</h3>
 								<p>No orders match your current filters.</p>
@@ -285,7 +285,6 @@
 					const totalAmount = order.total || 0;
 					const status = order.status || "pending";
 					const shelfNumber = order.shelfNumber || "N/A";
-					const txid = order.txid || "N/A";
 					const orderDate = new Date(order.createdAt).toLocaleDateString();
 
 					const row = document.createElement("tr");
@@ -296,7 +295,6 @@
 						<td>$${totalAmount.toFixed(2)}</td>
 						<td><span class="status-badge status-${status}">${status}</span></td>
 						<td>${shelfNumber}</td>
-						<td>${txid}</td>
 						<td>${orderDate}</td>
 						<td>
 							<div class="table-actions">
@@ -329,9 +327,13 @@
 							Mark Ready
 						</button>`;
 					case "ready for pickup":
-						return `<button class="action-btn edit" onclick="openAssignDriverModal('${order._id}', '${order.orderNumber}', '${encodeURIComponent((order.customer && order.customer.address && order.customer.address.city) || "")}')">
-							🚚 Mark OnTheWay
-						</button>`;
+						// No button. A driver is attached and the order dispatched
+						// automatically the moment it reaches this status; anything
+						// still sitting here had no driver free at that moment and is
+						// picked up by the background sweep as soon as one is. The
+						// only useful thing to show is why it is waiting, which the
+						// row's coverage warning already says.
+						return "";
 					case "OnTheWay":
 						return `<button class="action-btn edit" onclick="updateOrderStatus('${order._id}', 'delivered')">
 							Mark Delivered
@@ -405,155 +407,11 @@
 				}
 			}
 
-			// ───── Assign driver / Send rider (opens when marking an order On The Way) ─────
-			let assignOrderId = null;
-			let assignOrderNumber = null;
-
-			function ensureAssignDriverModal() {
-				if (document.getElementById("assign-driver-modal")) return;
-				const overlay = document.createElement("div");
-				overlay.id = "assign-driver-modal";
-				overlay.style.cssText =
-					"position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;z-index:3000;align-items:center;justify-content:center;padding:20px;";
-				overlay.innerHTML = `
-					<div class="omx-9">
-						<div class="omx-10">
-							<h3 class="omx-11">🚚 Assign Driver</h3>
-							<span class="omx-12" onclick="closeAssignDriverModal()">&times;</span>
-						</div>
-						<p class="omx-13">Select a driver to deliver this order. It will be marked <strong>On The Way</strong>.</p>
-						<label class="omx-14">Driver</label>
-						<select id="assign-driver-select" class="omx-15"></select>
-						<div class="omx-16">
-							<button class="btn btn-secondary" onclick="closeAssignDriverModal()">Cancel</button>
-							<button class="btn btn-primary" onclick="confirmAssignDriver()">Assign &amp; Send</button>
-						</div>
-					</div>`;
-				document.body.appendChild(overlay);
-			}
-
-			async function openAssignDriverModal(orderId, orderNumber, encodedOrderCity, lat, lng) {
-				assignOrderId = orderId;
-				assignOrderNumber = orderNumber;
-				const orderCity = encodedOrderCity ? decodeURIComponent(encodedOrderCity) : "";
-				ensureAssignDriverModal();
-				const modal = document.getElementById("assign-driver-modal");
-				const select = document.getElementById("assign-driver-select");
-				select.innerHTML = '<option value="">Loading drivers…</option>';
-				modal.style.display = "flex";
-				try {
-					// Market admins see their own market's drivers; main admin sees main-store drivers.
-					// Prefer the customer's EXACT map pin (captured on their profile) for the
-					// geofence filter — falls back to the delivery city's approximate center
-					// only if no exact pin was saved.
-					const exactLat = parseFloat(lat);
-					const exactLng = parseFloat(lng);
-					const hasPin = Number.isFinite(exactLat) && Number.isFinite(exactLng);
-					const locationQS = hasPin
-						? `lat=${exactLat}&lng=${exactLng}`
-						: orderCity
-						? `city=${encodeURIComponent(orderCity)}`
-						: "";
-					const driversUrl = IS_MARKET_CTX
-						? `${API_BASE_URL}/market-admin/drivers${locationQS ? "?" + locationQS : ""}`
-						: `${API_BASE_URL}/riders?limit=200${locationQS ? "&" + locationQS : ""}`;
-					const res = await fetch(driversUrl, {
-						headers: {
-							Authorization: `Bearer ${currentToken}`,
-							"Content-Type": "application/json",
-						},
-					});
-					const data = await res.json();
-					let riders = [];
-					if (IS_MARKET_CTX) {
-						// /riders answers { data: { riders } }, so data.data is the
-						// WRAPPER object and Array.isArray() is always false — the list
-						// silently became [] and the table rendered its empty state.
-						riders = listFrom(data, "riders");
-					} else {
-						const all = (data.data && data.data.riders) || [];
-						// Main admin assigns ONLY its own (main-store) drivers, never a market's.
-						riders = all.filter((r) => !r.market);
-					}
-					if (!riders.length) {
-						select.innerHTML = orderCity
-							? `<option value="">No drivers cover "${orderCity}". Add/adjust a driver's delivery regions first.</option>`
-							: '<option value="">No drivers available. Add a driver first.</option>';
-						return;
-					}
-					select.innerHTML = riders
-						.map((r) => {
-							const name =
-								(r.user && r.user.name) ||
-								(r.userInfo && r.userInfo.name) ||
-								r.name ||
-								"Driver";
-							const zones = Array.isArray(r.zones)
-								? r.zones.join(", ")
-								: r.zone || "";
-							const distance =
-								typeof r.distanceKm === "number" && isFinite(r.distanceKm)
-									? ` · ${r.distanceKm.toFixed(1)} km away`
-									: "";
-							return `<option value="${r._id}">${name}${
-								zones ? " — " + zones : ""
-							} (${r.status || "available"})${distance}</option>`;
-						})
-						.join("");
-				} catch (e) {
-					select.innerHTML = '<option value="">Failed to load drivers</option>';
-				}
-			}
-
-			function closeAssignDriverModal() {
-				const modal = document.getElementById("assign-driver-modal");
-				if (modal) modal.style.display = "none";
-				assignOrderId = null;
-				assignOrderNumber = null;
-			}
-
-			async function confirmAssignDriver() {
-				const select = document.getElementById("assign-driver-select");
-				const riderId = select ? select.value : "";
-				if (!riderId) {
-					showMessage("Please select a driver", "error");
-					return;
-				}
-				try {
-					const res = await fetch(`${ordersEndpoint()}/${assignOrderId}`, {
-						method: "PUT",
-						headers: {
-							Authorization: `Bearer ${currentToken}`,
-							"Content-Type": "application/json",
-						},
-						body: JSON.stringify({
-							status: "OnTheWay",
-							assignedRider: riderId,
-							riderAssignedAt: new Date().toISOString(),
-						}),
-					});
-					const result = await res.json();
-					if (res.ok) {
-						showMessage(
-							`Order "${assignOrderNumber}" assigned and marked On The Way`,
-							"success"
-						);
-						closeAssignDriverModal();
-						closeOrderDetailsModal();
-						loadOrders(
-							currentPage,
-							currentStatusFilter,
-							currentSearchFilter,
-							currentDateFromFilter,
-							currentDateToFilter
-						);
-					} else {
-						showMessage(formatApiError(result, "Failed to assign driver"), "error");
-					}
-				} catch (e) {
-					showMessage("Error assigning driver: " + e.message, "error");
-				}
-			}
+			// The manual "Assign Driver" modal used to live here. Both the main store
+			// and every market now attach a driver automatically the moment an order
+			// becomes ready for pickup, each from their own driver pool, so there is
+			// nothing left to pick. The result is reported when the shelf number is
+			// entered (see completeOrderProcessing below).
 
 			// Update payment status
 			async function updatePaymentStatus(orderId, newPaymentStatus) {
@@ -1008,7 +866,7 @@
 				if (show) {
 					tbody.innerHTML = `
 						<tr>
-							<td colspan="9" class="loading">
+							<td colspan="8" class="loading">
 								<div class="spinner"></div>
 								<p>Loading orders...</p>
 							</td>
@@ -1171,16 +1029,11 @@
 				document.getElementById("complete-btn").style.display = "none";
 
 				modal.style.display = "block";
-
-				// Automatically open the camera so items can be scanned right away.
-				// (The manual buttons and text box keep working underneath.)
-				setTimeout(() => {
-					try {
-						openProcessingScanner();
-					} catch (e) {
-						/* ignore — manual entry still works */
-					}
-				}, 350);
+				// The camera is NOT opened automatically. Most orders are scanned
+				// with a USB/keyboard scanner into the barcode box, so grabbing the
+				// webcam on every open was an unwanted permission prompt and a live
+				// video feed nobody asked for. "Scan items with camera" still opens
+				// it on demand.
 			}
 
 			// Close process order modal
@@ -1507,7 +1360,21 @@
 					// Update the current processing order with the shelf number
 					currentProcessingOrder.shelfNumber = shelfNumber.trim();
 
-					showMessage("Order processing completed successfully!", "success");
+					// Marking the order ready for pickup triggers automatic driver
+					// assignment on the server. Report the outcome here, since this is
+					// the moment the operator would otherwise have gone looking for an
+					// assign button.
+					const auto = updateResult && updateResult.data && updateResult.data.autoAssignment;
+					if (auto && auto.assigned) {
+						showMessage(
+							`Order ready — automatically assigned to ${auto.riderName}${auto.zoneName ? ` (${auto.zoneName})` : ""}.`,
+							"success"
+						);
+					} else if (auto && auto.message) {
+						showMessage(auto.message, "error");
+					} else {
+						showMessage("Order processing completed successfully!", "success");
+					}
 					closeProcessOrderModal();
 					loadOrders(
 						currentPage,

@@ -60,6 +60,34 @@ exports.updateSettings = async (req, res) => {
 		if (req.body.minimumOrderValue !== undefined) {
 			settings.minimumOrderValue = req.body.minimumOrderValue;
 		}
+		// Flat delivery fee for main-store orders (admin-only; this route is
+		// already gated by protect + authorize("admin")).
+		if (req.body.deliveryFee !== undefined) {
+			const fee = Number(req.body.deliveryFee);
+			if (!Number.isFinite(fee) || fee < 0) {
+				return sendError(res, 400, "Invalid delivery fee");
+			}
+			settings.deliveryFee = fee;
+		}
+		// Dynamic delivery: subtotal at which delivery becomes free (0 disables
+		// it). Admin-only, same gate as above.
+		if (req.body.freeDeliveryThreshold !== undefined) {
+			const threshold = Number(req.body.freeDeliveryThreshold);
+			if (!Number.isFinite(threshold) || threshold < 0) {
+				return sendError(res, 400, "Invalid free delivery threshold");
+			}
+			settings.freeDeliveryThreshold = threshold;
+		}
+		// USD -> LBP exchange rate (admin-only; this whole route is already
+		// gated by protect + authorize("admin")). Ignore junk / non-positive
+		// values so a bad input can never wipe the rate.
+		if (req.body.usdToLbpRate !== undefined) {
+			const rate = Number(req.body.usdToLbpRate);
+			if (!Number.isFinite(rate) || rate < 1) {
+				return sendError(res, 400, "Invalid USD to LBP exchange rate");
+			}
+			settings.usdToLbpRate = rate;
+		}
 		if (req.body.deliveryZones !== undefined) {
 			settings.deliveryZones = Array.isArray(req.body.deliveryZones)
 				? [
@@ -117,6 +145,16 @@ exports.getPublicSettings = async (req, res) => {
 			areOrdersDisabled: settings.areOrdersDisabled,
 			maintenanceMessage: settings.maintenanceMessage,
 			minimumOrderValue: settings.minimumOrderValue,
+			// Flat delivery fee added to a main-store order at checkout.
+			deliveryFee: Number(settings.deliveryFee) > 0 ? Number(settings.deliveryFee) : 0,
+			// Dynamic delivery: subtotal at which delivery is free (0 = disabled).
+			freeDeliveryThreshold:
+				Number(settings.freeDeliveryThreshold) > 0
+					? Number(settings.freeDeliveryThreshold)
+					: 0,
+			// USD -> LBP exchange rate shown next to every USD price in the app.
+			usdToLbpRate:
+				Number(settings.usdToLbpRate) > 0 ? Number(settings.usdToLbpRate) : 90000,
 			// Dash serving cities (array). Empty => main store shown everywhere.
 			cities,
 			// Dash multi-pin delivery coverage (map pin(s) + radius). Empty =>

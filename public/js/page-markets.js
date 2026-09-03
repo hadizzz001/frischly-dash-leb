@@ -3,6 +3,12 @@
 		let currentToken = localStorage.getItem('authToken') || localStorage.getItem('token');
 		let currentRefreshToken = localStorage.getItem('refreshToken');
 		const fmt = (n) => `$${Number(n||0).toFixed(2)}`;
+		// Commission is a percent (2 = 2%). Markets saved before the field
+		// existed send no value at all, so every read falls back to the same
+		// default the server applies rather than showing 0%.
+		const DEFAULT_COMMISSION_RATE = 2;
+		const rateOf = (m) => (Number.isFinite(Number(m && m.commissionRate)) && m.commissionRate !== null && m.commissionRate !== '' ? Number(m.commissionRate) : DEFAULT_COMMISSION_RATE);
+		const fmtRate = (n) => `${Number(n).toFixed(2).replace(/\.?0+$/, '')}%`;
 
 		function redirectToSignIn() { location.href = '/signin'; }
 
@@ -140,7 +146,7 @@
 
 		function renderMarkets(list) {
 			const tbody = document.getElementById('tbody');
-			if (!list.length) { tbody.innerHTML = '<tr><td colspan="9" class="empty">No markets yet.</td></tr>'; return; }
+			if (!list.length) { tbody.innerHTML = '<tr><td colspan="10" class="empty">No markets yet.</td></tr>'; return; }
 			window.__marketsById = {};
 			tbody.innerHTML = list.map(m => {
 				window.__marketsById[m._id] = m;
@@ -156,6 +162,7 @@
 					<td class="col-num">${m.totalItems ?? 0}</td>
 					<td class="col-num">${fmt(m.totalSales)}</td>
 					<td class="col-num">${m.totalOrders ?? 0}</td>
+					<td class="col-num">${fmtRate(rateOf(m))}</td>
 					<td><span class="badge ${m.isActive ? 'active' : 'inactive'}">${m.isActive ? 'Active' : 'Inactive'}</span></td>
 					<td class="col-actions">
 						<div class="action-group">
@@ -196,6 +203,7 @@
 			document.getElementById('form').reset();
 			document.getElementById('m_id').value = '';
 			document.getElementById('m_password').required = true;
+			document.getElementById('m_commission').value = DEFAULT_COMMISSION_RATE;
 			const citiesApi = window.getLebaneseCityMultiSelect && window.getLebaneseCityMultiSelect('m_cities');
 			if (citiesApi) citiesApi.setSelected([]);
 			setLogoPreview('');
@@ -213,6 +221,7 @@
 			document.getElementById('m_password').required = false;
 			document.getElementById('m_email').value = m.email || '';
 			document.getElementById('m_phone').value = m.phoneNumber || '';
+			document.getElementById('m_commission').value = rateOf(m);
 			const citiesApi = window.getLebaneseCityMultiSelect && window.getLebaneseCityMultiSelect('m_cities');
 			if (citiesApi) {
 				const initial = (Array.isArray(m.cities) && m.cities.length)
@@ -287,6 +296,16 @@
 				toast('Password must be at least 6 characters', true);
 				return;
 			}
+			// Blank means "leave it alone" (the server keeps the stored value, or
+			// applies the default on create); anything else must be a real 0-100.
+			const commissionRaw = document.getElementById('m_commission').value.trim();
+			if (commissionRaw !== '') {
+				const rate = Number(commissionRaw);
+				if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
+					toast('Commission rate must be a number between 0 and 100', true);
+					return;
+				}
+			}
 
 			const body = new FormData();
 			body.append('name', name);
@@ -300,6 +319,7 @@
 			const email = document.getElementById('m_email').value;
 			const phone = document.getElementById('m_phone').value;
 			const logoFile = document.getElementById('m_logo').files[0];
+			if (commissionRaw !== '') body.append('commissionRate', commissionRaw);
 			if (email) body.append('email', email);
 			if (phone) body.append('phoneNumber', phone);
 			if (logoFile) body.append('logo', logoFile);

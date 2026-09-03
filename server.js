@@ -587,6 +587,14 @@ const server = app.listen(PORT, () => {
 	console.log(`📍 Server URL: http://localhost:${PORT}`);
 	console.log(`🌐 Dashboard: http://localhost:${PORT}/dashboard.html`);
 	console.log(`🔐 Environment: ${process.env.NODE_ENV || "development"}`);
+
+	// Keeps driver assignment hands-off: orders are assigned the moment they
+	// become ready for pickup, and anything that had no driver free at that
+	// moment is picked up by this sweep as soon as one becomes available.
+	const {
+		startAutoAssignScheduler,
+	} = require("./src/services/autoAssignScheduler");
+	startAutoAssignScheduler();
 });
 
 // Handle unhandled promise rejections

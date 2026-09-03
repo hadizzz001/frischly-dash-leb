@@ -1146,7 +1146,7 @@
 										<td id="own-sales-amount" class="dsx-38">$0.00</td>
 									</tr>
 									<tr>
-										<td class="dsx-36">Markets Commission (2%)</td>
+										<td class="dsx-36">Markets Commission <span id="own-commission-rate" class="dsx-commission-rate-note">(2%)</span></td>
 										<td id="own-commission-amount" class="dsx-39">+$0.00</td>
 									</tr>
 									<tr class="dsx-40">
@@ -1158,10 +1158,10 @@
 						</div>
 					</div>
 
-					<!-- Markets Commission (2% of market sales) -->
+					<!-- Markets Commission (each market's own rate, set on Markets Management) -->
 					<div class="table-container dsx-31">
 						<div class="table-header dsx-43">
-							<h3 class="dsx-33">💰 Markets Commission (2% of Market Sales)</h3>
+							<h3 class="dsx-33">💰 Markets Commission <span id="market-commission-heading-rate" class="dsx-commission-rate-note">(per-market rate)</span></h3>
 							<span id="market-commission-count" class="dsx-22">0 markets</span>
 						</div>
 						<div class="table-responsive dsx-34">
@@ -1171,12 +1171,13 @@
 										<th class="dsx-45">Market</th>
 										<th class="dsx-46">Delivered Orders</th>
 										<th class="dsx-47">Total Sales</th>
-										<th class="dsx-47">Commission (2%)</th>
+										<th class="dsx-46">Rate</th>
+										<th class="dsx-47">Commission</th>
 									</tr>
 								</thead>
 								<tbody id="market-commission-table-body">
 									<tr>
-										<td colspan="4" class="dsx-3">Loading…</td>
+										<td colspan="5" class="dsx-3">Loading…</td>
 									</tr>
 								</tbody>
 								<tfoot>
@@ -1184,6 +1185,7 @@
 										<td class="dsx-49">Total</td>
 										<td id="market-commission-total-orders" class="dsx-50">0</td>
 										<td id="market-commission-total-sales" class="dsx-51">$0.00</td>
+										<td id="market-commission-effective-rate" class="dsx-50">—</td>
 										<td id="market-commission-total" class="dsx-52">$0.00</td>
 									</tr>
 								</tfoot>
@@ -1263,14 +1265,13 @@
 										<th class="dsx-67">Barcode</th>
 										<th class="dsx-67">Stock</th>
 										<th class="dsx-69">Price</th>
-										<th class="dsx-67">Category</th>
 										<th class="dsx-67">Created</th>
 										<th class="dsx-67">Status</th>
 									</tr>
 								</thead>
 								<tbody id="unsold-products-table-body">
 									<tr>
-										<td colspan="8" class="dsx-58">
+										<td colspan="7" class="dsx-58">
 											<div class="dsx-59">📭</div>
 											<p>Loading unsold products...</p>
 										</td>
@@ -2030,6 +2031,36 @@
 									</div>
 									<p class="setting-description" data-translation="Set the minimum order value required for customers to place orders.">
 										Set the minimum order value required for customers to place orders.
+									</p>
+								</div>
+								<div class="setting-item">
+									<label data-translation="Delivery Fee ($)">Delivery Fee ($)</label>
+									<div class="setting-actions dsx-77">
+										<input type="number" id="delivery-fee-input" class="form-control dsx-78" placeholder="0.00" min="0" step="0.01">
+										<button class="btn btn-primary" onclick="saveDeliveryFee()">Save</button>
+									</div>
+									<p class="setting-description" data-translation="Flat delivery fee added to every FreshlyLB order at checkout. Markets set their own on their dashboard. 0 = free delivery.">
+										Flat delivery fee added to every FreshlyLB order at checkout. Markets set their own on their dashboard. 0 = free delivery.
+									</p>
+								</div>
+								<div class="setting-item">
+									<label data-translation="Free Delivery Threshold ($)">Free Delivery Threshold ($)</label>
+									<div class="setting-actions dsx-77">
+										<input type="number" id="free-delivery-threshold-input" class="form-control dsx-78" placeholder="0.00" min="0" step="0.01">
+										<button class="btn btn-primary" onclick="saveFreeDeliveryThreshold()">Save</button>
+									</div>
+									<p class="setting-description" data-translation="Waive the delivery fee once a customer's subtotal reaches this amount. 0 = disabled (the flat fee above always applies).">
+										Waive the delivery fee once a customer's subtotal reaches this amount. 0 = disabled (the flat fee above always applies).
+									</p>
+								</div>
+								<div class="setting-item">
+									<label data-translation="USD to LBP Exchange Rate">USD to LBP Exchange Rate</label>
+									<div class="setting-actions dsx-77">
+										<input type="number" id="usd-to-lbp-rate-input" class="form-control dsx-78" placeholder="90000" min="1" step="1">
+										<button class="btn btn-primary" onclick="saveUsdToLbpRate()">Save</button>
+									</div>
+									<p class="setting-description" data-translation="How many LBP equal $1. Used to show the LBP price next to the USD price in the mobile app. Default: 90,000.">
+										How many LBP equal $1. Used to show the LBP price next to the USD price in the mobile app. Default: 90,000.
 									</p>
 								</div>
 							</div>
@@ -3984,9 +4015,6 @@
 					<h2>Order Details</h2>
 					<div class="order-number" id="modal-order-number"></div>
 					<div class="modal-actions">
-						<button id="modal-send-rider-btn" class="btn btn-primary dsx-231">
-							<span class="icon">🚚</span> Send Rider
-						</button>
 						<button class="btn btn-primary print-btn" onclick="printOrderInvoice()">
 							<span class="icon">🖨️</span> Print Invoice
 						</button>

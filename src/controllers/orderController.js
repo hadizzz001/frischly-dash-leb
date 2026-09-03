@@ -19,6 +19,14 @@ const { notifyCustomerOrderStatus } = require("../services/orderStatusNotificati
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const { sendResponse, sendError, sendSuccess, sendServerError } = require("../utils/apiResponse");
 const { escapeRegex } = require("../utils/sanitize");
+const {
+	autoAssignDriverForOrder,
+	tenantFilter,
+} = require("../services/autoDriverAssignment");
+const {
+	DEFAULT_COMMISSION_RATE,
+	effectiveRate,
+} = require("../utils/commission");
 
 // @desc    Get all orders with enhanced filtering options
 // @route   GET /api/orders
@@ -657,6 +665,40 @@ exports.createOrder = async (req, res) => {
 			}
 		}
 
+		// The store's own flat delivery fee — FreshlyLB uses Setting.deliveryFee
+		// (Dashboard -> Settings), a market its MarketSetting.deliveryFee (market
+		// dashboard -> Settings). This is the figure the app shows on the
+		// checkout screen, so it is what the order is charged. A store that
+		// leaves it at 0 keeps the previous behaviour exactly: the per-Zone fee
+		// resolved above (if any) still applies.
+		let marketSettings = null;
+		if (orderMarket) {
+			marketSettings = await MarketSetting.findOne({ market: orderMarket }).lean();
+		}
+		const storeDeliveryFee = orderMarket
+			? Number(marketSettings && marketSettings.deliveryFee) || 0
+			: Number(settings.deliveryFee) || 0;
+		if (storeDeliveryFee > 0) {
+			delivery = storeDeliveryFee;
+			console.log("Store delivery fee applied:", delivery);
+		}
+
+		// Dynamic delivery: once the order's subtotal reaches the store's
+		// free-delivery threshold the fee is waived. This mirrors exactly what
+		// the mobile app shows at checkout, so the shopper is never charged a
+		// fee they were told was free. 0 = disabled (flat fee always applies).
+		const freeDeliveryThreshold = orderMarket
+			? Number(marketSettings && marketSettings.freeDeliveryThreshold) || 0
+			: Number(settings.freeDeliveryThreshold) || 0;
+		if (freeDeliveryThreshold > 0 && subtotal >= freeDeliveryThreshold) {
+			delivery = 0;
+			console.log(
+				"Free delivery threshold reached (",
+				freeDeliveryThreshold,
+				") — delivery waived.",
+			);
+		}
+
 		// Validate and calculate promo code discount. A market order can only
 		// use that market's promo codes; a main-store order can only use admin
 		// (own-company) promo codes.
@@ -760,11 +802,9 @@ exports.createOrder = async (req, res) => {
 		// previously this always checked the global value even for market
 		// orders, so a market's own minimum was silently ignored.
 		let minimumOrderValue = settings.minimumOrderValue;
-		if (orderMarket) {
-			const marketSettings = await MarketSetting.findOne({ market: orderMarket }).lean();
-			if (marketSettings && marketSettings.minOrderAmount > 0) {
-				minimumOrderValue = marketSettings.minOrderAmount;
-			}
+		if (orderMarket && marketSettings && marketSettings.minOrderAmount > 0) {
+			// `marketSettings` was already read above for the delivery fee.
+			minimumOrderValue = marketSettings.minOrderAmount;
 		}
 		if (total < minimumOrderValue) {
 			console.log("Order total below minimum:", minimumOrderValue);
@@ -1116,6 +1156,16 @@ exports.updateOrder = async (req, res) => {
 
 		order.updatedBy = req.user.id;
 
+		// Becoming ready for pickup is what triggers driver assignment — there is
+		// no manual assign step. Mutates the order in place so it lands in the
+		// single save below.
+		let autoAssignment = null;
+		if (order.status === "ready for pickup" && __previousStatus !== "ready for pickup") {
+			autoAssignment = await autoAssignDriverForOrder(order, {
+				actorId: req.user.id,
+			});
+		}
+
 		await order.save();
 
 		const updatedOrder = await Order.findById(id)
@@ -1146,18 +1196,149 @@ exports.updateOrder = async (req, res) => {
 
 		// Notify the customer (push, works even when the app is closed) when
 		// the order status actually changed.
-		if (status && status !== __previousStatus) {
-			notifyCustomerOrderStatus(updatedOrder, status).catch((e) =>
+		// The order's FINAL status, not the requested one: automatic driver
+		// assignment moves "ready for pickup" straight on to "OnTheWay", and
+		// telling the customer their order is merely ready when a driver is
+		// already carrying it would be wrong.
+		const finalStatus = updatedOrder.status;
+		if (finalStatus !== __previousStatus) {
+			notifyCustomerOrderStatus(updatedOrder, finalStatus).catch((e) =>
 				console.error("Order status notification failed:", e),
 			);
 		}
 
-		const ras = { updatedOrder };
+		const ras = { updatedOrder, autoAssignment };
 
 		sendResponse(res, 200, true, "Order updated successfully", ras);
 	} catch (error) {
 		console.error("Error updating order:", error);
 		sendServerError(res, error, "Error updating order");
+	}
+};
+
+// @desc    Per-order driver coverage for the orders list. Answers, for each
+//          order still waiting on a driver, whether ANY available driver covers
+//          the customer's zone — so the row can say so outright instead of the
+//          operator discovering it only when an assignment fails.
+//          Orders that are already assigned, delivered or cancelled are skipped:
+//          "who will drive this?" is a settled question for them.
+//
+//          Tenant-aware: mounted on /api/orders it answers for the main store,
+//          and on /api/market-admin/orders it answers for that market, using
+//          that market's own drivers and zones.
+// @route   GET /api/orders/driver-coverage?ids=a,b,c
+// @route   GET /api/market-admin/orders/driver-coverage?ids=a,b,c
+// @access  Private (Admin, Manager | Market)
+exports.getOrderDriverCoverage = async (req, res) => {
+	try {
+		const scope = tenantFilter(req.marketId || null);
+		const filter = {
+			isActive: true,
+			status: { $nin: ["delivered", "cancelled"] },
+			$and: [
+				{ $or: [{ assignedRider: null }, { assignedRider: { $exists: false } }] },
+				scope,
+			],
+		};
+
+		// The dashboard sends the ids currently on screen so this stays cheap and
+		// never geocodes more orders than the operator can actually see.
+		if (req.query.ids) {
+			const ids = String(req.query.ids)
+				.split(",")
+				.map((id) => id.trim())
+				.filter((id) => mongoose.Types.ObjectId.isValid(id));
+			if (!ids.length) {
+				return sendResponse(res, 200, true, "Success", { coverage: {} });
+			}
+			filter._id = { $in: ids };
+		}
+
+		const orders = await Order.find(filter)
+			.select("orderNumber customer status")
+			.limit(500)
+			.lean();
+
+		if (!orders.length) {
+			return sendResponse(res, 200, true, "Success", { coverage: {} });
+		}
+
+		const [zoneDocs, riders] = await Promise.all([
+			Zone.find({ isActive: true, ...scope }).lean(),
+			Rider.getRidersWithStats(scope),
+		]);
+
+		const { coverageForOrders } = require("../utils/autoAssign");
+		const coverageMap = coverageForOrders({ orders, riders, zoneDocs });
+
+		const coverage = {};
+		coverageMap.forEach((value, orderId) => {
+			coverage[orderId] = value;
+		});
+
+		sendResponse(res, 200, true, "Success", { coverage });
+	} catch (error) {
+		console.error("Error computing order driver coverage:", error);
+		sendServerError(res, error, "Error computing order driver coverage");
+	}
+};
+
+// @desc    Run the automatic assignment sweep for this tenant on demand.
+//
+//          Assignment is not something anyone has to trigger: orders are
+//          assigned the moment they become ready for pickup, and the background
+//          sweep (services/autoAssignScheduler.js) drains anything that had no
+//          driver free at the time. This endpoint exposes the same sweep for
+//          scripts and diagnostics — no dashboard button calls it.
+//
+//          POST { dryRun: true } to see the plan without changing anything.
+//          Tenant comes from req.marketId, so the market-admin mount operates
+//          on that market's own drivers and zones.
+// @route   POST /api/orders/auto-assign-drivers
+// @route   POST /api/market-admin/orders/auto-assign-drivers
+// @access  Private (Admin, Manager | Market)
+exports.autoAssignDrivers = async (req, res) => {
+	try {
+		const dryRun = !!(req.body && req.body.dryRun);
+		let orderIds;
+		if (req.body && Array.isArray(req.body.orderIds) && req.body.orderIds.length) {
+			orderIds = req.body.orderIds
+				.map((id) => String(id))
+				.filter((id) => mongoose.Types.ObjectId.isValid(id));
+			if (!orderIds.length) return sendError(res, 400, "No valid order IDs provided");
+		}
+
+		const { assignTenantBacklog } = require("../services/autoDriverAssignment");
+		const { plan, assigned, failed } = await assignTenantBacklog(
+			req.marketId || null,
+			{
+				dryRun,
+				orderIds,
+				actorId: req.user && req.user.id,
+				onDispatched: (order) =>
+					notifyCustomerOrderStatus(order, order.status).catch((e) =>
+						console.error("Order status notification failed:", e),
+					),
+			},
+		);
+
+		if (dryRun) {
+			return sendResponse(res, 200, true, "Assignment plan ready", {
+				dryRun: true,
+				plan,
+			});
+		}
+
+		sendResponse(
+			res,
+			200,
+			true,
+			`Assigned ${assigned.length} order${assigned.length === 1 ? "" : "s"} across ${plan.totals.zonesMatched} zone${plan.totals.zonesMatched === 1 ? "" : "s"}`,
+			{ dryRun: false, plan, assigned, failed },
+		);
+	} catch (error) {
+		console.error("Error auto-assigning drivers:", error);
+		sendServerError(res, error, "Error auto-assigning drivers");
 	}
 };
 
@@ -1637,6 +1818,15 @@ exports.updateOrderStatus = async (req, res) => {
 			//order.paymentStatus = "paid";
 		}
 
+		// Same trigger as updateOrder: reaching "ready for pickup" assigns the
+		// driver automatically, whichever endpoint got the order there.
+		let autoAssignment = null;
+		if (status === "ready for pickup" && previousStatus !== "ready for pickup") {
+			autoAssignment = await autoAssignDriverForOrder(order, {
+				actorId: req.user.id,
+			});
+		}
+
 		await order.save();
 
 		const updatedOrder = await Order.findById(id)
@@ -1667,13 +1857,17 @@ exports.updateOrderStatus = async (req, res) => {
 
 		// Push the status change to the customer's device (delivered even
 		// when the app is fully closed/killed).
-		if (status !== previousStatus) {
-			notifyCustomerOrderStatus(updatedOrder, status).catch((e) =>
+		// The order's FINAL status, not the requested one: automatic driver
+		// assignment moves "ready for pickup" straight on to "OnTheWay", and
+		// telling the customer their order is merely ready when a driver is
+		// already carrying it would be wrong.
+		if (updatedOrder.status !== previousStatus) {
+			notifyCustomerOrderStatus(updatedOrder, updatedOrder.status).catch((e) =>
 				console.error("Order status notification failed:", e),
 			);
 		}
 
-		const ras = { updatedOrder };
+		const ras = { updatedOrder, autoAssignment };
 
 		sendResponse(res, 200, true, `Order status updated from '${previousStatus}' to '${status}' successfully`, ras);
 	} catch (error) {
@@ -1894,16 +2088,18 @@ exports.getProductSalesStats = async (req, res) => {
 	}
 };
 
-// @desc    Per-market sales totals + 2% platform commission for the main admin.
-//          The main admin earns 2% of every market's product sales (delivered
-//          orders). Returns a per-market breakdown plus grand totals, scoped to
-//          the same time period the Sales Statistics page is filtered by.
+// @desc    Per-market sales totals + platform commission for the main admin.
+//          Each market carries its own commission percentage
+//          (Market.commissionRate, set on the Markets Management page); markets
+//          saved before that field existed fall back to
+//          DEFAULT_COMMISSION_RATE. Returns a per-market breakdown — including
+//          the rate each row was charged at — plus grand totals, scoped to the
+//          same time period the Sales Statistics page is filtered by.
 // @route   GET /api/orders/market-commission
 // @access  Private (Admin, Manager)
 exports.getMarketCommissionStats = async (req, res) => {
 	try {
 		const { dateFrom, dateTo, timeRange } = req.query;
-		const COMMISSION_RATE = 0.02; // 2% to the main admin
 
 		// Build the same date filter used by getProductSalesStats.
 		let dateFilter = {};
@@ -1966,14 +2162,34 @@ exports.getMarketCommissionStats = async (req, res) => {
 			},
 			{ $unwind: { path: "$marketInfo", preserveNullAndEmptyArrays: true } },
 			{
+				// $ifNull, not the schema default: a market document saved before
+				// commissionRate existed has no such field, and mongoose defaults
+				// never reach an aggregation. Without this those markets would be
+				// charged 0%.
+				$addFields: {
+					commissionRate: {
+						$ifNull: ["$marketInfo.commissionRate", DEFAULT_COMMISSION_RATE],
+					},
+				},
+			},
+			{
 				$project: {
 					_id: 0,
 					marketId: "$_id",
 					marketName: { $ifNull: ["$marketInfo.name", "Unknown Market"] },
 					orderCount: { $size: "$orderIds" },
 					totalSales: { $round: ["$totalSales", 2] },
+					commissionRate: 1,
 					commission: {
-						$round: [{ $multiply: ["$totalSales", COMMISSION_RATE] }, 2],
+						$round: [
+							{
+								$divide: [
+									{ $multiply: ["$totalSales", "$commissionRate"] },
+									100,
+								],
+							},
+							2,
+						],
 					},
 				},
 			},
@@ -2027,7 +2243,7 @@ exports.getMarketCommissionStats = async (req, res) => {
 			totalOrders: 0,
 		};
 
-		// Main admin total earnings = own main-store sales + 2% market commission.
+		// Main admin total earnings = own main-store sales + market commission.
 		const grandTotalEarnings =
 			Math.round((ownSales.totalSales + totalCommission) * 100) / 100;
 
@@ -2038,7 +2254,12 @@ exports.getMarketCommissionStats = async (req, res) => {
 				totalOrders,
 				totalSales: Math.round(totalSales * 100) / 100,
 				totalCommission: Math.round(totalCommission * 100) / 100,
-				commissionRate: COMMISSION_RATE,
+				// Rates now vary per market, so a single headline rate would be a
+				// lie whenever they differ. Report the blended rate the totals
+				// actually work out to, plus the fallback used for markets that
+				// have never had one set.
+				effectiveCommissionRate: effectiveRate(totalCommission, totalSales),
+				defaultCommissionRate: DEFAULT_COMMISSION_RATE,
 			},
 			ownSales: ownSales,
 			grandTotalEarnings: grandTotalEarnings,

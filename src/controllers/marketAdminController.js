@@ -34,6 +34,8 @@ const MarketSetting = require("../models/MarketSetting");
 const Shelf = require("../models/Shelf");
 const { sendResponse, sendError, sendSuccess } = require("../utils/apiResponse");
 const { escapeRegex } = require("../utils/sanitize");
+const { DEFAULT_COMMISSION_RATE } = require("../utils/commission");
+const { autoAssignAndSave } = require("../services/autoDriverAssignment");
 const {
 	imageUpload: logoUpload,
 	uploadImageToCloudinary,
@@ -1349,19 +1351,32 @@ exports.updateOrder = async (req, res) => {
 		);
 		if (!order) return fail(res, 404, "Order not found");
 
+		// Reaching "ready for pickup" assigns one of THIS market's own drivers,
+		// automatically — the market-scoped twin of the main store's trigger.
+		// autoAssignAndSave (rather than the mutate-only form) because the write
+		// above was a findOneAndUpdate, so there is no pending save to join.
+		let autoAssignment = null;
+		if (update.status === "ready for pickup" && previousStatus !== "ready for pickup") {
+			autoAssignment = await autoAssignAndSave(order, {
+				actorId: req.user && req.user.id,
+			});
+		}
+
 		// Push-notify the customer (mirrors orderController.updateOrder) —
 		// this endpoint is also how the scannn app assigns a driver
 		// (status: "OnTheWay") and marks orders delivered for MARKET orders;
 		// without this, only main-store status changes (via /api/orders/:id)
 		// ever reached the customer's myMob app.
-		if (update.status && update.status !== previousStatus) {
+		// order.status, not update.status: automatic assignment may have moved the
+		// order on to "OnTheWay" in the same request.
+		if (update.status && order.status !== previousStatus) {
 			const { notifyCustomerOrderStatus } = require("../services/orderStatusNotification");
-			notifyCustomerOrderStatus(order, update.status).catch((e) =>
+			notifyCustomerOrderStatus(order, order.status).catch((e) =>
 				console.error("Market order status notification failed:", e),
 			);
 		}
 
-		ok(res, order, "Order updated");
+		sendResponse(res, 200, true, "Order updated", { ...order.toObject(), autoAssignment });
 	} catch (err) {
 		handleErr(res, err);
 	}
@@ -1426,19 +1441,28 @@ exports.updateOrderStatus = async (req, res) => {
 		);
 		if (!order) return fail(res, 404, "Order not found");
 
+		// Same automatic assignment trigger as the market updateOrder path above.
+		let autoAssignment = null;
+		if (status === "ready for pickup" && previous.status !== "ready for pickup") {
+			autoAssignment = await autoAssignAndSave(order, {
+				actorId: req.user && req.user.id,
+			});
+		}
+
 		// Push-notify the customer whenever the status actually changed — this
 		// is the market-scoped twin of orderController.updateOrderStatus, which
 		// already does this for main-store orders. Without it, market orders
 		// (e.g. status changes made from the scannn app or market dashboard)
 		// never reached the customer's myMob app.
-		if (status !== previous.status) {
+		// order.status, not the requested status — see updateOrder above.
+		if (order.status !== previous.status) {
 			const { notifyCustomerOrderStatus } = require("../services/orderStatusNotification");
-			notifyCustomerOrderStatus(order, status).catch((e) =>
+			notifyCustomerOrderStatus(order, order.status).catch((e) =>
 				console.error("Market order status notification failed:", e),
 			);
 		}
 
-		ok(res, order, "Status updated");
+		sendResponse(res, 200, true, "Status updated", { ...order.toObject(), autoAssignment });
 	} catch (err) {
 		handleErr(res, err);
 	}
@@ -1585,13 +1609,26 @@ exports.getProductSalesStats = async (req, res) => {
 			},
 		]);
 
+		// The market's own commission rate, so its dashboard can show the real
+		// deduction instead of a hardcoded one. Markets saved before the field
+		// existed have no value stored — fall back rather than charging 0%.
+		const marketDoc = await Market.findById(req.marketId)
+			.select("commissionRate")
+			.lean();
+		const commissionRate = Number.isFinite(marketDoc && marketDoc.commissionRate)
+			? marketDoc.commissionRate
+			: DEFAULT_COMMISSION_RATE;
+
 		const ras = {
 			items: data,
-			summary: summaryResult[0] || {
-				totalRevenue: 0,
-				totalQuantitySold: 0,
-				totalOrders: 0,
-				uniqueProducts: 0,
+			summary: {
+				...(summaryResult[0] || {
+					totalRevenue: 0,
+					totalQuantitySold: 0,
+					totalOrders: 0,
+					uniqueProducts: 0,
+				}),
+				commissionRate,
 			},
 			pagination: paginationMeta(page, limit, totalProducts),
 			filters: {

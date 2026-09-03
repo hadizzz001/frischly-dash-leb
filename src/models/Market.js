@@ -1,5 +1,9 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const {
+	DEFAULT_COMMISSION_RATE,
+	MAX_COMMISSION_RATE,
+} = require("../utils/commission");
 
 const marketSchema = new mongoose.Schema(
 	{
@@ -101,6 +105,20 @@ const marketSchema = new mongoose.Schema(
 		logoPublicId: {
 			type: String,
 			trim: true,
+		},
+		// Share of this market's delivered product sales that the main store
+		// keeps, as a PERCENT (2 = 2%). Set per market by the main admin on the
+		// Markets Management page; a market cannot change its own rate. Markets
+		// created before this field existed have no value stored, so every
+		// reader falls back to DEFAULT_COMMISSION_RATE rather than assuming 0.
+		commissionRate: {
+			type: Number,
+			default: DEFAULT_COMMISSION_RATE,
+			min: [0, "Commission rate cannot be negative"],
+			max: [
+				MAX_COMMISSION_RATE,
+				`Commission rate cannot exceed ${MAX_COMMISSION_RATE}%`,
+			],
 		},
 		// Aggregated stats (denormalized; updated via controller hooks)
 		totalSales: {

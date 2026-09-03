@@ -44,12 +44,13 @@
 							<th class="mkx-2">Items</th>
 							<th class="mkx-2">Total Sales</th>
 							<th class="mkx-2">Orders</th>
+							<th class="mkx-2">Commission</th>
 							<th>Status</th>
 							<th>Actions</th>
 						</tr>
 					</thead>
 					<tbody id="tbody">
-						<tr><td colspan="9" class="empty">Loading…</td></tr>
+						<tr><td colspan="10" class="empty">Loading…</td></tr>
 					</tbody>
 				</table>
 			</div>
@@ -81,6 +82,13 @@
 					<div class="form-row"><label>Phone</label><input id="m_phone" /></div>
 				</div>
 				<div class="form-row"><label>Cities *</label><div id="m_cities" data-lebanese-city-multiselect data-placeholder="Select cities"></div></div>
+				<div class="form-row">
+					<label for="m_commission">Commission Rate (%)</label>
+					<input id="m_commission" type="number" min="0" max="100" step="0.01" inputmode="decimal" placeholder="2" />
+					<p class="mkx-5">
+						Share of this market's delivered sales that Freshly.lb keeps. Drives the Commission column on Sales Statistics and the deduction the market sees on its own dashboard. Leave blank for the 2% default.
+					</p>
+				</div>
 				<div class="form-row">
 					<label>📍 Delivery Coverage Regions (multi-pin)</label>
 					<p class="mkx-5">

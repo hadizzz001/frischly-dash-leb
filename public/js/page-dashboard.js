@@ -7560,7 +7560,7 @@
 					const itemCount = order.items?.length || 0;
 
 					const row = `
-						<tr>
+						<tr data-order-id="${order._id}">
 							<td>${orderIndex}</td>
 							<td><strong>${order.orderNumber}</strong></td>
 							<td>
@@ -7570,6 +7570,7 @@
 										? `<small class="dsx-153">${order.customer.email}</small>`
 										: ""
 								}
+								<div class="dsx-coverage-slot" data-coverage-for="${order._id}"></div>
 							</td>
 							<td>${itemCount} item${itemCount !== 1 ? "s" : ""}</td>
 							<td><strong>$${order.total?.toFixed(2) || "0.00"}</strong></td>
@@ -7594,6 +7595,55 @@
 						</tr>
 					`;
 					tbody.innerHTML += row;
+				});
+
+				annotateDriverCoverage(orders);
+			}
+
+			// Flag orders that no driver can take. Runs after the rows are in the
+			// DOM and fills the per-row slot, so a slow/failed coverage lookup can
+			// never hold up or break the orders table itself.
+			async function annotateDriverCoverage(orders) {
+				const ids = (orders || []).map((o) => o && o._id).filter(Boolean);
+				if (!ids.length) return;
+				let coverage;
+				try {
+					const res = await fetch(
+						`${API_BASE_URL}/orders/driver-coverage?ids=${encodeURIComponent(ids.join(","))}`,
+						{
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+						}
+					);
+					if (!res.ok) return;
+					const result = await res.json();
+					coverage = (result && result.data && result.data.coverage) || {};
+				} catch (e) {
+					return; // advisory only — never blocks the table
+				}
+
+				const BADGES = {
+					"no-driver": { icon: "⚠️", text: "No driver covers this zone" },
+					"no-zone": { icon: "⚠️", text: "Outside all delivery zones" },
+					"no-location": { icon: "⚠️", text: "No delivery location on file" },
+				};
+
+				Object.keys(coverage).forEach((orderId) => {
+					const info = coverage[orderId];
+					const slot = document.querySelector(`[data-coverage-for="${orderId}"]`);
+					if (!slot || !info) return;
+					const badge = BADGES[info.state];
+					// "covered" is the normal case and gets no badge — a warning on
+					// every healthy row would train the operator to ignore all of them.
+					if (!badge) {
+						slot.innerHTML = "";
+						return;
+					}
+					slot.innerHTML = `<span class="dsx-coverage-warning" title="${escapeHtml(info.message || "")}">${badge.icon} ${escapeHtml(badge.text)}${
+						info.zoneName ? ` — ${escapeHtml(info.zoneName)}` : ""
+					}</span>`;
 				});
 			}
 
@@ -7623,133 +7673,11 @@
 				return colors[status] || "#6c757d";
 			}
 
-			// ===== Assign Driver → mark order On The Way =====
-			let assignOrderId = null;
-			let assignOrderNumber = null;
-
-			function ensureAssignDriverModal() {
-				if (document.getElementById("assign-driver-modal")) return;
-				const overlay = document.createElement("div");
-				overlay.id = "assign-driver-modal";
-				overlay.style.cssText =
-					"position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;z-index:3000;align-items:center;justify-content:center;padding:20px;";
-				overlay.innerHTML = `
-					<div class="dsx-240">
-						<div class="dsx-241">
-							<h3 class="dsx-90">🚚 Assign Driver</h3>
-							<span onclick="closeAssignDriverModal()" class="dsx-242">&times;</span>
-						</div>
-						<p class="dsx-82">Select a driver to deliver this order. It will be marked <strong>On The Way</strong>.</p>
-						<label class="dsx-243">Driver</label>
-						<select id="assign-driver-select" class="dsx-244"></select>
-						<div class="dsx-245">
-							<button class="btn btn-secondary" onclick="closeAssignDriverModal()">Cancel</button>
-							<button class="btn btn-primary" onclick="confirmAssignDriver()">Assign &amp; Send</button>
-						</div>
-					</div>`;
-				document.body.appendChild(overlay);
-			}
-
-			async function openAssignDriverModal(orderId, orderNumber, orderCity, orderLocation) {
-				assignOrderId = orderId;
-				assignOrderNumber = orderNumber;
-				ensureAssignDriverModal();
-				const modal = document.getElementById("assign-driver-modal");
-				const select = document.getElementById("assign-driver-select");
-				select.innerHTML = '<option value="">Loading drivers…</option>';
-				modal.style.display = "flex";
-				try {
-					// Prefer the customer's EXACT map pin (captured on their profile) for
-					// the geofence filter — falls back to the delivery city's approximate
-					// center only if no exact pin was saved. Ranks remaining drivers by
-					// proximity (nearest first).
-					const hasPin =
-						orderLocation &&
-						typeof orderLocation.latitude === "number" &&
-						typeof orderLocation.longitude === "number";
-					const locationQS = hasPin
-						? `&lat=${orderLocation.latitude}&lng=${orderLocation.longitude}`
-						: orderCity
-						? `&city=${encodeURIComponent(orderCity)}`
-						: "";
-					const res = await fetch(`${API_BASE_URL}/riders?limit=200${locationQS}`, {
-						headers: {
-							Authorization: `Bearer ${currentToken}`,
-							"Content-Type": "application/json",
-						},
-					});
-					const data = await res.json();
-					const riders = (data.data && data.data.riders) || [];
-					// Admin assigns ONLY its own (main-store) drivers, never a market's.
-					const adminRiders = riders.filter((r) => !r.market);
-					if (!adminRiders.length) {
-						select.innerHTML = orderCity
-							? `<option value="">No drivers cover "${orderCity}". Add/adjust a driver's zones first.</option>`
-							: '<option value="">No drivers available. Add riders in the Riders section first.</option>';
-						return;
-					}
-					select.innerHTML = adminRiders
-						.map((r) => {
-							const name = (r.userInfo && r.userInfo.name) || r.name || "Driver";
-							const zones = Array.isArray(r.zones) ? r.zones.join(", ") : r.zone || "";
-							const distance =
-								typeof r.distanceKm === "number" && isFinite(r.distanceKm)
-									? ` · ${r.distanceKm.toFixed(1)} km away`
-									: "";
-							return `<option value="${r._id}">${name}${zones ? " — " + zones : ""} (${r.status || "available"})${distance}</option>`;
-						})
-						.join("");
-				} catch (e) {
-					select.innerHTML = '<option value="">Failed to load drivers</option>';
-				}
-			}
-
-			function closeAssignDriverModal() {
-				const modal = document.getElementById("assign-driver-modal");
-				if (modal) modal.style.display = "none";
-				assignOrderId = null;
-				assignOrderNumber = null;
-			}
-
-			async function confirmAssignDriver() {
-				const select = document.getElementById("assign-driver-select");
-				const riderId = select ? select.value : "";
-				if (!riderId) {
-					showMessage("Please select a driver", "error");
-					return;
-				}
-				try {
-					const res = await fetch(`${API_BASE_URL}/orders/${assignOrderId}`, {
-						method: "PUT",
-						headers: {
-							Authorization: `Bearer ${currentToken}`,
-							"Content-Type": "application/json",
-						},
-						body: JSON.stringify({
-							status: "OnTheWay",
-							assignedRider: riderId,
-							riderAssignedAt: new Date().toISOString(),
-						}),
-					});
-					const result = await res.json();
-					if (res.ok) {
-						showMessage(
-							`Order "${assignOrderNumber}" assigned and marked On The Way`,
-							"success"
-						);
-						closeAssignDriverModal();
-						loadOrdersWithFilters(
-							currentOrdersPage,
-							ordersPageSize,
-							currentOrderFilters
-						);
-					} else {
-						showMessage(formatApiError(result, "Failed to assign driver"), "error");
-					}
-				} catch (e) {
-					showMessage("Error assigning driver: " + e.message, "error");
-				}
-			}
+			// Driver assignment has no UI at all, by design. An order is assigned and
+			// dispatched the moment it becomes ready for pickup, and anything that had
+			// no driver free at that moment is drained by the background sweep in
+			// src/services/autoAssignScheduler.js. The only thing the dashboard shows
+			// is WHY an order is still waiting — see annotateDriverCoverage().
 
 			// Update pagination
 			function updateOrdersPagination(pagination) {
@@ -8263,25 +8191,10 @@
 				setText("modal-delivery", money(order.delivery));
 				setText("modal-total", money(order.total));
 
-				// Show "Send Rider" only when the order is ready for pickup
-				const sendRiderBtn = document.getElementById("modal-send-rider-btn");
-				if (sendRiderBtn) {
-					if (order.status === "ready for pickup") {
-						sendRiderBtn.style.display = "inline-flex";
-						sendRiderBtn.onclick = function () {
-							closeOrderDetails();
-							openAssignDriverModal(
-								order._id,
-								order.orderNumber,
-								order.customer && order.customer.address && order.customer.address.city,
-								order.customer && order.customer.address && order.customer.address.location
-							);
-						};
-					} else {
-						sendRiderBtn.style.display = "none";
-						sendRiderBtn.onclick = null;
-					}
-				}
+				// Drivers are assigned automatically the moment an order becomes
+				// ready for pickup (see services/autoDriverAssignment.js), so there
+				// is no "Send Rider" button here any more. The assigned driver is
+				// shown on the order row instead.
 
 				// Show the modal
 				document.getElementById("order-details-modal").style.display = "block";
@@ -9495,9 +9408,11 @@
 				document.getElementById('stats-unique-products').textContent = summary.uniqueProducts.toLocaleString();
 			}
 
-			// Load per-market sales totals + 2% platform commission (main admin earns
-			// 2% of every market's product sales). Uses the same time filter as the
-			// product sales statistics above.
+			// Load per-market sales totals + platform commission. Each market has its
+			// own commission percentage (set on Markets Management), so the rate is
+			// reported per row and the headline figures quote the blended rate the
+			// totals actually work out to. Uses the same time filter as the product
+			// sales statistics above.
 			async function loadMarketCommission() {
 				const tbody = document.getElementById('market-commission-table-body');
 				if (!tbody) return;
@@ -9528,7 +9443,7 @@
 						payload.grandTotalEarnings || 0
 					);
 				} catch (e) {
-					tbody.innerHTML = `<tr><td colspan="4" class="dsx-261">Failed to load market commission</td></tr>`;
+					tbody.innerHTML = `<tr><td colspan="5" class="dsx-261">Failed to load market commission</td></tr>`;
 				}
 			}
 
@@ -9536,16 +9451,20 @@
 				const tbody = document.getElementById('market-commission-table-body');
 				if (!tbody) return;
 				const fmt = (n) => `$${(Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+				// Rates are percents (2 = 2%). Trim trailing zeros so a flat 2% does
+				// not read as "2.00%" while 2.5% still shows its decimal.
+				const fmtRate = (n) => `${(Number(n) || 0).toFixed(2).replace(/\.?0+$/, '')}%`;
 				const countEl = document.getElementById('market-commission-count');
 				if (countEl) countEl.textContent = `${totals.marketCount || rows.length || 0} market${(totals.marketCount || rows.length) === 1 ? '' : 's'}`;
 				if (!rows.length) {
-					tbody.innerHTML = `<tr><td colspan="4" class="dsx-262">No market sales in this period.</td></tr>`;
+					tbody.innerHTML = `<tr><td colspan="5" class="dsx-262">No market sales in this period.</td></tr>`;
 				} else {
 					tbody.innerHTML = rows.map((r) => `
 						<tr>
 							<td class="dsx-263">${r.marketName || 'Unknown Market'}</td>
 							<td class="dsx-264">${(r.orderCount || 0).toLocaleString()}</td>
 							<td class="dsx-265">${fmt(r.totalSales)}</td>
+							<td class="dsx-commission-rate-cell"><span class="dsx-commission-rate-badge">${fmtRate(r.commissionRate)}</span></td>
 							<td class="dsx-266">${fmt(r.commission)}</td>
 						</tr>`).join('');
 				}
@@ -9556,7 +9475,25 @@
 				if (totalSalesEl) totalSalesEl.textContent = fmt(totals.totalSales);
 				if (totalCommEl) totalCommEl.textContent = fmt(totals.totalCommission);
 
-				// Our Sales & Total Earnings (main-store sales + 2% market commission)
+				// Rate labels. When every market in the period charges the same rate
+				// that single rate is quoted; when they differ, the sales-weighted
+				// blended rate is — quoting one market's rate over mixed totals would
+				// simply be wrong.
+				const rates = [...new Set(rows.map((r) => Number(r.commissionRate)).filter((n) => Number.isFinite(n)))];
+				const blended = Number(totals.effectiveCommissionRate) || 0;
+				const rateLabel = rows.length
+					? (rates.length === 1 ? fmtRate(rates[0]) : `${fmtRate(blended)} blended`)
+					: '';
+				const effRateEl = document.getElementById('market-commission-effective-rate');
+				const headingRateEl = document.getElementById('market-commission-heading-rate');
+				if (effRateEl) effRateEl.textContent = rateLabel || '—';
+				if (headingRateEl) {
+					headingRateEl.textContent = rows.length
+						? (rates.length === 1 ? `(${fmtRate(rates[0])} of market sales)` : '(per-market rate)')
+						: '(per-market rate)';
+				}
+
+				// Our Sales & Total Earnings (main-store sales + market commission)
 				const own = ownSales || {};
 				const commission = (totals && totals.totalCommission) || 0;
 				const totalEarnings =
@@ -9570,6 +9507,8 @@
 				if (ownOrdersEl) ownOrdersEl.textContent = `${(own.totalOrders || 0).toLocaleString()} order${(own.totalOrders || 0) === 1 ? '' : 's'}`;
 				if (ownAmountEl) ownAmountEl.textContent = fmt(own.totalSales);
 				if (ownCommEl) ownCommEl.textContent = `+${fmt(commission)}`;
+				const ownCommRateEl = document.getElementById('own-commission-rate');
+				if (ownCommRateEl) ownCommRateEl.textContent = rateLabel ? `(${rateLabel})` : '';
 				if (ownTotalEl) ownTotalEl.textContent = fmt(totalEarnings);
 			}
 
@@ -9676,7 +9615,7 @@
 					console.error('Error loading unsold products:', error);
 					document.getElementById('unsold-products-table-body').innerHTML = `
 						<tr>
-							<td colspan="8" class="dsx-248">
+							<td colspan="7" class="dsx-248">
 								<div class="dsx-59">❌</div>
 								<p>Failed to load unsold products</p>
 								<p class="dsx-249">${error.message}</p>
@@ -9694,7 +9633,7 @@
 				if (!data || data.length === 0) {
 					tableBody.innerHTML = `
 						<tr>
-							<td colspan="8" class="dsx-268">
+							<td colspan="7" class="dsx-268">
 								<div class="dsx-59">🎉</div>
 								<p>Great news! All products have sales in this period</p>
 							</td>
@@ -9716,9 +9655,7 @@
 					const statusBadge = item.isActive !== false 
 						? '<span class="dsx-250">Active</span>'
 						: '<span class="dsx-251">Inactive</span>';
-					
-					const stockColor = item.stock <= 0 ? '#dc3545' : item.stock < 10 ? '#ffc107' : '#28a745';
-					
+
 					html += `
 						<tr class="dsx-269">
 							<td class="dsx-270">
@@ -9737,9 +9674,6 @@
 							</td>
 							<td class="dsx-275">
 								$${item.price ? item.price.toFixed(2) : '0.00'}
-							</td>
-							<td class="dsx-276">
-								${item.categoryName || 'N/A'}
 							</td>
 							<td class="dsx-277">
 								${createdDate}
@@ -11388,6 +11322,18 @@
 							settings.minimumOrderValue !== undefined && settings.minimumOrderValue !== null
 								? settings.minimumOrderValue
 								: 10;
+						document.getElementById('usd-to-lbp-rate-input').value =
+							settings.usdToLbpRate !== undefined && settings.usdToLbpRate !== null
+								? settings.usdToLbpRate
+								: 90000;
+						document.getElementById('delivery-fee-input').value =
+							settings.deliveryFee !== undefined && settings.deliveryFee !== null
+								? settings.deliveryFee
+								: 0;
+						document.getElementById('free-delivery-threshold-input').value =
+							settings.freeDeliveryThreshold !== undefined && settings.freeDeliveryThreshold !== null
+								? settings.freeDeliveryThreshold
+								: 0;
 					}
 				} catch (error) {
 					console.error('Error loading settings:', error);
@@ -11464,6 +11410,74 @@
 				} catch (error) {
 					console.error('Error updating minimum order value:', error);
 					showMessage('Error updating minimum order value', 'error');
+				}
+			}
+
+			// Flat delivery fee added to every main-store (FreshlyLB) order at
+			// checkout. Each market sets its own on the market dashboard.
+			async function saveDeliveryFee() {
+				const value = parseFloat(document.getElementById('delivery-fee-input').value);
+				if (isNaN(value) || value < 0) {
+					showMessage('Please enter a valid delivery fee', 'error');
+					return;
+				}
+				try {
+					const response = await authenticatedFetch(`${API_BASE_URL}/admin/settings`, {
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ deliveryFee: value })
+					});
+					if (!response.ok) throw new Error('Failed to update delivery fee');
+					showMessage('Delivery fee updated', 'success');
+				} catch (error) {
+					console.error('Error updating delivery fee:', error);
+					showMessage('Error updating delivery fee', 'error');
+				}
+			}
+
+			// Dynamic delivery: once a customer's subtotal reaches this amount the
+			// delivery fee above is waived (free delivery). 0 disables it. FreshlyLB
+			// admin only; each market sets its own on the market dashboard.
+			async function saveFreeDeliveryThreshold() {
+				const value = parseFloat(document.getElementById('free-delivery-threshold-input').value);
+				if (isNaN(value) || value < 0) {
+					showMessage('Please enter a valid free delivery threshold', 'error');
+					return;
+				}
+				try {
+					const response = await authenticatedFetch(`${API_BASE_URL}/admin/settings`, {
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ freeDeliveryThreshold: value })
+					});
+					if (!response.ok) throw new Error('Failed to update free delivery threshold');
+					showMessage('Free delivery threshold updated', 'success');
+				} catch (error) {
+					console.error('Error updating free delivery threshold:', error);
+					showMessage('Error updating free delivery threshold', 'error');
+				}
+			}
+
+			// USD -> LBP exchange rate used by the mobile app to show the LBP price
+			// beside every USD price. FreshlyLB admin only (the /admin/settings
+			// endpoint is already restricted to the admin role).
+			async function saveUsdToLbpRate() {
+				const value = parseFloat(document.getElementById('usd-to-lbp-rate-input').value);
+				if (isNaN(value) || value < 1) {
+					showMessage('Please enter a valid USD to LBP exchange rate', 'error');
+					return;
+				}
+				try {
+					const response = await authenticatedFetch(`${API_BASE_URL}/admin/settings`, {
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ usdToLbpRate: value })
+					});
+					if (!response.ok) throw new Error('Failed to update exchange rate');
+					showMessage('USD to LBP exchange rate updated', 'success');
+				} catch (error) {
+					console.error('Error updating exchange rate:', error);
+					showMessage('Error updating exchange rate', 'error');
 				}
 			}
 
@@ -13622,15 +13636,27 @@
 			}
 
 			// Fill the kitchen modal's category <select> from the cached categories.
+			// This dashboard only ever creates/edits main-store kitchens, so the list
+			// is narrowed to main-store categories. kitchenCategoriesData holds every
+			// category the admin can see — markets' included — and offering those here
+			// filed main-store kitchens under a market's category, where no storefront
+			// could ever group them (the server now rejects that pairing too).
 			function populateKitchenCategoryDropdown(selectedId) {
 				const select = document.getElementById("kitchen-category");
 				const hint = document.getElementById("kitchen-category-hint");
 				if (!select) return;
 				const sel = selectedId ? String(selectedId) : "";
-				let options = (kitchenCategoriesData || []).filter((c) => c.isActive !== false);
-				// Keep a currently-assigned (possibly inactive) category selectable.
+				const isMainStore = (c) => !(c && c.market && (c.market._id || c.market));
+				let options = (kitchenCategoriesData || []).filter(
+					(c) => c.isActive !== false && isMainStore(c),
+				);
+				// Keep a currently-assigned (possibly inactive) category selectable —
+				// but never a market-owned one, so an existing bad assignment has to be
+				// corrected rather than silently saved back.
 				if (sel && !options.some((c) => String(c._id) === sel)) {
-					const found = (kitchenCategoriesData || []).find((c) => String(c._id) === sel);
+					const found = (kitchenCategoriesData || []).find(
+						(c) => String(c._id) === sel && isMainStore(c),
+					);
 					if (found) options = [found].concat(options);
 				}
 				select.innerHTML =

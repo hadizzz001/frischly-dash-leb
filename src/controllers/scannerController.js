@@ -5,6 +5,7 @@ const Rider = require("../models/Rider");
 const mongoose = require("mongoose");
 const { sendResponse, sendError, sendSuccess, sendServerError } = require("../utils/apiResponse");
 const { notifyCustomerOrderStatus } = require("../services/orderStatusNotification");
+const { autoAssignDriverForOrder } = require("../services/autoDriverAssignment");
 
 // @desc    Scan barcode and retrieve product details
 // @route   POST /api/scanner/scan-product
@@ -476,6 +477,16 @@ exports.completeOrder = async (req, res) => {
     }
     order.notes = (order.notes || "") + "\n[Fulfillment] " + fulfillmentNotes;
 
+    // The scanner app is the third way an order reaches "ready for pickup", so
+    // it triggers the same automatic driver assignment as the dashboard paths.
+    // Mutates the order in place, ahead of the single save below.
+    let autoAssignment = null;
+    if (newStatus === "ready for pickup" && previousStatus !== "ready for pickup") {
+      autoAssignment = await autoAssignDriverForOrder(order, {
+        actorId: req.user && req.user.id,
+      });
+    }
+
     await order.save();
 
     // Push-notify the customer (mirrors orderController.updateOrder /
@@ -484,8 +495,10 @@ exports.completeOrder = async (req, res) => {
     // item is scanned, and previously never told the customer's myMob app
     // that their order was ready, even though every other status-change
     // endpoint did.
-    if (newStatus !== previousStatus) {
-      notifyCustomerOrderStatus(order, newStatus).catch((e) =>
+    // order.status, not newStatus: automatic assignment may have carried the
+    // order straight on to "OnTheWay" in the same save.
+    if (order.status !== previousStatus) {
+      notifyCustomerOrderStatus(order, order.status).catch((e) =>
         console.error("Scanner order status notification failed:", e),
       );
     }
@@ -499,13 +512,13 @@ exports.completeOrder = async (req, res) => {
     const ras = { order: {
         _id: order._id,
         orderNumber: order.orderNumber,
-        status: newStatus,
+        status: order.status,
         notes: order.notes,
       }, fulfillmentSummary: {
         totalItems: totalItems,
         pickedItems: pickedCount,
         skippedItems: skippedCount,
-      } };
+      }, autoAssignment };
     sendResponse(res, 200, true, "Order fulfillment completed", ras);
   } catch (error) {
     console.error("Error completing order:", error);

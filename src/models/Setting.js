@@ -19,6 +19,31 @@ const SettingSchema = new mongoose.Schema(
 			type: Number,
 			default: 10,
 		},
+		// Flat delivery fee charged on a FreshlyLB (main store) order, in USD.
+		// Markets have their own, on MarketSetting.deliveryFee. 0 = free
+		// delivery, which also lets the legacy per-Zone fee apply instead.
+		deliveryFee: {
+			type: Number,
+			default: 0,
+			min: [0, "Delivery fee cannot be negative"],
+		},
+		// Dynamic delivery: once an order's subtotal reaches this amount the
+		// delivery fee above is waived (free delivery). 0 = disabled, i.e. the
+		// flat deliveryFee always applies. Markets have the same field on
+		// MarketSetting.freeDeliveryThreshold.
+		freeDeliveryThreshold: {
+			type: Number,
+			default: 0,
+			min: [0, "Free delivery threshold cannot be negative"],
+		},
+		// USD -> LBP exchange rate used to show a second (LBP) price in the
+		// mobile app. Editable by the FreshlyLB admin only (Dashboard →
+		// Settings); markets cannot change it. Defaults to 90,000 LBP per $1.
+		usdToLbpRate: {
+			type: Number,
+			default: 90000,
+			min: [1, "Exchange rate must be at least 1"],
+		},
 		// Delivery/coverage zones for the main (Freshly) admin store — the global
 		// equivalent of a market's `deliveryZones` and a driver's `zones`. Each
 		// name refers to a global Zone document (market: null) configured on the

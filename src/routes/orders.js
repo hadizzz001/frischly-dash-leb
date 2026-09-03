@@ -10,6 +10,8 @@ const {
 	getOrderStats,
 	getProductSalesStats,
 	getMarketCommissionStats,
+	autoAssignDrivers,
+	getOrderDriverCoverage,
 	getUnsoldProducts,
 	cancelOrder,
 	getOrdersCount,
@@ -40,6 +42,18 @@ router.get(
 	protect,
 	authorize("admin", "manager"),
 	getMarketCommissionStats
+);
+router.get(
+	"/driver-coverage",
+	protect,
+	authorize("admin", "manager"),
+	getOrderDriverCoverage
+);
+router.post(
+	"/auto-assign-drivers",
+	protect,
+	authorize("admin", "manager"),
+	autoAssignDrivers
 );
 router.get(
 	"/unsold-products",

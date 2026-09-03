@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Kitchen = require("../models/Kitchen");
+const KitchenCategory = require("../models/KitchenCategory");
 const Product = require("../models/Product");
 const { sendSuccess, sendError, sendResponse } = require("../utils/apiResponse");
 const { escapeRegex } = require("../utils/sanitize");
@@ -55,6 +56,34 @@ const assertAdminMayModify = async (req, res, kitchenId) => {
 	}
 	if (owned.market) {
 		fail(res, 403, "This kitchen belongs to a market and is view-only");
+		return false;
+	}
+	return true;
+};
+
+// Guard: a kitchen and the category it is filed under must have the same owner.
+// Every storefront lists a store's kitchens alongside that same store's
+// categories, so a main-store kitchen filed under a market's category (or vice
+// versa) is orphaned — its category is never in the list it is grouped into and
+// the kitchen simply disappears. Returns true when the pairing is allowed; when
+// it returns false a response has already been sent.
+const assertCategoryOwnerMatches = async (res, categoryId, ownerMarketId) => {
+	if (!categoryId) return true;
+	const category = await KitchenCategory.findById(categoryId)
+		.select("market")
+		.lean();
+	if (!category) {
+		fail(res, 400, "Kitchen category not found");
+		return false;
+	}
+	const categoryOwner = category.market ? String(category.market) : null;
+	const kitchenOwner = ownerMarketId ? String(ownerMarketId) : null;
+	if (categoryOwner !== kitchenOwner) {
+		fail(
+			res,
+			400,
+			"That kitchen category belongs to a different store. Choose a category owned by the same store as the kitchen.",
+		);
 		return false;
 	}
 	return true;
@@ -206,6 +235,10 @@ exports.createKitchen = async (req, res) => {
 			}
 		}
 
+		// The category must belong to the same store as the kitchen itself.
+		if (!(await assertCategoryOwnerMatches(res, doc.category, doc.market || null)))
+			return;
+
 		const kitchen = await Kitchen.create(doc);
 		const populated = await Kitchen.findById(kitchen._id)
 			.populate({
@@ -244,6 +277,12 @@ exports.updateKitchen = async (req, res) => {
 		}
 		if (req.body && req.body.category !== undefined) {
 			update.category = sanitizeCategory(req.body.category);
+			// Market admins only ever own their own kitchens; anything an admin is
+			// allowed past assertAdminMayModify() is main-store (market === null).
+			const ownerMarketId =
+				req.user && req.user.role === "market" ? req.user.marketId : null;
+			if (!(await assertCategoryOwnerMatches(res, update.category, ownerMarketId)))
+				return;
 		}
 		if (req.body && req.body.isActive !== undefined) {
 			update.isActive = !!req.body.isActive;
