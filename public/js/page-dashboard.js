@@ -8152,6 +8152,35 @@
 				// Set created by
 				setText("modal-created-by", (order.createdBy && order.createdBy.name) || "N/A");
 
+				// Set assigned driver. The driver is a Rider whose name and phone
+				// live on its linked user, so read them from assignedRider.user.
+				const rider = order.assignedRider || null;
+				const driverUser = (rider && rider.user) || {};
+				const driverName = driverUser.name || (rider && rider.name) || null;
+				const driverPhone = driverUser.phoneNumber || null;
+				let driverInfo;
+				if (driverName) {
+					driverInfo = `<strong>${driverName}</strong>`;
+					if (driverPhone) {
+						driverInfo += `<br>📞 <a href="tel:${driverPhone}">${driverPhone}</a>`;
+					}
+					const vehicle = [rider.vehicleType, rider.vehicleNumber].filter(Boolean).join(" · ");
+					if (vehicle) driverInfo += `<br>🚗 ${vehicle}`;
+				} else {
+					driverInfo = "No driver assigned yet";
+				}
+				// Inline editor to reassign the delivery driver right here.
+				driverInfo += `
+					<div class="driver-editor" style="margin-top:10px;">
+						<label for="modal-driver-select" style="font-size:12px;font-weight:600;">Change driver:</label>
+						<select id="modal-driver-select" style="width:100%;padding:6px;margin-top:4px;">
+							<option value="">Loading drivers…</option>
+						</select>
+						<button type="button" class="btn btn-primary" style="margin-top:6px;" onclick="saveOrderDriver('${order._id}')">💾 Save driver</button>
+					</div>`;
+				setHtml("modal-driver-info", driverInfo);
+				populateOrderDriverSelect(order);
+
 				// Populate order items
 				const itemsContainer = document.getElementById("modal-order-items");
 				if (itemsContainer) {
@@ -8201,6 +8230,94 @@
 			} // Close order details modal
 			function closeOrderDetails() {
 				document.getElementById("order-details-modal").style.display = "none";
+			}
+
+			// Load the main store's drivers into the order modal dropdown and mark
+			// the currently assigned one as selected.
+			async function populateOrderDriverSelect(order) {
+				const select = document.getElementById("modal-driver-select");
+				if (!select) return;
+				const currentId =
+					(order.assignedRider &&
+						(order.assignedRider._id || order.assignedRider)) ||
+					"";
+				// Only offer drivers whose zone covers this customer (exact pin, else
+				// city) — the same rule the backend enforces on save.
+				const __addr = (order.customer && order.customer.address) || {};
+				const __loc = __addr.location || {};
+				const __cov = [];
+				if (typeof __loc.latitude === "number" && typeof __loc.longitude === "number") {
+					__cov.push(`lat=${__loc.latitude}`, `lng=${__loc.longitude}`);
+				}
+				if (__addr.city) __cov.push(`city=${encodeURIComponent(__addr.city)}`);
+				const __covQs = __cov.length ? "&" + __cov.join("&") : "";
+				try {
+					const res = await fetch(`${API_BASE_URL}/riders?limit=200${__covQs}`, {
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+					});
+					const result = await res.json().catch(() => ({}));
+					if (!res.ok) {
+						select.innerHTML = '<option value="">Failed to load drivers</option>';
+						return;
+					}
+					const list =
+						(result.data && (result.data.riders || result.data.items)) || [];
+					const opts = ['<option value="">— Unassigned —</option>'];
+					list.forEach((r) => {
+						// Offline drivers can't take a delivery, so keep them out.
+						if (String(r.status || "").toLowerCase() === "offline") return;
+						const id = r._id || (r.user && r.user._id);
+						const name =
+							(r.userInfo && r.userInfo.name) ||
+							(r.user && r.user.name) ||
+							r.name ||
+							"Driver";
+						const status = r.status ? ` (${r.status})` : "";
+						if (!id) return;
+						const sel = String(id) === String(currentId) ? " selected" : "";
+						opts.push(`<option value="${id}"${sel}>${name}${status}</option>`);
+					});
+					if (opts.length === 1) {
+						opts.push(
+							'<option value="" disabled>No online drivers cover this address</option>'
+						);
+					}
+					select.innerHTML = opts.join("");
+				} catch (e) {
+					select.innerHTML = '<option value="">Error loading drivers</option>';
+				}
+			}
+
+			// Save just the assigned driver. The backend enforces zone coverage, so
+			// a rejection means the chosen driver does not cover the customer.
+			async function saveOrderDriver(orderId) {
+				const select = document.getElementById("modal-driver-select");
+				if (!select) return;
+				const value = select.value || null; // "" clears the assignment
+				try {
+					const res = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+						method: "PUT",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({ assignedRider: value }),
+					});
+					const result = await res.json().catch(() => ({}));
+					if (res.ok) {
+						showMessage(value ? "Driver updated" : "Driver unassigned", "success");
+						loadOrders();
+						// Refresh the modal to reflect the new driver.
+						viewOrder(orderId);
+					} else {
+						showMessage(formatApiError(result) || "Failed to update driver", "error");
+					}
+				} catch (e) {
+					showMessage("Error updating driver", "error");
+				}
 			}
 
 			// Print order invoice

@@ -447,7 +447,14 @@ exports.getOrder = async (req, res) => {
 		const order = await Order.findById(id)
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
-			.populate("assignedRider", "name email phone")
+			// The assigned driver is a Rider whose name/phone live on its linked
+			// User, so populate the nested user — otherwise the client only ever
+			// sees an id and cannot show who is delivering.
+			.populate({
+				path: "assignedRider",
+				select: "vehicleType vehicleNumber status user",
+				populate: { path: "user", select: "name email phoneNumber" },
+			})
 			.populate("market", "name username location logo")
 			.populate(
 				"items.product",

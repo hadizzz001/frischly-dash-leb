@@ -14,6 +14,22 @@
 			<div class="header">
 				<h1>My Profile</h1>
 				<p>Welcome to your personal profile</p>
+				<!--
+				  Driver-only settings shortcut. Hidden by default; JS reveals it
+				  for rider / market_driver and moves everything except the
+				  deliveries list into the popup below, keeping this screen minimal.
+				-->
+				<button
+					type="button"
+					id="settings-gear-btn"
+					class="settings-gear"
+					style="display: none"
+					onclick="openSettingsModal()"
+					aria-label="Settings"
+					title="Settings"
+				>
+					⚙️
+				</button>
 			</div>
 
 			<div class="content">
@@ -161,6 +177,28 @@
 						</button>
 					</div>
 				</div>
+			</div>
+		</div>
+
+		<!--
+		  Settings popup (drivers only). JS relocates the profile sections and the
+		  action buttons into #settings-modal-body so the main screen stays focused
+		  on deliveries.
+		-->
+		<div id="settings-modal" class="settings-modal" style="display: none">
+			<div class="settings-modal-content">
+				<div class="settings-modal-header">
+					<h2>Settings</h2>
+					<button
+						type="button"
+						class="settings-modal-close"
+						onclick="closeSettingsModal()"
+						aria-label="Close"
+					>
+						&times;
+					</button>
+				</div>
+				<div id="settings-modal-body" class="settings-modal-body"></div>
 			</div>
 		</div>
 

@@ -130,6 +130,15 @@ const isDevelopment = process.env.NODE_ENV === "development";
 
 app.use(
 	helmet({
+		// Helmet's default is `no-referrer`, which makes the browser strip the
+		// Referer from EVERY outgoing request — including the dashboard's map
+		// tile requests. OpenStreetMap's tile servers now reject requests
+		// that carry no Referer (they answer with an "Access blocked" tile),
+		// so the zone/market map pickers went blank. `strict-origin-when-
+		// cross-origin` (the browser default) sends only our origin to other
+		// sites — no path or query string — which is exactly the
+		// identification tile providers ask a website for.
+		referrerPolicy: { policy: "strict-origin-when-cross-origin" },
 		contentSecurityPolicy: {
 			directives: {
 				defaultSrc: ["'self'"],

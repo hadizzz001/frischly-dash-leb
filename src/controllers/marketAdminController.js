@@ -1263,7 +1263,14 @@ exports.getOrder = async (req, res) => {
 		})
 			.populate("createdBy", "name email")
 			.populate("updatedBy", "name email")
-			.populate("assignedRider", "name email phone")
+			// The assigned driver is a Rider whose name/phone live on its linked
+			// User, so populate the nested user — otherwise the client only ever
+			// sees an id and cannot show who is delivering.
+			.populate({
+				path: "assignedRider",
+				select: "vehicleType vehicleNumber status user",
+				populate: { path: "user", select: "name email phoneNumber" },
+			})
 			.populate("market", "name username location logo")
 			.populate(
 				"items.product",
@@ -1927,6 +1934,47 @@ exports.riders = {
 				q.exec(),
 				Rider.countDocuments(filter),
 			]);
+
+			// Optional geofence filter: when the caller passes the customer's
+			// location (exact map pin lat/lng, or a city to approximate), keep
+			// only drivers whose zone actually covers it — the same rule enforced
+			// on assignment — so the reassign dropdown never offers a driver that
+			// would be rejected. Drivers inherit the market's full coverage.
+			const { city, lat, lng } = req.query;
+			const exactLat = lat !== undefined ? parseFloat(lat) : NaN;
+			const exactLng = lng !== undefined ? parseFloat(lng) : NaN;
+			const hasExactPoint =
+				Number.isFinite(exactLat) && Number.isFinite(exactLng);
+			if (hasExactPoint || city) {
+				const Zone = require("../models/Zone");
+				const { getCityCoords } = require("../utils/lebaneseCities");
+				const { namedZonesCoverPoint } = require("../utils/zoneGeo");
+				const coords = hasExactPoint
+					? { lat: exactLat, lng: exactLng }
+					: getCityCoords(city);
+				if (coords) {
+					const zoneDocs = await Zone.find({
+						isActive: true,
+						market: req.marketId,
+					}).lean();
+					const marketCovers = namedZonesCoverPoint(
+						zoneDocs.map((z) => z.zoneName),
+						zoneDocs,
+						coords.lat,
+						coords.lng
+					);
+					items = items.filter(
+						(r) =>
+							marketCovers ||
+							namedZonesCoverPoint(
+								Array.isArray(r.zones) ? r.zones : [],
+								zoneDocs,
+								coords.lat,
+								coords.lng
+							)
+					);
+				}
+			}
 
 			let data = items.map(serializeRider);
 			if (search) {

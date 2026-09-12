@@ -26,6 +26,86 @@
 				color: #000000;
 				padding: 30px;
 				text-align: center;
+				position: relative;
+			}
+
+			/* Driver-only settings shortcut in the top corner of the header. */
+			.settings-gear {
+				position: absolute;
+				top: 16px;
+				right: 16px;
+				width: 40px;
+				height: 40px;
+				padding: 0;
+				border: none;
+				border-radius: 50%;
+				background: rgba(0, 0, 0, 0.08);
+				color: #000;
+				font-size: 20px;
+				line-height: 40px;
+				cursor: pointer;
+				transition: background 0.2s ease, transform 0.2s ease;
+			}
+
+			.settings-gear:hover {
+				background: rgba(0, 0, 0, 0.18);
+				transform: rotate(45deg);
+			}
+
+			/* Minimal settings popup used for drivers. */
+			.settings-modal {
+				position: fixed;
+				inset: 0;
+				background: rgba(0, 0, 0, 0.6);
+				display: flex;
+				align-items: flex-start;
+				justify-content: center;
+				padding: 24px 16px;
+				overflow-y: auto;
+				z-index: 1000;
+			}
+
+			.settings-modal-content {
+				background: #ffffff;
+				width: 100%;
+				max-width: 560px;
+				border-radius: 15px;
+				border: 3px solid #ffc300;
+				box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+				overflow: hidden;
+			}
+
+			.settings-modal-header {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				background: #ffc300;
+				color: #000;
+				padding: 18px 24px;
+			}
+
+			.settings-modal-header h2 {
+				font-size: 20px;
+				margin: 0;
+			}
+
+			.settings-modal-close {
+				border: none;
+				background: transparent;
+				font-size: 28px;
+				line-height: 1;
+				cursor: pointer;
+				color: #000;
+			}
+
+			.settings-modal-body {
+				padding: 24px 32px 32px;
+			}
+
+			/* Sections start with 30px bottom margin; the last one in the popup
+			   should not add trailing whitespace. */
+			.settings-modal-body .profile-section:last-of-type {
+				margin-bottom: 0;
 			}
 
 			.header h1 {

@@ -105,6 +105,9 @@
 
 			// Edit profile function
 			function editProfile() {
+				// These buttons live inside the driver settings popup; close it so the
+				// form that replaces #profile-content underneath is actually visible.
+				if (typeof closeSettingsModal === "function") closeSettingsModal();
 				const profileContent = document.getElementById("profile-content");
 
 				// Get current values
@@ -302,6 +305,9 @@
 
 			// Change password function
 			function changePassword() {
+				// These buttons live inside the driver settings popup; close it so the
+				// form that replaces #profile-content underneath is actually visible.
+				if (typeof closeSettingsModal === "function") closeSettingsModal();
 				// Show password change form
 				const profileContent = document.getElementById("profile-content");
 				profileContent.innerHTML = `
@@ -428,6 +434,14 @@
 							);
 							if (delSec) delSec.style.display = "";
 							loadMyDeliveries();
+							// Keep the deliveries table in sync automatically: when an
+							// admin/market reassigns an order to (or away from) this driver
+							// on the orders pages, it appears/disappears here within the
+							// polling interval — no manual Refresh needed.
+							startDeliveriesAutoSync();
+							// Drivers get a minimal screen: deliveries on top, everything
+							// else tucked into the settings popup in the corner.
+							setupDriverMinimalLayout();
 						}
 
 						// Update address
@@ -459,6 +473,20 @@
 			// ───────── Driver deliveries (rider / market_driver) ─────────
 			// The backend automatically scopes /api/orders to the logged-in driver's
 			// own assigned orders, so we just ask for the ones still in progress.
+			let __deliveriesSyncInterval = null;
+			function startDeliveriesAutoSync() {
+				if (__deliveriesSyncInterval) clearInterval(__deliveriesSyncInterval);
+				// Poll periodically so reassignments made elsewhere show up on their
+				// own. Pause while the tab is hidden to avoid needless requests, and
+				// refresh immediately when the driver returns to the tab.
+				__deliveriesSyncInterval = setInterval(() => {
+					if (document.visibilityState === "visible") loadMyDeliveries();
+				}, 20000);
+				document.addEventListener("visibilitychange", () => {
+					if (document.visibilityState === "visible") loadMyDeliveries();
+				});
+			}
+
 			async function loadMyDeliveries() {
 				const tbody = document.getElementById("deliveries-table-body");
 				if (!tbody) return;
@@ -544,6 +572,57 @@
 					showMessage("Error updating order.", "error");
 				}
 			}
+
+			// ───────── Driver minimal layout & settings popup ─────────
+			// For drivers the deliveries list is the whole job, so it moves to the
+			// top and every other section (personal info, live location, address,
+			// account) plus the action buttons are relocated into a settings popup
+			// opened from the gear in the header corner. Non-drivers are untouched.
+			function setupDriverMinimalLayout() {
+				const profileContent = document.getElementById("profile-content");
+				const modalBody = document.getElementById("settings-modal-body");
+				const delSec = document.getElementById("my-deliveries-section");
+				const gear = document.getElementById("settings-gear-btn");
+				if (!profileContent || !modalBody || !delSec) return;
+
+				// Deliveries first — it is the reason this screen exists.
+				profileContent.insertBefore(delSec, profileContent.firstChild);
+
+				// Everything else (sections + the action buttons), in document
+				// order, goes into the popup. Skip the deliveries section itself.
+				const toMove = [];
+				Array.from(profileContent.children).forEach((el) => {
+					if (el === delSec) return;
+					if (
+						el.classList.contains("profile-section") ||
+						el.classList.contains("actions")
+					) {
+						toMove.push(el);
+					}
+				});
+				toMove.forEach((el) => modalBody.appendChild(el));
+
+				if (gear) gear.style.display = "";
+			}
+
+			function openSettingsModal() {
+				const modal = document.getElementById("settings-modal");
+				if (modal) modal.style.display = "flex";
+			}
+
+			function closeSettingsModal() {
+				const modal = document.getElementById("settings-modal");
+				if (modal) modal.style.display = "none";
+			}
+
+			// Close the settings popup when clicking the dimmed backdrop or Escape.
+			document.addEventListener("click", (e) => {
+				const modal = document.getElementById("settings-modal");
+				if (modal && e.target === modal) closeSettingsModal();
+			});
+			document.addEventListener("keydown", (e) => {
+				if (e.key === "Escape") closeSettingsModal();
+			});
 
 			// Load profile when page loads
 			document.addEventListener("DOMContentLoaded", loadUserProfile);

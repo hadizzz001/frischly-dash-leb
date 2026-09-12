@@ -57,6 +57,30 @@
 					? `${API_BASE_URL}/market-admin/orders`
 					: `${API_BASE_URL}/orders`;
 			}
+			// Drivers come from the same tenant as the orders: a market's own
+			// Rider pool in market context, the main store's riders otherwise.
+			function ridersEndpoint() {
+				return IS_MARKET_CTX
+					? `${API_BASE_URL}/market-admin/riders`
+					: `${API_BASE_URL}/riders`;
+			}
+			// Build coverage query params (customer's exact map pin, else city) from
+			// an order, so the riders endpoint only returns drivers whose delivery
+			// zone actually covers this customer — the same rule the backend enforces
+			// on save, so operators don't pick a driver that will be rejected.
+			function orderCoverageQuery(order) {
+				const addr = (order && order.customer && order.customer.address) || {};
+				const loc = addr.location || {};
+				const params = [];
+				if (
+					typeof loc.latitude === "number" &&
+					typeof loc.longitude === "number"
+				) {
+					params.push(`lat=${loc.latitude}`, `lng=${loc.longitude}`);
+				}
+				if (addr.city) params.push(`city=${encodeURIComponent(addr.city)}`);
+				return params.join("&");
+			}
 			let allOrders = [];
 			let filteredOrders = [];
 			let currentPage = 1;
@@ -690,6 +714,42 @@
 							<p><strong>Items Count:</strong> ${order.items?.length || 0}</p>
 						</div>
 
+						<div class="order-details-card">
+							<h4>🛵 Driver</h4>
+							<div id="om-driver-current">
+							${(() => {
+								// The assigned driver is a Rider whose name and phone
+								// live on its linked user (assignedRider.user).
+								const rider = order.assignedRider;
+								const du = (rider && rider.user) || {};
+								const dn = du.name || (rider && rider.name);
+								const dp = du.phoneNumber;
+								if (!dn) return "<p>No driver assigned yet</p>";
+								const veh = [rider.vehicleType, rider.vehicleNumber]
+									.filter(Boolean)
+									.join(" · ");
+								return (
+									`<p><strong>Name:</strong> ${dn}</p>` +
+									(dp
+										? `<p><strong>Phone:</strong> <a href="tel:${dp}">${dp}</a></p>`
+										: "") +
+									(veh ? `<p><strong>Vehicle:</strong> ${veh}</p>` : "")
+								);
+							})()}
+							</div>
+							<div class="om-driver-editor">
+								<label for="om-driver-select"><strong>Change driver:</strong></label>
+								<select id="om-driver-select">
+									<option value="">Loading drivers…</option>
+								</select>
+								<button
+									type="button"
+									class="action-btn view"
+									onclick="saveOrderDriver('${order._id}')"
+								>💾 Save driver</button>
+							</div>
+						</div>
+
 						${zoneHtml}
 					</div>
 
@@ -722,6 +782,112 @@
 				`;
 
 					modal.style.display = "block";
+					// Fill the "Change driver" dropdown from this tenant's rider pool
+					// and preselect whoever is currently assigned.
+					populateOrderDriverSelect(order);
+				} finally {
+					hideLoading();
+				}
+			}
+
+			// Load this tenant's drivers into the order modal's dropdown, marking
+			// the currently assigned one as selected.
+			async function populateOrderDriverSelect(order) {
+				const select = document.getElementById("om-driver-select");
+				if (!select) return;
+				const currentId =
+					(order.assignedRider &&
+						(order.assignedRider._id || order.assignedRider)) ||
+					"";
+				try {
+					const cov = orderCoverageQuery(order);
+					const res = await fetch(
+						`${ridersEndpoint()}?limit=200${cov ? "&" + cov : ""}`,
+						{
+							headers: {
+								Authorization: `Bearer ${currentToken}`,
+								"Content-Type": "application/json",
+							},
+						}
+					);
+					const result = await res.json().catch(() => ({}));
+					if (!res.ok) {
+						select.innerHTML = '<option value="">Failed to load drivers</option>';
+						return;
+					}
+					// Admin /riders returns data.riders; market /riders returns
+					// data.items. Accept either.
+					const list =
+						(result.data && (result.data.riders || result.data.items)) || [];
+					const opts = ['<option value="">— Unassigned —</option>'];
+					list.forEach((r) => {
+						// Offline drivers can't take a delivery, so keep them out of
+						// the list entirely.
+						if (String(r.status || "").toLowerCase() === "offline") return;
+						const id = r._id || (r.user && r.user._id);
+						const name =
+							(r.userInfo && r.userInfo.name) ||
+							(r.user && r.user.name) ||
+							r.name ||
+							"Driver";
+						const status = r.status ? ` (${r.status})` : "";
+						if (!id) return;
+						const sel = String(id) === String(currentId) ? " selected" : "";
+						opts.push(
+							`<option value="${id}"${sel}>${name}${status}</option>`
+						);
+					});
+					if (opts.length === 1) {
+						opts.push(
+							'<option value="" disabled>No online drivers cover this address</option>'
+						);
+					}
+					select.innerHTML = opts.join("");
+				} catch (e) {
+					select.innerHTML = '<option value="">Error loading drivers</option>';
+				}
+			}
+
+			// Save just the assigned driver for an order. The backend enforces that
+			// the chosen driver's zone actually covers the customer's location, so a
+			// rejection here means the driver is out of coverage.
+			async function saveOrderDriver(orderId) {
+				const select = document.getElementById("om-driver-select");
+				if (!select) return;
+				const value = select.value || null; // "" → null clears the assignment
+				try {
+					showLoading();
+					const res = await fetch(`${ordersEndpoint()}/${orderId}`, {
+						method: "PUT",
+						headers: {
+							Authorization: `Bearer ${currentToken}`,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({ assignedRider: value }),
+					});
+					const result = await res.json().catch(() => ({}));
+					if (res.ok) {
+						showMessage(
+							value ? "Driver updated" : "Driver unassigned",
+							"success"
+						);
+						loadOrders(
+							currentPage,
+							currentStatusFilter,
+							currentSearchFilter,
+							currentDateFromFilter,
+							currentDateToFilter
+						);
+						// Refresh the modal so the "current driver" block reflects the change.
+						viewOrderDetails(orderId);
+					} else {
+						showMessage(
+							formatApiError(result, "Failed to update driver"),
+							"error"
+						);
+					}
+				} catch (e) {
+					showMessage("Error updating driver", "error");
 				} finally {
 					hideLoading();
 				}
