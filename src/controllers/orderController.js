@@ -201,9 +201,11 @@ exports.getOrders = async (req, res) => {
 			.populate("updatedBy", "name email")
 			.populate("assignedRider", "name email phone")
 			.populate("market", "name username location logo")
+			// `weight` is included so the scanner app (scannn) can show each
+			// item's weight label next to its shelf number while picking.
 			.populate(
 				"items.product",
-				"name barcode shelfNumber price discount tax bottlerefund picture market",
+				"name barcode shelfNumber price discount tax bottlerefund picture weight market",
 			)
 			.sort(sortOptions)
 			.skip(skip)
@@ -456,9 +458,11 @@ exports.getOrder = async (req, res) => {
 				populate: { path: "user", select: "name email phoneNumber" },
 			})
 			.populate("market", "name username location logo")
+			// `weight` is included so the scanner app (scannn) can show each
+			// item's weight label next to its shelf number while picking.
 			.populate(
 				"items.product",
-				"name barcode shelfNumber price discount tax bottlerefund picture market",
+				"name barcode shelfNumber price discount tax bottlerefund picture weight market",
 			);
 
 		if (!order) {
@@ -1038,7 +1042,16 @@ exports.createOrder = async (req, res) => {
 				await NotificationService.sendToUsers(
 					staffUserIds,
 					"New Order Created",
-					`Order #${populatedOrder._id} has been placed by ${populatedOrder.customer.name}`,
+					`Order #${populatedOrder.orderNumber || populatedOrder._id} has been placed by ${populatedOrder.customer.name}`,
+					// Data payload (all strings — FCM requires it) so the scanner
+					// app can deep-link straight into the order and post the
+					// alert on its ringing "new-orders" channel.
+					{
+						type: "new_order",
+						orderId: populatedOrder._id.toString(),
+						orderNumber: String(populatedOrder.orderNumber || ""),
+						channelId: "new-orders-v1",
+					},
 				);
 				console.log(
 					`✅ FCM notification sent to ${staffUsers.length} staff users for order ${populatedOrder._id}`,

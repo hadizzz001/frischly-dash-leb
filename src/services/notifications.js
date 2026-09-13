@@ -56,21 +56,56 @@ class NotificationService {
 				throw new Error("No users found with FCM tokens");
 			}
 
-			const messages = users.map((user) => ({
-				token: user.fcmToken,
-				notification: {
+			// Expo apps (the scannn warehouse/Zebra scanner app registers an
+			// ExponentPushToken[...] in `fcmToken`, exactly like the customer
+			// app) can't be reached through admin.messaging() — route those
+			// through Expo Push instead, mirroring sendToRole() below. Everything
+			// else is a raw FCM registration token and goes through Firebase.
+			const expoUsers = users.filter((user) => Expo.isExpoPushToken(user.fcmToken));
+			const fcmUsers = users.filter((user) => !Expo.isExpoPushToken(user.fcmToken));
+
+			const responses = [];
+			if (fcmUsers.length > 0) {
+				const messages = fcmUsers.map((user) => ({
+					token: user.fcmToken,
+					notification: {
+						title,
+						body,
+					},
+					data: {
+						...data,
+						userId: user._id.toString(),
+					},
+				}));
+				const response = await admin.messaging().sendEach(messages);
+				responses.push(...response.responses);
+			}
+
+			let tickets = [];
+			if (expoUsers.length > 0) {
+				// `channelId` lets the receiving app post the notification on its
+				// own high-importance channel (ringtone, vibration, LED) — the
+				// scanner app uses it for its "new order" alert.
+				const { channelId, ...payload } = data;
+				const expoMessages = expoUsers.map((user) => ({
+					to: user.fcmToken,
+					sound: "default",
+					priority: "high",
+					...(channelId ? { channelId } : {}),
 					title,
 					body,
-				},
-				data: {
-					...data,
-					userId: user._id.toString(),
-				},
-			}));
+					data: { ...payload, userId: user._id.toString() },
+				}));
+				for (const chunk of expo.chunkPushNotifications(expoMessages)) {
+					const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+					tickets.push(...ticketChunk);
+				}
+			}
 
-			const response = await admin.messaging().sendEach(messages);
-			console.log(`✅ Notifications sent to ${users.length} users`);
-			return { success: true, responses: response.responses };
+			console.log(
+				`✅ Notifications sent to ${users.length} users (${fcmUsers.length} via Firebase, ${expoUsers.length} via Expo)`
+			);
+			return { success: true, responses, tickets };
 		} catch (error) {
 			console.error("❌ Error sending notifications to users:", error);
 			throw error;

@@ -1272,9 +1272,11 @@ exports.getOrder = async (req, res) => {
 				populate: { path: "user", select: "name email phoneNumber" },
 			})
 			.populate("market", "name username location logo")
+			// `weight` is included so the scanner app (scannn) can show each
+			// item's weight label next to its shelf number while picking.
 			.populate(
 				"items.product",
-				"name barcode shelfNumber price discount tax bottlerefund picture market",
+				"name barcode shelfNumber price discount tax bottlerefund picture weight market",
 			);
 		if (!order) return fail(res, 404, "Order not found");
 		ok(res, order);
