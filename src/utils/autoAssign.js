@@ -29,6 +29,19 @@ const { getCityCoords } = require("./lebaneseCities");
 // leave a zone unstaffed the moment its only driver picks up a single order.
 const ASSIGNABLE_RIDER_STATUSES = new Set(["available", "busy"]);
 
+// Hard cap on how many undelivered orders one driver may hold at once. A
+// driver already carrying this many (Rider.getRidersWithStats' activeOrdersCount
+// — orders assigned to them that are not yet delivered/cancelled) is skipped by
+// auto-assignment and the next driver takes the order instead.
+const MAX_ACTIVE_ORDERS_PER_RIDER = 5;
+
+const activeLoad = (rider) =>
+	Math.max(0, Number(rider && rider.activeOrdersCount) || 0);
+
+/** True while the driver still has room for at least one more order. */
+const riderHasCapacity = (rider, extraLoad = 0) =>
+	activeLoad(rider) + (Number(extraLoad) || 0) < MAX_ACTIVE_ORDERS_PER_RIDER;
+
 const riderName = (rider) =>
 	(rider && rider.userInfo && rider.userInfo.name) ||
 	(rider && rider.name) ||
@@ -85,14 +98,17 @@ const zoneForPoint = (zoneDocs, lat, lng) => {
  * Drivers that can be given work right now. A driver on break or offline is
  * out; "busy" stays in, because drivers routinely carry several orders on one
  * run and excluding them would unstaff a zone the moment its only driver picks
- * up a single order.
+ * up a single order. A driver already holding MAX_ACTIVE_ORDERS_PER_RIDER
+ * undelivered orders is out too — the cap is what stops one driver absorbing
+ * every order in a zone.
  */
 const eligibleRiders = (riders) =>
 	(riders || []).filter(
 		(r) =>
 			r &&
 			r.isActive !== false &&
-			ASSIGNABLE_RIDER_STATUSES.has(lower(r.status || "available")),
+			ASSIGNABLE_RIDER_STATUSES.has(lower(r.status || "available")) &&
+			riderHasCapacity(r),
 	);
 
 /** Eligible drivers who list `zoneName` among the zones they cover. */
@@ -162,10 +178,20 @@ const planAssignments = ({ orders = [], riders = [], zoneDocs = [] }) => {
 	});
 
 	const eligible = eligibleRiders(riders);
+	// On shift but already at the cap — not candidates, but worth naming when
+	// they are the only reason a zone has nobody.
+	const full = (riders || []).filter(
+		(r) =>
+			r &&
+			r.isActive !== false &&
+			ASSIGNABLE_RIDER_STATUSES.has(lower(r.status || "available")) &&
+			!riderHasCapacity(r),
+	);
 
 	const groups = [...buckets.values()].map((bucket) => ({
 		...bucket,
 		candidates: driversForZone(eligible, bucket.zoneName),
+		fullCount: driversForZone(full, bucket.zoneName).length,
 	}));
 
 	// Most-constrained zone first. A zone with a single possible driver must
@@ -189,7 +215,9 @@ const planAssignments = ({ orders = [], riders = [], zoneDocs = [] }) => {
 	byConstraint.forEach((group) => {
 		if (!group.candidates.length) {
 			group.rider = null;
-			group.reason = `No active driver lists "${group.zoneName}" in their zones`;
+			group.reason = group.fullCount
+				? `Every driver for "${group.zoneName}" already has ${MAX_ACTIVE_ORDERS_PER_RIDER} undelivered orders`
+				: `No active driver lists "${group.zoneName}" in their zones`;
 			return;
 		}
 
@@ -219,12 +247,20 @@ const planAssignments = ({ orders = [], riders = [], zoneDocs = [] }) => {
 			return sa.name.localeCompare(sb.name);
 		};
 
+		// A driver this plan has already filled up cannot take another zone.
+		const withRoom = group.candidates.filter((r) =>
+			riderHasCapacity(r, assignedLoad.get(String(r._id)) || 0),
+		);
+		if (!withRoom.length) {
+			group.rider = null;
+			group.reason = `Every driver for "${group.zoneName}" already has ${MAX_ACTIVE_ORDERS_PER_RIDER} undelivered orders`;
+			return;
+		}
+
 		// Prefer a driver no other zone has taken yet; only double up a driver
 		// when this zone has no untaken candidate left.
-		const untaken = group.candidates.filter(
-			(r) => !assignedLoad.has(String(r._id)),
-		);
-		const pool = untaken.length ? untaken : group.candidates;
+		const untaken = withRoom.filter((r) => !assignedLoad.has(String(r._id)));
+		const pool = untaken.length ? untaken : withRoom;
 		const chosen = [...pool].sort(compare)[0];
 
 		group.rider = chosen;
@@ -299,11 +335,17 @@ const coverageForOrders = ({ orders = [], riders = [], zoneDocs = [] }) => {
 
 		const drivers = driversForZone(eligible, zone.zoneName);
 		if (!drivers.length) {
+			const allFull = driversForZone(
+				(riders || []).filter((r) => r && r.isActive !== false && !riderHasCapacity(r)),
+				zone.zoneName,
+			).length;
 			result.set(id, {
 				state: COVERAGE.NO_DRIVER,
 				zoneName: zone.zoneName,
 				driverCount: 0,
-				message: `This customer's zone "${zone.zoneName}" is not covered by any available driver. Add it to a driver's zones, or bring a driver back on shift.`,
+				message: allFull
+					? `Every driver for zone "${zone.zoneName}" already has ${MAX_ACTIVE_ORDERS_PER_RIDER} undelivered orders. It will be assigned automatically once one frees up.`
+					: `This customer's zone "${zone.zoneName}" is not covered by any available driver. Add it to a driver's zones, or bring a driver back on shift.`,
 			});
 			return;
 		}
@@ -321,6 +363,8 @@ const coverageForOrders = ({ orders = [], riders = [], zoneDocs = [] }) => {
 
 module.exports = {
 	ASSIGNABLE_RIDER_STATUSES,
+	MAX_ACTIVE_ORDERS_PER_RIDER,
+	riderHasCapacity,
 	COVERAGE,
 	resolveOrderPoint,
 	zoneForPoint,

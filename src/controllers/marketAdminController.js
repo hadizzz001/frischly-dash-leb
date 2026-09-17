@@ -669,12 +669,34 @@ exports.listMarketDrivers = async (req, res) => {
 			console.error("[market-admin] Zone self-heal failed:", e.message);
 		}
 
-		const riders = await Rider.find({
+		const riderDocs = await Rider.find({
 			market: req.marketId,
 			isActive: true,
 		})
 			.populate("user", "name email phoneNumber address isActive role")
 			.sort({ createdAt: -1 });
+
+		// Live load per driver — the same "undelivered orders in hand" count the
+		// main-store GET /riders exposes as activeOrdersCount. The scanner app's
+		// "Assign Driver" picker uses it to grey out drivers who already hold
+		// the maximum, so market drivers must report it too.
+		const loadRows = riderDocs.length
+			? await Order.aggregate([
+					{
+						$match: {
+							assignedRider: { $in: riderDocs.map((r) => r._id) },
+							status: { $in: ["confirmed", "processing", "OnTheWay"] },
+						},
+					},
+					{ $group: { _id: "$assignedRider", count: { $sum: 1 } } },
+				])
+			: [];
+		const loadByRider = new Map(loadRows.map((r) => [String(r._id), r.count]));
+		const riders = riderDocs.map((r) => {
+			const obj = typeof r.toObject === "function" ? r.toObject() : r;
+			obj.activeOrdersCount = loadByRider.get(String(r._id)) || 0;
+			return obj;
+		});
 
 		// Optional geofence filter: only return drivers whose selected zones
 		// (each backed by a map pin + radius configured on the Zones management
@@ -724,11 +746,10 @@ exports.listMarketDrivers = async (req, res) => {
 							marketCovers ||
 							namedZonesCoverPoint(r.zones, zoneDocs, coords.lat, coords.lng)
 					)
-					.map((r) => {
-						const obj = typeof r.toObject === "function" ? r.toObject() : r;
-						obj.distanceKm = riderDistanceToPoint(r, zoneDocs, coords.lat, coords.lng);
-						return obj;
-					})
+					.map((r) => ({
+						...r,
+						distanceKm: riderDistanceToPoint(r, zoneDocs, coords.lat, coords.lng),
+					}))
 					.sort((a, b) => a.distanceKm - b.distanceKm);
 				return ok(res, covered);
 			}

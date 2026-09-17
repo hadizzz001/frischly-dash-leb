@@ -37,6 +37,8 @@ const Rider = require("../models/Rider");
 const Zone = require("../models/Zone");
 const {
 	COVERAGE,
+	MAX_ACTIVE_ORDERS_PER_RIDER,
+	riderHasCapacity,
 	resolveOrderPoint,
 	zoneForPoint,
 	eligibleRiders,
@@ -153,6 +155,19 @@ async function autoAssignDriverForOrder(order, opts = {}) {
 	const riders = await Rider.getRidersWithStats(scope);
 	const candidates = driversForZone(eligibleRiders(riders), zone.zoneName);
 	if (!candidates.length) {
+		// Say so when the zone IS staffed but every driver is already holding
+		// the maximum — that is a very different situation from "nobody covers
+		// this zone", and the operator needs to know which one they are in.
+		const full = driversForZone(riders, zone.zoneName).filter(
+			(r) => r && r.isActive !== false && !riderHasCapacity(r),
+		);
+		if (full.length) {
+			return done(
+				RESULT.NO_DRIVER,
+				`No driver assigned: every driver for zone "${zone.zoneName}" already has ${MAX_ACTIVE_ORDERS_PER_RIDER} undelivered orders. It will be assigned automatically once a driver frees up.`,
+				{ zoneName: zone.zoneName, atCapacity: true },
+			);
+		}
 		return done(
 			RESULT.NO_DRIVER,
 			`No driver assigned: this customer's zone "${zone.zoneName}" is not covered by any available driver.`,
@@ -307,6 +322,10 @@ async function assignTenantBacklog(marketId, opts = {}) {
 	const assigned = [];
 	const failed = [];
 	const assignedAt = new Date();
+	// Orders handed to each driver by THIS sweep, on top of the live load they
+	// started with — so a zone with more orders than a driver has room for
+	// stops at the cap instead of pouring the whole zone onto them.
+	const handedOut = new Map();
 
 	for (const group of groups) {
 		if (!group.rider) continue;
@@ -319,9 +338,17 @@ async function assignTenantBacklog(marketId, opts = {}) {
 			);
 			continue;
 		}
+		const riderKey = String(riderDoc._id);
 
 		for (const entry of group.entries) {
 			try {
+				if (!riderHasCapacity(group.rider, handedOut.get(riderKey) || 0)) {
+					failed.push({
+						...describe(entry.order),
+						reason: `${riderName(group.rider)} already has ${MAX_ACTIVE_ORDERS_PER_RIDER} undelivered orders — left for the next sweep`,
+					});
+					continue;
+				}
 				const order = await Order.findById(entry.order._id);
 				// Re-check against the live document: the on-transition trigger or a
 				// concurrent sweep may already have taken this one.
@@ -348,6 +375,7 @@ async function assignTenantBacklog(marketId, opts = {}) {
 				order.status = ON_THE_WAY;
 				if (actorId) order.updatedBy = actorId;
 				await order.save();
+				handedOut.set(riderKey, (handedOut.get(riderKey) || 0) + 1);
 
 				assigned.push({
 					...describe(entry.order),
@@ -385,6 +413,7 @@ async function tenantsWithBacklog() {
 module.exports = {
 	READY_FOR_PICKUP,
 	ON_THE_WAY,
+	MAX_ACTIVE_ORDERS_PER_RIDER,
 	RESULT,
 	tenantFilter,
 	backlogFilter,

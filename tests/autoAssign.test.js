@@ -4,6 +4,7 @@ const {
 	resolveOrderPoint,
 	coverageForOrders,
 	COVERAGE,
+	MAX_ACTIVE_ORDERS_PER_RIDER,
 } = require("../src/utils/autoAssign");
 
 // Two 5 km zones ~11 km apart, so they do not overlap.
@@ -105,6 +106,43 @@ describe("planAssignments", () => {
 		expect(b.rider).toBeNull();
 		expect(b.reason).toMatch(/No active driver/);
 		expect(driverOf(zoneNamed(plan, "Zone A"))).toBe("Driver A");
+	});
+
+	it("skips a driver who already holds the maximum undelivered orders", () => {
+		const plan = planAssignments({
+			orders: inA,
+			riders: [
+				rider("rFull", "Full A", ["Zone A"], { activeOrdersCount: MAX_ACTIVE_ORDERS_PER_RIDER }),
+				rider("rRoom", "Room A", ["Zone A"], { activeOrdersCount: 4 }),
+			],
+			zoneDocs: [zoneA],
+		});
+		expect(driverOf(zoneNamed(plan, "Zone A"))).toBe("Room A");
+	});
+
+	it("reports a zone whose only drivers are all full", () => {
+		const plan = planAssignments({
+			orders: inA,
+			riders: [rider("rFull", "Full A", ["Zone A"], { activeOrdersCount: 7 })],
+			zoneDocs: [zoneA],
+		});
+		expect(zoneNamed(plan, "Zone A").rider).toBeNull();
+		expect(zoneNamed(plan, "Zone A").reason).toMatch(/undelivered orders/);
+	});
+
+	it("does not hand a second zone to a driver this plan already filled", () => {
+		const plan = planAssignments({
+			orders: allOrders,
+			riders: [
+				// Floater has room for exactly the 3 Zone A orders and nothing more.
+				rider("rF", "Floater", ["Zone A", "Zone B"], { activeOrdersCount: MAX_ACTIVE_ORDERS_PER_RIDER - 3 }),
+			],
+			zoneDocs: [zoneA, zoneB],
+		});
+		const withRider = plan.groups.filter((g) => g.rider);
+		expect(withRider).toHaveLength(1);
+		const without = plan.groups.find((g) => !g.rider);
+		expect(without.reason).toMatch(/undelivered orders/);
 	});
 
 	it("skips offline and on-break drivers but keeps busy ones", () => {

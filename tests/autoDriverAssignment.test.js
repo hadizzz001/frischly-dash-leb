@@ -14,7 +14,7 @@ const Rider = require("../src/models/Rider");
 const Zone = require("../src/models/Zone");
 const { riderCoversOrder } = require("../src/utils/zoneGeo");
 const mongoose = require("mongoose");
-const { autoAssignDriverForOrder, RESULT } = require("../src/services/autoDriverAssignment");
+const { autoAssignDriverForOrder, RESULT, MAX_ACTIVE_ORDERS_PER_RIDER } = require("../src/services/autoDriverAssignment");
 
 const zoneA = { _id: "zA", zoneName: "Zone A", distance: 5, distanceUnit: "km", coordinates: { latitude: 33.8938, longitude: 35.5018 }, isActive: true };
 
@@ -171,7 +171,8 @@ describe("autoAssignDriverForOrder", () => {
 
 	it("falls through to the next driver when the hard coverage check rejects the first", async () => {
 		mockWorld({
-			riders: [rider("rA", "Driver A", ["Zone A"]), rider("rA2", "Driver A2", ["Zone A"], { activeOrdersCount: 5 })],
+			// A2 carries more (but stays under the cap) so it ranks second.
+			riders: [rider("rA", "Driver A", ["Zone A"]), rider("rA2", "Driver A2", ["Zone A"], { activeOrdersCount: 3 })],
 		});
 		riderCoversOrder
 			.mockResolvedValueOnce({ covers: false, reason: "out of coverage" })
@@ -188,6 +189,31 @@ describe("autoAssignDriverForOrder", () => {
 		const res = await autoAssignDriverForOrder(order);
 		expect(res.state).toBe(RESULT.NO_DRIVER);
 		expect(order.assignedRider).toBeNull();
+	});
+
+	it("skips a driver already holding the maximum and takes the next one", async () => {
+		mockWorld({
+			riders: [
+				rider("rFull", "Full A", ["Zone A"], { activeOrdersCount: MAX_ACTIVE_ORDERS_PER_RIDER }),
+				rider("rNext", "Next A", ["Zone A"], { activeOrdersCount: 4 }),
+			],
+		});
+		const order = readyOrder();
+		const res = await autoAssignDriverForOrder(order);
+		expect(res.state).toBe(RESULT.ASSIGNED);
+		expect(res.riderName).toBe("Next A");
+		expect(String(order.assignedRider)).toBe("rNext");
+	});
+
+	it("explains when every driver for the zone is full", async () => {
+		mockWorld({ riders: [rider("rFull", "Full A", ["Zone A"], { activeOrdersCount: 5 })] });
+		const order = readyOrder();
+		const res = await autoAssignDriverForOrder(order);
+		expect(res.state).toBe(RESULT.NO_DRIVER);
+		expect(res.atCapacity).toBe(true);
+		expect(res.message).toMatch(/already has 5 undelivered orders/);
+		expect(order.assignedRider).toBeNull();
+		expect(order.status).toBe("ready for pickup");
 	});
 
 	it("does not count offline drivers as available", async () => {
