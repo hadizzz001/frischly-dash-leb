@@ -36,6 +36,9 @@ const requiredVars = {
 		// Social login audiences (ID-token verification)
 		"GOOGLE_CLIENT_ID",
 		"APPLE_CLIENT_ID",
+		// Voice search proxy (POST /api/voice/interpret). Server-side only —
+		// never ship this key in the mobile app bundle.
+		"OPENAI_API_KEY",
 	],
 };
 

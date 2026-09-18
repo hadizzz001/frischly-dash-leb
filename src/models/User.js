@@ -114,6 +114,18 @@ const userSchema = new mongoose.Schema(
 		passwordResetExpires: {
 			type: Date,
 		},
+		// ✅ Native in-app reset: a short 6-digit code is emailed alongside the
+		// link. Stored hashed; POST /auth/verify-reset-code exchanges it for
+		// `passwordResetToken`. Attempts are capped so it can't be brute-forced.
+		passwordResetCodeHash: {
+			type: String,
+			select: false,
+		},
+		passwordResetCodeAttempts: {
+			type: Number,
+			default: 0,
+			select: false,
+		},
 		address: {
 			street: {
 				type: String,

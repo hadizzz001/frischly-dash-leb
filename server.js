@@ -32,6 +32,7 @@ const backupRoutes = require("./src/routes/backup");
 const translateRoutes = require("./src/routes/translate");
 const scannerRoutes = require("./src/routes/scanner");
 const feedbackRoutes = require("./src/routes/feedback");
+const voiceRoutes = require("./src/routes/voice");
 
 // Controllers
 const { cancelOrder } = require("./src/controllers/orderController");
@@ -384,6 +385,7 @@ app.use("/api/backup", backupRoutes);
 app.use("/api/translate", translateRoutes);
 app.use("/api/scanner", scannerRoutes);
 app.use("/api/feedback", feedbackRoutes);
+app.use("/api/voice", voiceRoutes);
 
 // True when the request was made against a local development host. Used so
 // local development never bounces the developer out to the live public site.

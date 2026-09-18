@@ -1283,9 +1283,15 @@ const requestPasswordReset = async (req, res) => {
 		const resetToken = crypto.randomBytes(32).toString("hex");
 		const resetTokenExpires = Date.now() + 60 * 60 * 1000; // 1 hour
 
+		// Native in-app flow: a 6-digit code goes out in the same email. Only
+		// its hash is stored; /verify-reset-code exchanges the code for the token.
+		const resetCode = String(crypto.randomInt(0, 1000000)).padStart(6, "0");
+
 		// Save reset token to user
 		user.passwordResetToken = resetToken;
 		user.passwordResetExpires = resetTokenExpires;
+		user.passwordResetCodeHash = hashResetCode(resetCode);
+		user.passwordResetCodeAttempts = 0;
 		await user.save();
 
 		// Create reset URL
@@ -1300,7 +1306,7 @@ const requestPasswordReset = async (req, res) => {
 		const resetUrl = `${normalizedBaseUrl}/reset-password.html?token=${resetToken}`;
 
 		const { subject: emailSubject, text: emailText, html: emailHtml } =
-			passwordResetEmail({ name: user.name, resetUrl });
+			passwordResetEmail({ name: user.name, resetUrl, code: resetCode });
 
 		try {
 			await sendEmail({
@@ -1314,6 +1320,8 @@ const requestPasswordReset = async (req, res) => {
 			// Clear the reset token if email fails
 			user.passwordResetToken = undefined;
 			user.passwordResetExpires = undefined;
+			user.passwordResetCodeHash = undefined;
+			user.passwordResetCodeAttempts = 0;
 			await user.save();
 			return sendServerError(res, emailError, "Failed to send password reset email. Please try again.");
 		}
@@ -1328,6 +1336,69 @@ const requestPasswordReset = async (req, res) => {
 };
 
 // @desc    Reset password with token
+const hashResetCode = (code) =>
+	crypto.createHash("sha256").update(String(code)).digest("hex");
+const MAX_RESET_CODE_ATTEMPTS = 5;
+
+// @desc    Exchange the emailed 6-digit code for the password reset token
+// @route   POST /api/auth/verify-reset-code
+// @access  Public
+const verifyResetCode = async (req, res) => {
+	try {
+		const errors = validationResult(req);
+		if (!errors.isEmpty()) {
+			return sendValidationError(res, errors, 400, req);
+		}
+
+		const sanitizedEmail = sanitizeEmail(req.body.email);
+		const code = String(req.body.code || "").replace(/\D/g, "");
+		if (!sanitizedEmail || code.length !== 6) {
+			return sendError(res, 400, "Invalid or expired code");
+		}
+
+		const user = await User.findOne({
+			email: sanitizedEmail,
+			passwordResetExpires: { $gt: Date.now() },
+		}).select("+passwordResetCodeHash +passwordResetCodeAttempts");
+
+		if (!user || !user.passwordResetCodeHash || !user.passwordResetToken) {
+			return sendError(res, 400, "Invalid or expired code");
+		}
+
+		if ((user.passwordResetCodeAttempts || 0) >= MAX_RESET_CODE_ATTEMPTS) {
+			// Too many guesses: burn the whole reset so a fresh request is needed.
+			user.passwordResetToken = undefined;
+			user.passwordResetExpires = undefined;
+			user.passwordResetCodeHash = undefined;
+			user.passwordResetCodeAttempts = 0;
+			await user.save();
+			return sendError(res, 429, "Too many attempts. Please request a new code.");
+		}
+
+		const expected = Buffer.from(user.passwordResetCodeHash, "hex");
+		const actual = Buffer.from(hashResetCode(code), "hex");
+		const matches =
+			expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
+
+		if (!matches) {
+			user.passwordResetCodeAttempts = (user.passwordResetCodeAttempts || 0) + 1;
+			await user.save();
+			return sendError(res, 400, "Invalid or expired code");
+		}
+
+		// The code is single-use; the token stays valid for the final step.
+		user.passwordResetCodeHash = undefined;
+		user.passwordResetCodeAttempts = 0;
+		await user.save();
+
+		const ras = { token: user.passwordResetToken };
+		sendResponse(res, 200, true, "Code verified", ras);
+	} catch (error) {
+		console.error("Verify reset code error:", error);
+		sendServerError(res, error, "Server error during code verification");
+	}
+};
+
 // @route   POST /api/auth/reset-password
 // @access  Public
 const resetPassword = async (req, res) => {
@@ -1726,6 +1797,7 @@ module.exports = {
 	deleteUser,
 	deleteAccount,
 	requestPasswordReset,
+	verifyResetCode,
 	resetPassword,
 	resetCustomerPassword,
 	getCustomerCount,

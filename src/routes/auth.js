@@ -18,6 +18,7 @@ const {
 	deleteUser,
 	deleteAccount,
 	requestPasswordReset,
+	verifyResetCode,
 	resetPassword,
 	resetCustomerPassword,
 	getCustomerCount,
@@ -242,6 +243,18 @@ const requestPasswordResetValidation = [
 		.withMessage("Please provide a valid email address"),
 ];
 
+const verifyResetCodeValidation = [
+	body("email")
+		.isEmail()
+		.normalizeEmail()
+		.withMessage("Please provide a valid email address"),
+	body("code")
+		.isString()
+		.trim()
+		.matches(/^\d{6}$/)
+		.withMessage("Code must be 6 digits"),
+];
+
 const resetPasswordValidation = [
 	body("token")
 		.isString()
@@ -271,6 +284,7 @@ router.post(
 	requestPasswordResetValidation,
 	requestPasswordReset
 );
+router.post("/verify-reset-code", verifyResetCodeValidation, verifyResetCode);
 router.post("/reset-password", resetPasswordValidation, resetPassword);
 
 // Protected routes

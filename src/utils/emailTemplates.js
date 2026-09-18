@@ -147,15 +147,23 @@ function registrationConfirmationEmail({ name, confirmUrl }) {
 /**
  * Password reset request
  */
-function passwordResetEmail({ name, resetUrl }) {
+function passwordResetEmail({ name, resetUrl, code }) {
 	const subject = "Reset your Freshly lb password";
 
-	const text = `Hi ${name},\n\nYou requested a password reset for your Freshly lb account. Click the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this password reset, please ignore this email.`;
+	const codeLine = code ? `Your verification code is: ${code}\n\nEnter it in the Freshly LB app, or ` : "";
+	const text = `Hi ${name},\n\nYou requested a password reset for your Freshly lb account. ${codeLine}click the link below to reset your password:\n\n${resetUrl}\n\nThis code and link expire in 1 hour.\n\nIf you didn't request this password reset, please ignore this email.`;
+
+	const codeBlock = code
+		? `<p>Enter this verification code in the ${BRAND_NAME} app:</p>
+		<p style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: ${HEADING_COLOR}; margin: 8px 0 16px;">${code}</p>
+		<p style="font-size: 13px; color: #666;">Or, on the web, click the button below.</p>`
+		: "";
 
 	const html = wrapEmailBody(`
 		<h2 style="color: ${HEADING_COLOR};">Reset your password</h2>
 		<p>Hi ${name},</p>
-		<p>You requested a password reset for your ${BRAND_NAME} account. Click the button below to choose a new password.</p>
+		<p>You requested a password reset for your ${BRAND_NAME} account.</p>
+		${codeBlock}
 		${renderButton(resetUrl, "Reset Password")}
 		<p style="font-size: 13px; color: #666;">If the button above doesn't work, copy and paste this link into your browser:<br>
 		<a href="${resetUrl}" style="color: ${BRAND_COLOR}; word-break: break-all;">${resetUrl}</a></p>
