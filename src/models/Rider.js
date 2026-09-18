@@ -56,6 +56,20 @@ const riderSchema = new mongoose.Schema(
 			trim: true,
 			maxlength: [20, "Vehicle number cannot be more than 20 characters"],
 		},
+		// Per-rider cap on undelivered orders held at once ("Max Orders" on the
+		// dashboard's rider form). Auto-assignment skips a rider whose
+		// activeOrdersCount has reached this, and the scanner app's manual
+		// picker greys them out. See utils/autoAssign.js riderHasCapacity().
+		maxActiveOrders: {
+			type: Number,
+			default: 5,
+			min: [1, "Max orders must be at least 1"],
+			max: [100, "Max orders cannot be more than 100"],
+			validate: {
+				validator: Number.isInteger,
+				message: "Max orders must be a whole number",
+			},
+		},
 		// Performance metrics
 		ordersPickedCount: {
 			type: Number,
@@ -320,6 +334,7 @@ riderSchema.statics.getRidersWithStats = function (filter = {}) {
 				status: 1,
 				vehicleType: 1,
 				vehicleNumber: 1,
+				maxActiveOrders: 1,
 				ordersPickedCount: 1,
 				ordersDeliveredCount: 1,
 				activeOrdersCount: 1,

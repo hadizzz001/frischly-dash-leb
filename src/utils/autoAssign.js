@@ -29,18 +29,32 @@ const { getCityCoords } = require("./lebaneseCities");
 // leave a zone unstaffed the moment its only driver picks up a single order.
 const ASSIGNABLE_RIDER_STATUSES = new Set(["available", "busy"]);
 
-// Hard cap on how many undelivered orders one driver may hold at once. A
-// driver already carrying this many (Rider.getRidersWithStats' activeOrdersCount
-// — orders assigned to them that are not yet delivered/cancelled) is skipped by
-// auto-assignment and the next driver takes the order instead.
-const MAX_ACTIVE_ORDERS_PER_RIDER = 5;
+// Default cap on how many undelivered orders one driver may hold at once. Each
+// Rider carries its own `maxActiveOrders` ("Max Orders" on the dashboard's
+// rider form); this default only applies when that field is missing — e.g.
+// riders created before the field existed and read through an aggregation,
+// which does not apply schema defaults. A driver already carrying their max
+// (Rider.getRidersWithStats' activeOrdersCount — orders assigned to them that
+// are not yet delivered/cancelled) is skipped by auto-assignment and the next
+// driver takes the order instead.
+const DEFAULT_MAX_ACTIVE_ORDERS_PER_RIDER = 5;
+// Kept under the old name for existing callers/tests.
+const MAX_ACTIVE_ORDERS_PER_RIDER = DEFAULT_MAX_ACTIVE_ORDERS_PER_RIDER;
 
 const activeLoad = (rider) =>
 	Math.max(0, Number(rider && rider.activeOrdersCount) || 0);
 
+/** The cap that applies to THIS driver (their own maxActiveOrders, else the default). */
+const riderMaxActiveOrders = (rider) => {
+	const max = Number(rider && rider.maxActiveOrders);
+	return Number.isFinite(max) && max >= 1
+		? Math.floor(max)
+		: DEFAULT_MAX_ACTIVE_ORDERS_PER_RIDER;
+};
+
 /** True while the driver still has room for at least one more order. */
 const riderHasCapacity = (rider, extraLoad = 0) =>
-	activeLoad(rider) + (Number(extraLoad) || 0) < MAX_ACTIVE_ORDERS_PER_RIDER;
+	activeLoad(rider) + (Number(extraLoad) || 0) < riderMaxActiveOrders(rider);
 
 const riderName = (rider) =>
 	(rider && rider.userInfo && rider.userInfo.name) ||
@@ -98,7 +112,7 @@ const zoneForPoint = (zoneDocs, lat, lng) => {
  * Drivers that can be given work right now. A driver on break or offline is
  * out; "busy" stays in, because drivers routinely carry several orders on one
  * run and excluding them would unstaff a zone the moment its only driver picks
- * up a single order. A driver already holding MAX_ACTIVE_ORDERS_PER_RIDER
+ * up a single order. A driver already holding their own maxActiveOrders of
  * undelivered orders is out too — the cap is what stops one driver absorbing
  * every order in a zone.
  */
@@ -216,7 +230,7 @@ const planAssignments = ({ orders = [], riders = [], zoneDocs = [] }) => {
 		if (!group.candidates.length) {
 			group.rider = null;
 			group.reason = group.fullCount
-				? `Every driver for "${group.zoneName}" already has ${MAX_ACTIVE_ORDERS_PER_RIDER} undelivered orders`
+				? `Every driver for "${group.zoneName}" already holds their maximum undelivered orders`
 				: `No active driver lists "${group.zoneName}" in their zones`;
 			return;
 		}
@@ -253,7 +267,7 @@ const planAssignments = ({ orders = [], riders = [], zoneDocs = [] }) => {
 		);
 		if (!withRoom.length) {
 			group.rider = null;
-			group.reason = `Every driver for "${group.zoneName}" already has ${MAX_ACTIVE_ORDERS_PER_RIDER} undelivered orders`;
+			group.reason = `Every driver for "${group.zoneName}" already holds their maximum undelivered orders`;
 			return;
 		}
 
@@ -344,7 +358,7 @@ const coverageForOrders = ({ orders = [], riders = [], zoneDocs = [] }) => {
 				zoneName: zone.zoneName,
 				driverCount: 0,
 				message: allFull
-					? `Every driver for zone "${zone.zoneName}" already has ${MAX_ACTIVE_ORDERS_PER_RIDER} undelivered orders. It will be assigned automatically once one frees up.`
+					? `Every driver for zone "${zone.zoneName}" already holds their maximum undelivered orders. It will be assigned automatically once one frees up.`
 					: `This customer's zone "${zone.zoneName}" is not covered by any available driver. Add it to a driver's zones, or bring a driver back on shift.`,
 			});
 			return;
@@ -363,7 +377,9 @@ const coverageForOrders = ({ orders = [], riders = [], zoneDocs = [] }) => {
 
 module.exports = {
 	ASSIGNABLE_RIDER_STATUSES,
+	DEFAULT_MAX_ACTIVE_ORDERS_PER_RIDER,
 	MAX_ACTIVE_ORDERS_PER_RIDER,
+	riderMaxActiveOrders,
 	riderHasCapacity,
 	COVERAGE,
 	resolveOrderPoint,

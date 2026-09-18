@@ -118,6 +118,7 @@ exports.getRiders = async (req, res) => {
 						status: 1,
 						vehicleType: 1,
 						vehicleNumber: 1,
+						maxActiveOrders: 1,
 						ordersPickedCount: 1,
 						ordersDeliveredCount: 1,
 						activeOrdersCount: 1,
@@ -346,6 +347,7 @@ exports.createRider = async (req, res) => {
 			zones,
 			vehicleType,
 			vehicleNumber,
+			maxActiveOrders,
 			workingHours,
 			verificationDocuments,
 		} = req.body;
@@ -383,6 +385,10 @@ exports.createRider = async (req, res) => {
 			zones,
 			vehicleType,
 			vehicleNumber,
+			// Leave undefined so the schema default (5) applies when not sent.
+			...(maxActiveOrders !== undefined &&
+				maxActiveOrders !== null &&
+				maxActiveOrders !== "" && { maxActiveOrders }),
 			workingHours,
 			verificationDocuments,
 		});
@@ -447,15 +453,17 @@ exports.updateRider = async (req, res) => {
 			"status",
 			"vehicleType",
 			"vehicleNumber",
+			"maxActiveOrders",
 			"workingHours",
 			"currentLocation",
 			"verificationDocuments",
 			"isVerified",
 		];
 
-		// If not admin/manager, limit what can be updated
+		// If not admin/manager, limit what can be updated. A rider must not be
+		// able to raise/lower their own order cap.
 		if (req.user.role !== "admin" && req.user.role !== "manager") {
-			const restrictedFields = ["isVerified", "zones"];
+			const restrictedFields = ["isVerified", "zones", "maxActiveOrders"];
 			restrictedFields.forEach((field) => {
 				if (updates[field] !== undefined) {
 					delete updates[field];

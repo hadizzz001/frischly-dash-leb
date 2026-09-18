@@ -38,6 +38,7 @@ const Zone = require("../models/Zone");
 const {
 	COVERAGE,
 	MAX_ACTIVE_ORDERS_PER_RIDER,
+	riderMaxActiveOrders,
 	riderHasCapacity,
 	resolveOrderPoint,
 	zoneForPoint,
@@ -164,7 +165,7 @@ async function autoAssignDriverForOrder(order, opts = {}) {
 		if (full.length) {
 			return done(
 				RESULT.NO_DRIVER,
-				`No driver assigned: every driver for zone "${zone.zoneName}" already has ${MAX_ACTIVE_ORDERS_PER_RIDER} undelivered orders. It will be assigned automatically once a driver frees up.`,
+				`No driver assigned: every driver for zone "${zone.zoneName}" already holds their maximum undelivered orders. It will be assigned automatically once a driver frees up.`,
 				{ zoneName: zone.zoneName, atCapacity: true },
 			);
 		}
@@ -301,6 +302,7 @@ async function assignTenantBacklog(marketId, opts = {}) {
 						zones: g.rider.zones || [],
 						status: g.rider.status,
 						activeOrdersCount: g.rider.activeOrdersCount || 0,
+						maxActiveOrders: riderMaxActiveOrders(g.rider),
 					}
 				: null,
 			note: g.reason || null,
@@ -345,7 +347,7 @@ async function assignTenantBacklog(marketId, opts = {}) {
 				if (!riderHasCapacity(group.rider, handedOut.get(riderKey) || 0)) {
 					failed.push({
 						...describe(entry.order),
-						reason: `${riderName(group.rider)} already has ${MAX_ACTIVE_ORDERS_PER_RIDER} undelivered orders — left for the next sweep`,
+						reason: `${riderName(group.rider)} already has ${riderMaxActiveOrders(group.rider)} undelivered orders — left for the next sweep`,
 					});
 					continue;
 				}

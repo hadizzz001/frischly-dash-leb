@@ -211,9 +211,25 @@ describe("autoAssignDriverForOrder", () => {
 		const res = await autoAssignDriverForOrder(order);
 		expect(res.state).toBe(RESULT.NO_DRIVER);
 		expect(res.atCapacity).toBe(true);
-		expect(res.message).toMatch(/already has 5 undelivered orders/);
+		expect(res.message).toMatch(/maximum undelivered orders/);
 		expect(order.assignedRider).toBeNull();
 		expect(order.status).toBe("ready for pickup");
+	});
+
+	it("honours each driver's own maxActiveOrders instead of the default", async () => {
+		mockWorld({
+			riders: [
+				// At the default cap of 5 — but this driver is allowed 8, so has room.
+				rider("rBig", "Big A", ["Zone A"], { activeOrdersCount: 5, maxActiveOrders: 8 }),
+				// Only 2 in hand, yet capped at 2 — full.
+				rider("rSmall", "Small A", ["Zone A"], { activeOrdersCount: 2, maxActiveOrders: 2 }),
+			],
+		});
+		const order = readyOrder();
+		const res = await autoAssignDriverForOrder(order);
+		expect(res.state).toBe(RESULT.ASSIGNED);
+		expect(res.riderName).toBe("Big A");
+		expect(String(order.assignedRider)).toBe("rBig");
 	});
 
 	it("does not count offline drivers as available", async () => {

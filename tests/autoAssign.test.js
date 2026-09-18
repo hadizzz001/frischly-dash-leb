@@ -5,6 +5,7 @@ const {
 	coverageForOrders,
 	COVERAGE,
 	MAX_ACTIVE_ORDERS_PER_RIDER,
+	riderMaxActiveOrders,
 } = require("../src/utils/autoAssign");
 
 // Two 5 km zones ~11 km apart, so they do not overlap.
@@ -118,6 +119,25 @@ describe("planAssignments", () => {
 			zoneDocs: [zoneA],
 		});
 		expect(driverOf(zoneNamed(plan, "Zone A"))).toBe("Room A");
+	});
+
+	it("uses each driver's own maxActiveOrders, falling back to the default", () => {
+		expect(riderMaxActiveOrders(rider("r", "Default", ["Zone A"]))).toBe(MAX_ACTIVE_ORDERS_PER_RIDER);
+		expect(riderMaxActiveOrders(rider("r", "Ten", ["Zone A"], { maxActiveOrders: 10 }))).toBe(10);
+		expect(riderMaxActiveOrders(rider("r", "Bad", ["Zone A"], { maxActiveOrders: 0 }))).toBe(MAX_ACTIVE_ORDERS_PER_RIDER);
+		expect(riderMaxActiveOrders(rider("r", "Str", ["Zone A"], { maxActiveOrders: "3" }))).toBe(3);
+
+		const plan = planAssignments({
+			orders: inA,
+			riders: [
+				// Holds 5 (the old hard cap) but is allowed 6 — still has room.
+				rider("rBig", "Big A", ["Zone A"], { activeOrdersCount: 5, maxActiveOrders: 6 }),
+				// Holds only 1 but is capped at 1 — full.
+				rider("rOne", "One A", ["Zone A"], { activeOrdersCount: 1, maxActiveOrders: 1 }),
+			],
+			zoneDocs: [zoneA],
+		});
+		expect(driverOf(zoneNamed(plan, "Zone A"))).toBe("Big A");
 	});
 
 	it("reports a zone whose only drivers are all full", () => {

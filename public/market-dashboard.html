@@ -4018,6 +4018,24 @@
 							/>
 						</div>
 						<div class="form-group">
+							<label for="rider-max-orders">Max Orders *</label>
+							<input
+								type="number"
+								id="rider-max-orders"
+								name="maxActiveOrders"
+								required
+								min="1"
+								max="100"
+								step="1"
+								value="5"
+								placeholder="e.g., 5"
+							/>
+							<small class="form-help"
+								>Most undelivered orders this rider can hold at once. Auto-assignment
+								skips them once they reach it (default 5)</small
+							>
+						</div>
+						<div class="form-group">
 							<label for="rider-status">Status *</label>
 							<select id="rider-status" name="status" required>
 								<option value="available">Available</option>

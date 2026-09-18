@@ -9346,6 +9346,7 @@
 						zones: selectedZones,
 						vehicleType: formData.get("vehicleType"),
 						vehicleNumber: formData.get("vehicleNumber"),
+						maxActiveOrders: parseInt(formData.get("maxActiveOrders"), 10),
 						status: formData.get("status"),
 						isVerified: formData.get("isVerified") === "true",
 						isActive: formData.get("isActive") === "true",
@@ -9369,6 +9370,13 @@
 
 					if (!riderData.vehicleNumber) {
 						throw new Error("Please enter a vehicle number");
+					}
+
+					if (
+						!Number.isInteger(riderData.maxActiveOrders) ||
+						riderData.maxActiveOrders < 1
+					) {
+						throw new Error("Max orders must be a whole number of at least 1");
 					}
 
 					// Remove null values for cleaner API request
@@ -9497,6 +9505,7 @@
 					const vehicleNumberField = document.getElementById(
 						"rider-vehicle-number"
 					);
+					const maxOrdersField = document.getElementById("rider-max-orders");
 					const statusField = document.getElementById("rider-status");
 					const zoneField = document.getElementById("rider-zone");
 					const isVerifiedField = document.getElementById("rider-is-verified");
@@ -9525,6 +9534,13 @@
 					if (vehicleField) vehicleField.value = rider.vehicleType || "";
 					if (vehicleNumberField)
 						vehicleNumberField.value = rider.vehicleNumber || "";
+					// Riders created before the cap existed have no value yet — show
+					// the server default so saving the form keeps them at 5.
+					if (maxOrdersField)
+						maxOrdersField.value =
+							Number.isInteger(rider.maxActiveOrders) && rider.maxActiveOrders >= 1
+								? rider.maxActiveOrders
+								: 5;
 					if (statusField) statusField.value = rider.status || "offline";
 
 					// Set boolean fields

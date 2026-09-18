@@ -2077,6 +2077,11 @@ exports.riders = {
 					body.vehiclePlate !== undefined) && {
 					vehicleNumber: body.vehicleNumber || body.vehiclePlate,
 				}),
+				...(body.maxActiveOrders !== undefined &&
+					body.maxActiveOrders !== null &&
+					body.maxActiveOrders !== "" && {
+						maxActiveOrders: body.maxActiveOrders,
+					}),
 				...(zones !== undefined && { zones }),
 				...(body.status !== undefined && { status: body.status }),
 				...(body.isActive !== undefined && { isActive: body.isActive }),
@@ -2100,6 +2105,9 @@ exports.riders = {
 							: await defaultMarketZones(req.marketId),
 					vehicleType: patch.vehicleType || "motorbike",
 					vehicleNumber: patch.vehicleNumber,
+					...(patch.maxActiveOrders !== undefined && {
+						maxActiveOrders: patch.maxActiveOrders,
+					}),
 					status: patch.status || "available",
 					isActive: patch.isActive !== false,
 					isVerified: patch.isVerified !== false,
@@ -2132,6 +2140,11 @@ exports.riders = {
 					body.vehiclePlate !== undefined) && {
 					vehicleNumber: body.vehicleNumber || body.vehiclePlate,
 				}),
+				...(body.maxActiveOrders !== undefined &&
+					body.maxActiveOrders !== null &&
+					body.maxActiveOrders !== "" && {
+						maxActiveOrders: body.maxActiveOrders,
+					}),
 				...(zones !== undefined && { zones }),
 				...(body.status !== undefined && { status: body.status }),
 				...(body.isActive !== undefined && { isActive: body.isActive }),
