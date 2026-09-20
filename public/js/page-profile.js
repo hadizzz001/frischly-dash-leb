@@ -533,7 +533,7 @@
 						const status = o.status || "pending";
 						const action =
 							status === "OnTheWay"
-								? `<button class="btn prx-34" onclick="markDelivered('${o._id}')">✓ Mark Delivered</button>`
+								? `<button class="btn prx-34" onclick="markDelivered('${o._id}')"><i data-lucide=check></i> Mark Delivered</button>`
 								: '<span class="prx-3">—</span>';
 						return `
 							<tr>
@@ -674,18 +674,18 @@
 					if (r.ok) {
 						__lastPushAt = Date.now();
 						__lastPushed = { lat: latitude, lng: longitude };
-						__setStatus("🟢 Live location active", "#28a745");
+						__setStatus("Live location active", "#28a745");
 						__setLastUpdate(latitude, longitude);
 					} else {
 						const j = await r.json().catch(() => ({}));
 						__setStatus(
-							`🔴 Server rejected location: ${j.message || r.status}`,
+							`Server rejected location: ${j.message || r.status}`,
 							"#dc3545"
 						);
 					}
 				} catch (e) {
 					console.error(e);
-					__setStatus("🔴 Network error pushing location", "#dc3545");
+					__setStatus("Network error pushing location", "#dc3545");
 				}
 			}
 			function __isSecureForGeo() {
@@ -711,12 +711,12 @@
 						}
 					},
 					(err) => {
-						let msg = "🔴 GPS unavailable";
+						let msg = "GPS unavailable";
 						if (err.code === 1)
 							msg =
-								"🔴 Permission denied — open the padlock icon in the address bar and set Location to Allow, then click the button again";
-						else if (err.code === 2) msg = "🔴 Position unavailable";
-						else if (err.code === 3) msg = "🔴 GPS timed out";
+								"Permission denied — open the padlock icon in the address bar and set Location to Allow, then click the button again";
+						else if (err.code === 2) msg = "Position unavailable";
+						else if (err.code === 3) msg = "GPS timed out";
 						__setStatus(msg, "#dc3545");
 						console.warn("watchPosition error:", err);
 					},
@@ -750,42 +750,42 @@
 				__permissionRequested = true;
 
 				if (!("geolocation" in navigator)) {
-					__setStatus("🔴 Geolocation not supported", "#dc3545");
+					__setStatus("Geolocation not supported", "#dc3545");
 					return;
 				}
 				if (!__isSecureForGeo()) {
 					__setStatus(
-						"🔴 Use http://localhost or HTTPS (LAN IPs are blocked by browsers)",
+						"Use http://localhost or HTTPS (LAN IPs are blocked by browsers)",
 						"#dc3545"
 					);
 					return;
 				}
 
-				__setStatus("🟡 Requesting permission…", "#b08900");
+				__setStatus("Requesting permission…", "#b08900");
 				navigator.geolocation.getCurrentPosition(
 					(pos) => {
 						__pushLocation(pos.coords.latitude, pos.coords.longitude);
 						__startWatch();
 						__startAutoPushInterval();
 						const lbl = document.getElementById("enable-location-label");
-						if (lbl) lbl.textContent = "✓ Tracking active";
+						if (lbl) lbl.textContent = "Tracking active";
 						const btn = document.getElementById("enable-location-btn");
 						if (btn) btn.style.display = "none";
 					},
 					(err) => {
 						if (err.code === 1) {
 							__setStatus(
-								"🔴 Location permission denied — click the button below to allow, or enable it via the browser's site settings",
+								"Location permission denied — click the button below to allow, or enable it via the browser's site settings",
 								"#dc3545"
 							);
 						} else if (err.code === 2) {
 							__setStatus(
-								"🔴 Position unavailable — click the button to retry",
+								"Position unavailable — click the button to retry",
 								"#dc3545"
 							);
 						} else {
 							__setStatus(
-								"🔴 GPS timed out — click the button to retry",
+								"GPS timed out — click the button to retry",
 								"#dc3545"
 							);
 						}
@@ -812,14 +812,14 @@
 					);
 					return;
 				}
-				__setStatus("🟡 Requesting permission…", "#b08900");
+				__setStatus("Requesting permission…", "#b08900");
 				navigator.geolocation.getCurrentPosition(
 					(pos) => {
 						__pushLocation(pos.coords.latitude, pos.coords.longitude);
 						__startWatch();
 						__startAutoPushInterval();
 						const lbl = document.getElementById("enable-location-label");
-						if (lbl) lbl.textContent = "✓ Tracking active";
+						if (lbl) lbl.textContent = "Tracking active";
 						const btn = document.getElementById("enable-location-btn");
 						if (btn) btn.style.display = "none";
 					},
@@ -828,11 +828,11 @@
 						if (err.code === 1)
 							msg =
 								"Location permission was denied.\n\n" +
-								"To fix: click the 🔒 padlock icon next to the URL → Site settings → Location → Allow → reload the page.";
+								"To fix: click the  padlock icon next to the URL  Site settings  Location  Allow  reload the page.";
 						else if (err.code === 2)
 							msg = "Position unavailable. Check device GPS / Wi-Fi.";
 						else if (err.code === 3) msg = "Location request timed out.";
-						__setStatus("🔴 " + msg.split("\n")[0], "#dc3545");
+						__setStatus(" " + msg.split("\n")[0], "#dc3545");
 						alert(msg);
 					},
 					{ enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }

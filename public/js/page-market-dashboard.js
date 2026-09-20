@@ -25,7 +25,7 @@
 
 			function rewritePath(u) {
 				const orig = u;
-				// Admin-only system endpoints → noop
+				// Admin-only system endpoints  noop
 				if (/^\/api\/admin\/(backup|maintenance|system-info)/.test(u)) {
 					return M + "/__noop_admin" + u.replace(/^\/api\/admin/, "");
 				}
@@ -182,7 +182,7 @@
 				};
 				const metaOf = (b) => (b && b.data && (b.data.meta || b.data.pagination)) || b?.meta || {};
 
-				// Staff list (was /api/auth/users) → admin expects data.data.users
+				// Staff list (was /api/auth/users)  admin expects data.data.users
 				{
 					const items = itemsOf(body);
 					if (items && /\/api\/market-admin\/staff(\?|$|\/?$)/.test(rewrittenUrl)) {
@@ -204,13 +204,13 @@
 					}
 				}
 
-				// Rider-user dropdown → same users envelope expected by rider modal
+				// Rider-user dropdown  same users envelope expected by rider modal
 				if (/\/api\/market-admin\/rider-users(\?|$|\/?$)/.test(rewrittenUrl) && Array.isArray(body.data)) {
 					out = { success: true, data: { users: body.data, total: body.data.length } };
 					return wrap(out);
 				}
 
-				// Product sales stats → loadProductSalesStats reads
+				// Product sales stats  loadProductSalesStats reads
 				// result.data.productSales (array) + result.data.pagination.
 				{
 					const items = itemsOf(body);
@@ -228,7 +228,7 @@
 					}
 				}
 
-				// Unsold products → loadUnsoldProducts reads
+				// Unsold products  loadUnsoldProducts reads
 				// result.data.productsWithCategory (array) + result.data.pagination.
 				{
 					const items = itemsOf(body);
@@ -245,7 +245,7 @@
 					}
 				}
 
-				// Products list → this market dashboard reads data.data.products
+				// Products list  this market dashboard reads data.data.products
 				// (array) plus data.data.pagination (with a `totalProducts` field).
 				{
 					const items = itemsOf(body);
@@ -273,7 +273,7 @@
 					}
 				}
 
-				// Orders list → market dashboard reads `data.orders` (array) plus
+				// Orders list  market dashboard reads `data.orders` (array) plus
 				// `data.pagination` (same shape as the real /api/orders endpoint).
 				{
 					const items = itemsOf(body);
@@ -304,7 +304,7 @@
 					}
 				}
 
-				// Riders list (market's own Rider docs) → dashboard reads
+				// Riders list (market's own Rider docs)  dashboard reads
 				// data.data.riders (array).
 				{
 					const items = itemsOf(body);
@@ -318,7 +318,7 @@
 					}
 				}
 
-				// Categories list → loadCategories reads data.data.categories (array).
+				// Categories list  loadCategories reads data.data.categories (array).
 				{
 					const items = itemsOf(body);
 					if (items && /\/api\/market-admin\/categories(\?|$|\/?$)/.test(rewrittenUrl)) {
@@ -327,7 +327,7 @@
 					}
 				}
 
-				// Subcategories list → consumers read data.data.subcategories (array).
+				// Subcategories list  consumers read data.data.subcategories (array).
 				{
 					const items = itemsOf(body);
 					if (items && /\/api\/market-admin\/subcategories(\?|$|\/?$)/.test(rewrittenUrl)) {
@@ -336,7 +336,7 @@
 					}
 				}
 
-				// Promo codes list → the market dashboard reads `data` as a plain
+				// Promo codes list  the market dashboard reads `data`as a plain
 				// array (loadPromoCodes calls result.data.filter), so do NOT nest it
 				// under data.promoCodes or .filter throws "is not a function".
 				{
@@ -346,7 +346,7 @@
 						return wrap(out);
 					}
 				}
-				// Announcements list → same: loadAnnouncements reads result.data as
+				// Announcements list  same: loadAnnouncements reads result.data as
 				// a plain array (result.data.forEach), so keep it as an array.
 				{
 					const items = itemsOf(body);
@@ -356,7 +356,7 @@
 					}
 				}
 
-				// Waste list → updateWasteTable reads `data.data` as a plain array
+				// Waste list  updateWasteTable reads `data.data`as a plain array
 				// plus a TOP-LEVEL `pagination` object (sibling of `data`, not
 				// nested inside it). Do NOT nest under data.waste, or
 				// data.data.forEach throws "is not a function".
@@ -385,7 +385,7 @@
 				}
 
 
-				// /me → expose the user object expected by /auth/me consumers
+				// /me  expose the user object expected by /auth/me consumers
 				if (/\/api\/market-admin\/me(\?|$)/.test(rewrittenUrl) && body.data) {
 					const m = body.data.market || {};
 					const u = body.data.user || {};
@@ -414,7 +414,7 @@
 					return wrap(out);
 				}
 
-				// Profile (Market doc) → match auth/profile shape used by admin.
+				// Profile (Market doc)  match auth/profile shape used by admin.
 				// The admin UI reads user.address.{street,city}, but markets store the
 				// address under location, so expose an `address` derived from `location`
 				// (same as the /me adapter). Without this the frontend throws a
@@ -769,7 +769,7 @@
 
 			// Debug function to check API configuration
 			function checkApiConfig() {
-				console.log("🔍 API Configuration Check:");
+				console.log("API Configuration Check:");
 				console.log("Current hostname:", window.location.hostname);
 				console.log("API_BASE_URL:", API_BASE_URL);
 				console.log("Current token exists:", !!currentToken);
@@ -1283,7 +1283,7 @@
 				}
 
 				try {
-					console.log("🔍 Change Password Debug:");
+					console.log("Change Password Debug:");
 					console.log("API_BASE_URL:", API_BASE_URL);
 					console.log("Full URL:", `${API_BASE_URL}/auth/change-password`);
 					console.log("Current token exists:", !!currentToken);
@@ -2394,7 +2394,7 @@
 										: ""
 								}
 								<div class="mdx-131" style="display: ${category.image ? "none" : "flex"}">
-									📁
+									<i data-lucide=folder></i>
 								</div>
 							</td>
 							<td class="mdx-132">
@@ -3279,7 +3279,7 @@
 										${
 											subcategory.parentCategory?.image
 												? ""
-												: `<div class="mdx-144">📁</div>`
+												: `<div class="mdx-144"><i data-lucide=folder></i></div>`
 										}
 										<span class="category-badge">${
 											subcategory.parentCategory?.name || "Unknown"
@@ -3296,7 +3296,7 @@
 											onclick="editSubcategory('${subcategory._id}')"
 											title="Edit Subcategory"
 										>
-											✏️
+											<i data-lucide=pencil></i>
 										</button>
 										<button
 											class="btn-action ${subcategory.isActive ? "deactivate" : "activate"}"
@@ -3305,7 +3305,7 @@
 											}', ${!subcategory.isActive})"
 											title="${subcategory.isActive ? "Deactivate" : "Activate"} Subcategory"
 										>
-											${subcategory.isActive ? "🔒" : "🔓"}
+											${subcategory.isActive ? "<i data-lucide=lock></i>" : "<i data-lucide=lock-open></i>"}
 										</button>
 									</div>
 								</td>
@@ -5397,7 +5397,7 @@
 								<td>${statusBadge}</td>
 								<td>
 									<div class="mdx-142">
-										<span class="mdx-168">⭐</span>
+										<span class="mdx-168"><i data-lucide=star></i></span>
 										<span>${rating}</span>
 										<span class="mdx-169">(${completionRate}%)</span>
 									</div>
@@ -5407,10 +5407,10 @@
 										<button class="btn-icon" onclick="viewRiderDetails('${
 											rider._id
 										}')" title="View Details">
-											👁️
+											<i data-lucide=eye></i>
 										</button>
 										<button class="btn-icon" onclick="editRider('${rider._id}')" title="Edit Rider">
-											✏️
+											<i data-lucide=pencil></i>
 										</button>
 										<button class="btn-icon ${
 											rider.status === "available" ? "btn-danger" : ""
@@ -5419,12 +5419,12 @@
 						}')" title="${
 							rider.status === "available" ? "Deactivate" : "Activate"
 						}">
-											${rider.status === "available" ? "⏸️" : "▶️"}
+											${rider.status === "available" ? "<i data-lucide=pause></i>" : "<i data-lucide=play></i>"}
 										</button>
 										<button class="btn-icon btn-danger" onclick="deleteRider('${
 											rider._id
 										}')" title="Delete Rider">
-											🗑️
+											<i data-lucide=trash-2></i>
 										</button>
 									</div>
 								</td>
@@ -5575,17 +5575,17 @@
 						<td>
 							<div class="table-actions">
 								<button class="btn-icon" onclick="editZone('${zone._id}')" title="Edit">
-									✏️
+									<i data-lucide=pencil></i>
 								</button>
 								<button class="btn-icon" onclick="toggleZoneStatus('${zone._id}', ${
 							zone.isActive
 						})" title="${zone.isActive ? "Deactivate" : "Activate"}">
-									${zone.isActive ? "⏸️" : "▶️"}
+									${zone.isActive ? "<i data-lucide=pause></i>" : "<i data-lucide=play></i>"}
 								</button>
 								<button class="btn-icon btn-danger" onclick="deleteZone('${zone._id}', '${
 							zone.zoneName
 						}')" title="Delete">
-									🗑️
+									<i data-lucide=trash-2></i>
 								</button>
 							</div>
 						</td>
@@ -6241,10 +6241,10 @@
 						<td>
 							<div class="table-actions">
 								<button class="btn-icon" onclick="viewCustomer('${customer._id}')" title="View Details">
-									👁️
+									<i data-lucide=eye></i>
 								</button>
 								<button class="btn-icon" onclick="resetCustomerPassword('${customer._id}', '${customer.name}')" title="Reset Password">
-									🔑
+									<i data-lucide=key></i>
 								</button>
 							</div>
 						</td>
@@ -7083,7 +7083,7 @@
 						let detailsHtml = `
 							<div class="mdx-174">
 								<div class="mdx-175">
-									<div class="mdx-176">🏍️</div>
+									<div class="mdx-176"><i data-lucide=bike></i></div>
 									<div>
 										<h2 class="mdx-177">${
 											u.name || "Unknown"
@@ -7094,22 +7094,22 @@
 									</div>
 								</div>
 								<div class="mdx-179">
-									<div><strong>📧 Email:</strong><br><span class="mdx-180">${
+									<div><strong><i data-lucide=mail></i> Email:</strong><br><span class="mdx-180">${
 										u.email || "Not provided"
 									}</span></div>
-									<div><strong>📞 Phone:</strong><br><span class="mdx-180">${
+									<div><strong><i data-lucide=phone></i> Phone:</strong><br><span class="mdx-180">${
 										u.phoneNumber || "Not provided"
 									}</span></div>
-									<div><strong>🏢 Zones:</strong><br><span class="mdx-180">${
+									<div><strong><i data-lucide=building-2></i> Zones:</strong><br><span class="mdx-180">${
 										Array.isArray(rider.zones)
 											? rider.zones.join(", ")
 											: rider.zone || "No zones assigned"
 									}</span></div>
-									<div><strong>🚗 Vehicle:</strong><br><span class="mdx-180">${
+									<div><strong><i data-lucide=car></i> Vehicle:</strong><br><span class="mdx-180">${
 										rider.vehicleType || "—"
 									}</span></div>
-									<div><strong>📄 License:</strong><br><span class="mdx-180">${displayLicense}</span></div>
-									<div><strong>📊 Status:</strong><br>${getStatusBadge(displayStatus)}</div>
+									<div><strong><i data-lucide=file-text></i> License:</strong><br><span class="mdx-180">${displayLicense}</span></div>
+									<div><strong><i data-lucide=chart-column></i> Status:</strong><br>${getStatusBadge(displayStatus)}</div>
 								</div>
 								<div class="mdx-181">
 									<div class="mdx-182">
@@ -7125,7 +7125,7 @@
 										<div class="mdx-184">Orders Delivered</div>
 									</div>
 									<div class="mdx-182">
-										<div class="mdx-186">⭐ ${
+										<div class="mdx-186"><i data-lucide=star></i> ${
 											typeof rider.rating === "number" && !isNaN(rider.rating)
 												? rider.rating.toFixed(1)
 												: "N/A"
@@ -7135,18 +7135,18 @@
 								</div>
 								${
 									rider.emergencyContactName
-										? `<div class="mdx-187"><strong>🚨 Emergency Contact:</strong><br>${
+										? `<div class="mdx-187"><strong><i data-lucide=siren></i> Emergency Contact:</strong><br>${
 												rider.emergencyContactName
 										  } - ${rider.emergencyContactPhone || "No phone"}</div>`
 										: ""
 								}
 								${
 									rider.notes
-										? `<div class="mdx-188"><strong>📝 Notes:</strong><br>${rider.notes}</div>`
+										? `<div class="mdx-188"><strong><i data-lucide=notebook-pen></i> Notes:</strong><br>${rider.notes}</div>`
 										: ""
 								}
 								<div class="mdx-189">
-									<button onclick="editRider('${riderId}')" class="btn btn-primary mdx-190">✏️ Edit Rider</button>
+									<button onclick="editRider('${riderId}')" class="btn btn-primary mdx-190"><i data-lucide=pencil></i> Edit Rider</button>
 									<button onclick="document.getElementById('rider-details-overlay').style.display='none'" class="btn btn-secondary mdx-191">Close</button>
 								</div>
 							</div>
@@ -7434,7 +7434,7 @@
 							updatedMarket
 						);
 					}
-					if (statusEl) statusEl.textContent = "Logo updated ✓";
+					if (statusEl) statusEl.textContent = "Logo updated ";
 					showMessage("Market logo updated", "success");
 				} catch (error) {
 					console.error("Logo upload error:", error);
@@ -7919,7 +7919,7 @@
 					tbody.innerHTML = `
 						<tr>
 							<td colspan="10" class="mdx-3">
-								<div class="mdx-224">📦</div>
+								<div class="mdx-224"><i data-lucide=package></i></div>
 								<div class="mdx-225">No orders found</div>
 								<div class="mdx-226">Create your first order to get started</div>
 							</td>
@@ -8010,9 +8010,9 @@
 				}
 
 				const BADGES = {
-					"no-driver": { icon: "⚠️", text: "No driver covers this zone" },
-					"no-zone": { icon: "⚠️", text: "Outside all delivery zones" },
-					"no-location": { icon: "⚠️", text: "No delivery location on file" },
+					"no-driver": { icon: "", text: "No driver covers this zone" },
+					"no-zone": { icon: "", text: "Outside all delivery zones" },
+					"no-location": { icon: "", text: "No delivery location on file" },
 				};
 
 				Object.keys(coverage).forEach((orderId) => {
@@ -8506,16 +8506,16 @@
 				// Set customer information
 				let customerInfo = `<strong>${customer.name || "Unknown customer"}</strong>`;
 				if (customer.email) {
-					customerInfo += `<br>📧 ${customer.email}`;
+					customerInfo += `<br><i data-lucide=mail></i> ${customer.email}`;
 				}
 				const custAddr = customer.address;
 				if (custAddr && custAddr.city) {
-					customerInfo += `<br>📍 ${custAddr.street ? custAddr.street + ", " : ""}${custAddr.city}`;
+					customerInfo += `<br><i data-lucide=map-pin></i> ${custAddr.street ? custAddr.street + ", " : ""}${custAddr.city}`;
 				}
 				const custLoc = custAddr && custAddr.location;
 				if (custLoc && isFinite(custLoc.latitude) && isFinite(custLoc.longitude)) {
 					const mapUrl = `https://www.openstreetmap.org/?mlat=${custLoc.latitude}&mlon=${custLoc.longitude}#map=16/${custLoc.latitude}/${custLoc.longitude}`;
-					customerInfo += `<br><a href="${mapUrl}" target="_blank" rel="noopener" class="mdx-235">🗺️ View Map Pin</a>`;
+					customerInfo += `<br><a href="${mapUrl}" target="_blank" rel="noopener" class="mdx-235"><i data-lucide=map></i> View Map Pin</a>`;
 				}
 				setHtml("modal-customer-info", customerInfo);
 
@@ -8545,10 +8545,10 @@
 				if (driverName) {
 					driverInfo = `<strong>${driverName}</strong>`;
 					if (driverPhone) {
-						driverInfo += `<br>📞 <a href="tel:${driverPhone}">${driverPhone}</a>`;
+						driverInfo += `<br><i data-lucide=phone></i> <a href="tel:${driverPhone}">${driverPhone}</a>`;
 					}
 					const vehicle = [rider.vehicleType, rider.vehicleNumber].filter(Boolean).join(" · ");
-					if (vehicle) driverInfo += `<br>🚗 ${vehicle}`;
+					if (vehicle) driverInfo += `<br><i data-lucide=car></i> ${vehicle}`;
 				} else {
 					driverInfo = "No driver assigned yet";
 				}
@@ -8559,7 +8559,7 @@
 						<select id="modal-driver-select" style="width:100%;padding:6px;margin-top:4px;">
 							<option value="">Loading drivers…</option>
 						</select>
-						<button type="button" class="btn btn-primary" style="margin-top:6px;" onclick="saveOrderDriver('${order._id}')">💾 Save driver</button>
+						<button type="button" class="btn btn-primary" style="margin-top:6px;" onclick="saveOrderDriver('${order._id}')"><i data-lucide=save></i> Save driver</button>
 					</div>`;
 				setHtml("modal-driver-info", driverInfo);
 				populateOrderDriverSelect(order);
@@ -8615,7 +8615,7 @@
 
 			// Load this market's drivers into the order modal dropdown and mark the
 			// currently assigned one as selected. The page-wide fetch interceptor
-			// rewrites /api/riders → /api/market-admin/riders and normalizes the
+			// rewrites /api/riders  /api/market-admin/riders and normalizes the
 			// payload to data.riders, so the admin-shaped call works unchanged.
 			async function populateOrderDriverSelect(order) {
 				const select = document.getElementById("modal-driver-select");
@@ -8980,7 +8980,7 @@
 						</td>
 						<td>
 							<div class="mdx-142">
-								<span class="mdx-168">⭐</span>
+								<span class="mdx-168"><i data-lucide=star></i></span>
 								<span>${rating.toFixed(1)}</span>
 								<span class="mdx-169">(${
 									rider.completionRate ? rider.completionRate.toFixed(1) : "0.0"
@@ -8992,18 +8992,18 @@
 								<button class="btn-icon" onclick="viewRiderDetails('${
 									rider._id
 								}')" title="View Details">
-									👁️
+									<i data-lucide=eye></i>
 								</button>
 								<button class="btn-icon" onclick="editRider('${rider._id}')" title="Edit Rider">
-									✏️
+									<i data-lucide=pencil></i>
 								</button>
 								${
 									rider.currentLocation
 										? `<button class="btn-icon" onclick="viewRiderLocation('${rider._id}')" title="View Location">
-										📍
+										<i data-lucide=map-pin></i>
 									</button>`
 										: `<button class="btn-icon" disabled title="No Location Data">
-										📍
+										<i data-lucide=map-pin></i>
 									</button>`
 								}
 								<button class="btn-icon ${
@@ -9013,12 +9013,12 @@
 						}')" title="${
 							effectiveStatus === "available" ? "Deactivate" : "Activate"
 						}">
-									${effectiveStatus === "available" ? "⏸️" : "▶️"}
+									${effectiveStatus === "available" ? "<i data-lucide=pause></i>" : "<i data-lucide=play></i>"}
 								</button>
 								<button class="btn-icon btn-danger" onclick="deleteRider('${
 									rider._id
 								}')" title="Delete Rider">
-									🗑️
+									<i data-lucide=trash-2></i>
 								</button>
 							</div>
 						</td>
@@ -9878,7 +9878,7 @@
 					document.getElementById('sales-stats-table-body').innerHTML = `
 						<tr>
 							<td colspan="9" class="mdx-237">
-								<div class="mdx-50">❌</div>
+								<div class="mdx-50"><i data-lucide=circle-x></i></div>
 								<p>Failed to load sales statistics</p>
 								<p class="mdx-238">${error.message}</p>
 							</td>
@@ -9898,7 +9898,7 @@
 					tableBody.innerHTML = `
 						<tr>
 							<td colspan="9" class="mdx-49">
-								<div class="mdx-50">📭</div>
+								<div class="mdx-50"><i data-lucide=inbox></i></div>
 								<p>No sales data found for the selected period</p>
 								<p class="mdx-238">Try adjusting your time filter</p>
 							</td>
@@ -9963,9 +9963,9 @@
 			// Get rank badge emoji for top 3
 			function getRankBadge(rank) {
 				switch(rank) {
-					case 1: return '🥇';
-					case 2: return '🥈';
-					case 3: return '🥉';
+					case 1: return '';
+					case 2: return '';
+					case 3: return '';
 					default: return '';
 				}
 			}
@@ -10103,7 +10103,7 @@
 					document.getElementById('unsold-products-table-body').innerHTML = `
 						<tr>
 							<td colspan="8" class="mdx-237">
-								<div class="mdx-50">❌</div>
+								<div class="mdx-50"><i data-lucide=circle-x></i></div>
 								<p>Failed to load unsold products</p>
 								<p class="mdx-238">${error.message}</p>
 							</td>
@@ -10121,7 +10121,7 @@
 					tableBody.innerHTML = `
 						<tr>
 							<td colspan="8" class="mdx-251">
-								<div class="mdx-50">🎉</div>
+								<div class="mdx-50"><i data-lucide=party-popper></i></div>
 								<p>Great news! All products have sales in this period</p>
 							</td>
 						</tr>
@@ -10563,7 +10563,7 @@
 									${
 										productPicture
 											? `<img src="${productPicture}" alt="${productName}" class="mdx-265">`
-											: `<div class="mdx-266"><i class="fas fa-box"></i></div>`
+											: `<div class="mdx-266"><i data-lucide=package></i></div>`
 									}
 									<span>${productName}</span>
 								</div>
@@ -10578,14 +10578,14 @@
 									onclick="editWasteRecord('${waste._id}')"
 									title="Edit"
 								>
-									✏️
+									<i data-lucide=pencil></i>
 								</button>
 								<button 
 									class="btn btn-icon" 
 									onclick="deleteWasteRecord('${waste._id}')"
 									title="Delete"
 								>
-									🗑️
+									<i data-lucide=trash-2></i>
 								</button>
 							</td>
 						</tr>
@@ -11187,7 +11187,7 @@
 				// Total waste
 				html += `
 					<div class="stat-card">
-						<div class="stat-icon">📊</div>
+						<div class="stat-icon"><i data-lucide=chart-column></i></div>
 						<div class="stat-info">
 							<div class="stat-value">${totalQuantity.toFixed(2)}</div>
 							<div class="stat-label">Total Waste Units</div>
@@ -11198,7 +11198,7 @@
 				// Total records
 				html += `
 					<div class="stat-card">
-						<div class="stat-icon">🧾</div>
+						<div class="stat-icon"><i data-lucide=receipt></i></div>
 						<div class="stat-info">
 							<div class="stat-value">${totalCount}</div>
 							<div class="stat-label">Total Records</div>
@@ -11210,7 +11210,7 @@
 				if (byReason.length > 0) {
 					html += `
 						<div class="stat-card">
-							<div class="stat-icon">🔍</div>
+							<div class="stat-icon"><i data-lucide=search></i></div>
 							<div class="stat-info">
 								<div class="stat-value">${byReason[0]._id}</div>
 								<div class="stat-label">Top Waste Reason</div>
@@ -11224,7 +11224,7 @@
 					const avgWaste = totalQuantity / byDate.length;
 					html += `
 						<div class="stat-card">
-							<div class="stat-icon">📈</div>
+							<div class="stat-icon"><i data-lucide=trending-up></i></div>
 							<div class="stat-info">
 								<div class="stat-value">${avgWaste.toFixed(2)}</div>
 								<div class="stat-label">Avg. Waste Per Day</div>
@@ -12786,10 +12786,10 @@
 								</td>
 								<td>
 									<button class="btn-icon" onclick="editPromoCode('${promo._id}')" title="Edit">
-										✏️
+										<i data-lucide=pencil></i>
 									</button>
 									<button class="btn-icon delete-btn" onclick="deletePromoCode('${promo._id}')" title="Delete">
-										🗑️
+										<i data-lucide=trash-2></i>
 									</button>
 								</td>
 							`;
@@ -13045,14 +13045,14 @@
 												onclick="editAnnouncement('${announcement._id}')"
 												title="Edit Announcement"
 											>
-												✏️
+												<i data-lucide=pencil></i>
 											</button>
 											<button
 												class="btn-action delete"
 												onclick="deleteAnnouncement('${announcement._id}')"
 												title="Delete Announcement"
 											>
-												🗑️
+												<i data-lucide=trash-2></i>
 											</button>
 										</div>
 									</td>
@@ -13347,7 +13347,7 @@
 					console.error("saveKitchenOrder:", err);
 					showMessage("Failed to save order: " + err.message, "error");
 				} finally {
-					if (saveBtn) saveBtn.textContent = "💾 Save order";
+					if (saveBtn) saveBtn.textContent = "Save order";
 					updateKitchenOrderButtons();
 				}
 			}
@@ -13653,7 +13653,7 @@
 					].filter(Boolean).join(' <span class="mdx-285">•</span> ');
 					const rowBg = selected ? "background:#f0fdf4;" : "background:#fff;";
 					const btn = selected
-						? `<button type="button" onclick="toggleKitchenItem('${id}')" class="mdx-306">✓ Added</button>`
+						? `<button type="button" onclick="toggleKitchenItem('${id}')" class="mdx-306"><i data-lucide=check></i> Added</button>`
 						: `<button type="button" onclick="toggleKitchenItem('${id}')" class="mdx-307">+ Add</button>`;
 					return `
 						<div class="mdx-308">
@@ -13699,7 +13699,7 @@
 					if (url) {
 						preview.innerHTML = `<img src="${url}" alt=""  class="mdx-311">`;
 					} else {
-						preview.textContent = "📷";
+						preview.textContent = "";
 					}
 				}
 				if (removeBtn) removeBtn.style.display = url ? "inline-block" : "none";
@@ -14101,7 +14101,7 @@
 					console.error("saveKitchenCategoryOrder:", err);
 					showMessage("Failed to save order: " + err.message, "error");
 				} finally {
-					if (saveBtn) saveBtn.textContent = "💾 Save order";
+					if (saveBtn) saveBtn.textContent = "Save order";
 					updateKitchenCategoryOrderButtons();
 				}
 			}
@@ -14220,7 +14220,7 @@
 				if (fileInput) fileInput.value = "";
 				if (preview) {
 					if (url) preview.innerHTML = `<img src="${url}" alt=""  class="mdx-311">`;
-					else preview.textContent = "📷";
+					else preview.textContent = "";
 				}
 				if (removeBtn) removeBtn.style.display = url ? "inline-block" : "none";
 				if (status) status.textContent = url ? "" : "No image selected";

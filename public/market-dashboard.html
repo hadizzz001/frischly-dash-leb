@@ -54,7 +54,7 @@
 		/>
 
 		<!-- Manifest for PWA -->
-		<meta name="theme-color" content="#FFC300" />
+		<meta name="theme-color" content="#F59E0B" />
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -70,10 +70,15 @@
 		<link rel="stylesheet" href="css/market-dashboard-extracted.css?v=5" />
 		<!-- Global overrides last so they win the cascade (e.g. 40x40 product thumbnails) -->
 		<link rel="stylesheet" href="css/global.css?v=5" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+		<link rel="stylesheet" href="css/admin.css?v=1" />
+		<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+		<script src="js/icons.js?v=1"></script>
 </head>
 	<body>
 		<!-- Mobile Menu Toggle -->
-		<button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+		<button class="menu-toggle" onclick="toggleSidebar()"><i data-lucide=menu></i></button>
 
 		<!-- Sidebar -->
 		<div class="sidebar" id="sidebar">
@@ -97,19 +102,19 @@
 			<ul class="sidebar-menu">
 				<li class="menu-item">
 					<a href="#" onclick="showSection('users')" id="menu-users">
-						<span class="menu-icon">👥</span>
+						<span class="menu-icon"><i data-lucide=users></i></span>
 						<span class="menu-text">Staff Management</span>
 					</a>
 				</li>
 				<li class="menu-item">
 					<a href="#" onclick="showSection('categories')" id="menu-categories">
-						<span class="menu-icon">📂</span>
+						<span class="menu-icon"><i data-lucide=folder-open></i></span>
 						<span class="menu-text">Categories</span>
 					</a>
 				</li>
 				<li class="menu-item">
 					<a href="#" onclick="showSection('products')" id="menu-products">
-						<span class="menu-icon">📦</span>
+						<span class="menu-icon"><i data-lucide=package></i></span>
 						<span class="menu-text">Products</span>
 					</a>
 				</li>
@@ -121,79 +126,79 @@
 				-->
 				<li class="menu-item" id="markets-menu-item" style="display: none">
 					<a href="/markets" id="menu-markets">
-						<span class="menu-icon">🏪</span>
+						<span class="menu-icon"><i data-lucide=store></i></span>
 						<span class="menu-text">Market Management</span>
 					</a>
 				</li>
 				<li class="menu-item">
 					<a href="#" onclick="showSection('orders')" id="menu-orders">
-						<span class="menu-icon">🛒</span>
+						<span class="menu-icon"><i data-lucide=shopping-cart></i></span>
 						<span class="menu-text">Orders</span>
 					</a>
 				</li>
 				<li class="menu-item">
 					<a href="#" onclick="showSection('statistics')" id="menu-statistics">
-						<span class="menu-icon">📊</span>
+						<span class="menu-icon"><i data-lucide=chart-column></i></span>
 						<span class="menu-text">Sales Statistics</span>
 					</a>
 				</li>
 				<li class="menu-item">
 					<a href="#" onclick="showSection('riders')" id="menu-riders">
-						<span class="menu-icon">🏍️</span>
+						<span class="menu-icon"><i data-lucide=bike></i></span>
 						<span class="menu-text">Riders Management</span>
 					</a>
 				</li>
 				<li class="menu-item">
 					<a href="#" onclick="showSection('waste')" id="menu-waste">
-						<span class="menu-icon">♻️</span>
+						<span class="menu-icon"><i data-lucide=recycle></i></span>
 						<span class="menu-text">Waste Management</span>
 					</a>
 				</li>
 				<li class="menu-item">
 					<a href="#" onclick="showSection('promocodes')" id="menu-promocodes">
-						<span class="menu-icon">🏷️</span>
+						<span class="menu-icon"><i data-lucide=tag></i></span>
 						<span class="menu-text">Promo Codes</span>
 					</a>
 				</li>
 				<li class="menu-item">
 					<a href="#" onclick="showSection('announcements')" id="menu-announcements">
-						<span class="menu-icon">📢</span>
+						<span class="menu-icon"><i data-lucide=megaphone></i></span>
 						<span class="menu-text">Announcements</span>
 					</a>
 				</li>
 				<li class="menu-item">
 					<a href="#" onclick="showSection('kitchens')" id="menu-kitchens">
-						<span class="menu-icon">🍳</span>
+						<span class="menu-icon"><i data-lucide=cooking-pot></i></span>
 						<span class="menu-text">For Kitchens</span>
 					</a>
 				</li>
 				<li class="menu-item">
 					<a href="#" onclick="showSection('kitchencategories')" id="menu-kitchencategories">
-						<span class="menu-icon">🗂️</span>
+						<span class="menu-icon"><i data-lucide=folders></i></span>
 						<span class="menu-text">Kitchen Categories</span>
 					</a>
 				</li>
 				<li class="menu-item">
 					<a href="#" onclick="showSection('settings')" id="menu-settings">
-						<span class="menu-icon">⚙️</span>
+						<span class="menu-icon"><i data-lucide=settings></i></span>
 						<span class="menu-text">Settings</span>
 					</a>
 				</li>
 				<li class="menu-item">
 					<a href="#" onclick="showSection('profile')" id="menu-profile">
-						<span class="menu-icon">👤</span>
+						<span class="menu-icon"><i data-lucide=user></i></span>
 						<span class="menu-text">Profile</span>
 					</a>
 				</li>
 				<li class="menu-item" id="backup-menu-item">
 					<a href="#" onclick="downloadBackup(event)" id="menu-backup">
-						<span class="menu-icon">💾</span>
+						<span class="menu-icon"><i data-lucide=save></i></span>
 						<span class="menu-text">Backup</span>
 					</a>
 				</li>
 				<li class="menu-item">
 					<a href="#" onclick="logout()">
-						<span class="menu-icon">🚪</span>
+						<span class="menu-icon"><i data-lucide=log-out></i></span>
 						<span class="menu-text">Sign Out</span>
 					</a>
 				</li>
@@ -255,25 +260,25 @@
 						class="staff-tab-btn active"
 						onclick="showStaffTab('staff')"
 					>
-						👥 Staff
+						<i data-lucide=users></i> Staff
 					</button>
 					<button class="staff-tab-btn" onclick="showStaffTab('customers')">
-						🛒 Customers
+						<i data-lucide=shopping-cart></i> Customers
 					</button>
 					<button class="staff-tab-btn" onclick="showStaffTab('shelfs')">
-						📦 Shelfs
+						<i data-lucide=package></i> Shelfs
 					</button>
 				</div>					<!-- Staff Tab Content -->
 					<div id="staff-tab-content" class="staff-tab-content active">
 						<div class="section-actions">
 							<button class="btn btn-primary" onclick="showAddUserModal()">
-								➕ Add New User
+								<i data-lucide=plus></i> Add New User
 							</button>
 							<button class="btn btn-secondary" onclick="refreshUsersList()">
-								🔄 Refresh List
+								<i data-lucide=refresh-cw></i> Refresh List
 							</button>
 							<!-- <button class="btn btn-secondary" onclick="exportUsers()">
-								📊 Export Users
+								<i data-lucide=chart-column></i> Export Users
 							</button> -->
 						</div>
 
@@ -314,10 +319,10 @@
 					<div id="customers-tab-content" class="staff-tab-content">
 						<div class="section-actions">
 							<button class="btn btn-secondary" onclick="refreshCustomers()">
-								🔄 Refresh
+								<i data-lucide=refresh-cw></i> Refresh
 							</button>
 							<button class="btn btn-secondary" onclick="exportCustomers()">
-								📊 Export Customers
+								<i data-lucide=chart-column></i> Export Customers
 							</button>
 						</div>
 
@@ -403,10 +408,10 @@
 					<div id="shelfs-tab-content" class="staff-tab-content">
 						<div class="section-actions">
 							<button class="btn btn-primary" onclick="showAddShelfModal()">
-								➕ Add Shelf
+								<i data-lucide=plus></i> Add Shelf
 							</button>
 							<button class="btn btn-secondary" onclick="refreshShelfs()">
-								🔄 Refresh
+								<i data-lucide=refresh-cw></i> Refresh
 							</button>
 						</div>
 
@@ -494,13 +499,13 @@
 							class="category-tab-btn active"
 							onclick="showCategoryTab('categories')"
 						>
-							📂 Categories
+							<i data-lucide=folder-open></i> Categories
 						</button>
 						<button
 							class="category-tab-btn"
 							onclick="showCategoryTab('subcategories',false)"
 						>
-							📁 Subcategories
+							<i data-lucide=folder></i> Subcategories
 						</button>
 					</div>
 
@@ -508,7 +513,7 @@
 					<div id="categories-tab-content" class="category-tab-content active">
 						<div class="section-actions">
 							<button class="btn btn-primary" onclick="showAddCategoryModal()">
-								➕ Add Category
+								<i data-lucide=plus></i> Add Category
 							</button>
 							<div class="filter-controls">
 								<input
@@ -542,11 +547,11 @@
 									class="btn btn-secondary"
 									onclick="clearCategoryFilters()"
 								>
-									🗑️ Clear
+									<i data-lucide=trash-2></i> Clear
 								</button>
 							</div>
 							<button class="btn btn-secondary" onclick="refreshCategories()">
-								🔄 Refresh
+								<i data-lucide=refresh-cw></i> Refresh
 							</button>
 						</div>
 
@@ -592,7 +597,7 @@
 								class="btn btn-primary"
 								onclick="showAddSubcategoryModal()"
 							>
-								➕ Add Subcategory
+								<i data-lucide=plus></i> Add Subcategory
 							</button>
 							<div class="filter-controls">
 								<input
@@ -623,14 +628,14 @@
 									class="btn btn-secondary"
 									onclick="clearSubcategoryFilters()"
 								>
-									🗑️ Clear
+									<i data-lucide=trash-2></i> Clear
 								</button>
 							</div>
 							<button
 								class="btn btn-secondary"
 								onclick="refreshSubcategories()"
 							>
-								🔄 Refresh
+								<i data-lucide=refresh-cw></i> Refresh
 							</button>
 						</div>
 
@@ -678,10 +683,10 @@
 
 					<div class="section-actions">
 						<button class="btn btn-primary" onclick="showAddProductModal()">
-							➕ Add Product
+							<i data-lucide=plus></i> Add Product
 						</button>
 						<button class="btn btn-secondary" onclick="refreshProducts()">
-							🔄 Refresh
+							<i data-lucide=refresh-cw></i> Refresh
 						</button>
 					</div>
 
@@ -742,11 +747,9 @@
 							<option value="updatedAt-asc">Least Recently Updated</option>
 							<option value="sortOrder-asc">Sort Order Low-High</option>
 							<option value="sortOrder-desc">Sort Order High-Low</option>
-							<option value="categorySortOrder-asc">
-								Category Sort Order Low-High
+							<option value="categorySortOrder-asc">Category Sort Order Low-High
 							</option>
-							<option value="categorySortOrder-desc">
-								Category Sort Order High-Low
+							<option value="categorySortOrder-desc">Category Sort Order High-Low
 							</option>
 						</select>
 						<button
@@ -754,10 +757,10 @@
 							onclick="searchProducts()"
 						
 						>
-							🔍 Search
+							<i data-lucide=search></i> Search
 						</button>
 						<button class="btn btn-secondary" onclick="clearProductFilters()">
-							🗑️ Clear
+							<i data-lucide=trash-2></i> Clear
 						</button>
 					</div>
 
@@ -874,7 +877,7 @@
 							<span
 								id="orders-live-indicator"
 							
-								 class="mdx-9">● Live</span
+								 class="mdx-9"><i data-lucide=circle class=dot></i> Live</span
 							>
 						</h2>
 						<p>
@@ -888,19 +891,19 @@
 
 					<div class="section-actions">
 						<button class="btn btn-secondary" onclick="refreshOrders()">
-							🔄 Refresh Orders
+							<i data-lucide=refresh-cw></i> Refresh Orders
 						</button>
 						<button
 							class="btn btn-success"
 							onclick="window.location.href='/ordermanagement?ctx=market'"
 						>
-							📋 Staff Manage Orders
+							<i data-lucide=clipboard-list></i> Staff Manage Orders
 						</button>
 						<button
 							class="btn btn-primary"
 							onclick="showSection('statistics')"
 						>
-							📊 Sales Statistics
+							<i data-lucide=chart-column></i> Sales Statistics
 						</button>
 					</div>
 
@@ -947,8 +950,8 @@
 							</div>
 						</div>
 						<div class="filter-actions mdx-16">
-							<button class="btn btn-secondary" onclick="clearOrderFilters()">🗑️ Clear</button>
-							<button class="btn btn-primary" onclick="searchOrders()">🔍 Search</button>
+							<button class="btn btn-secondary" onclick="clearOrderFilters()"><i data-lucide=trash-2></i> Clear</button>
+							<button class="btn btn-primary" onclick="searchOrders()"><i data-lucide=search></i> Search</button>
 						</div>
 					</div>
 
@@ -1055,28 +1058,28 @@
 				<!-- Sales Statistics Section -->
 				<div id="statistics-section" class="content-section">
 					<div class="section-header">
-						<h2>📊 Sales Statistics</h2>
+						<h2><i data-lucide=chart-column></i> Sales Statistics</h2>
 						<p>Analyze product sales performance and trends</p>
 					</div>
 
 					<!-- Statistics Summary Cards -->
 					<div class="stats-grid mdx-19" id="sales-summary-stats">
 						<div class="stat-card mdx-20">
-							<div class="stat-icon mdx-21">📦</div>
+							<div class="stat-icon mdx-21"><i data-lucide=package></i></div>
 							<div class="stat-info">
 								<div class="stat-value mdx-22" id="stats-total-quantity">0</div>
 								<div class="stat-label mdx-23">Items Sold</div>
 							</div>
 						</div>
 						<div class="stat-card mdx-24">
-							<div class="stat-icon mdx-21">🛒</div>
+							<div class="stat-icon mdx-21"><i data-lucide=shopping-cart></i></div>
 							<div class="stat-info">
 								<div class="stat-value mdx-22" id="stats-total-orders">0</div>
 								<div class="stat-label mdx-23">Total Delivered Orders</div>
 							</div>
 						</div>
 						<div class="stat-card mdx-25">
-							<div class="stat-icon mdx-21">🏷️</div>
+							<div class="stat-icon mdx-21"><i data-lucide=tag></i></div>
 							<div class="stat-info">
 								<div class="stat-value mdx-22" id="stats-unique-products">0</div>
 								<div class="stat-label mdx-23">Products Sold</div>
@@ -1086,7 +1089,7 @@
 
 					<!-- Time Filter Section -->
 					<div class="filter-section mdx-26">
-						<h4 class="mdx-27">🕐 Time Period Filter</h4>
+						<h4 class="mdx-27"><i data-lucide=clock></i> Time Period Filter</h4>
 						<div class="mdx-28">
 							<div class="filter-group">
 								<label for="stats-time-range" class="mdx-14">Quick Select:</label>
@@ -1119,10 +1122,10 @@
 								</select>
 							</div>
 							<button class="btn btn-primary mdx-31" onclick="loadProductSalesStats(1)">
-								🔍 Apply Filter
+								<i data-lucide=search></i> Apply Filter
 							</button>
 							<button class="btn btn-secondary mdx-31" onclick="exportSalesStatistics()">
-								📥 Export to Excel
+								<i data-lucide=download></i> Export to Excel
 							</button>
 						</div>
 					</div>
@@ -1130,7 +1133,7 @@
 					<!-- Total Amount / Commission Breakdown -->
 					<div class="table-container mdx-32">
 						<div class="table-header mdx-33">
-							<h3 class="mdx-34">💰 Total Amount (Selected Period)</h3>
+							<h3 class="mdx-34"><i data-lucide=coins></i> Total Amount (Selected Period)</h3>
 						</div>
 						<div class="table-responsive mdx-35">
 							<table class="mdx-36">
@@ -1155,7 +1158,7 @@
 					<!-- Sales Statistics Table -->
 					<div class="table-container mdx-43">
 						<div class="table-header mdx-44">
-							<h3 class="mdx-34">🏆 Product Sales Ranking</h3>
+							<h3 class="mdx-34"><i data-lucide=trophy></i> Product Sales Ranking</h3>
 							<span id="sales-stats-count" class="mdx-23">0 products</span>
 						</div>
 						<div class="table-responsive mdx-35">
@@ -1176,7 +1179,7 @@
 								<tbody id="sales-stats-table-body">
 									<tr>
 										<td colspan="9" class="mdx-49">
-											<div class="mdx-50">📊</div>
+											<div class="mdx-50"><i data-lucide=chart-column></i></div>
 											<p>Loading sales statistics...</p>
 										</td>
 									</tr>
@@ -1212,7 +1215,7 @@
 					<!-- Unsold Products Table -->
 					<div class="table-container mdx-56">
 						<div class="table-header mdx-57">
-							<h3 class="mdx-34">📭 Products With No Sales (Selected Period)</h3>
+							<h3 class="mdx-34"><i data-lucide=inbox></i> Products With No Sales (Selected Period)</h3>
 							<span id="unsold-products-count" class="mdx-23">0 products</span>
 						</div>
 						<div class="table-responsive mdx-35">
@@ -1232,7 +1235,7 @@
 								<tbody id="unsold-products-table-body">
 									<tr>
 										<td colspan="8" class="mdx-49">
-											<div class="mdx-50">📭</div>
+											<div class="mdx-50"><i data-lucide=inbox></i></div>
 											<p>Loading unsold products...</p>
 										</td>
 									</tr>
@@ -1279,10 +1282,10 @@
 							class="riders-tab-btn active"
 							onclick="showRidersTab('riders')"
 						>
-							🏍️ Riders
+							<i data-lucide=bike></i> Riders
 						</button>
 						<button class="riders-tab-btn" onclick="showRidersTab('zones')">
-							📍 Zones
+							<i data-lucide=map-pin></i> Zones
 						</button>
 					</div>
 
@@ -1290,13 +1293,13 @@
 					<div id="riders-tab-content" class="riders-tab-content active">
 						<div class="section-actions">
 							<button class="btn btn-primary" onclick="showAddRiderModal()">
-								➕ Add Rider
+								<i data-lucide=plus></i> Add Rider
 							</button>
 							<button class="btn btn-secondary" onclick="refreshRiders()">
-								🔄 Refresh
+								<i data-lucide=refresh-cw></i> Refresh
 							</button>
 							<button class="btn btn-info mdx-61" onclick="window.location.href='market-driverslocation.html'">
-								📍 Drivers Locations
+								<i data-lucide=map-pin></i> Drivers Locations
 							</button>
 						</div>
 
@@ -1338,13 +1341,13 @@
 					<div id="zones-tab-content" class="riders-tab-content">
 						<div class="section-actions">
 							<button class="btn btn-primary" onclick="showAddZoneModal()">
-								➕ Add Zone
+								<i data-lucide=plus></i> Add Zone
 							</button>
 							<button class="btn btn-secondary" onclick="refreshZones()">
-								🔄 Refresh
+								<i data-lucide=refresh-cw></i> Refresh
 							</button>
 							<button class="btn btn-secondary" onclick="showZoneStats()">
-								📊 Statistics
+								<i data-lucide=chart-column></i> Statistics
 							</button>
 						</div>
 
@@ -1455,7 +1458,7 @@
 									</button>
 
 									<button class="btn btn-outline" onclick="exportWasteRecords()">
-										<i class="fas fa-download"></i> Export Waste Records
+										<i data-lucide=download></i> Export Waste Records
 									</button>
 
 									<div class="filter-group">
@@ -1768,7 +1771,7 @@
 					<div class="settings-content">
 						<div class="settings-grid">
 							<div class="settings-card mdx-8">
-								<h3>🛍️ Product Management</h3>
+								<h3><i data-lucide=shopping-bag></i> Product Management</h3>
 								<div class="setting-item">
 									<label>Product Status Control</label>
 									<div class="setting-actions">
@@ -1794,7 +1797,7 @@
 							</div>
 
 							<div class="settings-card mdx-8">
-								<h3>🗃️ Database Management</h3>
+								<h3><i data-lucide=archive></i> Database Management</h3>
 								<div class="setting-item">
 									<label>Database Operations</label>
 									<div class="setting-actions">
@@ -1811,7 +1814,7 @@
 							</div>
 
 							<div class="settings-card mdx-8">
-								<h3>📊 System Information</h3>
+								<h3><i data-lucide=chart-column></i> System Information</h3>
 								<div class="setting-item">
 									<label>System Stats</label>
 									<div class="setting-actions">
@@ -1829,7 +1832,7 @@
 							</div>
 
 							<div class="settings-card mdx-8">
-								<h3>🔧 Maintenance</h3>
+								<h3><i data-lucide=wrench></i> Maintenance</h3>
 								<div class="setting-item">
 									<label>System Maintenance</label>
 									<div class="setting-actions">
@@ -1915,7 +1918,7 @@
 							</div>
 
 							<div class="settings-card">
-								<h2>📢 FCM Notifications</h2>
+								<h2><i data-lucide=megaphone></i> FCM Notifications</h2>
 								<div class="setting-item">
 									<label>Send Notification to All Customers</label>
 									<div class="setting-actions mdx-65">
@@ -1930,7 +1933,7 @@
 							</div>
 
 							<div class="settings-card">
-								<h3>🌐 Language Settings</h3>
+								<h3><i data-lucide=globe></i> Language Settings</h3>
 								<div class="setting-item">
 									<label>Application Language</label>
 									<div class="setting-actions">
@@ -1962,7 +1965,7 @@
 					</div>
 
 					<div class="user-card" id="market-logo-card">
-						<h2 class="mdx-66">🖼️ Market Logo</h2>
+						<h2 class="mdx-66"><i data-lucide=image></i> Market Logo</h2>
 						<p class="mdx-67">
 							This is the brand logo customers see for your market in the app.
 						</p>
@@ -2055,11 +2058,11 @@
 					</div>
 
 					<div class="user-card" id="delivery-regions-card">
-						<h2 class="mdx-66">📍 Delivery Coverage Regions (multi-pin)</h2>
+						<h2 class="mdx-66"><i data-lucide=map-pin></i> Delivery Coverage Regions (multi-pin)</h2>
 						<p class="mdx-67">
 							Define the exact zone(s) your market delivers to — same map used by the main admin when creating your market.
 						</p>
-						<button class="btn btn-primary" onclick="openMarketRegionsModal()">📍 Edit Delivery Coverage Regions</button>
+						<button class="btn btn-primary" onclick="openMarketRegionsModal()"><i data-lucide=map-pin></i> Edit Delivery Coverage Regions</button>
 					</div>
 				</div>
 
@@ -2072,10 +2075,10 @@
 
 					<div class="section-actions">
 						<button class="btn btn-primary" onclick="openAnnouncementModal()">
-							➕ Add Announcement
+							<i data-lucide=plus></i> Add Announcement
 						</button>
 						<button class="btn btn-secondary" onclick="loadAnnouncements()">
-							🔄 Refresh
+							<i data-lucide=refresh-cw></i> Refresh
 						</button>
 					</div>
 
@@ -2119,10 +2122,10 @@
 
 					<div class="section-actions">
 						<button class="btn btn-primary" onclick="openKitchenModal()">
-							➕ Add Kitchen
+							<i data-lucide=plus></i> Add Kitchen
 						</button>
 						<button class="btn btn-secondary" onclick="loadKitchens()">
-							🔄 Refresh
+							<i data-lucide=refresh-cw></i> Refresh
 						</button>
 					</div>
 
@@ -2132,7 +2135,7 @@
 							<div class="table-header-controls mdx-73">
 								<span id="kitchens-count-display">0 kitchens</span>
 								<button id="kitchens-save-order-btn" type="button" class="btn btn-primary mdx-74" onclick="saveKitchenOrder()" disabled
-								>💾 Save order</button>
+								><i data-lucide=save></i> Save order</button>
 								<button id="kitchens-reset-order-btn" type="button" class="btn btn-secondary mdx-74" onclick="resetKitchenOrder()" disabled
 								>Undo</button>
 							</div>
@@ -2171,10 +2174,10 @@
 
 					<div class="section-actions">
 						<button class="btn btn-primary" onclick="openKitchenCategoryModal()">
-							➕ Add Category
+							<i data-lucide=plus></i> Add Category
 						</button>
 						<button class="btn btn-secondary" onclick="loadKitchenCategories()">
-							🔄 Refresh
+							<i data-lucide=refresh-cw></i> Refresh
 						</button>
 					</div>
 
@@ -2184,7 +2187,7 @@
 							<div class="table-header-controls mdx-73">
 								<span id="kitchen-categories-count-display">0 categories</span>
 								<button id="kitchen-categories-save-order-btn" type="button" class="btn btn-primary mdx-74" onclick="saveKitchenCategoryOrder()" disabled
-								>💾 Save order</button>
+								><i data-lucide=save></i> Save order</button>
 								<button id="kitchen-categories-reset-order-btn" type="button" class="btn btn-secondary mdx-74" onclick="resetKitchenCategoryOrder()" disabled
 								>Undo</button>
 							</div>
@@ -2276,7 +2279,7 @@
 							ondragleave="handleKitchenPictureDragLeave(event)"
 							ondrop="handleKitchenPictureDrop(event)"
 						 class="mdx-91">
-							<div id="kitchen-picture-preview" class="mdx-92">📷</div>
+							<div id="kitchen-picture-preview" class="mdx-92"><i data-lucide=camera></i></div>
 							<div class="mdx-93">
 								<div class="mdx-94">Drag &amp; drop an image here</div>
 								<div class="mdx-95">or click anywhere in this box to browse</div>
@@ -2287,7 +2290,7 @@
 								<input type="hidden" id="kitchen-picture-public-id" />
 								<input type="file" id="kitchen-picture-file" accept="image/*" onchange="uploadKitchenPicture(this)"  class="mdx-1">
 								<button type="button" onclick="event.stopPropagation(); document.getElementById('kitchen-picture-file').click();"
-								 class="mdx-98">📁 Browse</button>
+								 class="mdx-98"><i data-lucide=folder></i> Browse</button>
 								<button type="button" id="kitchen-picture-remove" onclick="event.stopPropagation(); removeKitchenPicture();"
 								 class="mdx-99">Remove</button>
 							</div>
@@ -2312,7 +2315,7 @@
 						<div class="mdx-107">
 							<div class="mdx-108">
 								<div class="mdx-109">
-									<span class="mdx-110">🔍</span>
+									<span class="mdx-110"><i data-lucide=search></i></span>
 									<input
 										type="text"
 										id="kitchen-items-search"
@@ -2411,7 +2414,7 @@
 							ondragleave="handleKitchenCategoryPictureDragLeave(event)"
 							ondrop="handleKitchenCategoryPictureDrop(event)"
 						 class="mdx-91">
-							<div id="kitchen-category-picture-preview" class="mdx-92">📷</div>
+							<div id="kitchen-category-picture-preview" class="mdx-92"><i data-lucide=camera></i></div>
 							<div class="mdx-93">
 								<div class="mdx-94">Drag &amp; drop an image here</div>
 								<div class="mdx-95">or click anywhere in this box to browse</div>
@@ -2422,7 +2425,7 @@
 								<input type="hidden" id="kitchen-category-picture-public-id" />
 								<input type="file" id="kitchen-category-picture-file" accept="image/*" onchange="uploadKitchenCategoryPicture(this)"  class="mdx-1">
 								<button type="button" onclick="event.stopPropagation(); document.getElementById('kitchen-category-picture-file').click();"
-								 class="mdx-98">📁 Browse</button>
+								 class="mdx-98"><i data-lucide=folder></i> Browse</button>
 								<button type="button" id="kitchen-category-picture-remove" onclick="event.stopPropagation(); removeKitchenCategoryPicture();"
 								 class="mdx-99">Remove</button>
 							</div>
@@ -3154,7 +3157,7 @@
 
 					<div class="customer-actions">
 						<button class="btn btn-danger" onclick="deleteCustomer()">
-							🗑️ Delete Customer
+							<i data-lucide=trash-2></i> Delete Customer
 						</button>
 					</div>
 				</div>
@@ -3229,14 +3232,14 @@
 									class="btn btn-secondary"
 									onclick="BarcodeScanner.fillField('product-barcode', { title: 'Scan product barcode' })"
 								>
-									📷 Scan
+									<i data-lucide=camera></i> Scan
 								</button>
 								<button
 									type="button"
 									class="btn btn-secondary"
 									onclick="showBarcodeGeneratorModal()"
 								>
-									🔄 Generate
+									<i data-lucide=refresh-cw></i> Generate
 								</button>
 							</div>
 						</div>
@@ -3478,7 +3481,7 @@
 						onclick="generateRandomBarcode()"
 					
 					>
-						🎲 Generate Random
+						<i data-lucide=dices></i> Generate Random
 					</button>
 					<button
 						type="button"
@@ -3525,7 +3528,7 @@
 							class="btn btn-primary"
 							onclick="printBarcode()"
 						>
-							🖨️ Print Barcode
+							<i data-lucide=printer></i> Print Barcode
 						</button>
 						<button
 							type="button"
@@ -3664,8 +3667,7 @@
 						>
 							<option value="set">Set Stock (Replace current stock)</option>
 							<option value="add">Add Stock (Increase current stock)</option>
-							<option value="subtract">
-								Remove Stock (Decrease current stock)
+							<option value="subtract">Remove Stock (Decrease current stock)
 							</option>
 						</select>
 					</div>
@@ -3889,7 +3891,7 @@
 					<div class="order-number" id="modal-order-number"></div>
 					<div class="modal-actions">
 						<button class="btn btn-primary print-btn" onclick="printOrderInvoice()">
-							<span class="icon">🖨️</span> Print Invoice
+							<span class="icon"><i data-lucide=printer></i></span> Print Invoice
 						</button>
 						<span class="close-details" onclick="closeOrderDetails()">&times;</span>
 					</div>
@@ -3897,38 +3899,38 @@
 				<div class="order-details-body">
 					<div class="order-info-grid">
 						<div class="info-card">
-							<h4><span class="icon">👤</span> Customer Information</h4>
+							<h4><span class="icon"><i data-lucide=user></i></span> Customer Information</h4>
 							<div class="info-value" id="modal-customer-info"></div>
 						</div>
 						<div class="info-card">
-							<h4><span class="icon">📞</span> Phone Number</h4>
+							<h4><span class="icon"><i data-lucide=phone></i></span> Phone Number</h4>
 							<div class="info-value" id="modal-customer-phone"></div>
 						</div>
 						<div class="info-card">
-							<h4><span class="icon">📊</span> Order Status</h4>
+							<h4><span class="icon"><i data-lucide=chart-column></i></span> Order Status</h4>
 							<div class="info-value" id="modal-order-status"></div>
 						</div>
 						<div class="info-card">
-							<h4><span class="icon">💳</span> Payment Status</h4>
+							<h4><span class="icon"><i data-lucide=credit-card></i></span> Payment Status</h4>
 							<div class="info-value" id="modal-payment-status"></div>
 						</div>
 						<div class="info-card">
-							<h4><span class="icon">📅</span> Order Date</h4>
+							<h4><span class="icon"><i data-lucide=calendar></i></span> Order Date</h4>
 							<div class="info-value" id="modal-order-date"></div>
 						</div>
 						<div class="info-card">
-							<h4><span class="icon">👨‍💼</span> Created By</h4>
+							<h4><span class="icon"><i data-lucide=user-cog></i></span> Created By</h4>
 							<div class="info-value" id="modal-created-by"></div>
 						</div>
 						<div class="info-card">
-							<h4><span class="icon">🛵</span> Driver</h4>
+							<h4><span class="icon"><i data-lucide=bike></i></span> Driver</h4>
 							<div class="info-value" id="modal-driver-info"></div>
 						</div>
 						
 					</div>
 
 					<div class="order-items-section">
-						<h3><span class="icon">🛒</span> Order Items</h3>
+						<h3><span class="icon"><i data-lucide=shopping-cart></i></span> Order Items</h3>
 						<table class="items-table">
 							<thead>
 								<tr>
@@ -4200,7 +4202,7 @@
 						</div>
 
 						<div class="form-group form-group-full">
-							<label>📍 Zone Location & Coverage Radius</label>
+							<label><i data-lucide=map-pin></i> Zone Location & Coverage Radius</label>
 							<p class="mdx-262">
 								Click on the map to drop a pin at this zone's center. Drag the round pin to reposition it, and drag the small square handle to grow/shrink the coverage circle. Drivers who select this zone will only be assigned orders whose delivery city falls inside this circle.
 							</p>
@@ -4244,7 +4246,7 @@
 
 				<div class="stats-grid" id="zone-stats-content">
 					<div class="stat-card">
-						<div class="stat-icon">📍</div>
+						<div class="stat-icon"><i data-lucide=map-pin></i></div>
 						<div class="stat-info">
 							<div class="stat-value" id="total-zones-stat">0</div>
 							<div class="stat-label">Total Zones</div>
@@ -4252,7 +4254,7 @@
 					</div>
 
 					<div class="stat-card">
-						<div class="stat-icon">✅</div>
+						<div class="stat-icon"><i data-lucide=circle-check></i></div>
 						<div class="stat-info">
 							<div class="stat-value" id="active-zones-stat">0</div>
 							<div class="stat-label">Active Zones</div>
@@ -4260,7 +4262,7 @@
 					</div>
 
 					<div class="stat-card">
-						<div class="stat-icon">⏸️</div>
+						<div class="stat-icon"><i data-lucide=pause></i></div>
 						<div class="stat-info">
 							<div class="stat-value" id="inactive-zones-stat">0</div>
 							<div class="stat-label">Inactive Zones</div>
@@ -4268,7 +4270,7 @@
 					</div>
 
 					<div class="stat-card">
-						<div class="stat-icon">🛣️</div>
+						<div class="stat-icon"><i data-lucide=route></i></div>
 						<div class="stat-info">
 							<div class="stat-value" id="avg-distance-stat">0</div>
 							<div class="stat-label">Avg Distance (km)</div>
@@ -4276,7 +4278,7 @@
 					</div>
 
 					<div class="stat-card">
-						<div class="stat-icon">💰</div>
+						<div class="stat-icon"><i data-lucide=coins></i></div>
 						<div class="stat-info">
 							<div class="stat-value" id="avg-fee-stat">$0.00</div>
 							<div class="stat-label">Avg Delivery Fee</div>
@@ -4284,7 +4286,7 @@
 					</div>
 
 					<div class="stat-card">
-						<div class="stat-icon">📊</div>
+						<div class="stat-icon"><i data-lucide=chart-column></i></div>
 						<div class="stat-info">
 							<div class="stat-value" id="delivery-coverage-stat">0%</div>
 							<div class="stat-label">Coverage Efficiency</div>

@@ -294,7 +294,7 @@
 					tbody.innerHTML = `
 						<tr>
 							<td colspan="8" class="empty-state">
-								<div class="icon">📦</div>
+								<div class="icon"><i data-lucide=package></i></div>
 								<h3>No orders found</h3>
 								<p>No orders match your current filters.</p>
 							</td>
@@ -554,7 +554,7 @@
 					// Build a Google Maps pin link if we have exact coordinates
 					const customerMapHtml =
 						customerLat !== null && customerLng !== null
-							? `<p><strong>Map Pin:</strong> <a href="https://www.google.com/maps/search/?api=1&query=${customerLat},${customerLng}" target="_blank" rel="noopener noreferrer">📍 View on Google Maps</a></p>`
+							? `<p><strong>Map Pin:</strong> <a href="https://www.google.com/maps/search/?api=1&query=${customerLat},${customerLng}" target="_blank" rel="noopener noreferrer"><i data-lucide=map-pin></i> View on Google Maps</a></p>`
 							: "";
 
 					// Fetch zone information
@@ -647,7 +647,7 @@
 
 						zoneHtml = `
 						<div class="order-details-card">
-							<h4>🚚 Zone Information</h4>
+							<h4><i data-lucide=truck></i> Zone Information</h4>
 							<p><strong>Zone:</strong> ${zoneName}</p>
 							<p><strong>Distance:</strong> ${zoneDistance}</p>
 							<p><strong>Delivery Fee:</strong> ${deliveryFee}</p>
@@ -665,7 +665,7 @@
 					} else {
 						zoneHtml = `
 						<div class="order-details-card">
-							<h4>🚚 Zone Information</h4>
+							<h4><i data-lucide=truck></i> Zone Information</h4>
 							<p class="omx-17">No zone found for this address</p>
 						</div>
 					`;
@@ -693,12 +693,12 @@
 
 					content.innerHTML = `
 					<div class="order-details-header">
-						<h3>📋 Order #${order.orderNumber}</h3>
+						<h3><i data-lucide=clipboard-list></i> Order #${order.orderNumber}</h3>
 					</div>
 
 					<div class="order-details-grid">
 						<div class="order-details-card">
-							<h4>👤 Customer Information</h4>
+							<h4><i data-lucide=user></i> Customer Information</h4>
 							<p><strong>Name:</strong> ${customerName}</p>
 							<p><strong>Email:</strong> ${customerEmail}</p>
 							<p><strong>Phone:</strong> ${customerPhone}</p>
@@ -707,7 +707,7 @@
 						</div>
 
 						<div class="order-details-card">
-							<h4>📦 Order Information</h4>
+							<h4><i data-lucide=package></i> Order Information</h4>
 							<p><strong>Status:</strong> <span class="status-badge status-${status}">${status}</span></p>
 							<p><strong>Order Date:</strong> ${orderDate}</p>
 							<p><strong>Total Amount:</strong> $${order.total?.toFixed(2) || "0.00"}</p>
@@ -715,7 +715,7 @@
 						</div>
 
 						<div class="order-details-card">
-							<h4>🛵 Driver</h4>
+							<h4><i data-lucide=bike></i> Driver</h4>
 							<div id="om-driver-current">
 							${(() => {
 								// The assigned driver is a Rider whose name and phone
@@ -746,7 +746,7 @@
 									type="button"
 									class="action-btn view"
 									onclick="saveOrderDriver('${order._id}')"
-								>💾 Save driver</button>
+								><i data-lucide=save></i> Save driver</button>
 							</div>
 						</div>
 
@@ -754,19 +754,19 @@
 					</div>
 
 					<div class="order-items-section">
-						<h4>🛒 Order Items</h4>
+						<h4><i data-lucide=shopping-cart></i> Order Items</h4>
 						<div class="users-table-container">
 							<table class="users-table order-items-table">
 								<thead>
 									<tr>
-										<th>📦 Product</th>
-										<th>🏷️ Shelf #</th>
-										<th>🔢 Quantity</th>
-										<th>💰 Unit Price</th>
-										<th>📊 Tax (%)</th>
-										<th>🎯 Discount (%)</th>
-										<th>♻️ Bottle Refund</th>
-										<th>💵 Total</th>
+										<th><i data-lucide=package></i> Product</th>
+										<th><i data-lucide=tag></i> Shelf #</th>
+										<th><i data-lucide=hash></i> Quantity</th>
+										<th><i data-lucide=coins></i> Unit Price</th>
+										<th><i data-lucide=chart-column></i> Tax (%)</th>
+										<th><i data-lucide=target></i> Discount (%)</th>
+										<th><i data-lucide=recycle></i> Bottle Refund</th>
+										<th><i data-lucide=banknote></i> Total</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -854,7 +854,7 @@
 			async function saveOrderDriver(orderId) {
 				const select = document.getElementById("om-driver-select");
 				if (!select) return;
-				const value = select.value || null; // "" → null clears the assignment
+				const value = select.value || null; // ""null clears the assignment
 				try {
 					showLoading();
 					const res = await fetch(`${ordersEndpoint()}/${orderId}`, {
@@ -1268,7 +1268,7 @@
 
 				const statusElement = document.getElementById("process-status");
 				if (res.ok) {
-					statusElement.innerHTML = `✅ ${res.message}`;
+					statusElement.innerHTML = `${res.message}`;
 					statusElement.className = "processing-status completed";
 					setTimeout(() => updateProcessStatus(), 2000);
 				} else {
@@ -1365,7 +1365,7 @@
 
 				let message = `"${name}" ${current}/${required} • ${processedItems.size} of ${currentProcessingOrder.items.length} items done`;
 				if (allDone) {
-					message = "✅ All items processed! Ready to complete.";
+					message = "All items processed! Ready to complete.";
 					// Close the camera shortly after the last item.
 					setTimeout(() => {
 						if (window.BarcodeScanner && BarcodeScanner.isOpen()) {
@@ -1420,7 +1420,7 @@
 				if (button) {
 					if (current >= required) {
 						button.disabled = true;
-						button.textContent = "✓ Done";
+						button.textContent = "Done";
 					} else {
 						button.textContent = `＋ Mark 1 (${current}/${required})`;
 					}
@@ -1432,7 +1432,7 @@
 				const res = incrementItemScan(itemId, { source: "manual" });
 				const statusElement = document.getElementById("process-status");
 				if (res.ok) {
-					statusElement.innerHTML = `✅ ${res.message}`;
+					statusElement.innerHTML = `${res.message}`;
 					statusElement.className = "processing-status completed";
 					setTimeout(() => updateProcessStatus(), 2000);
 				} else {
@@ -1455,7 +1455,7 @@
 				}
 				if (allDone) {
 					const statusElement = document.getElementById("process-status");
-					statusElement.innerHTML = `✅ All items processed! Ready to complete.`;
+					statusElement.innerHTML = `All items processed! Ready to complete.`;
 					statusElement.className = "processing-status completed";
 				}
 				return allDone;

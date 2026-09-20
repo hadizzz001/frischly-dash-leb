@@ -245,7 +245,7 @@ function objectFrom(payload, key) {
 
 // Console info for debugging
 console.log(
-	`🌍 Environment: ${
+	`Environment: ${
 		CONFIG.isDevelopment
 			? "Development"
 			: CONFIG.isProduction
@@ -253,7 +253,7 @@ console.log(
 			: "Production"
 	}`
 );
-console.log(`🔗 API Base URL: ${API_BASE_URL}`);
+console.log(`API Base URL: ${API_BASE_URL}`);
 
 // Export for modules (if needed)
 if (typeof module !== "undefined" && module.exports) {

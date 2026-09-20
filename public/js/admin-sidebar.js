@@ -23,23 +23,24 @@
 	"use strict";
 
 	// Canonical admin menu — MUST stay in sync with the dashboard sidebar.
+	// `icon` is a lucide icon name (rendered by js/icons.js).
 	var MENU = [
-		{ key: "users", icon: "👥", label: "Staff Management", section: "users" },
-		{ key: "categories", icon: "📂", label: "Categories", section: "categories" },
-		{ key: "products", icon: "📦", label: "Products", section: "products" },
-		{ key: "markets", icon: "🏪", label: "Market Management", href: "/markets" },
-		{ key: "orders", icon: "🛒", label: "Orders", section: "orders" },
-		{ key: "statistics", icon: "📊", label: "Sales Statistics", section: "statistics" },
-		{ key: "riders", icon: "🏍️", label: "Riders Management", section: "riders" },
-		{ key: "feedback", icon: "💬", label: "Feedback", section: "feedback" },
-		{ key: "waste", icon: "♻️", label: "Waste Management", section: "waste" },
-		{ key: "promocodes", icon: "🏷️", label: "Promo Codes", section: "promocodes" },
-		{ key: "announcements", icon: "📢", label: "Announcements", section: "announcements" },
-		{ key: "kitchens", icon: "🍳", label: "For Kitchens", section: "kitchens" },
-		{ key: "kitchencategories", icon: "🗂️", label: "Kitchen Categories", section: "kitchencategories" },
-		{ key: "settings", icon: "⚙️", label: "Settings", section: "settings" },
-		{ key: "profile", icon: "👤", label: "Profile", section: "profile" },
-		{ key: "backup", icon: "💾", label: "Backup", href: "/dashboard?action=backup" },
+		{ key: "users", icon: "users", label: "Staff Management", section: "users" },
+		{ key: "categories", icon: "folder-open", label: "Categories", section: "categories" },
+		{ key: "products", icon: "package", label: "Products", section: "products" },
+		{ key: "markets", icon: "store", label: "Market Management", href: "/markets" },
+		{ key: "orders", icon: "shopping-cart", label: "Orders", section: "orders" },
+		{ key: "statistics", icon: "chart-column", label: "Sales Statistics", section: "statistics" },
+		{ key: "riders", icon: "bike", label: "Riders Management", section: "riders" },
+		{ key: "feedback", icon: "message-circle", label: "Feedback", section: "feedback" },
+		{ key: "waste", icon: "recycle", label: "Waste Management", section: "waste" },
+		{ key: "promocodes", icon: "tag", label: "Promo Codes", section: "promocodes" },
+		{ key: "announcements", icon: "megaphone", label: "Announcements", section: "announcements" },
+		{ key: "kitchens", icon: "cooking-pot", label: "For Kitchens", section: "kitchens" },
+		{ key: "kitchencategories", icon: "folders", label: "Kitchen Categories", section: "kitchencategories" },
+		{ key: "settings", icon: "settings", label: "Settings", section: "settings" },
+		{ key: "profile", icon: "user", label: "Profile", section: "profile" },
+		{ key: "backup", icon: "save", label: "Backup", href: "/dashboard?action=backup" },
 	];
 
 	function escapeHtml(s) {
@@ -62,9 +63,9 @@
 				isActive +
 				'"><a href="' +
 				href +
-				'"><span class="menu-icon">' +
+				'"><span class="menu-icon"><i data-lucide=' +
 				m.icon +
-				'</span><span class="menu-text">' +
+				'></i></span><span class="menu-text">' +
 				escapeHtml(m.label) +
 				"</span></a></li>"
 			);
@@ -73,7 +74,7 @@
 		// Sign Out always last; uses the page's own logout() if present.
 		html +=
 			'<li class="menu-item"><a href="#" onclick="if(window.logout){logout();}return false;">' +
-			'<span class="menu-icon">🚪</span><span class="menu-text">Sign Out</span></a></li>';
+			'<span class="menu-icon"><i data-lucide=log-out></i></span><span class="menu-text">Sign Out</span></a></li>';
 
 		container.innerHTML = html;
 	}

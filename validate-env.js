@@ -37,8 +37,10 @@ const requiredVars = {
 		"GOOGLE_CLIENT_ID",
 		"APPLE_CLIENT_ID",
 		// Voice search proxy (POST /api/voice/interpret). Server-side only —
-		// never ship this key in the mobile app bundle.
+		// never ship this key in the mobile app bundle. CHATAPI is the
+		// deployed .env's name for the same key.
 		"OPENAI_API_KEY",
+		"CHATAPI",
 	],
 };
 

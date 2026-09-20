@@ -63,25 +63,30 @@
 		/>
 
 		<!-- Manifest for PWA -->
-		<meta name="theme-color" content="#FFC300" />
+		<meta name="theme-color" content="#F59E0B" />
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 		<meta name="apple-mobile-web-app-title" content="Freshly Shop" />
 
 			<link rel="stylesheet" href="css/shop-extracted.css" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+		<link rel="stylesheet" href="css/admin.css?v=1" />
+		<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+		<script src="js/icons.js?v=1"></script>
 </head>
 	<body>
 		<!-- Header -->
 		<header class="header">
 			<div class="header-content">
 				<div class="logo">
-					<span class="logo-icon">🛒</span>
+					<span class="logo-icon"><i data-lucide=shopping-cart></i></span>
 					<span>Freshly Shop</span>
 				</div>
 				<div class="user-actions">
 					<button onclick="toggleCart()" class="cart-button">
-						<span class="cart-icon">🛒</span>
+						<span class="cart-icon"><i data-lucide=shopping-cart></i></span>
 						<span>Cart</span>
 						<span id="cart-count" class="cart-count">0</span>
 					</button>
@@ -180,7 +185,7 @@
 			</div>
 			<div id="cart-items" class="cart-items">
 				<div class="empty-cart">
-					<div class="empty-cart-icon">🛒</div>
+					<div class="empty-cart-icon"><i data-lucide=shopping-cart></i></div>
 					<h3>Your cart is empty</h3>
 					<p>Add some products to get started!</p>
 				</div>
@@ -206,7 +211,7 @@
 								checked
 							/>
 							<label for="payment-online">
-								<span class="payment-icon">💳</span>
+								<span class="payment-icon"><i data-lucide=credit-card></i></span>
 								<span class="payment-text">Online Payment</span>
 							</label>
 						</div>
@@ -218,7 +223,7 @@
 								value="cash"
 							/>
 							<label for="payment-cash">
-								<span class="payment-icon">💵</span>
+								<span class="payment-icon"><i data-lucide=banknote></i></span>
 								<span class="payment-text">Cash on Delivery</span>
 							</label>
 						</div>
@@ -238,7 +243,7 @@
 				<div class="address-section">
 					<div class="address-toggle" onclick="toggleAddressForm()">
 						<span class="address-toggle-label">Delivery Address</span>
-						<span class="address-toggle-icon">▼</span>
+						<span class="address-toggle-icon"></span>
 					</div>
 					<div id="address-form" class="address-form shx-1">
 						<div class="form-row">

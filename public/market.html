@@ -5,13 +5,18 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<title>Market Admin — Freshly.lb</title>
 	<link rel="stylesheet" href="css/market.css" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+		<link rel="stylesheet" href="css/admin.css?v=1" />
+		<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+		<script src="js/icons.js?v=1"></script>
 </head>
 <body>
 	<!-- Login screen -->
 	<div id="loginScreen" class="login-wrap">
 		<div class="login-card">
 			<h1>Freshly.lb</h1>
-			<h2>🏪 Market Sign In</h2>
+			<h2><i data-lucide=store></i> Market Sign In</h2>
 			<p>Enter the credentials provided by the Freshly.lb admin.</p>
 			<form onsubmit="event.preventDefault(); doLogin();">
 				<div class="form-row"><label>Username or Email</label><input id="loginUsername" required autocomplete="username" /></div>
@@ -31,16 +36,16 @@
 				<p class="market-info" id="mInfo"></p>
 			</div>
 			<ul class="sidebar-menu">
-				<li class="menu-item active" data-tab="products"><a href="#products" onclick="switchTab('products'); return false;"><span class="menu-icon">📦</span><span>Products</span></a></li>
-				<li class="menu-item" data-tab="orders"><a href="#orders" onclick="switchTab('orders'); return false;"><span class="menu-icon">🧾</span><span>Orders</span></a></li>
-				<li class="menu-item"><a href="#" onclick="logout(); return false;"><span class="menu-icon">🚪</span><span>Logout</span></a></li>
+				<li class="menu-item active" data-tab="products"><a href="#products" onclick="switchTab('products'); return false;"><span class="menu-icon"><i data-lucide=package></i></span><span>Products</span></a></li>
+				<li class="menu-item" data-tab="orders"><a href="#orders" onclick="switchTab('orders'); return false;"><span class="menu-icon"><i data-lucide=receipt></i></span><span>Orders</span></a></li>
+				<li class="menu-item"><a href="#" onclick="logout(); return false;"><span class="menu-icon"><i data-lucide=log-out></i></span><span>Logout</span></a></li>
 			</ul>
 		</aside>
 
 		<div class="main-content">
 			<main>
 				<div class="page-header">
-					<h1 id="pageTitle">📦 Products</h1>
+					<h1 id="pageTitle"><i data-lucide=package></i> Products</h1>
 					<p>Manage your market products and orders.</p>
 				</div>
 
@@ -101,7 +106,7 @@
 					<label>Barcode *</label>
 					<div class="barcode-field">
 						<input id="p_barcode" required />
-						<button type="button" class="btn secondary" onclick="BarcodeScanner.fillField('p_barcode', { title: 'Scan product barcode' })">📷 Scan</button>
+						<button type="button" class="btn secondary" onclick="BarcodeScanner.fillField('p_barcode', { title: 'Scan product barcode' })"><i data-lucide=camera></i> Scan</button>
 					</div>
 				</div>
 				<div class="form-row"><label>Shelf Number *</label><input id="p_shelf" required /></div>

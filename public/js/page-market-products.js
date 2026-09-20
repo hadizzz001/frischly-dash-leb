@@ -84,7 +84,7 @@
 				if (j.success) {
 					const market = j.data && j.data.market;
 					if (market) {
-						document.getElementById('title').textContent = `📦 ${market.name} — Products`;
+						document.getElementById('title').textContent = `${market.name} — Products`;
 						document.title = `${market.name} — Products`;
 					}
 				}
@@ -115,7 +115,7 @@
 				const isActive = p.isActive !== false;
 				return `
 					<tr>
-						<td>${img ? `<img class="thumb" src="${escapeHtml(img)}" alt="${escapeHtml(p.name)}" />` : '<span class="thumb placeholder">📦</span>'}</td>
+						<td>${img ? `<img class="thumb" src="${escapeHtml(img)}" alt="${escapeHtml(p.name)}" />` : '<span class="thumb placeholder"><i data-lucide=package></i></span>'}</td>
 						<td><strong>${escapeHtml(p.name || '')}</strong></td>
 						<td>${escapeHtml(cat)}</td>
 						<td>${fmt(price)}</td>

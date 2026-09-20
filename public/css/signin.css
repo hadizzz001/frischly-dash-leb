@@ -5,7 +5,7 @@
 }
 
 body {
-	font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+	font-family: "Inter", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 	background: #ffffff;
 	min-height: 100vh;
 	display: flex;
@@ -16,12 +16,12 @@ body {
 .container {
 	background: #ffffff;
 	border-radius: 15px;
-	box-shadow: 0 15px 35px rgba(255, 195, 0, 0.3);
+	box-shadow: 0 15px 35px rgba(245, 158, 11, 0.3);
 	overflow: hidden;
 	width: 400px;
 	max-width: 90vw;
 	padding: 40px;
-	border: 3px solid #ffc300;
+	border: 3px solid #f59e0b;
 }
 
 .logo {
@@ -41,7 +41,7 @@ body {
 }
 
 .header h1 {
-	color: #ffc300;
+	color: #f59e0b;
 	margin-bottom: 10px;
 	font-size: 28px;
 }
@@ -82,7 +82,7 @@ body {
 
 .password-toggle:hover {
 	color: #000000;
-	background: rgba(255, 195, 0, 0.18);
+	background: rgba(245, 158, 11, 0.18);
 }
 
 .password-toggle:focus-visible {
@@ -103,13 +103,13 @@ body {
 }
 
 .logo h1 {
-	color: #ffc300;
+	color: #f59e0b;
 	margin-bottom: 10px;
 	font-size: 28px;
 }
 
 .form-container h2 {
-	color: #ffc300;
+	color: #f59e0b;
 	margin-bottom: 10px;
 	font-size: 24px;
 	text-align: center;
@@ -136,7 +136,7 @@ body {
 .form-group input {
 	width: 100%;
 	padding: 12px;
-	border: 2px solid #ffc300;
+	border: 2px solid #f59e0b;
 	border-radius: 8px;
 	font-size: 14px;
 	transition: border-color 0.3s ease;
@@ -152,9 +152,9 @@ body {
 .btn {
 	width: 100%;
 	padding: 12px;
-	background: #ffc300;
+	background: #f59e0b;
 	color: #000000;
-	border: 2px solid #ffc300;
+	border: 2px solid #f59e0b;
 	border-radius: 8px;
 	font-size: 16px;
 	font-weight: 600;
@@ -174,9 +174,9 @@ body {
 }
 
 .btn-primary {
-	background: #ffc300;
+	background: #f59e0b;
 	color: #000000;
-	border: 2px solid #ffc300;
+	border: 2px solid #f59e0b;
 }
 
 .btn-primary:hover {
@@ -211,7 +211,7 @@ body {
 
 .spinner {
 	border: 4px solid #f3f3f3;
-	border-top: 4px solid #ffc300;
+	border-top: 4px solid #f59e0b;
 	border-radius: 50%;
 	width: 30px;
 	height: 30px;
@@ -239,7 +239,7 @@ body {
 }
 
 .form-footer a {
-	color: #ffc300;
+	color: #f59e0b;
 	text-decoration: none;
 	font-weight: 500;
 }
@@ -267,7 +267,7 @@ body {
 }
 
 .links a {
-	color: #ffc300;
+	color: #f59e0b;
 	text-decoration: none;
 	font-weight: 500;
 }

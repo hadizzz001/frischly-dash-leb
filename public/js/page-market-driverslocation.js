@@ -66,7 +66,7 @@
 						const url = `https://www.openstreetmap.org/?mlat=${loc.latitude}&mlon=${loc.longitude}#map=15/${loc.latitude}/${loc.longitude}`;
 						mapInner = `
 							<div class="map-coords-panel">
-								<div class="map-coords-icon">🗺️</div>
+								<div class="map-coords-icon"><i data-lucide=map></i></div>
 								<div class="map-coords-text">
 									${Number(loc.latitude).toFixed(5)}, ${Number(loc.longitude).toFixed(5)}
 								</div>
@@ -75,7 +75,7 @@
 								</div>
 								<a href="${url}" target="_blank" rel="noopener"
 									class="map-open-link">
-									🌍 Open Map in New Tab
+									<i data-lucide=globe></i> Open Map in New Tab
 								</a>
 							</div>
 						`;
@@ -91,8 +91,8 @@
 						</div>
 						<div class="map-container">${mapInner}</div>
 						<div class="rider-info">
-							<span>🚗 ${r.vehicleType || "N/A"}${r.vehicleNumber ? " · " + r.vehicleNumber : ""}</span>
-							<span>📞 ${u.phoneNumber || "N/A"}</span>
+							<span><i data-lucide=car></i> ${r.vehicleType || "N/A"}${r.vehicleNumber ? " · " + r.vehicleNumber : ""}</span>
+							<span><i data-lucide=phone></i> ${u.phoneNumber || "N/A"}</span>
 						</div>
 					`;
 					grid.appendChild(card);

@@ -20,7 +20,9 @@
  */
 const { sendError, sendResponse } = require("../utils/apiResponse");
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
+// The key may be provided as OPENAI_API_KEY or, as the deployed .env names
+// it, CHATAPI. Either works; the first non-empty one wins.
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.CHATAPI || "";
 const OPENAI_BASE_URL = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(
 	/\/+$/,
 	"",

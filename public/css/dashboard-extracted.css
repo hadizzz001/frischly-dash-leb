@@ -4,7 +4,7 @@
 			}
 			
 			.stylish-table tbody tr:hover {
-				background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05)) !important;
+				background: #f9fafb !important;
 				transform: translateY(-1px);
 				box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 			}
@@ -26,7 +26,7 @@
 			
 			.stylish-table tbody td:first-child {
 				font-weight: 700;
-				color: #667eea;
+				color: #374151;
 				text-align: center;
 				position: relative;
 			}
@@ -38,7 +38,7 @@
 				top: 0;
 				bottom: 0;
 				width: 4px;
-				background: linear-gradient(135deg, #667eea, #764ba2);
+				background: #374151;
 				border-radius: 0 2px 2px 0;
 			}
 			
@@ -121,8 +121,8 @@
 			#statistics-section .stat-card {
 				background: #ffffff !important;
 				color: #000000 !important;
-				border: 2px solid #ffc300 !important;
-				box-shadow: 0 2px 10px rgba(255, 195, 0, 0.18) !important;
+				border: 2px solid #f59e0b !important;
+				box-shadow: 0 2px 10px rgba(245, 158, 11, 0.18) !important;
 			}
 			#statistics-section .stat-card .stat-icon,
 			#statistics-section .stat-card .stat-value,
@@ -135,10 +135,10 @@
 			}
 			#statistics-section .filter-section select,
 			#statistics-section .filter-section input {
-				border: 1px solid #ffc300 !important;
+				border: 1px solid #f59e0b !important;
 			}
 			#statistics-section .table-header {
-				background: #ffc300 !important;
+				background: #f59e0b !important;
 				color: #000000 !important;
 			}
 			#statistics-section .table-header h3,
@@ -146,10 +146,10 @@
 				color: #000000 !important;
 			}
 			#statistics-section thead tr {
-				background: #ffc300 !important;
+				background: #f59e0b !important;
 			}
 			#statistics-section thead th {
-				background: #ffc300 !important;
+				background: #f59e0b !important;
 				color: #000000 !important;
 				border-bottom: 2px solid #000000 !important;
 			}
@@ -157,14 +157,14 @@
 				color: #000000 !important;
 			}
 			#statistics-section tbody td span[style*="linear-gradient"] {
-				background: #ffc300 !important;
+				background: #f59e0b !important;
 				color: #000000 !important;
 			}
 			#statistics-section tbody tr:nth-child(even) td {
 				background: #fffaf0;
 			}
 			#statistics-section tbody tr:hover td {
-				background: rgba(255, 195, 0, 0.18) !important;
+				background: rgba(245, 158, 11, 0.18) !important;
 			}
 			#statistics-section tbody tr[style*="#eef3ff"],
 			#statistics-section tbody tr[style*="#f0fff4"],
@@ -175,23 +175,23 @@
 				color: #000000 !important;
 			}
 			#statistics-section .stylish-table tbody td:first-child::before {
-				background: #ffc300 !important;
+				background: #f59e0b !important;
 			}
 			#statistics-section .stylish-table tbody td:nth-child(3) {
 				color: #000000 !important;
-				background: rgba(255, 195, 0, 0.18) !important;
+				background: rgba(245, 158, 11, 0.18) !important;
 			}
 			#statistics-section .stylish-table tbody td:nth-child(4) {
 				color: #000000 !important;
 			}
 			#statistics-section .stylish-table tbody tr:hover {
-				background: rgba(255, 195, 0, 0.10) !important;
+				background: rgba(245, 158, 11, 0.10) !important;
 			}
 			#statistics-section .btn-pagination.active,
 			#statistics-section .pagination-numbers .btn.active {
-				background: #ffc300 !important;
+				background: #f59e0b !important;
 				color: #000000 !important;
-				border-color: #ffc300 !important;
+				border-color: #f59e0b !important;
 			}
 
 body {
@@ -201,12 +201,12 @@ body {
 							}
 							.header {
 								text-align: center;
-								border-bottom: 2px solid #ffc300;
+								border-bottom: 2px solid #f59e0b;
 								padding-bottom: 20px;
 								margin-bottom: 30px;
 							}
 							.header h1 {
-								color: #ffc300;
+								color: #f59e0b;
 								margin: 0;
 								font-size: 28px;
 							}
@@ -223,7 +223,7 @@ body {
 							}
 							.info-section h3 {
 								margin: 0 0 10px 0;
-								color: #ffc300;
+								color: #f59e0b;
 								font-size: 16px;
 							}
 							.items-table {
@@ -253,7 +253,7 @@ body {
 								font-size: 16px;
 							}
 							.total-row {
-								border-top: 2px solid #ffc300;
+								border-top: 2px solid #f59e0b;
 								padding-top: 10px;
 								font-weight: bold;
 								font-size: 18px;
@@ -394,7 +394,7 @@ body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 3
 }
 
 .dsx-19 {
-	background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+	background: #15803d;
 	color: white;
 	padding: 20px;
 	border-radius: 12px;
@@ -414,14 +414,14 @@ body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 3
 }
 
 .dsx-23 {
-	background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%);
+	background: #d97706;
 	color: white;
 	padding: 20px;
 	border-radius: 12px;
 }
 
 .dsx-24 {
-	background: linear-gradient(135deg, #0b4fed 0%, #4002ea 100%);
+	background: #1d4ed8;
 	color: white;
 	padding: 20px;
 	border-radius: 12px;
@@ -474,7 +474,7 @@ body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 3
 
 .dsx-32 {
 	padding: 15px 20px;
-	background: linear-gradient(135deg, #0b4fed 0%, #4002ea 100%);
+	background: #1d4ed8;
 	color: white;
 }
 
@@ -538,7 +538,7 @@ body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 3
 
 .dsx-43 {
 	padding: 15px 20px;
-	background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+	background: #15803d;
 	color: white;
 	display: flex;
 	justify-content: space-between;
@@ -546,7 +546,7 @@ body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 3
 }
 
 .dsx-44 {
-	background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+	background: #f3f4f6;
 }
 
 .dsx-45 {
@@ -608,7 +608,7 @@ body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 3
 
 .dsx-54 {
 	padding: 15px 20px;
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	background: #374151;
 	color: white;
 }
 
@@ -617,7 +617,7 @@ body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 3
 	text-align: center;
 	font-weight: 600;
 	color: #333;
-	border-bottom: 2px solid #667eea;
+	border-bottom: 2px solid #374151;
 }
 
 .dsx-56 {
@@ -625,7 +625,7 @@ body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 3
 	text-align: left;
 	font-weight: 600;
 	color: #333;
-	border-bottom: 2px solid #667eea;
+	border-bottom: 2px solid #374151;
 }
 
 .dsx-57 {
@@ -633,7 +633,7 @@ body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 3
 	text-align: right;
 	font-weight: 600;
 	color: #333;
-	border-bottom: 2px solid #667eea;
+	border-bottom: 2px solid #374151;
 }
 
 .dsx-58 {
@@ -689,7 +689,7 @@ body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 3
 
 .dsx-66 {
 	padding: 15px 20px;
-	background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+	background: #dc2626;
 	color: white;
 }
 
@@ -1179,7 +1179,7 @@ body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 3
 .dsx-136 {
 	width: 60px;
 	height: 60px;
-	background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+	background: #f3f4f6;
 	border-radius: 8px;
 	border: 2px solid #dee2e6;
 	/* visibility is toggled inline by JS depending on whether an image exists */
@@ -1369,7 +1369,7 @@ body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 3
 	width: 40px;
 	height: 40px;
 	border-radius: 50%;
-	background: #ffc300;
+	background: #f59e0b;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -1456,7 +1456,7 @@ body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 3
 	display:inline-block;
 	padding:3px 10px;
 	border-radius:999px;
-	background:#fff3cd;
+	background:#fef3c7;
 	color:#856404;
 	font-size:0.85em;
 	font-weight:600;
@@ -1552,7 +1552,7 @@ body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 3
 .dsx-194 {
 	font-size: 22px;
 	font-weight: 700;
-	color: #ffc300;
+	color: #f59e0b;
 }
 
 .dsx-195 {
@@ -1573,7 +1573,7 @@ body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 3
 }
 
 .dsx-198 {
-	background: #fff3cd;
+	background: #fef3c7;
 	padding: 14px;
 	border-radius: 8px;
 	margin-bottom: 14px;
@@ -1596,7 +1596,7 @@ body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 3
 	padding: 8px 18px;
 	font-size: 15px;
 	border-radius: 6px;
-	background: #ffc300;
+	background: #f59e0b;
 	color: #222;
 	border: none;
 	font-weight: 600;
@@ -1940,7 +1940,7 @@ body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 3
 	text-align: center;
 	font-weight: 700;
 	font-size: 1.1em;
-	color: #667eea;
+	color: #374151;
 }
 
 .dsx-254 {
@@ -1959,7 +1959,7 @@ body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 3
 }
 
 .dsx-256 {
-	background: linear-gradient(135deg, #11998e, #38ef7d);
+	background: #15803d;
 	color: white;
 	padding: 6px 14px;
 	border-radius: 20px;

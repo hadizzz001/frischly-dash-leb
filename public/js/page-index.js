@@ -7,13 +7,13 @@
 
 					if (data.success) {
 						document.getElementById("api-status").innerHTML =
-							'<span class="status-online">✅ API Server Online</span>';
+							'<span class="status-online"><i data-lucide=circle-check></i> API Server Online</span>';
 					} else {
 						throw new Error("API returned error");
 					}
 				} catch (error) {
 					document.getElementById("api-status").innerHTML =
-						'<span class="status-offline">❌ API Server Offline</span>';
+						'<span class="status-offline"><i data-lucide=circle-x></i> API Server Offline</span>';
 				}
 			}
 

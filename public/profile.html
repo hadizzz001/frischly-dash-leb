@@ -8,6 +8,11 @@
 		<!-- Favicon -->
 		<link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
 			<link rel="stylesheet" href="css/profile-extracted.css" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+		<link rel="stylesheet" href="css/admin.css?v=1" />
+		<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+		<script src="js/icons.js?v=1"></script>
 </head>
 	<body>
 		<div class="container">
@@ -28,7 +33,7 @@
 					aria-label="Settings"
 					title="Settings"
 				>
-					⚙️
+					<i data-lucide=settings></i>
 				</button>
 			</div>
 
@@ -66,11 +71,11 @@
 					  must stay inline, not in a CSS class.
 					-->
 					<div class="profile-section" id="rider-location-section" style="display: none">
-						<h3>🛰️ Live Location</h3>
+						<h3> Live Location</h3>
 						<div class="profile-item">
 							<span class="profile-label">Status:</span>
 							<span class="profile-value prx-3" id="gps-status">
-								🟡 Requesting permission…
+								<i data-lucide=circle class=dot-warning></i> Requesting permission…
 							</span>
 						</div>
 						<div class="profile-item">
@@ -85,7 +90,7 @@
 							 class="btn prx-5"
 							
 							>
-								<span id="enable-location-label">📍 Enable Live Location</span>
+								<span id="enable-location-label"><i data-lucide=map-pin></i> Enable Live Location</span>
 							</button>
 							<small class="prx-6">
 								Your browser will ask for location permission automatically
@@ -97,7 +102,7 @@
 					</div>
 
 					<div class="profile-section" id="my-deliveries-section" style="display: none">
-						<h3>📦 My Deliveries</h3>
+						<h3><i data-lucide=package></i> My Deliveries</h3>
 						<p class="prx-7">
 							Orders assigned to you. Tap
 							<strong>Mark Delivered</strong> once you drop one off.
@@ -109,7 +114,7 @@
 							
 								onclick="loadMyDeliveries()"
 							>
-								🔄 Refresh
+								<i data-lucide=refresh-cw></i> Refresh
 							</button>
 						</div>
 						<div class="prx-10">
@@ -160,7 +165,7 @@
 					</div>
 
 					<div class="actions">
-						<a href="shop1.html" class="btn">← Back to Shop</a>
+						<a href="shop1.html" class="btn"><i data-lucide=arrow-left></i> Back to Shop</a>
 						<button
 							onclick="editProfile()"
 						 class="btn prx-15"

@@ -83,7 +83,7 @@
 				if (j.success) {
 					const market = j.data && j.data.market;
 					if (market) {
-						document.getElementById('title').textContent = `🛒 ${market.name} — Orders`;
+						document.getElementById('title').textContent = `${market.name} — Orders`;
 						document.title = `${market.name} — Orders`;
 					}
 				}

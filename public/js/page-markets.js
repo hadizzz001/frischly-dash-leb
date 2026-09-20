@@ -155,7 +155,7 @@
 					: `<button class="btn small" onclick="activateMarket('${m._id}')">Activate</button>`;
 				return `
 				<tr>
-					<td class="col-logo">${m.logo ? `<img src="${escapeHtml(m.logo)}" alt="${escapeHtml(m.name)} logo" class="logo-cell" />` : '<span class="logo-placeholder">🏪</span>'}</td>
+					<td class="col-logo">${m.logo ? `<img src="${escapeHtml(m.logo)}" alt="${escapeHtml(m.name)} logo" class="logo-cell" />` : '<span class="logo-placeholder"><i data-lucide=store></i></span>'}</td>
 					<td class="col-name"><span class="market-name">${escapeHtml(m.name)}</span></td>
 					<td class="col-username"><span class="market-username">${escapeHtml(m.username)}</span></td>
 					<td>${escapeHtml((m.cities && m.cities.length ? m.cities.join(', ') : (m.location?.city || '—')))}</td>

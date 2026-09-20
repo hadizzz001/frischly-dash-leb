@@ -29,7 +29,7 @@
 }
 
 .link-yellow {
-	color: #ffc300;
+	color: #f59e0b;
 	text-decoration: none;
 	font-weight: 500;
 }
@@ -130,7 +130,7 @@
 
 .users-table tbody tr:hover,
 .data-table tbody tr:hover {
-	background: rgba(255, 195, 0, 0.14) !important;
+	background: rgba(245, 158, 11, 0.14) !important;
 }
 
 /* Numeric-ish columns read better without wrapping */
@@ -431,9 +431,9 @@ table tbody td [style*="color: #fff"] {
 	border-color: #9ca3af;
 }
 .btn-pagination.active {
-	background: #667eea !important;
+	background: #374151 !important;
 	color: #fff !important;
-	border-color: #667eea !important;
+	border-color: #374151 !important;
 }
 .btn-pagination:disabled {
 	opacity: 0.5;

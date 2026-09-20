@@ -24,6 +24,11 @@ exports.getRiders = async (req, res) => {
 			search,
 			sortBy = "createdAt",
 			sortOrder = "desc",
+			// Tenant scope. `market=<id>` returns only that market's drivers;
+			// `scope=global` returns only the main store's own riders (no
+			// market). Omit both for the legacy "everyone" list.
+			market: marketScope,
+			scope,
 		} = req.query;
 
 		// Build filter object
@@ -31,6 +36,14 @@ exports.getRiders = async (req, res) => {
 		if (zone) filter.zones = zone; // Check if zone is in zones array
 		if (status) filter.status = status;
 		if (vehicleType) filter.vehicleType = vehicleType;
+		if (marketScope) {
+			if (!mongoose.Types.ObjectId.isValid(marketScope)) {
+				return sendError(res, 400, "Invalid market ID");
+			}
+			filter.market = new mongoose.Types.ObjectId(marketScope);
+		} else if (scope === "global") {
+			filter.market = null; // matches both missing and null
+		}
 
 		// Convert page and limit to numbers
 		const pageNum = parseInt(page, 10);

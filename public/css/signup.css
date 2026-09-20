@@ -5,7 +5,7 @@
 }
 
 body {
-	font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+	font-family: "Inter", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 	background: #ffffff;
 	min-height: 100vh;
 	display: flex;
@@ -17,12 +17,12 @@ body {
 .container {
 	background: #ffffff;
 	border-radius: 15px;
-	box-shadow: 0 15px 35px rgba(255, 195, 0, 0.3);
+	box-shadow: 0 15px 35px rgba(245, 158, 11, 0.3);
 	width: 500px;
 	max-width: 95vw;
 	padding: 40px;
 	margin: 20px 0;
-	border: 3px solid #ffc300;
+	border: 3px solid #f59e0b;
 }
 
 .header {
@@ -31,7 +31,7 @@ body {
 }
 
 .header h1 {
-	color: #ffc300;
+	color: #f59e0b;
 	margin-bottom: 10px;
 	font-size: 28px;
 }
@@ -55,7 +55,7 @@ body {
 .form-group input {
 	width: 100%;
 	padding: 12px;
-	border: 2px solid #ffc300;
+	border: 2px solid #f59e0b;
 	border-radius: 8px;
 	font-size: 14px;
 	transition: border-color 0.3s ease;
@@ -99,7 +99,7 @@ body {
 
 .password-toggle:hover {
 	color: #000000;
-	background: rgba(255, 195, 0, 0.18);
+	background: rgba(245, 158, 11, 0.18);
 }
 
 .password-toggle:focus-visible {
@@ -122,7 +122,7 @@ body {
 .form-group select {
 	width: 100%;
 	padding: 12px;
-	border: 2px solid #ffc300;
+	border: 2px solid #f59e0b;
 	border-radius: 8px;
 	font-size: 14px;
 	transition: border-color 0.3s ease;
@@ -137,11 +137,11 @@ body {
 }
 
 .address-section {
-	background: rgba(255, 195, 0, 0.1);
+	background: rgba(245, 158, 11, 0.1);
 	padding: 25px;
 	border-radius: 10px;
 	margin-bottom: 25px;
-	border: 2px solid #ffc300;
+	border: 2px solid #f59e0b;
 }
 
 .address-section h3 {
@@ -154,7 +154,7 @@ body {
 }
 
 .address-section h3::before {
-	content: "📍";
+	content: "";
 	margin-right: 8px;
 	font-size: 16px;
 }
@@ -179,7 +179,7 @@ body {
 }
 
 .address-grid input:focus {
-	border-color: #667eea;
+	border-color: #374151;
 	box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
@@ -197,9 +197,9 @@ body {
 .btn {
 	width: 100%;
 	padding: 12px;
-	background: #ffc300;
+	background: #f59e0b;
 	color: #000000;
-	border: 2px solid #ffc300;
+	border: 2px solid #f59e0b;
 	border-radius: 8px;
 	font-size: 16px;
 	font-weight: 600;
@@ -249,7 +249,7 @@ body {
 
 .spinner {
 	border: 4px solid #f3f3f3;
-	border-top: 4px solid #667eea;
+	border-top: 4px solid #374151;
 	border-radius: 50%;
 	width: 30px;
 	height: 30px;
@@ -272,7 +272,7 @@ body {
 }
 
 .links a {
-	color: #667eea;
+	color: #374151;
 	text-decoration: none;
 	font-weight: 500;
 }

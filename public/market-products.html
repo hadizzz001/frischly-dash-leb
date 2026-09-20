@@ -7,6 +7,11 @@
 	<link rel="stylesheet" href="css/market-products.css?v=5" />
 	<!-- Global overrides last so they win the cascade (e.g. 40x40 product thumbnails) -->
 	<link rel="stylesheet" href="css/global.css?v=5" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+		<link rel="stylesheet" href="css/admin.css?v=1" />
+		<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+		<script src="js/icons.js?v=1"></script>
 </head>
 <body data-active-menu="markets">
 	<div class="sidebar">
@@ -23,12 +28,12 @@
 		<div class="container">
 			<div class="page-header">
 				<div class="brand-name">Freshly.lb</div>
-				<h1 id="title">📦 Market Products</h1>
+				<h1 id="title"><i data-lucide=package></i> Market Products</h1>
 				<p>Read-only list of products linked to this market.</p>
 			</div>
 
 			<div class="toolbar">
-				<a id="backLink" href="/markets" class="btn secondary">← Back to manage</a>
+				<a id="backLink" href="/markets" class="btn secondary"><i data-lucide=arrow-left></i> Back to manage</a>
 				<input id="searchInput" placeholder="Search by name…" class="search-input-flex" />
 			</div>
 

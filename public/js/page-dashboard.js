@@ -267,7 +267,7 @@
 
 			// Debug function to check API configuration
 			function checkApiConfig() {
-				console.log("🔍 API Configuration Check:");
+				console.log("API Configuration Check:");
 				console.log("Current hostname:", window.location.hostname);
 				console.log("API_BASE_URL:", API_BASE_URL);
 				console.log("Current token exists:", !!currentToken);
@@ -775,7 +775,7 @@
 				}
 
 				try {
-					console.log("🔍 Change Password Debug:");
+					console.log("Change Password Debug:");
 					console.log("API_BASE_URL:", API_BASE_URL);
 					console.log("Full URL:", `${API_BASE_URL}/auth/change-password`);
 					console.log("Current token exists:", !!currentToken);
@@ -1995,7 +1995,7 @@
 										: ""
 								}
 								<div class="dsx-136" style="display: ${category.image ? "none" : "flex"}">
-									📁
+									<i data-lucide=folder></i>
 								</div>
 							</td>
 							<td class="dsx-137">
@@ -2884,7 +2884,7 @@
 										${
 											subcategory.parentCategory?.image
 												? ""
-												: `<div class="dsx-149">📁</div>`
+												: `<div class="dsx-149"><i data-lucide=folder></i></div>`
 										}
 										<span class="category-badge">${
 											subcategory.parentCategory?.name || "Unknown"
@@ -2901,7 +2901,7 @@
 											onclick="editSubcategory('${subcategory._id}')"
 											title="Edit Subcategory"
 										>
-											✏️
+											<i data-lucide=pencil></i>
 										</button>
 										<button
 											class="btn-action ${subcategory.isActive ? "deactivate" : "activate"}"
@@ -2910,7 +2910,7 @@
 											}', ${!subcategory.isActive})"
 											title="${subcategory.isActive ? "Deactivate" : "Activate"} Subcategory"
 										>
-											${subcategory.isActive ? "🔒" : "🔓"}
+											${subcategory.isActive ? "<i data-lucide=lock></i>" : "<i data-lucide=lock-open></i>"}
 										</button>
 									</div>
 								</td>
@@ -4888,7 +4888,9 @@
 						return;
 					}
 
-					const response = await fetch(`${API_BASE_URL}/riders`, {
+					// Main-store riders only: a market's own drivers are managed from
+					// that market's page (markets -> Manage -> Drivers).
+					const response = await fetch(`${API_BASE_URL}/riders?scope=global&limit=200`, {
 						method: "GET",
 						headers: {
 							Authorization: `Bearer ${token}`,
@@ -4897,7 +4899,6 @@
 					});
 					if (response.ok) {
 						const data = await response.json();
-						console.log("Riders API Response:", data); // Debug log
 						displayRiders(data.data.riders);
 						document.getElementById(
 							"riders-count-display"
@@ -5046,10 +5047,10 @@
 											${
 												marketName
 													? `<div class="dsx-169">
-														<i class="fas fa-store dsx-170"></i> ${escapeHtml(marketName)}
+														<i data-lucide=store class="dsx-170"></i> ${escapeHtml(marketName)}
 													</div>`
 													: `<div class="dsx-171">
-														<i class="fas fa-globe dsx-170"></i> Global
+														<i data-lucide=globe class="dsx-170"></i> Global
 													</div>`
 											}
 										</div>
@@ -5080,7 +5081,7 @@
 								<td>${statusBadge}</td>
 								<td>
 									<div class="dsx-147">
-										<span class="dsx-176">⭐</span>
+										<span class="dsx-176"><i data-lucide=star></i></span>
 										<span>${rating}</span>
 										<span class="dsx-177">(${completionRate}%)</span>
 									</div>
@@ -5090,11 +5091,11 @@
 										<button class="btn-icon" onclick="viewRiderDetails('${
 											rider._id
 										}')" title="View Details">
-											👁️
+											<i data-lucide=eye></i>
 										</button>
 										${isMarketRider ? `<span class="dsx-178">Market rider — view only</span>` : `
 										<button class="btn-icon" onclick="editRider('${rider._id}')" title="Edit Rider">
-											✏️
+											<i data-lucide=pencil></i>
 										</button>
 										<button class="btn-icon ${
 											rider.status === "available" ? "btn-danger" : ""
@@ -5103,12 +5104,12 @@
 						}')" title="${
 							rider.status === "available" ? "Deactivate" : "Activate"
 						}">
-											${rider.status === "available" ? "⏸️" : "▶️"}
+											${rider.status === "available" ? "<i data-lucide=pause></i>" : "<i data-lucide=play></i>"}
 										</button>
 										<button class="btn-icon btn-danger" onclick="deleteRider('${
 											rider._id
 										}')" title="Delete Rider">
-											🗑️
+											<i data-lucide=trash-2></i>
 										</button>
 										`}
 									</div>
@@ -5262,7 +5263,7 @@
 						<td>
 							${
 								zone.market && zone.market.name
-									? '<span class="dsx-180">🏪 ' +
+									? '<span class="dsx-180"><i data-lucide=store></i> ' +
 									  zone.market.name +
 									  '</span>'
 									: '<span class="dsx-181">—</span>'
@@ -5272,17 +5273,17 @@
 							<div class="table-actions">
 								${isMarketZone ? `<span class="dsx-126">Market zone — view only</span>` : `
 								<button class="btn-icon" onclick="editZone('${zone._id}')" title="Edit">
-									✏️
+									<i data-lucide=pencil></i>
 								</button>
 								<button class="btn-icon" onclick="toggleZoneStatus('${zone._id}', ${
 							zone.isActive
 						})" title="${zone.isActive ? "Deactivate" : "Activate"}">
-									${zone.isActive ? "⏸️" : "▶️"}
+									${zone.isActive ? "<i data-lucide=pause></i>" : "<i data-lucide=play></i>"}
 								</button>
 								<button class="btn-icon btn-danger" onclick="deleteZone('${zone._id}', '${
 							zone.zoneName
 						}')" title="Delete">
-									🗑️
+									<i data-lucide=trash-2></i>
 								</button>
 								`}
 							</div>
@@ -5940,10 +5941,10 @@
 						<td>
 							<div class="table-actions">
 								<button class="btn-icon" onclick="viewCustomer('${customer._id}')" title="View Details">
-									👁️
+									<i data-lucide=eye></i>
 								</button>
 								<button class="btn-icon" onclick="resetCustomerPassword('${customer._id}', '${customer.name}')" title="Reset Password">
-									🔑
+									<i data-lucide=key></i>
 								</button>
 							</div>
 						</td>
@@ -6765,7 +6766,7 @@
 						let detailsHtml = `
 							<div class="dsx-185">
 								<div class="dsx-186">
-									<div class="dsx-187">🏍️</div>
+									<div class="dsx-187"><i data-lucide=bike></i></div>
 									<div>
 										<h2 class="dsx-188">${
 											rider.user.name
@@ -6776,24 +6777,24 @@
 									</div>
 								</div>
 								<div class="dsx-190">
-									<div><strong>📧 Email:</strong><br><span class="dsx-191">${
+									<div><strong><i data-lucide=mail></i> Email:</strong><br><span class="dsx-191">${
 										rider.user.email
 									}</span></div>
-									<div><strong>📞 Phone:</strong><br><span class="dsx-191">${
+									<div><strong><i data-lucide=phone></i> Phone:</strong><br><span class="dsx-191">${
 										rider.user.phoneNumber || "Not provided"
 									}</span></div>
-									<div><strong>🏢 Zones:</strong><br><span class="dsx-191">${
+									<div><strong><i data-lucide=building-2></i> Zones:</strong><br><span class="dsx-191">${
 										Array.isArray(rider.zones)
 											? rider.zones.join(", ")
 											: rider.zone || "No zones assigned"
 									}</span></div>
-									<div><strong>🚗 Vehicle:</strong><br><span class="dsx-191">${
+									<div><strong><i data-lucide=car></i> Vehicle:</strong><br><span class="dsx-191">${
 										rider.vehicleType
 									}</span></div>
-									<div><strong>📄 License:</strong><br><span class="dsx-191">${
+									<div><strong><i data-lucide=file-text></i> License:</strong><br><span class="dsx-191">${
 										rider.licenseNumber || "Not provided"
 									}</span></div>
-									<div><strong>📊 Status:</strong><br>${getStatusBadge(rider.status)}</div>
+									<div><strong><i data-lucide=chart-column></i> Status:</strong><br>${getStatusBadge(rider.status)}</div>
 								</div>
 								<div class="dsx-192">
 									<div class="dsx-193">
@@ -6809,7 +6810,7 @@
 										<div class="dsx-195">Orders Delivered</div>
 									</div>
 									<div class="dsx-193">
-										<div class="dsx-197">⭐ ${
+										<div class="dsx-197"><i data-lucide=star></i> ${
 											typeof rider.rating === "number" && !isNaN(rider.rating)
 												? rider.rating.toFixed(1)
 												: "N/A"
@@ -6819,18 +6820,18 @@
 								</div>
 								${
 									rider.emergencyContactName
-										? `<div class="dsx-198"><strong>🚨 Emergency Contact:</strong><br>${
+										? `<div class="dsx-198"><strong><i data-lucide=siren></i> Emergency Contact:</strong><br>${
 												rider.emergencyContactName
 										  } - ${rider.emergencyContactPhone || "No phone"}</div>`
 										: ""
 								}
 								${
 									rider.notes
-										? `<div class="dsx-199"><strong>📝 Notes:</strong><br>${rider.notes}</div>`
+										? `<div class="dsx-199"><strong><i data-lucide=notebook-pen></i> Notes:</strong><br>${rider.notes}</div>`
 										: ""
 								}
 								<div class="dsx-200">
-									<button onclick="editRider('${riderId}')" class="btn btn-primary dsx-201">✏️ Edit Rider</button>
+									<button onclick="editRider('${riderId}')" class="btn btn-primary dsx-201"><i data-lucide=pencil></i> Edit Rider</button>
 									<button onclick="document.getElementById('rider-details-overlay').style.display='none'" class="btn btn-secondary dsx-202">Close</button>
 								</div>
 							</div>
@@ -7534,7 +7535,7 @@
 					tbody.innerHTML = `
 						<tr>
 							<td colspan="10" class="dsx-3">
-								<div class="dsx-235">📦</div>
+								<div class="dsx-235"><i data-lucide=package></i></div>
 								<div class="dsx-236">No orders found</div>
 								<div class="dsx-237">Create your first order to get started</div>
 							</td>
@@ -7625,9 +7626,9 @@
 				}
 
 				const BADGES = {
-					"no-driver": { icon: "⚠️", text: "No driver covers this zone" },
-					"no-zone": { icon: "⚠️", text: "Outside all delivery zones" },
-					"no-location": { icon: "⚠️", text: "No delivery location on file" },
+					"no-driver": { icon: "", text: "No driver covers this zone" },
+					"no-zone": { icon: "", text: "Outside all delivery zones" },
+					"no-location": { icon: "", text: "No delivery location on file" },
 				};
 
 				Object.keys(coverage).forEach((orderId) => {
@@ -8123,16 +8124,16 @@
 				// Set customer information
 				let customerInfo = `<strong>${customer.name || "Unknown customer"}</strong>`;
 				if (customer.email) {
-					customerInfo += `<br>📧 ${customer.email}`;
+					customerInfo += `<br><i data-lucide=mail></i> ${customer.email}`;
 				}
 				const custAddr = customer.address;
 				if (custAddr && custAddr.city) {
-					customerInfo += `<br>📍 ${custAddr.street ? custAddr.street + ", " : ""}${custAddr.city}`;
+					customerInfo += `<br><i data-lucide=map-pin></i> ${custAddr.street ? custAddr.street + ", " : ""}${custAddr.city}`;
 				}
 				const custLoc = custAddr && custAddr.location;
 				if (custLoc && isFinite(custLoc.latitude) && isFinite(custLoc.longitude)) {
 					const mapUrl = `https://www.openstreetmap.org/?mlat=${custLoc.latitude}&mlon=${custLoc.longitude}#map=16/${custLoc.latitude}/${custLoc.longitude}`;
-					customerInfo += `<br><a href="${mapUrl}" target="_blank" rel="noopener" class="dsx-246">🗺️ View Map Pin</a>`;
+					customerInfo += `<br><a href="${mapUrl}" target="_blank" rel="noopener" class="dsx-246"><i data-lucide=map></i> View Map Pin</a>`;
 				}
 				setHtml("modal-customer-info", customerInfo);
 
@@ -8162,10 +8163,10 @@
 				if (driverName) {
 					driverInfo = `<strong>${driverName}</strong>`;
 					if (driverPhone) {
-						driverInfo += `<br>📞 <a href="tel:${driverPhone}">${driverPhone}</a>`;
+						driverInfo += `<br><i data-lucide=phone></i> <a href="tel:${driverPhone}">${driverPhone}</a>`;
 					}
 					const vehicle = [rider.vehicleType, rider.vehicleNumber].filter(Boolean).join(" · ");
-					if (vehicle) driverInfo += `<br>🚗 ${vehicle}`;
+					if (vehicle) driverInfo += `<br><i data-lucide=car></i> ${vehicle}`;
 				} else {
 					driverInfo = "No driver assigned yet";
 				}
@@ -8176,7 +8177,7 @@
 						<select id="modal-driver-select" style="width:100%;padding:6px;margin-top:4px;">
 							<option value="">Loading drivers…</option>
 						</select>
-						<button type="button" class="btn btn-primary" style="margin-top:6px;" onclick="saveOrderDriver('${order._id}')">💾 Save driver</button>
+						<button type="button" class="btn btn-primary" style="margin-top:6px;" onclick="saveOrderDriver('${order._id}')"><i data-lucide=save></i> Save driver</button>
 					</div>`;
 				setHtml("modal-driver-info", driverInfo);
 				populateOrderDriverSelect(order);
@@ -8427,7 +8428,9 @@
 				try {
 					showSectionLoading("riders", true, "Loading riders data...");
 
-					const response = await fetch(`${API_BASE_URL}/riders`, {
+					// Main-store riders only (see loadRiders): market drivers live
+					// under Markets -> Manage -> Drivers.
+					const response = await fetch(`${API_BASE_URL}/riders?scope=global&limit=200`, {
 						headers: {
 							Authorization: `Bearer ${currentToken}`,
 						},
@@ -8583,7 +8586,7 @@
 						</td>
 						<td>
 							<div class="dsx-147">
-								<span class="dsx-176">⭐</span>
+								<span class="dsx-176"><i data-lucide=star></i></span>
 								<span>${rating.toFixed(1)}</span>
 								<span class="dsx-177">(${
 									rider.completionRate ? rider.completionRate.toFixed(1) : "0.0"
@@ -8595,20 +8598,20 @@
 								<button class="btn-icon" onclick="viewRiderDetails('${
 									rider._id
 								}')" title="View Details">
-									👁️
+									<i data-lucide=eye></i>
 								</button>
 								${
 									rider.currentLocation
 										? `<button class="btn-icon" onclick="viewRiderLocation('${rider._id}')" title="View Location">
-										📍
+										<i data-lucide=map-pin></i>
 									</button>`
 										: `<button class="btn-icon" disabled title="No Location Data">
-										📍
+										<i data-lucide=map-pin></i>
 									</button>`
 								}
 								${isMarketRider ? `<span class="dsx-178">Market rider — view only</span>` : `
 								<button class="btn-icon" onclick="editRider('${rider._id}')" title="Edit Rider">
-									✏️
+									<i data-lucide=pencil></i>
 								</button>
 								<button class="btn-icon ${
 									rider.status === "available" ? "btn-danger" : ""
@@ -8617,12 +8620,12 @@
 						}')" title="${
 							rider.status === "available" ? "Deactivate" : "Activate"
 						}">
-									${rider.status === "available" ? "⏸️" : "▶️"}
+									${rider.status === "available" ? "<i data-lucide=pause></i>" : "<i data-lucide=play></i>"}
 								</button>
 								<button class="btn-icon btn-danger" onclick="deleteRider('${
 									rider._id
 								}')" title="Delete Rider">
-									🗑️
+									<i data-lucide=trash-2></i>
 								</button>
 								`}
 							</div>
@@ -9442,7 +9445,7 @@
 					document.getElementById('sales-stats-table-body').innerHTML = `
 						<tr>
 							<td colspan="9" class="dsx-248">
-								<div class="dsx-59">❌</div>
+								<div class="dsx-59"><i data-lucide=circle-x></i></div>
 								<p>Failed to load sales statistics</p>
 								<p class="dsx-249">${error.message}</p>
 							</td>
@@ -9462,7 +9465,7 @@
 					tableBody.innerHTML = `
 						<tr>
 							<td colspan="9" class="dsx-58">
-								<div class="dsx-59">📭</div>
+								<div class="dsx-59"><i data-lucide=inbox></i></div>
 								<p>No sales data found for the selected period</p>
 								<p class="dsx-249">Try adjusting your time filter</p>
 							</td>
@@ -9527,9 +9530,9 @@
 			// Get rank badge emoji for top 3
 			function getRankBadge(rank) {
 				switch(rank) {
-					case 1: return '🥇';
-					case 2: return '🥈';
-					case 3: return '🥉';
+					case 1: return '';
+					case 2: return '';
+					case 3: return '';
 					default: return '';
 				}
 			}
@@ -9749,7 +9752,7 @@
 					document.getElementById('unsold-products-table-body').innerHTML = `
 						<tr>
 							<td colspan="7" class="dsx-248">
-								<div class="dsx-59">❌</div>
+								<div class="dsx-59"><i data-lucide=circle-x></i></div>
 								<p>Failed to load unsold products</p>
 								<p class="dsx-249">${error.message}</p>
 							</td>
@@ -9767,7 +9770,7 @@
 					tableBody.innerHTML = `
 						<tr>
 							<td colspan="7" class="dsx-268">
-								<div class="dsx-59">🎉</div>
+								<div class="dsx-59"><i data-lucide=party-popper></i></div>
 								<p>Great news! All products have sales in this period</p>
 							</td>
 						</tr>
@@ -10437,7 +10440,7 @@
 									${
 										productPicture
 											? `<img src="${productPicture}" alt="${productName}" class="dsx-293">`
-											: `<div class="dsx-294"><i class="fas fa-box"></i></div>`
+											: `<div class="dsx-294"><i data-lucide=package></i></div>`
 									}
 									<span>${productName}</span>
 								</div>
@@ -10452,14 +10455,14 @@
 									onclick="editWasteRecord('${waste._id}')"
 									title="Edit"
 								>
-									✏️
+									<i data-lucide=pencil></i>
 								</button>
 								<button 
 									class="btn btn-icon" 
 									onclick="deleteWasteRecord('${waste._id}')"
 									title="Delete"
 								>
-									🗑️
+									<i data-lucide=trash-2></i>
 								</button>
 							</td>
 						</tr>
@@ -11044,7 +11047,7 @@
 				// Total waste
 				html += `
 					<div class="stat-card">
-						<div class="stat-icon">📊</div>
+						<div class="stat-icon"><i data-lucide=chart-column></i></div>
 						<div class="stat-info">
 							<div class="stat-value">${data.total.totalQuantity.toFixed(2)}</div>
 							<div class="stat-label">Total Waste Units</div>
@@ -11055,7 +11058,7 @@
 				// Total records
 				html += `
 					<div class="stat-card">
-						<div class="stat-icon">🧾</div>
+						<div class="stat-icon"><i data-lucide=receipt></i></div>
 						<div class="stat-info">
 							<div class="stat-value">${data.total.count}</div>
 							<div class="stat-label">Total Records</div>
@@ -11067,7 +11070,7 @@
 				if (Array.isArray(data.byReason) && data.byReason.length > 0) {
 					html += `
 						<div class="stat-card">
-							<div class="stat-icon">🔍</div>
+							<div class="stat-icon"><i data-lucide=search></i></div>
 							<div class="stat-info">
 								<div class="stat-value">${data.byReason[0]._id}</div>
 								<div class="stat-label">Top Waste Reason</div>
@@ -11081,7 +11084,7 @@
 					const avgWaste = data.total.totalQuantity / data.byDate.length;
 					html += `
 						<div class="stat-card">
-							<div class="stat-icon">📈</div>
+							<div class="stat-icon"><i data-lucide=trending-up></i></div>
 							<div class="stat-info">
 								<div class="stat-value">${avgWaste.toFixed(2)}</div>
 								<div class="stat-label">Avg. Waste Per Day</div>
@@ -12650,10 +12653,10 @@
 								</td>
 								<td>
 									<button class="btn-icon" onclick="editPromoCode('${promo._id}')" title="Edit">
-										✏️
+										<i data-lucide=pencil></i>
 									</button>
 									<button class="btn-icon delete-btn" onclick="deletePromoCode('${promo._id}')" title="Delete">
-										🗑️
+										<i data-lucide=trash-2></i>
 									</button>
 								</td>
 							`;
@@ -12901,14 +12904,14 @@
 												onclick="editAnnouncement('${announcement._id}')"
 												title="Edit Announcement"
 											>
-												✏️
+												<i data-lucide=pencil></i>
 											</button>
 											<button
 												class="btn-action delete"
 												onclick="deleteAnnouncement('${announcement._id}')"
 												title="Delete Announcement"
 											>
-												🗑️
+												<i data-lucide=trash-2></i>
 											</button>
 										</div>
 									</td>
@@ -13217,7 +13220,7 @@
 					console.error("saveKitchenOrder:", err);
 					showMessage("Failed to save order: " + err.message, "error");
 				} finally {
-					if (saveBtn) saveBtn.textContent = "💾 Save order";
+					if (saveBtn) saveBtn.textContent = "Save order";
 					updateKitchenOrderButtons();
 				}
 			}
@@ -13531,7 +13534,7 @@
 					].filter(Boolean).join(' <span class="dsx-314">•</span> ');
 					const rowBg = selected ? "background:#f0fdf4;" : "background:#fff;";
 					const btn = selected
-						? `<button type="button" onclick="toggleKitchenItem('${id}')" class="dsx-334">✓ Added</button>`
+						? `<button type="button" onclick="toggleKitchenItem('${id}')" class="dsx-334"><i data-lucide=check></i> Added</button>`
 						: `<button type="button" onclick="toggleKitchenItem('${id}')" class="dsx-335">+ Add</button>`;
 					return `
 						<div class="dsx-336">
@@ -13577,7 +13580,7 @@
 					if (url) {
 						preview.innerHTML = `<img src="${url}" alt=""  class="dsx-339">`;
 					} else {
-						preview.textContent = "📷";
+						preview.textContent = "";
 					}
 				}
 				if (removeBtn) removeBtn.style.display = url ? "inline-block" : "none";
@@ -14001,7 +14004,7 @@
 					console.error("saveKitchenCategoryOrder:", err);
 					showMessage("Failed to save order: " + err.message, "error");
 				} finally {
-					if (saveBtn) saveBtn.textContent = "💾 Save order";
+					if (saveBtn) saveBtn.textContent = "Save order";
 					updateKitchenCategoryOrderButtons();
 				}
 			}
@@ -14120,7 +14123,7 @@
 				if (fileInput) fileInput.value = "";
 				if (preview) {
 					if (url) preview.innerHTML = `<img src="${url}" alt=""  class="dsx-339">`;
-					else preview.textContent = "📷";
+					else preview.textContent = "";
 				}
 				if (removeBtn) removeBtn.style.display = url ? "inline-block" : "none";
 				if (status) status.textContent = url ? "" : "No image selected";

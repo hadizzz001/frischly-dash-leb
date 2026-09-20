@@ -73,7 +73,7 @@
 			prodTab.classList.toggle('visible-block', name === 'products');
 			orderTab.classList.toggle('hidden', name !== 'orders');
 			orderTab.classList.toggle('visible-block', name === 'orders');
-			document.getElementById('pageTitle').textContent = name === 'products' ? '📦 Products' : '🧾 Orders';
+			document.getElementById('pageTitle').textContent = name === 'products' ? 'Products' : 'Orders';
 			if (name === 'orders') loadOrders();
 		}
 

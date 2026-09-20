@@ -5,6 +5,11 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<title>Manage Market — Freshly.lb Admin</title>
 	<link rel="stylesheet" href="css/market-manage.css" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+		<link rel="stylesheet" href="css/admin.css?v=1" />
+		<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+		<script src="js/icons.js?v=1"></script>
 </head>
 <body data-active-menu="markets">
 	<div class="sidebar">
@@ -20,17 +25,17 @@
 		<div class="container">
 			<div class="page-header">
 				<div class="brand-name">Freshly.lb</div>
-				<h1>🏪 Manage Market</h1>
+				<h1><i data-lucide=store></i> Manage Market</h1>
 				<p>View market details and access its products and orders.</p>
 			</div>
 
 			<div class="toolbar">
-				<a href="/markets" class="btn secondary">← Back to markets</a>
+				<a href="/markets" class="btn secondary"><i data-lucide=arrow-left></i> Back to markets</a>
 				<div id="headerName" class="header-name"></div>
 			</div>
 
 			<div class="detail-card" id="detailCard">
-				<div class="detail-logo placeholder" id="logoBox">🏪</div>
+				<div class="detail-logo placeholder" id="logoBox"><i data-lucide=store></i></div>
 				<div>
 					<div class="detail-grid" id="detailGrid"></div>
 				</div>
@@ -40,15 +45,47 @@
 
 			<div class="tabs">
 				<a class="tab-card" id="productsTab">
-					<div class="icon">📦</div>
+					<div class="icon"><i data-lucide=package></i></div>
 					<h3>Products</h3>
 					<p>View this market's product catalog (read-only).</p>
 				</a>
 				<a class="tab-card" id="ordersTab">
-					<div class="icon">🛒</div>
+					<div class="icon"><i data-lucide=shopping-cart></i></div>
 					<h3>Orders</h3>
 					<p>View this market's incoming orders (read-only).</p>
 				</a>
+				<a class="tab-card" href="#drivers" id="driversTab">
+					<div class="icon"><i data-lucide=bike></i></div>
+					<h3>Drivers</h3>
+					<p>The delivery drivers registered by this market.</p>
+				</a>
+			</div>
+
+			<!-- Drivers: riders that belong to this market. They are listed here
+			     (not in the main Riders Management page), which only shows the
+			     main store's own riders. -->
+			<div class="data-table" id="drivers">
+				<div class="table-header">
+					<h3><i data-lucide=bike></i> Drivers</h3>
+					<span id="driversCount">Loading…</span>
+				</div>
+				<div class="table-container">
+					<table>
+						<thead>
+							<tr>
+								<th>Driver</th>
+								<th>Phone</th>
+								<th>Vehicle</th>
+								<th>Zones</th>
+								<th>Status</th>
+								<th>Deliveries</th>
+							</tr>
+						</thead>
+						<tbody id="driversBody">
+							<tr class="empty-row"><td colspan="6">Loading drivers…</td></tr>
+						</tbody>
+					</table>
+				</div>
 			</div>
 		</div>
 	</div>

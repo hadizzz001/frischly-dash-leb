@@ -131,7 +131,63 @@
 			].map(([l, v]) => `<div class="stat"><div class="v">${escapeHtml(v)}</div><div class="l">${escapeHtml(l)}</div></div>`).join('');
 		}
 
+		// --- Drivers ---------------------------------------------------------------
+		// GET /api/riders?market=<id> returns only this market's riders (the main
+		// Riders Management page asks for ?scope=global and so never shows them).
+		async function loadDrivers() {
+			const body = document.getElementById('driversBody');
+			const count = document.getElementById('driversCount');
+			if (!body || !marketId) return;
+			try {
+				const r = await authenticatedFetch(API(`/riders?market=${encodeURIComponent(marketId)}&limit=200`));
+				const json = await r.json();
+				if (!r.ok || !json.success) throw new Error(json.message || 'Failed to load drivers');
+				const riders = (json.data && json.data.riders) || [];
+				count.textContent = `${riders.length} driver${riders.length === 1 ? '' : 's'}`;
+				if (!riders.length) {
+					body.innerHTML = '<tr class="empty-row"><td colspan="6">This market has no drivers yet.</td></tr>';
+					return;
+				}
+				body.innerHTML = riders.map(renderDriverRow).join('');
+			} catch (e) {
+				count.textContent = '';
+				body.innerHTML = `<tr class="empty-row"><td colspan="6">${escapeHtml(e.message)}</td></tr>`;
+			}
+		}
+
+		function renderDriverRow(r) {
+			const user = r.userInfo || r.user || {};
+			const name = user.name || 'Unnamed driver';
+			const email = user.email || '';
+			const phone = user.phoneNumber || user.phone || '—';
+			const zones = Array.isArray(r.zones) && r.zones.length ? r.zones.join(', ') : (r.zone || '—');
+			const status = r.status || (r.isActive === false ? 'offline' : 'available');
+			const vehicle = [r.vehicleType, r.vehicleNumber || r.vehiclePlate].filter(Boolean).join(' · ') || '—';
+			const delivered = Number(r.ordersDeliveredCount || 0);
+			const rating = typeof r.rating === 'number' ? r.rating : (r.rating && r.rating.average) || 0;
+			return `
+				<tr>
+					<td>
+						<div class="row" style="gap:10px;flex-wrap:nowrap">
+							<span class="avatar">${escapeHtml(name.charAt(0).toUpperCase())}</span>
+							<div>
+								<div style="font-weight:600">${escapeHtml(name)}</div>
+								${email ? `<div class="small">${escapeHtml(email)}</div>` : ''}
+							</div>
+						</div>
+					</td>
+					<td>${phone !== '—' ? `<a href="tel:${escapeHtml(phone)}">${escapeHtml(phone)}</a>` : '—'}</td>
+					<td>${escapeHtml(vehicle)}</td>
+					<td>${escapeHtml(zones)}</td>
+					<td><span class="status-badge ${escapeHtml(String(status).toLowerCase())}">${escapeHtml(status)}</span></td>
+					<td>${delivered}${rating ? ` <span class="small">· ${Number(rating).toFixed(1)} <i data-lucide=star class="star"></i></span>` : ''}</td>
+				</tr>`;
+		}
+
 		(async function init() {
-			if (await requireAdminAccess()) loadMarket();
+			if (await requireAdminAccess()) {
+				loadMarket();
+				loadDrivers();
+			}
 		})();
 	

@@ -7,7 +7,9 @@
 
 			async function loadRidersLocations() {
 				try {
-					const response = await fetch(`${API_BASE_URL}/riders`, {
+					// Main-store riders only — each market's drivers are tracked from
+					// that market's own page.
+					const response = await fetch(`${API_BASE_URL}/riders?scope=global&limit=200`, {
 						headers: {
 							Authorization: `Bearer ${currentToken}`,
 							"Content-Type": "application/json",
@@ -65,11 +67,11 @@
 								<span class="rider-status ${statusClass}">${rider.status || "Unknown"}</span>
 							</div>
 							<div class="map-container" id="map-${rider._id}">
-								<div class="no-location">🟡 Locating…</div>
+								<div class="no-location"><i data-lucide=circle class=dot-warning></i> Locating…</div>
 							</div>
 							<div class="rider-info">
-								<span>🚗 ${rider.vehicleType || "N/A"}</span>
-								<span>📞 ${phone}</span>
+								<span><i data-lucide=car></i> ${rider.vehicleType || "N/A"}</span>
+								<span><i data-lucide=phone></i> ${phone}</span>
 							</div>
 						`;
 						grid.appendChild(card);
@@ -184,23 +186,23 @@
 				const url = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=15/${lat}/${lng}`;
 				const sourceLabel =
 					coords.source === "live"
-						? "🟢 Live"
+						? "Live"
 						: coords.source === "address"
-						? "📍 Last known address"
+						? "Last known address"
 						: coords.source === "city"
-						? "🏙️ City"
-						: "📍 Service zone";
+						? "City"
+						: "<i data-lucide=map-pin></i> Service zone";
 
 				container.innerHTML = `
 					<div class="rlx-4">
-						<div class="rlx-5">🗺️</div>
+						<div class="rlx-5"><i data-lucide=map></i></div>
 						<div class="rlx-6">${sourceLabel}</div>
 						<div class="rlx-7">
 							${lat.toFixed(5)}, ${lng.toFixed(5)}
 						</div>
 						<a href="${url}" target="_blank" rel="noopener"
 						 class="rlx-8">
-							🌍 Open Map in New Tab
+							<i data-lucide=globe></i> Open Map in New Tab
 						</a>
 					</div>
 				`;
@@ -230,9 +232,9 @@
 			document.addEventListener("fullscreenchange", () => {
 				const btn = document.getElementById("fullscreenBtn");
 				if (document.fullscreenElement) {
-					btn.textContent = "⛶ Exit Fullscreen";
+					btn.textContent = "Exit Fullscreen";
 				} else {
-					btn.textContent = "⛶ Fullscreen";
+					btn.textContent = "Fullscreen";
 				}
 			});
 		

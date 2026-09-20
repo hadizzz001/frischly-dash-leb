@@ -8,7 +8,7 @@
 						if (data.data.isMaintenanceMode) {
 							document.body.innerHTML = `
 								<div class="shx-2">
-									<h1 class="shx-3">🚧</h1>
+									<h1 class="shx-3"></h1>
 									<h2>Maintenance Mode</h2>
 									<p>${data.data.maintenanceMessage}</p>
 								</div>
@@ -27,7 +27,7 @@
 							banner.style.cssText =
 								"background: #ffc107; color: #000; text-align: center; padding: 10px; position: fixed; top: 0; left: 0; right: 0; z-index: 1000; font-weight: bold;";
 							banner.textContent =
-								"⚠️ " +
+								" " +
 								(data.data.maintenanceMessage ||
 									"Ordering is currently disabled.");
 							document.body.prepend(banner);
@@ -251,8 +251,8 @@
 								<div class="product-image">
 									${
 										imageUrl
-											? `<img src="${imageUrl}" alt="${product.name}" onerror="this.parentElement.innerHTML='<div class=\\'no-image\\'>📦</div>'">`
-											: '<div class="no-image">📦</div>'
+											? `<img src="${imageUrl}" alt="${product.name}" onerror="this.parentElement.innerHTML='<div class=\\'no-image\\'></div>'">`
+											: '<div class="no-image"><i data-lucide=package></i></div>'
 									}
 								</div>
 								<div class="product-info">
@@ -623,7 +623,7 @@
 				if (cart.length === 0) {
 					cartItems.innerHTML = `
 						<div class="empty-cart">
-							<div class="empty-cart-icon">🛒</div>
+							<div class="empty-cart-icon"><i data-lucide=shopping-cart></i></div>
 							<h3>Your cart is empty</h3>
 							<p>Add some products to get started!</p>
 						</div>
@@ -636,8 +636,8 @@
 							<div class="cart-item-image">
 								${
 									item.imageUrl
-										? `<img src="${item.imageUrl}" alt="${item.name}" class="shx-5" onerror="this.parentElement.innerHTML='📦'">`
-										: "📦"
+										? `<img src="${item.imageUrl}" alt="${item.name}" class="shx-5" onerror="this.parentElement.innerHTML=''">`
+										: "<i data-lucide=package></i>"
 								}
 							</div>
 							<div class="cart-item-info">
@@ -654,7 +654,7 @@
 							})" class="quantity-btn">+</button>
 								<span onclick="removeFromCart('${
 									item.id
-								}')" class="remove-item" title="Remove item">🗑️</span>
+								}')" class="remove-item" title="Remove item"><i data-lucide=trash-2></i></span>
 							</div>
 						</div>
 					`
@@ -859,7 +859,7 @@
 
 				mainContent.innerHTML = `
 					<div class="shx-6">
-						<div class="shx-7">🎉</div>
+						<div class="shx-7"><i data-lucide=party-popper></i></div>
 						<h2 class="shx-8">Order Placed Successfully!</h2>
 						<div class="shx-9">
 							<h3 class="shx-10">Order Details</h3>
@@ -878,13 +878,13 @@
 							}</p>
 						</div>
 						<div class="shx-13">
-							<strong>✅ Your order has been placed successfully!</strong><br>
+							<strong><i data-lucide=circle-check></i> Your order has been placed successfully!</strong><br>
 							You will receive a confirmation email shortly.<br>
 							${
 								url
 									? `<a href="${url}" target="_blank" class="shx-14">Complete Payment Here</a>`
 									: order.paymentMethod === "cash"
-									? "<strong>💵 Cash on Delivery</strong> - Please have the exact amount ready."
+									? "<strong><i data-lucide=banknote></i> Cash on Delivery</strong> - Please have the exact amount ready."
 									: ""
 							}
 						</div>
@@ -925,7 +925,7 @@
 				mainContent.innerHTML = `
 					<div class="shx-17">
 						<div class="shx-18">
-							✅ Signed out successfully!
+							<i data-lucide=circle-check></i> Signed out successfully!
 						</div>
 						<a href="signin.html" class="btn btn-primary shx-19">Sign In</a>
 						<a href="index.html" class="btn btn-secondary">Home</a>

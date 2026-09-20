@@ -26,18 +26,23 @@
 		/>
 
 		<!-- Manifest for PWA -->
-		<meta name="theme-color" content="#FFC300" />
+		<meta name="theme-color" content="#F59E0B" />
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 		<meta name="apple-mobile-web-app-title" content="Freshly" />
 			<link rel="stylesheet" href="css/ordermanagement-extracted.css" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+		<link rel="stylesheet" href="css/admin.css?v=1" />
+		<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+		<script src="js/icons.js?v=1"></script>
 </head>
 	<body>
 		<!-- Header -->
 		<header class="header">
 			<div class="header-left">
-				<button class="back-btn" onclick="window.history.back()">← Back</button>
+				<button class="back-btn" onclick="window.history.back()"><i data-lucide=arrow-left></i> Back</button>
 				<h1>Freshly</h1>
 			</div>
 			<div class="user-info">
@@ -108,10 +113,10 @@
 			<!-- Orders Management Section -->
 			<div class="content-section">
 				<div class="section-header">
-					<h2>📦 Order Management</h2>
+					<h2><i data-lucide=package></i> Order Management</h2>
 					<div class="actions">
 						<button class="btn btn-secondary" onclick="refreshOrders()">
-							🔄 Refresh
+							<i data-lucide=refresh-cw></i> Refresh
 						</button>
 					</div>
 				</div>
@@ -192,7 +197,7 @@
 							onclick="changePage('prev')"
 							disabled
 						>
-							← Previous
+							<i data-lucide=arrow-left></i> Previous
 						</button>
 						<span class="page-numbers" id="page-numbers"></span>
 						<button
@@ -201,7 +206,7 @@
 							onclick="changePage('next')"
 							disabled
 						>
-							Next →
+							Next <i data-lucide=arrow-right></i>
 						</button>
 					</div>
 				</div>
@@ -262,7 +267,7 @@
 								onclick="openProcessingScanner()"
 							
 							>
-								📷 Scan items with camera
+								<i data-lucide=camera></i> Scan items with camera
 							</button>
 						</div>
 					</div>

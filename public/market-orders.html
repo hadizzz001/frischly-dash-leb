@@ -5,6 +5,11 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<title>Market Orders — Freshly.lb Admin</title>
 	<link rel="stylesheet" href="css/market-orders.css" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+		<link rel="stylesheet" href="css/admin.css?v=1" />
+		<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+		<script src="js/icons.js?v=1"></script>
 </head>
 <body data-active-menu="markets">
 	<div class="sidebar">
@@ -21,12 +26,12 @@
 		<div class="container">
 			<div class="page-header">
 				<div class="brand-name">Freshly.lb</div>
-				<h1 id="title">🛒 Market Orders</h1>
+				<h1 id="title"><i data-lucide=shopping-cart></i> Market Orders</h1>
 				<p>Read-only list of orders linked to this market.</p>
 			</div>
 
 			<div class="toolbar">
-				<a id="backLink" href="/markets" class="btn secondary">← Back to manage</a>
+				<a id="backLink" href="/markets" class="btn secondary"><i data-lucide=arrow-left></i> Back to manage</a>
 				<div class="toolbar-filters">
 					<select id="statusFilter">
 						<option value="">All statuses</option>

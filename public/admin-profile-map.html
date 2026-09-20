@@ -11,11 +11,16 @@
 	<script src="https://cdn.jsdelivr.net/npm/ol@9.2.4/dist/ol.js"></script>
 	<script src="js/region-map-picker.js?v=2"></script>
 	<link rel="stylesheet" href="css/profile-map.css" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+		<link rel="stylesheet" href="css/admin.css?v=1" />
+		<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+		<script src="js/icons.js?v=1"></script>
 </head>
 <body>
 	<div class="bar">
 		<div>
-			<h1>📍 Delivery Coverage Regions (Freshly main store)</h1>
+			<h1><i data-lucide=map-pin></i> Delivery Coverage Regions (Freshly main store)</h1>
 			<p>Click the map to drop a pin — add as many as you need. Drag a pin's round center to move it, drag its square handle to resize the coverage circle, and click the red × to remove one.</p>
 		</div>
 		<button class="btn secondary" onclick="closeMe()">Close</button>

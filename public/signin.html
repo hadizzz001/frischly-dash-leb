@@ -9,9 +9,14 @@
 		<link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
 		<link rel="stylesheet" href="css/global.css" />
 		<link rel="stylesheet" href="css/signin.css" />
-	</head>
-	<body>
-		<div class="container">
+			<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+		<link rel="stylesheet" href="css/admin.css?v=1" />
+		<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+		<script src="js/icons.js?v=1"></script>
+</head>
+	<body class="auth-page">
+		<div class="container auth-card">
 			<div class="header">
 				<h1>Welcome Back</h1>
 				<p>Sign in to your account</p>
@@ -64,10 +69,10 @@
 					</div>
 				</div>
 
-				<button type="submit" class="btn">Sign In</button>
+				<button type="submit" class="btn btn-primary">Sign In</button>
 			</form>
 
-			<div class="divider">─────── or ───────</div>
+			<div class="divider">or</div>
 
 			<div class="links">
 				<p class="text-muted-gray">
@@ -78,7 +83,7 @@
 						>Reset it here</a
 					>
 				</p>
-				<p><a href="index.html">← Back to Home</a></p>
+				<p><a href="index.html"><i data-lucide=arrow-left></i> Back to Home</a></p>
 			</div>
 		</div>
 

@@ -124,12 +124,12 @@
 			"#bcs-overlay .bcs-btn{appearance:none;border:none;border-radius:999px;padding:11px 18px;font-size:14px;font-weight:700;" +
 			"cursor:pointer;background:rgba(255,255,255,.16);color:#fff;display:inline-flex;align-items:center;gap:8px;}" +
 			"#bcs-overlay .bcs-btn:hover{background:rgba(255,255,255,.28);}" +
-			"#bcs-overlay .bcs-btn.primary{background:#ffc300;color:#000;}" +
+			"#bcs-overlay .bcs-btn.primary{background:#f59e0b;color:#000;}" +
 			"#bcs-overlay .bcs-btn.primary:hover{background:#e6ad00;}" +
 			"#bcs-overlay .bcs-btn[hidden]{display:none;}" +
 			"#bcs-overlay .bcs-manual{display:flex;gap:8px;justify-content:center;}" +
 			"#bcs-overlay .bcs-manual[hidden]{display:none;}" +
-			"#bcs-overlay .bcs-manual input{flex:1;max-width:340px;padding:11px 12px;border-radius:8px;border:2px solid #ffc300;" +
+			"#bcs-overlay .bcs-manual input{flex:1;max-width:340px;padding:11px 12px;border-radius:8px;border:2px solid #f59e0b;" +
 			"background:#fff;color:#000;font-size:15px;}" +
 			"#bcs-overlay .bcs-flash{position:absolute;inset:0;z-index:4;pointer-events:none;opacity:0;transition:opacity .12s ease;}" +
 			"#bcs-overlay .bcs-flash.show-ok{opacity:1;box-shadow:inset 0 0 0 6px #22c55e;background:rgba(34,197,94,.12);}" +
@@ -204,9 +204,9 @@
 			'<div class="bcs-status info">Starting camera&hellip;</div>' +
 			'<div class="bcs-hint"></div>' +
 			'<div class="bcs-controls">' +
-			'<button type="button" class="bcs-btn bcs-torch" hidden>🔦 Light</button>' +
-			'<button type="button" class="bcs-btn bcs-manual-toggle">⌨️ Enter manually</button>' +
-			'<button type="button" class="bcs-btn bcs-retry" hidden>↻ Retry camera</button>' +
+			'<button type="button" class="bcs-btn bcs-torch" hidden><i data-lucide=flashlight></i> Light</button>' +
+			'<button type="button" class="bcs-btn bcs-manual-toggle"><i data-lucide=keyboard></i> Enter manually</button>' +
+			'<button type="button" class="bcs-btn bcs-retry" hidden> Retry camera</button>' +
 			"</div>" +
 			'<div class="bcs-manual" hidden>' +
 			'<input type="text" inputmode="numeric" autocomplete="off" placeholder="Type barcode&hellip;" />' +
@@ -323,7 +323,7 @@
 		}
 
 		if (validity === true) {
-			// Trusted by its check digit → accept immediately (fast *and* correct).
+			// Trusted by its check digit  accept immediately (fast *and* correct).
 			resetVote();
 			acceptHit(code, false);
 			return;
@@ -579,7 +579,7 @@
 			.applyVideoConstraints({ advanced: [{ torch: next }] })
 			.then(function () {
 				state.torchOn = next;
-				el.torchBtn.textContent = next ? "🔦 Light on" : "🔦 Light";
+				el.torchBtn.textContent = next ? "Light on" : "Light";
 			})
 			.catch(function () {});
 	}
