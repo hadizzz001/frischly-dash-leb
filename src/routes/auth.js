@@ -113,9 +113,13 @@ const updateProfileValidation = [
 		.normalizeEmail()
 		.withMessage("Please provide a valid email address"),
 	body("address.street")
-		.optional()
+		// checkFalsy: an empty street is a valid way to clear a placeholder
+		// (the model does not require it); plain optional() only skips
+		// undefined, so "" used to fail isLength({ min: 1 }) with a
+		// misleading "less than 200 characters" error.
+		.optional({ checkFalsy: true })
 		.trim()
-		.isLength({ min: 1, max: 200 })
+		.isLength({ max: 200 })
 		.withMessage("Street address must be less than 200 characters"),
 	body("address.city")
 		.optional()
