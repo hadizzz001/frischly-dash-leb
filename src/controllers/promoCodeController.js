@@ -1,8 +1,22 @@
 const PromoCode = require("../models/PromoCode");
 const MarketPromoCode = require("../models/MarketPromoCode");
 const User = require("../models/User");
+const Order = require("../models/Order");
 const { t } = require("../utils/translations");
 const { sendResponse, sendError, sendSuccess, sendServerError } = require("../utils/apiResponse");
+
+// "Onetime" promo codes (isFromOwnCompany === false on either collection)
+// may be redeemed once per customer. Orders are the source of truth: a
+// non-cancelled order by this user that carries the code counts as a use.
+const hasCustomerUsedPromo = async (userId, { promoCodeId, marketPromoCodeId }) => {
+	if (!userId) return false;
+	const query = { createdBy: userId, status: { $ne: "cancelled" } };
+	if (promoCodeId) query.promoCode = promoCodeId;
+	else if (marketPromoCodeId) query.marketPromoCode = marketPromoCodeId;
+	else return false;
+	return Boolean(await Order.exists(query));
+};
+exports.hasCustomerUsedPromo = hasCustomerUsedPromo;
 
 // @desc    Get all promo codes (public - without code)
 // @route   GET /api/promocodes/public
@@ -63,6 +77,12 @@ exports.validatePromoCode = async (req, res) => {
 			) {
 				return sendError(res, 400, "This promo code has reached its usage limit");
 			}
+			if (
+				marketPromo.isFromOwnCompany === false &&
+				(await hasCustomerUsedPromo(req.user && req.user.id, { marketPromoCodeId: marketPromo._id }))
+			) {
+				return sendError(res, 400, t("promoCodeAlreadyUsed", req));
+			}
 
 			const minRequired =
 				marketPromo.minOrderTotal ||
@@ -101,15 +121,25 @@ exports.validatePromoCode = async (req, res) => {
 			return sendResponse(res, 200, true, t("promoCodeApplied", req), ras);
 		}
 
-		// Main store cart -> admin own-company promo codes only.
+		// Main store cart -> admin promo codes: reusable "Promo" codes and
+		// "Onetime Promo" codes (once per customer, optional minimum total).
 		const promoCode = await PromoCode.findOne({
 			code: upperCode,
 			isActive: true,
-			isFromOwnCompany: true,
 		});
 
 		if (!promoCode) {
 			return sendError(res, 404, "Invalid or inactive promo code");
+		}
+
+		if (promoCode.isFromOwnCompany === false) {
+			if (await hasCustomerUsedPromo(req.user && req.user.id, { promoCodeId: promoCode._id })) {
+				return sendError(res, 400, t("promoCodeAlreadyUsed", req));
+			}
+			const minRequired = Number(promoCode.triggerCondition && promoCode.triggerCondition.minOrderTotal) || 0;
+			if (minRequired && total < minRequired) {
+				return sendError(res, 400, `Minimum order total for this promo code is ${minRequired}`);
+			}
 		}
 
 		let discountAmount = 0;

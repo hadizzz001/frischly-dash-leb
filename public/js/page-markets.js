@@ -198,27 +198,42 @@
 
 		function escapeHtml(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
+		function setModalMode(isEdit) {
+			document.getElementById('modalTitle').textContent = isEdit ? 'Edit Market' : 'Add Market';
+			document.getElementById('modalSubtitle').textContent = isEdit
+				? 'Update the market details, credentials and delivery coverage.'
+				: 'Create a market and hand the credentials to its owner.';
+			document.getElementById('m_submit').textContent = isEdit ? 'Save changes' : 'Create market';
+			const pwd = document.getElementById('m_password');
+			pwd.required = !isEdit;
+			pwd.placeholder = isEdit ? 'Leave blank to keep current' : 'At least 6 characters';
+			document.getElementById('m_password_req').style.display = isEdit ? 'none' : '';
+			document.getElementById('m_password_help').textContent = isEdit
+				? 'Only fill this in to set a new password.'
+				: 'The owner signs in at /signin with this username and password.';
+		}
+
 		function openCreate() {
-			document.getElementById('modalTitle').textContent = 'Add Market';
 			document.getElementById('form').reset();
+			setModalMode(false);
 			document.getElementById('m_id').value = '';
-			document.getElementById('m_password').required = true;
 			document.getElementById('m_commission').value = DEFAULT_COMMISSION_RATE;
 			const citiesApi = window.getLebaneseCityMultiSelect && window.getLebaneseCityMultiSelect('m_cities');
 			if (citiesApi) citiesApi.setSelected([]);
 			setLogoPreview('');
 			document.getElementById('modal').classList.add('show');
+			document.body.classList.add('modal-open');
 			initMarketMapPicker([]);
 		}
 
 		function openEdit(jsonStr) {
 			const m = JSON.parse(jsonStr);
-			document.getElementById('modalTitle').textContent = 'Edit Market';
+			document.getElementById('form').reset();
+			setModalMode(true);
 			document.getElementById('m_id').value = m._id;
 			document.getElementById('m_name').value = m.name || '';
 			document.getElementById('m_username').value = m.username || '';
 			document.getElementById('m_password').value = '';
-			document.getElementById('m_password').required = false;
 			document.getElementById('m_email').value = m.email || '';
 			document.getElementById('m_phone').value = m.phoneNumber || '';
 			document.getElementById('m_commission').value = rateOf(m);
@@ -232,16 +247,26 @@
 			document.getElementById('m_logo').value = '';
 			setLogoPreview(m.logo || '');
 			document.getElementById('modal').classList.add('show');
+			document.body.classList.add('modal-open');
 			initMarketMapPicker(Array.isArray(m.deliveryRegions) ? m.deliveryRegions : []);
 		}
 
 		function closeModal() {
 			document.getElementById('modal').classList.remove('show');
+			document.body.classList.remove('modal-open');
 			if (window.__marketMapPicker) {
 				window.__marketMapPicker.destroy();
 				window.__marketMapPicker = null;
 			}
 		}
+
+		// Close on Escape or on a click on the dimmed backdrop (not the dialog).
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && document.getElementById('modal').classList.contains('show')) closeModal();
+		});
+		document.getElementById('modal').addEventListener('mousedown', (e) => {
+			if (e.target === e.currentTarget) closeModal();
+		});
 
 		function initMarketMapPicker(initialRegions) {
 			if (window.__marketMapPicker) {
@@ -266,13 +291,16 @@
 
 		function setLogoPreview(src) {
 			const preview = document.getElementById('m_logo_preview');
+			const field = preview.closest('.logo-field');
+			const nameEl = document.getElementById('m_logo_name');
+			if (nameEl) nameEl.textContent = 'PNG or JPG, square works best.';
 			if (!src) {
-				preview.style.display = 'none';
 				preview.removeAttribute('src');
+				if (field) field.classList.remove('has-logo');
 				return;
 			}
 			preview.src = src;
-			preview.style.display = 'block';
+			if (field) field.classList.add('has-logo');
 		}
 
 		async function submitForm() {
@@ -358,12 +386,19 @@
 			clearTimeout(window.__sd); window.__sd = setTimeout(loadMarkets, 300);
 		});
 
+		function clearLogo() {
+			document.getElementById('m_logo').value = '';
+			setLogoPreview('');
+		}
+
 		document.getElementById('m_logo').addEventListener('change', (event) => {
 			const file = event.target.files[0];
+			const nameEl = document.getElementById('m_logo_name');
 			if (!file) {
 				setLogoPreview('');
 				return;
 			}
+			if (nameEl) nameEl.textContent = file.name;
 			const reader = new FileReader();
 			reader.onload = () => setLogoPreview(reader.result);
 			reader.onerror = () => {

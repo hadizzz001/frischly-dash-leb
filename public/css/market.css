@@ -357,35 +357,16 @@ tr:hover td {
 	color: #1e40af;
 }
 
-.modal-overlay {
-	position: fixed;
-	inset: 0;
-	background: rgba(0, 0, 0, 0.5);
-	display: none;
-	align-items: center;
-	justify-content: center;
-	z-index: 50;
-}
-
-.modal-overlay.show {
-	display: flex;
-}
-
-.modal {
-	background: #ffffff;
-	border: 3px solid var(--brand);
-	border-radius: 15px;
-	padding: 24px;
-	width: 100%;
-	max-width: 560px;
-	max-height: 90vh;
-	overflow-y: auto;
-	box-shadow: 0 15px 35px rgba(244, 187, 38, 0.3);
-}
-
-.modal h2 {
-	color: var(--brand);
-	margin-bottom: 16px;
+/* Product dialog: admin.css owns .modal / .modal-content; these only
+   shape the form inside it. */
+.product-form .form-grid { grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+.product-form .form-group { margin-bottom: 0; }
+.product-form .barcode-field { display: flex; gap: 8px; align-items: center; }
+.product-form .barcode-field { flex-wrap: nowrap; }
+.product-form .barcode-field input { flex: 1 1 auto; width: auto; min-width: 0; }
+.product-form .barcode-field .btn { flex: 0 0 auto; }
+@media (max-width: 560px) {
+	.product-form .form-grid { grid-template-columns: 1fr; }
 }
 
 .row {

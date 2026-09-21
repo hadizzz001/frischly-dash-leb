@@ -785,7 +785,21 @@ input[type="range"] { height: auto; padding: 0; border: 0 !important; box-shadow
 /* --------------------------------------------------------------------------
    Modals
    -------------------------------------------------------------------------- */
-.modal { background: rgba(17, 24, 39, 0.45) !important; backdrop-filter: blur(2px); }
+/* `.modal` is always the full-screen scrim and `.modal-content` the dialog.
+   Pages toggle the scrim with inline display (dashboard) or `.show`
+   (markets, market): both work. */
+.modal {
+	position: fixed;
+	inset: 0;
+	z-index: 1200;
+	display: none;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+	background: rgba(17, 24, 39, 0.45) !important;
+	backdrop-filter: blur(2px);
+}
+.modal.show { display: block; }
+body.modal-open { overflow: hidden; }
 .modal-content {
 	background: var(--bg) !important;
 	border-radius: var(--r-lg) !important;
@@ -794,8 +808,11 @@ input[type="range"] { height: auto; padding: 0; border: 0 !important; box-shadow
 	padding: 24px !important;
 	margin: 5vh auto !important;
 	max-height: 90vh;
+	overflow-y: auto;
 	animation: none !important;
 }
+.modal-content.modal-wide { max-width: 920px; width: calc(100% - 32px); }
+.modal-content.modal-md { max-width: 600px; width: calc(100% - 32px); }
 #zone-modal .modal-content { margin: 0 !important; border-radius: 0 !important; }
 .modal-header {
 	display: flex;

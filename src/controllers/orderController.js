@@ -3,6 +3,7 @@ const Product = require("../models/Product");
 const Rider = require("../models/Rider");
 const PromoCode = require("../models/PromoCode");
 const MarketPromoCode = require("../models/MarketPromoCode");
+const { hasCustomerUsedPromo } = require("./promoCodeController");
 const mongoose = require("mongoose");
 const Zone = require("../models/Zone");
 const User = require("../models/User");
@@ -729,12 +730,23 @@ exports.createOrder = async (req, res) => {
 			promoCodeDoc = await PromoCode.findById(promoCode);
 
 			if (promoCodeDoc) {
-				if (!promoCodeDoc.isActive || !promoCodeDoc.isFromOwnCompany) {
+				if (!promoCodeDoc.isActive) {
 					return sendError(res, 400, "Invalid or inactive promo code");
 				}
 				// Admin promo codes only apply to main-store orders.
 				if (orderMarket) {
 					return sendError(res, 400, "This promo code is not valid for this market");
+				}
+				// Onetime codes: once per customer, optional minimum order total.
+				if (promoCodeDoc.isFromOwnCompany === false) {
+					if (await hasCustomerUsedPromo(req.user.id, { promoCodeId: promoCodeDoc._id })) {
+						return sendError(res, 400, "You have already used this one-time promo code");
+					}
+					const minRequired =
+						Number(promoCodeDoc.triggerCondition && promoCodeDoc.triggerCondition.minOrderTotal) || 0;
+					if (minRequired && orderTotalBeforeDiscount < minRequired) {
+						return sendError(res, 400, `Minimum order total for this promo code is ${minRequired}`);
+					}
 				}
 				if (promoCodeDoc.discountType === "percentage") {
 					discount =
@@ -771,6 +783,12 @@ exports.createOrder = async (req, res) => {
 					marketPromoDoc.usageCount >= marketPromoDoc.usageLimit
 				) {
 					return sendError(res, 400, "This promo code has reached its usage limit");
+				}
+				if (
+					marketPromoDoc.isFromOwnCompany === false &&
+					(await hasCustomerUsedPromo(req.user.id, { marketPromoCodeId: marketPromoDoc._id }))
+				) {
+					return sendError(res, 400, "You have already used this one-time promo code");
 				}
 				const minRequired =
 					marketPromoDoc.minOrderTotal ||

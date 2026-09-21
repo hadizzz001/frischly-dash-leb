@@ -11,6 +11,7 @@ const translations = {
 		promoCodeCreated: "Promo code created successfully",
 		promoCodeUpdated: "Promo code updated successfully",
 		promoCodeDeleted: "Promo code deleted successfully",
+		promoCodeAlreadyUsed: "You have already used this one-time promo code",
 	},
 };
 

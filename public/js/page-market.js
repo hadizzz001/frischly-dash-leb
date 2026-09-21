@@ -125,9 +125,20 @@
 				document.getElementById('p_pic').value = p.picture || '';
 				document.getElementById('p_desc').value = p.description || '';
 			}
+			document.getElementById('p_submit').textContent = jsonStr ? 'Save changes' : 'Add product';
 			document.getElementById('prodModal').classList.add('show');
+			document.body.classList.add('modal-open');
 		}
-		function closeProductModal() { document.getElementById('prodModal').classList.remove('show'); }
+		function closeProductModal() {
+			document.getElementById('prodModal').classList.remove('show');
+			document.body.classList.remove('modal-open');
+		}
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && document.getElementById('prodModal').classList.contains('show')) closeProductModal();
+		});
+		document.getElementById('prodModal').addEventListener('mousedown', (e) => {
+			if (e.target === e.currentTarget) closeProductModal();
+		});
 
 		async function submitProduct() {
 			const id = document.getElementById('p_id').value;

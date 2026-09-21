@@ -45,34 +45,57 @@
 		.badge { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
 		.badge.active { background: #d1fae5; color: #065f46; }
 		.badge.inactive { background: #fee2e2; color: #991b1b; }
-		.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 50; }
-		.modal-overlay.show { display: flex; }
-		.modal { background: #ffffff; border: 3px solid var(--brand); border-radius: 0; padding: 24px 32px 32px; width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh; overflow-y: auto; box-shadow: none; }
-		.modal h2 { color: var(--brand); margin-bottom: 16px; }
-		.modal-inner { max-width: 900px; margin: 0 auto; }
-		.form-row { margin-bottom: 12px; }
-		.form-row label { display: block; font-weight: 500; font-size: 14px; margin-bottom: 5px; color: var(--ink); }
 		.logo-cell { width: 48px; height: 48px; border-radius: 10px; border: 2px solid var(--brand); object-fit: cover; background: #ffffff; }
 		.logo-placeholder { width: 48px; height: 48px; border-radius: 10px; border: 2px solid var(--brand); display: inline-flex; align-items: center; justify-content: center; background: rgba(244, 187, 38, 0.12); font-size: 20px; }
-		.logo-preview { display: none; width: 96px; height: 96px; border-radius: 14px; border: 2px solid var(--brand); object-fit: cover; margin-top: 8px; background: #ffffff; }
-		.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 		.empty { text-align: center; padding: 40px; color: var(--muted); }
 		.toast { position: fixed; bottom: 20px; right: 20px; background: #111827; color: white; padding: 12px 20px; border-radius: 8px; opacity: 0; transition: opacity .25s; z-index: 100; }
 		.toast.show { opacity: 1; }
 		.toast.error { background: #dc2626; }
 		a { color: var(--ink); font-weight: 600; }
-		@media (max-width: 900px) { .sidebar { position: static; width: 100%; height: auto; } .main-content { margin-left: 0; padding: 16px; } .toolbar { align-items: stretch; flex-direction: column; margin: 0 20px 16px; } #tableWrap { margin: 0 20px 24px; } .row { grid-template-columns: 1fr; } table { display: block; overflow-x: auto; } }
+		@media (max-width: 900px) { .sidebar { position: static; width: 100%; height: auto; } .main-content { margin-left: 0; padding: 16px; } .toolbar { align-items: stretch; flex-direction: column; margin: 0 20px 16px; } #tableWrap { margin: 0 20px 24px; } table { display: block; overflow-x: auto; } }
 
 .mkx-1 { max-width:380px; }
 .mkx-2 { text-align:right; }
-.mkx-3 { display:flex;justify-content:space-between;align-items:center; }
-.mkx-4 { cursor:pointer;font-size:30px;color:#888;line-height:1; }
-.mkx-5 { color:#666;font-size:12px;margin:2px 0 8px; }
-.mkx-6 { width:100%;height:65vh;min-height:420px;border-radius:8px;border:2px solid var(--brand); }
-.mkx-7 { display:flex;justify-content:flex-end;gap:8px;margin-top:8px; }
 
 .map-load-error {
 	padding: 16px;
 	color: #c0392b;
 	font-size: 13px;
+}
+
+/* --------------------------------------------------------------------------
+   Add / Edit Market dialog (admin.css owns .modal / .modal-content;
+   these only shape the form inside it)
+   -------------------------------------------------------------------------- */
+.market-modal .modal-header { align-items: flex-start; }
+.modal-subtitle { margin: 4px 0 0; font-size: 13px; color: var(--muted, #6b7280); }
+.market-form .mf-section { padding: 18px 0 4px; border-top: 1px solid var(--border, #e5e7eb); }
+.market-form .mf-section:first-child { padding-top: 0; border-top: 0; }
+.market-form .mf-section-title {
+	display: flex; align-items: center; gap: 6px;
+	margin: 0 0 12px; font-size: 13px; font-weight: 600;
+	color: var(--text, #111827); letter-spacing: 0;
+}
+.market-form .mf-section-title svg.lucide { width: 15px; height: 15px; color: var(--muted, #6b7280); }
+.market-form .mf-section-help { margin: -6px 0 12px; }
+.market-form .form-grid { grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+.market-form .form-group { margin-bottom: 0; }
+.market-form .form-help { margin-top: 6px; }
+.market-form .input-narrow { max-width: 200px; }
+.logo-field { display: flex; align-items: center; gap: 14px; }
+.logo-field .logo-placeholder { width: 56px; height: 56px; flex: 0 0 56px; border-radius: 12px; border: 1px dashed var(--border-strong, #d1d5db); background: var(--surface, #f9fafb); color: var(--muted, #6b7280); }
+.logo-field .logo-placeholder svg.lucide { width: 20px; height: 20px; }
+.logo-field .logo-preview { display: none; width: 56px; height: 56px; flex: 0 0 56px; border-radius: 12px; border: 1px solid var(--border, #e5e7eb); object-fit: cover; background: #ffffff; }
+.logo-field.has-logo .logo-preview { display: block; }
+.logo-field.has-logo .logo-placeholder { display: none; }
+.logo-field-input { flex: 1; min-width: 0; }
+.logo-field-actions { display: flex; align-items: center; gap: 12px; }
+.logo-upload-btn { height: 34px !important; padding: 0 12px !important; font-size: 13px !important; margin: 0; cursor: pointer; color: var(--text, #111827) !important; }
+.logo-remove-btn { display: none; font-size: 13px; color: var(--muted, #6b7280); cursor: pointer; }
+.logo-field.has-logo .logo-remove-btn { display: inline; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.market-map { width: 100%; height: 440px; min-height: 320px; border-radius: 10px; border: 1px solid var(--border, #e5e7eb); overflow: hidden; background: var(--surface, #f9fafb); }
+@media (max-width: 640px) {
+	.market-form .form-grid { grid-template-columns: 1fr; }
+	.market-map { height: 60vh; }
 }
