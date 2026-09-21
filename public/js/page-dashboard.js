@@ -5221,7 +5221,7 @@
 				if (zones.length === 0) {
 					tbody.innerHTML = `
 						<tr>
-							<td colspan="9" class="dsx-3">
+							<td colspan="8" class="dsx-3">
 								No zones found. ${
 									filteredZonesData.length !== zonesData.length
 										? "Try adjusting your filters or "
@@ -5252,7 +5252,6 @@
 							}
 						</td>
 						<td>${zone.distance} km</td>
-						<td>$${zone.deliveryFee ? zone.deliveryFee.toFixed(2) : "0.00"}</td>
 						<td>${zone.estimatedDeliveryTime || "N/A"}</td>
 						<td>
 							<span class="status-badge ${zone.isActive ? "active" : "inactive"}">
@@ -5306,13 +5305,6 @@
 								zonesData.length
 						  ).toFixed(1)
 						: 0;
-				const avgFee =
-					zonesData.length > 0
-						? (
-								zonesData.reduce((sum, z) => sum + (z.deliveryFee || 0), 0) /
-								zonesData.length
-						  ).toFixed(2)
-						: 0;
 
 				if (zonesData.length > 0) {
 					summary.innerHTML = `
@@ -5332,10 +5324,6 @@
 							<div class="stat-item">
 								<span class="stat-number">${avgDistance} km</span>
 								<span class="stat-label">Avg Distance</span>
-							</div>
-							<div class="stat-item">
-								<span class="stat-number">$${avgFee}</span>
-								<span class="stat-label">Avg Fee</span>
 							</div>
 						</div>
 					`;
@@ -5450,7 +5438,6 @@
 				const inputs = [
 					"zone-name",
 					"zone-distance",
-					"zone-delivery-fee",
 				];
 				inputs.forEach((inputId) => {
 					const input = document.getElementById(inputId);
@@ -5487,19 +5474,9 @@
 						throw new Error("Valid distance is required");
 					}
 
-					// Validate delivery fee if provided
-					const deliveryFee = formData.get("deliveryFee");
-					if (
-						deliveryFee &&
-						(isNaN(parseFloat(deliveryFee)) || parseFloat(deliveryFee) < 0)
-					) {
-						throw new Error("Delivery fee must be a valid positive number");
-					}
-
 					const zoneData = {
 						zoneName: zoneName,
 						distance: parseFloat(distance),
-						deliveryFee: deliveryFee ? parseFloat(deliveryFee) : 0,
 						estimatedDeliveryTime: formData.get("estimatedDeliveryTime")
 							? parseInt(
 									formData.get("estimatedDeliveryTime").replace(/\D/g, "")
@@ -5578,8 +5555,6 @@
 				document.getElementById("zone-distance").value = zone.distance;
 				const radiusDisplay = document.getElementById("zone-radius-display");
 				if (radiusDisplay) radiusDisplay.textContent = (zone.distance || 0).toFixed(1);
-				document.getElementById("zone-delivery-fee").value =
-					zone.deliveryFee || "";
 				document.getElementById("zone-delivery-time").value =
 					zone.estimatedDeliveryTime || "";
 				document.getElementById("zone-boundaries").value =
@@ -5636,9 +5611,6 @@
 					document.getElementById("avg-distance-stat").textContent = (
 						stats.averageDistance || 0
 					).toFixed(1);
-					document.getElementById("avg-fee-stat").textContent = `$${(
-						stats.averageDeliveryFee || 0
-					).toFixed(2)}`;
 					document.getElementById("delivery-coverage-stat").textContent = `${(
 						stats.coverageEfficiency || 0
 					).toFixed(1)}%`;
@@ -5656,13 +5628,6 @@
 									zonesData.reduce((sum, z) => sum + z.distance, 0) / totalZones
 							  ).toFixed(1)
 							: 0;
-					const avgFee =
-						totalZones > 0
-							? (
-									zonesData.reduce((sum, z) => sum + (z.deliveryFee || 0), 0) /
-									totalZones
-							  ).toFixed(2)
-							: 0;
 
 					document.getElementById("total-zones-stat").textContent = totalZones;
 					document.getElementById("active-zones-stat").textContent =
@@ -5671,7 +5636,6 @@
 						inactiveZones;
 					document.getElementById("avg-distance-stat").textContent =
 						avgDistance;
-					document.getElementById("avg-fee-stat").textContent = `$${avgFee}`;
 					document.getElementById("delivery-coverage-stat").textContent = `${
 						activeZones > 0 ? ((activeZones / totalZones) * 100).toFixed(1) : 0
 					}%`;
@@ -10025,24 +9989,6 @@
 								this.setCustomValidity("Distance must be a positive number");
 							} else if (value > 1000) {
 								this.setCustomValidity("Distance cannot exceed 1000 km");
-							} else {
-								this.setCustomValidity("");
-							}
-						});
-					}
-
-					// Delivery fee validation
-					const deliveryFeeInput = document.getElementById("zone-delivery-fee");
-					if (deliveryFeeInput) {
-						deliveryFeeInput.addEventListener("blur", function () {
-							const value = this.value.trim();
-							if (
-								value &&
-								(isNaN(parseFloat(value)) || parseFloat(value) < 0)
-							) {
-								this.setCustomValidity(
-									"Delivery fee must be a positive number"
-								);
 							} else {
 								this.setCustomValidity("");
 							}

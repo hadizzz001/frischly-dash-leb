@@ -186,7 +186,6 @@ exports.createZone = async (req, res) => {
 			distance,
 			distanceUnit,
 			description,
-			deliveryFee,
 			estimatedDeliveryTime,
 			priority,
 			coordinates,
@@ -214,7 +213,6 @@ exports.createZone = async (req, res) => {
 			distance: parseFloat(distance),
 			distanceUnit: distanceUnit || "km",
 			description,
-			deliveryFee: deliveryFee ? parseFloat(deliveryFee) : 0,
 			estimatedDeliveryTime: estimatedDeliveryTime || 30,
 			priority: priority || 1,
 			coordinates,
@@ -262,7 +260,6 @@ exports.updateZone = async (req, res) => {
 			distance,
 			distanceUnit,
 			description,
-			deliveryFee,
 			estimatedDeliveryTime,
 			priority,
 			coordinates,
@@ -302,8 +299,6 @@ exports.updateZone = async (req, res) => {
 		if (distance !== undefined) updateData.distance = parseFloat(distance);
 		if (distanceUnit !== undefined) updateData.distanceUnit = distanceUnit;
 		if (description !== undefined) updateData.description = description;
-		if (deliveryFee !== undefined)
-			updateData.deliveryFee = parseFloat(deliveryFee);
 		if (estimatedDeliveryTime !== undefined)
 			updateData.estimatedDeliveryTime = estimatedDeliveryTime;
 		if (priority !== undefined) updateData.priority = priority;
@@ -449,7 +444,6 @@ exports.getZoneStats = async (req, res) => {
 					},
 					totalDistance: { $sum: "$distance" },
 					averageDistance: { $avg: "$distance" },
-					averageDeliveryFee: { $avg: "$deliveryFee" },
 					averageDeliveryTime: { $avg: "$estimatedDeliveryTime" },
 				},
 			},
@@ -461,7 +455,6 @@ exports.getZoneStats = async (req, res) => {
 			inactiveZones: 0,
 			totalDistance: 0,
 			averageDistance: 0,
-			averageDeliveryFee: 0,
 			averageDeliveryTime: 0,
 		};
 
@@ -483,36 +476,6 @@ exports.getZoneStats = async (req, res) => {
 		sendResponse(res, 200, true, "Success", ras);
 	} catch (error) {
 		console.error("Error fetching zone statistics:", error);
-		sendServerError(res, error, "Error");
-	}
-};
-
-// @desc    Calculate delivery fee for zone/city
-// @route   POST /api/zones/calculate-delivery
-// @access  Public
-exports.calculateDeliveryFee = async (req, res) => {
-	try {
-		const zoneName = req.body.zoneName || req.body.city;
-
-		if (!zoneName) {
-			return sendError(res, 400, "Error", "Zone name or city is required");
-		}
-
-		const zone = await Zone.findByName(zoneName);
-
-		if (!zone) {
-			return sendError(res, 404, "Error", "No delivery zone found for this city");
-		}
-
-		const deliveryFee = zone.deliveryFee ? zone.deliveryFee : 4;
-
-		const ras = {
-			deliveryFee,
-			estimatedDeliveryTime: zone.estimatedDeliveryTime,
-		};
-		sendResponse(res, 200, true, "Success", ras);
-	} catch (error) {
-		console.error("Error calculating delivery fee:", error);
 		sendServerError(res, error, "Error");
 	}
 };

@@ -21,7 +21,7 @@ const SettingSchema = new mongoose.Schema(
 		},
 		// Flat delivery fee charged on a FreshlyLB (main store) order, in USD.
 		// Markets have their own, on MarketSetting.deliveryFee. 0 = free
-		// delivery, which also lets the legacy per-Zone fee apply instead.
+		// delivery.
 		deliveryFee: {
 			type: Number,
 			default: 0,

@@ -29,11 +29,6 @@ const zoneSchema = new mongoose.Schema(
 			type: Boolean,
 			default: true,
 		},
-		deliveryFee: {
-			type: Number,
-			min: [0, "Delivery fee cannot be negative"],
-			default: 0,
-		},
 		estimatedDeliveryTime: {
 			type: Number, // in minutes
 			min: [1, "Estimated delivery time must be at least 1 minute"],
@@ -102,15 +97,6 @@ zoneSchema.virtual("formattedDistance").get(function () {
 	return `${this.distance} ${this.distanceUnit}`;
 });
 
-// Virtual for delivery info
-zoneSchema.virtual("deliveryInfo").get(function () {
-	return {
-		fee: this.deliveryFee,
-		estimatedTime: this.estimatedDeliveryTime,
-		formattedTime: `${this.estimatedDeliveryTime} minutes`,
-	};
-});
-
 // Static method to find active zones by name
 zoneSchema.statics.findByName = function (zoneName) {
 	return this.findOne({
@@ -122,15 +108,6 @@ zoneSchema.statics.findByName = function (zoneName) {
 // Static method to find active zones
 zoneSchema.statics.findActiveZones = function () {
 	return this.find({ isActive: true }).sort({ priority: -1, zoneName: 1 });
-};
-
-// Instance method to calculate delivery fee based on distance
-zoneSchema.methods.calculateDeliveryFee = function (baseRate = 1) {
-	if (this.deliveryFee > 0) {
-		return this.deliveryFee;
-	}
-	// Calculate based on distance if no fixed fee is set
-	return Math.max(baseRate, this.distance * 0.5);
 };
 
 // Pre-save middleware to set updatedBy field

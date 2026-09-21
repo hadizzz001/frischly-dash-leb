@@ -9,7 +9,6 @@ const {
 	deleteZone,
 	permanentDeleteZone,
 	getZoneStats,
-	calculateDeliveryFee,
 } = require("../controllers/zoneController");
 
 // Import middleware
@@ -22,7 +21,6 @@ const router = express.Router();
 // see every zone.
 router.get("/", optionalProtect, getZones);
 //router.get("/active", getActiveZones);
-router.post("/calculate-delivery", calculateDeliveryFee);
 router.get("/:id", optionalProtect, getZone);
 
 // Protected routes (require authentication)

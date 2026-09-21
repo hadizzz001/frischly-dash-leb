@@ -634,23 +634,9 @@ exports.createOrder = async (req, res) => {
 		console.log("All items processed. Final subtotal:", subtotal);
 
 		// Create order
-		// Calculate delivery charge based on customer's zone
+		// Delivery charge comes from the store's Settings (below); zones no
+		// longer carry a fee of their own.
 		let delivery = 0;
-		console.log("Calculating delivery fee. City:", orderAddress?.city);
-		if (orderAddress && orderAddress.city) {
-			try {
-				const zone = await Zone.findByName(orderAddress.city);
-				if (zone && zone.deliveryFee) {
-					delivery = zone.deliveryFee;
-					console.log("Zone found. Delivery fee:", delivery);
-				} else {
-					console.log("Zone not found or no delivery fee.");
-				}
-			} catch (error) {
-				console.warn("Error fetching delivery fee from zone:", error.message);
-				// Continue with delivery = 0 if zone lookup fails
-			}
-		}
 
 		// Calculate processing fee: 2.9% + 0.30
 		const processingFee = (subtotal + delivery) * 0.029 + 0.3;
@@ -680,9 +666,7 @@ exports.createOrder = async (req, res) => {
 		// The store's own flat delivery fee — FreshlyLB uses Setting.deliveryFee
 		// (Dashboard -> Settings), a market its MarketSetting.deliveryFee (market
 		// dashboard -> Settings). This is the figure the app shows on the
-		// checkout screen, so it is what the order is charged. A store that
-		// leaves it at 0 keeps the previous behaviour exactly: the per-Zone fee
-		// resolved above (if any) still applies.
+		// checkout screen, so it is what the order is charged. 0 = free delivery.
 		let marketSettings = null;
 		if (orderMarket) {
 			marketSettings = await MarketSetting.findOne({ market: orderMarket }).lean();

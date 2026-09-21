@@ -533,56 +533,26 @@
 				}
 			}
 
-			// Get delivery fee from API
-			async function getDeliveryFee() {
+			// Delivery fee shown in the cart. Mirrors what the server charges on
+			// checkout: the flat Setting.deliveryFee (Dashboard -> Settings),
+			// waived once the subtotal reaches the free-delivery threshold.
+			async function getDeliveryFee(subtotal = 0) {
 				try {
-					// Get current user information
-					const authToken = localStorage.getItem("authToken");
-					if (!authToken) {
-						return 2.0; // Default delivery fee if not logged in
+					const response = await fetch(`${API_BASE_URL}/settings/public`);
+					if (!response.ok) {
+						return 0;
 					}
-
-					const userResponse = await fetch(`${API_BASE_URL}/auth/me`, {
-						headers: {
-							Authorization: `Bearer ${authToken}`,
-						},
-					});
-
-					if (!userResponse.ok) {
-						return 2.0; // Default delivery fee if user fetch fails
+					const payload = await response.json();
+					const settings = payload.data || {};
+					const fee = Number(settings.deliveryFee) || 0;
+					const threshold = Number(settings.freeDeliveryThreshold) || 0;
+					if (threshold > 0 && subtotal >= threshold) {
+						return 0;
 					}
-
-					const userData = await userResponse.json();
-					const city = userData.data?.user?.address?.city;
-
-					if (!city) {
-						return 2.0; // Default delivery fee if no city
-					}
-
-					// Calculate delivery fee
-					const deliveryResponse = await fetch(
-						`${API_BASE_URL}/zones/calculate-delivery`,
-						{
-							method: "POST",
-							headers: {
-								"Content-Type": "application/json",
-							},
-							body: JSON.stringify({
-								city,
-								baseRate: 0,
-							}),
-						}
-					);
-
-					if (!deliveryResponse.ok) {
-						return 2.0; // Default delivery fee if calculation fails
-					}
-
-					const deliveryData = await deliveryResponse.json();
-					return deliveryData.data?.deliveryFee || 2.0;
+					return fee;
 				} catch (error) {
-					console.error("Error calculating delivery fee:", error);
-					return 2.0; // Default delivery fee on error
+					console.error("Error fetching delivery fee:", error);
+					return 0;
 				}
 			}
 
@@ -608,10 +578,10 @@
 				let deliveryFee = 0.0;
 				if (cart.length > 0) {
 					try {
-						deliveryFee = await getDeliveryFee();
+						deliveryFee = await getDeliveryFee(totalPrice);
 					} catch (error) {
 						console.error("Error getting delivery fee:", error);
-						deliveryFee = 2.0; // Fallback to default
+						deliveryFee = 0;
 					}
 				}
 
