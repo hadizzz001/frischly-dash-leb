@@ -1,49 +1,105 @@
 const { Expo } = require("expo-server-sdk");
 const admin = require("firebase-admin");
 const User = require("../models/User");
+const Rider = require("../models/Rider");
+const Market = require("../models/Market");
 const sendExpoNotification = require("./expoNotification");
 
-const expo = new Expo();
+// Display name of the main (non-market) store — orders with no `market`.
+const MAIN_STORE_NAME = "FreshlyLB";
 
-// Neat, customer-facing copy for each order status milestone. Titles include a
-// small emoji so the notification reads nicely on the lock screen. Keep the map
-// aligned with the Order model's status values.
+// Short, warm copy for each order status milestone — the kind of line a shopper
+// is happy to see pop up on the lock screen. Every entry is a function of the
+// personal bits we can fill in: the shopper's first name, the store the order
+// came from and, once assigned, the driver's first name. Any of them may be
+// empty, so each template has to read well without it.
+//
+// No order number on purpose: "ORD-20260921-0006" reads like a serial number
+// and eats half the banner. Tapping the notification opens the order anyway.
+// Keep the keys aligned with the Order model's status values.
 const STATUS_MESSAGES = {
-	pending: {
-		title: "Order placed 🎉",
-		body: "We've received your order and it's being processed.",
-	},
-	confirmed: {
-		title: "Order confirmed ✅",
-		body: "Your order has been confirmed and is being prepared.",
-	},
-	processing: {
-		title: "Preparing your order 👨‍🍳",
-		body: "Your order is being prepared right now.",
-	},
-	"ready for pickup": {
-		title: "Your order is ready 📦",
-		body: "Your order is ready and will be on its way soon.",
-	},
-	OnTheWay: {
-		title: "Your order is on the way 🚗",
-		body: "Your driver is heading to you. Tap to track your order.",
-	},
-	delivered: {
-		title: "Order delivered 🛍️",
-		body: "Enjoy! Your order has been delivered.",
-	},
-	cancelled: {
-		title: "Order cancelled ❌",
-		body: "Your order has been cancelled.",
-	},
+	pending: ({ name, store }) => ({
+		title: "Order received 🎉",
+		body: `${name ? `Thanks, ${name}!` : "Thanks!"} ${store} has your order and is getting started on it.`,
+	}),
+	confirmed: ({ store }) => ({
+		title: "You're all set ✅",
+		body: `${store} confirmed your order. We'll ping you the moment it's on the move.`,
+	}),
+	processing: ({ store }) => ({
+		title: "Packing your order 🛒",
+		body: `${store} is getting your order together right now — won't be long!`,
+	}),
+	"ready for pickup": () => ({
+		title: "Packed and ready 📦",
+		body: "Your order is packed and waiting for a driver. We'll tell you the moment someone grabs it.",
+	}),
+	OnTheWay: ({ driver, store }) =>
+		driver
+			? {
+					title: `${driver} is on the way 🛵`,
+					body: `${driver} has your order from ${store} and is heading your way. Tap to follow along!`,
+				}
+			: {
+					title: "Your order is on the way 🛵",
+					body: `A driver has your order from ${store} and is heading your way. Tap to follow along!`,
+				},
+	delivered: ({ name, store }) => ({
+		title: "Delivered! 🛍️",
+		body: `Your order from ${store} just arrived. Enjoy${name ? `, ${name}` : ""} — and tell us how it went!`,
+	}),
+	cancelled: ({ store }) => ({
+		title: "Order cancelled 😔",
+		body: `Your order from ${store} was cancelled. If that doesn't look right, reach out and we'll sort it out.`,
+	}),
 };
 
-// Resolve the customer's User id from an order. Orders embed the customer as a
-// snapshot of the User document (see createOrder), so customer._id points at the
-// user who placed the order. Fall back to createdBy for older/edge cases.
-function getCustomerUserId(order) {
-	return order?.customer?._id || order?.customer?.id || order?.createdBy || null;
+const firstName = (full) => String(full || "").trim().split(/\s+/)[0] || "";
+
+// Accept either a raw ObjectId or a populated document.
+const idOf = (ref) => (ref && ref._id) || ref || null;
+
+// Orders keep only a snapshot of the customer (name, email, phone, address —
+// the schema drops the User's _id), so the shopper's User id comes from
+// createdBy: the app always places orders as the customer. Fall back to the
+// snapshot's email for orders created on the customer's behalf.
+async function findCustomer(order) {
+	const userId =
+		order?.customer?._id || order?.customer?.id || idOf(order?.createdBy);
+	if (userId) {
+		const user = await User.findById(userId).select("name fcmToken");
+		if (user) return user;
+	}
+	const email = order?.customer?.email;
+	if (!email) return null;
+	return User.findOne({ email: String(email).toLowerCase() }).select("name fcmToken");
+}
+
+// Name lookups are decoration: if either fails the push still goes out with
+// the generic wording.
+async function storeName(order) {
+	const marketId = idOf(order?.market);
+	if (!marketId) return MAIN_STORE_NAME;
+	try {
+		const market = await Market.findById(marketId).select("name").lean();
+		return (market && market.name) || MAIN_STORE_NAME;
+	} catch {
+		return MAIN_STORE_NAME;
+	}
+}
+
+async function driverName(order) {
+	const riderId = idOf(order?.assignedRider);
+	if (!riderId) return "";
+	try {
+		const rider = await Rider.findById(riderId)
+			.select("user")
+			.populate("user", "name")
+			.lean();
+		return firstName(rider?.user?.name);
+	} catch {
+		return "";
+	}
 }
 
 /**
@@ -55,7 +111,7 @@ function getCustomerUserId(order) {
  * Safe to await or fire-and-forget: it never throws, so it can't break the
  * request that triggered the status change.
  *
- * @param {object} order - The order document (must include customer + orderNumber/_id).
+ * @param {object} order - The order document (must include customer/createdBy + _id).
  * @param {string} status - The new status value.
  */
 async function notifyCustomerOrderStatus(order, status) {
@@ -66,19 +122,19 @@ async function notifyCustomerOrderStatus(order, status) {
 			return { success: false, reason: "no_template" };
 		}
 
-		const userId = getCustomerUserId(order);
-		if (!userId) return { success: false, reason: "no_customer" };
+		const user = await findCustomer(order);
+		if (!user) return { success: false, reason: "no_customer" };
+		if (!user.fcmToken) return { success: false, reason: "no_token" };
 
-		const user = await User.findById(userId).select("fcmToken");
-		if (!user || !user.fcmToken) {
-			return { success: false, reason: "no_token" };
-		}
-
-		const orderRef = order.orderNumber
-			? `#${order.orderNumber}`
-			: `#${order._id}`;
-		const title = template.title;
-		const body = `Order ${orderRef} — ${template.body}`;
+		const [store, driver] = await Promise.all([
+			storeName(order),
+			status === "OnTheWay" ? driverName(order) : "",
+		]);
+		const { title, body } = template({
+			name: firstName(order?.customer?.name || user.name),
+			store,
+			driver,
+		});
 		const data = {
 			orderId: String(order._id),
 			order_id: String(order._id),
@@ -90,7 +146,21 @@ async function notifyCustomerOrderStatus(order, status) {
 		// Use Expo's push service for those; fall back to raw FCM for any
 		// genuine FCM device tokens.
 		if (Expo.isExpoPushToken(user.fcmToken)) {
-			return await sendExpoNotification(user.fcmToken, title, body, data);
+			const sentToken = user.fcmToken;
+			return await sendExpoNotification(sentToken, title, body, data, {
+				// A token Expo no longer knows (app reinstalled, device wiped)
+				// will never work again: drop it so the app re-registers on
+				// its next launch instead of every push failing quietly.
+				onDeliveryError: (code) => {
+					if (code !== "DeviceNotRegistered") return;
+					User.updateOne(
+						{ _id: user._id, fcmToken: sentToken },
+						{ $set: { fcmToken: null } },
+					).catch((e) =>
+						console.error("❌ Could not clear stale push token:", e.message),
+					);
+				},
+			});
 		}
 
 		try {
@@ -115,4 +185,4 @@ async function notifyCustomerOrderStatus(order, status) {
 	}
 }
 
-module.exports = { notifyCustomerOrderStatus, STATUS_MESSAGES };
+module.exports = { notifyCustomerOrderStatus, STATUS_MESSAGES, MAIN_STORE_NAME };
