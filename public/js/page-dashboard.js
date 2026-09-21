@@ -12627,7 +12627,7 @@
 
 								// Filter data based on isFromOwnCompany
 								const filteredData = isFromOwnCompany !== null
-									? promoList.filter(promo => promo.isFromOwnCompany === isFromOwnCompany)
+									? promoList.filter(promo => (promo.isFromOwnCompany !== false) === isFromOwnCompany)
 									: promoList;
 
 						filteredData.forEach((promo) => {
@@ -12635,7 +12635,7 @@
 								? `${promo.discountValue}%`
 								: `$${promo.discountValue}`;
 							
-							const typeDisplay = promo.isFromOwnCompany 
+							const typeDisplay = promo.isFromOwnCompany !== false
 								? '<span class="status-badge status-active">Normal</span>' 
 								: '<span class="status-badge dsx-300">One-time</span>';
 							
@@ -12675,9 +12675,24 @@
 				document.getElementById("promocode-id").value = "";
 				// Set default values based on tab
 				document.getElementById("promocode-discount-type").value = "percentage";
-				document.getElementById("promocode-own-company").value = tabType === 'promo' ? "true" : "false";
-				togglePromoCodeFields();
+				// The tab you clicked decides the type. It is locked here so a
+				// one-time code can never be saved as a reusable one by picking
+				// the wrong option (which is how ABC/XXX ended up reusable).
+				setPromoCodeType(tabType === 'promo', true);
 				document.getElementById("promocode-modal").style.display = "block";
+			}
+
+			function setPromoCodeType(isFromOwnCompany, locked) {
+				const select = document.getElementById("promocode-own-company");
+				select.value = isFromOwnCompany ? "true" : "false";
+				select.disabled = !!locked;
+				const help = document.getElementById("promocode-type-help");
+				if (help) {
+					help.textContent = isFromOwnCompany
+						? "Reusable: every customer can apply it on any number of orders."
+						: "One-time: each customer can redeem it on one order only (checked against their order history).";
+				}
+				togglePromoCodeFields();
 			}
 
 			async function editPromoCode(id) {
@@ -12696,14 +12711,12 @@
 						document.getElementById("promocode-description").value = promo.description || "";
 						document.getElementById("promocode-discount-type").value = promo.discountType || "percentage";
 						document.getElementById("promocode-discount-value").value = promo.discountValue || "";
-						document.getElementById("promocode-own-company").value = promo.isFromOwnCompany.toString();
+						// Legacy codes have no flag at all -> treated as reusable.
+						setPromoCodeType(promo.isFromOwnCompany !== false, false);
 						document.getElementById("promocode-min-order").value = promo.triggerCondition?.minOrderTotal || "";
 						document.getElementById("promocode-email-subject").value = promo.emailSubject || "";
 						document.getElementById("promocode-email-message").value = promo.emailMessage || "";
-						document.getElementById("promocode-status").value = promo.isActive.toString();
-						
-						// Show/hide conditional fields
-						togglePromoCodeFields();
+						document.getElementById("promocode-status").value = String(promo.isActive !== false);
 						
 						document.getElementById("promocode-modal").style.display = "block";
 					}
@@ -12791,20 +12804,16 @@
 				const emailSubjectGroup = document.getElementById("email-subject-group");
 				const emailMessageGroup = document.getElementById("email-message-group");
 				
+				// The "sent by email" flow was never built server-side, so those two
+				// fields only ever confused people — keep them hidden for both types.
+				emailSubjectGroup.style.display = "none";
+				emailMessageGroup.style.display = "none";
 				if (isFromOwnCompany) {
-					// Hide email-related fields for own company promo codes
 					triggerConditionGroup.style.display = "none";
-					emailSubjectGroup.style.display = "none";
-					emailMessageGroup.style.display = "none";
-					// Clear the values
 					document.getElementById("promocode-min-order").value = "";
-					document.getElementById("promocode-email-subject").value = "";
-					document.getElementById("promocode-email-message").value = "";
 				} else {
-					// Show email-related fields for other companies' promo codes
+					// One-time codes may require a minimum order total.
 					triggerConditionGroup.style.display = "block";
-					emailSubjectGroup.style.display = "block";
-					emailMessageGroup.style.display = "block";
 				}
 			}
 

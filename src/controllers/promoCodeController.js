@@ -270,8 +270,14 @@ exports.createPromoCode = async (req, res) => {
 			isActive,
 		} = req.body;
 
-		// Check if code already exists
-		const existingCode = await PromoCode.findOne({ code });
+		// Codes are stored upper-cased; compare the same way, otherwise a
+		// lower-case duplicate slipped past this check and hit the unique
+		// index as a 500 "Server Error".
+		const normalizedCode = String(code || "").trim().toUpperCase();
+		if (!normalizedCode) {
+			return sendError(res, 400, t("promoCodeRequired", req));
+		}
+		const existingCode = await PromoCode.findOne({ code: normalizedCode });
 		if (existingCode) {
 			return sendError(res, 400, t("promoCodeExists", req));
 		}
@@ -290,7 +296,7 @@ exports.createPromoCode = async (req, res) => {
 
 		const promoCode = await PromoCode.create({
 			companyName,
-			code,
+			code: normalizedCode,
 			description,
 			discountType,
 			discountValue,
