@@ -4,7 +4,7 @@ const PickTracking = require("../models/PickTracking");
 const Rider = require("../models/Rider");
 const mongoose = require("mongoose");
 const { sendResponse, sendError, sendSuccess, sendServerError } = require("../utils/apiResponse");
-const { notifyCustomerOrderStatus } = require("../services/orderStatusNotification");
+const { notifyCustomerOrderTransition } = require("../services/orderStatusNotification");
 const { autoAssignDriverForOrder } = require("../services/autoDriverAssignment");
 
 // @desc    Scan barcode and retrieve product details
@@ -191,6 +191,21 @@ exports.pickItem = async (req, res) => {
     });
 
     await pickTracking.save();
+
+    // The first scan is when packing really starts. The scannn app lets staff
+    // scan straight away without tapping "Start processing", and it already
+    // shows the order as "processing" locally from the first pick — keep the
+    // server in step so the dashboard agrees and the customer gets their
+    // "Packing your order" push instead of silence until it's on the way.
+    if (order.status === "pending" || order.status === "confirmed") {
+      const previousStatus = order.status;
+      order.status = "processing";
+      order.updatedBy = req.user.id;
+      await order.save();
+      notifyCustomerOrderTransition(order, previousStatus).catch((e) =>
+        console.error("Scanner order status notification failed:", e),
+      );
+    }
 
     // Calculate progress
     const totalOrderItems = order.items.length;
@@ -492,16 +507,12 @@ exports.completeOrder = async (req, res) => {
     // Push-notify the customer (mirrors orderController.updateOrder /
     // updateOrderStatus and marketAdminController's twins) — this endpoint
     // is how the scannn app flips an order to "ready for pickup" once every
-    // item is scanned, and previously never told the customer's myMob app
-    // that their order was ready, even though every other status-change
-    // endpoint did.
-    // order.status, not newStatus: automatic assignment may have carried the
-    // order straight on to "OnTheWay" in the same save.
-    if (order.status !== previousStatus) {
-      notifyCustomerOrderStatus(order, order.status).catch((e) =>
-        console.error("Scanner order status notification failed:", e),
-      );
-    }
+    // item is scanned. Every milestone passed, not just the final one:
+    // automatic assignment may have carried the order straight on to
+    // "OnTheWay" in the same save, and the shopper hears "packed" first.
+    notifyCustomerOrderTransition(order, previousStatus).catch((e) =>
+      console.error("Scanner order status notification failed:", e),
+    );
 
     // Mark pick tracking as completed
     if (pickTracking) {

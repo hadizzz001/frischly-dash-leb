@@ -30,9 +30,10 @@ const STATUS_MESSAGES = {
 		title: "Packing your order 🛒",
 		body: `${store} is getting your order together right now — won't be long!`,
 	}),
-	"ready for pickup": () => ({
+	// Reads right whether a driver is found seconds later or not at all yet.
+	"ready for pickup": ({ store }) => ({
 		title: "Packed and ready 📦",
-		body: "Your order is packed and waiting for a driver. We'll tell you the moment someone grabs it.",
+		body: `Your order from ${store} is all packed up! We're finding you a driver now and we'll tell you the moment it's on the way.`,
 	}),
 	OnTheWay: ({ driver, store }) =>
 		driver
@@ -53,6 +54,17 @@ const STATUS_MESSAGES = {
 		body: `Your order from ${store} was cancelled. If that doesn't look right, reach out and we'll sort it out.`,
 	}),
 };
+
+// Statuses an order sits in before it's packed. Jumping from one of these
+// straight to "OnTheWay" means the "packed" moment happened silently in the
+// same request (automatic driver assignment, or a manual dispatch).
+const BEFORE_PACKED = new Set(["pending", "confirmed", "processing"]);
+
+// Gap between the "packed" push and the "on the way" push when both come out
+// of one request, so they land as two beats of the story, not a double buzz.
+const PACKED_TO_ON_THE_WAY_GAP_MS = 5000;
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const firstName = (full) => String(full || "").trim().split(/\s+/)[0] || "";
 
@@ -185,4 +197,33 @@ async function notifyCustomerOrderStatus(order, status) {
 	}
 }
 
-module.exports = { notifyCustomerOrderStatus, STATUS_MESSAGES, MAIN_STORE_NAME };
+/**
+ * Notify the customer about every milestone an order passed in one request.
+ * Call it after the save with the status the order had before; it's a no-op
+ * when nothing changed, so callers need no guard of their own.
+ *
+ * The one multi-milestone case: automatic driver assignment carries an order
+ * from "ready for pickup" straight on to "OnTheWay" inside the same save. The
+ * shopper still gets both moments — "packed" now, "on the way" a few seconds
+ * later — and their in-app inbox reads like a proper order timeline.
+ *
+ * Never throws (same contract as notifyCustomerOrderStatus).
+ */
+async function notifyCustomerOrderTransition(order, previousStatus) {
+	const status = order?.status;
+	if (!status || status === previousStatus) {
+		return { success: false, reason: "no_change" };
+	}
+	if (status === "OnTheWay" && BEFORE_PACKED.has(previousStatus)) {
+		await notifyCustomerOrderStatus(order, "ready for pickup");
+		await delay(PACKED_TO_ON_THE_WAY_GAP_MS);
+	}
+	return notifyCustomerOrderStatus(order, status);
+}
+
+module.exports = {
+	notifyCustomerOrderStatus,
+	notifyCustomerOrderTransition,
+	STATUS_MESSAGES,
+	MAIN_STORE_NAME,
+};

@@ -37,6 +37,10 @@ const { escapeRegex } = require("../utils/sanitize");
 const { DEFAULT_COMMISSION_RATE } = require("../utils/commission");
 const { autoAssignAndSave } = require("../services/autoDriverAssignment");
 const {
+	notifyCustomerOrderStatus,
+	notifyCustomerOrderTransition,
+} = require("../services/orderStatusNotification");
+const {
 	imageUpload: logoUpload,
 	uploadImageToCloudinary,
 } = require("../utils/cloudinaryUpload");
@@ -1397,11 +1401,11 @@ exports.updateOrder = async (req, res) => {
 		// (status: "OnTheWay") and marks orders delivered for MARKET orders;
 		// without this, only main-store status changes (via /api/orders/:id)
 		// ever reached the customer's myMob app.
-		// order.status, not update.status: automatic assignment may have moved the
-		// order on to "OnTheWay" in the same request.
-		if (update.status && order.status !== previousStatus) {
-			const { notifyCustomerOrderStatus } = require("../services/orderStatusNotification");
-			notifyCustomerOrderStatus(order, order.status).catch((e) =>
+		// Every milestone passed, not just the final one: automatic assignment
+		// may have moved the order on to "OnTheWay" in the same request, and
+		// the shopper hears about "packed" too. No-op when nothing changed.
+		if (update.status) {
+			notifyCustomerOrderTransition(order, previousStatus).catch((e) =>
 				console.error("Market order status notification failed:", e),
 			);
 		}
@@ -1484,13 +1488,10 @@ exports.updateOrderStatus = async (req, res) => {
 		// already does this for main-store orders. Without it, market orders
 		// (e.g. status changes made from the scannn app or market dashboard)
 		// never reached the customer's myMob app.
-		// order.status, not the requested status — see updateOrder above.
-		if (order.status !== previous.status) {
-			const { notifyCustomerOrderStatus } = require("../services/orderStatusNotification");
-			notifyCustomerOrderStatus(order, order.status).catch((e) =>
-				console.error("Market order status notification failed:", e),
-			);
-		}
+		// Every milestone passed, not just the final one — see updateOrder above.
+		notifyCustomerOrderTransition(order, previous.status).catch((e) =>
+			console.error("Market order status notification failed:", e),
+		);
 
 		sendResponse(res, 200, true, "Status updated", { ...order.toObject(), autoAssignment });
 	} catch (err) {
@@ -1526,7 +1527,6 @@ exports.cancelOrder = async (req, res) => {
 		order.updatedBy = req.user && req.user._id;
 		await order.save();
 
-		const { notifyCustomerOrderStatus } = require("../services/orderStatusNotification");
 		notifyCustomerOrderStatus(order, "cancelled").catch((e) =>
 			console.error("Market order status notification failed:", e),
 		);

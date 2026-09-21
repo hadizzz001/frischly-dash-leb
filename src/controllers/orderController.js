@@ -16,7 +16,10 @@ const {
 	refundProcessedEmail,
 } = require("../utils/emailTemplates");
 const NotificationService = require("../services/notifications");
-const { notifyCustomerOrderStatus } = require("../services/orderStatusNotification");
+const {
+	notifyCustomerOrderStatus,
+	notifyCustomerOrderTransition,
+} = require("../services/orderStatusNotification");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const { sendResponse, sendError, sendSuccess, sendServerError } = require("../utils/apiResponse");
 const { escapeRegex } = require("../utils/sanitize");
@@ -1216,18 +1219,13 @@ exports.updateOrder = async (req, res) => {
 			}
 		}
 
-		// Notify the customer (push, works even when the app is closed) when
-		// the order status actually changed.
-		// The order's FINAL status, not the requested one: automatic driver
-		// assignment moves "ready for pickup" straight on to "OnTheWay", and
-		// telling the customer their order is merely ready when a driver is
-		// already carrying it would be wrong.
-		const finalStatus = updatedOrder.status;
-		if (finalStatus !== __previousStatus) {
-			notifyCustomerOrderStatus(updatedOrder, finalStatus).catch((e) =>
-				console.error("Order status notification failed:", e),
-			);
-		}
+		// Notify the customer (push, works even when the app is closed) about
+		// every milestone the order passed: automatic driver assignment can
+		// move "ready for pickup" straight on to "OnTheWay" in the same save,
+		// and the shopper hears about both. No-op when nothing changed.
+		notifyCustomerOrderTransition(updatedOrder, __previousStatus).catch((e) =>
+			console.error("Order status notification failed:", e),
+		);
 
 		const ras = { updatedOrder, autoAssignment };
 
@@ -1877,17 +1875,13 @@ exports.updateOrderStatus = async (req, res) => {
 			}
 		}
 
-		// Push the status change to the customer's device (delivered even
-		// when the app is fully closed/killed).
-		// The order's FINAL status, not the requested one: automatic driver
-		// assignment moves "ready for pickup" straight on to "OnTheWay", and
-		// telling the customer their order is merely ready when a driver is
-		// already carrying it would be wrong.
-		if (updatedOrder.status !== previousStatus) {
-			notifyCustomerOrderStatus(updatedOrder, updatedOrder.status).catch((e) =>
-				console.error("Order status notification failed:", e),
-			);
-		}
+		// Push every milestone the order passed to the customer's device
+		// (delivered even when the app is fully closed/killed). Automatic
+		// driver assignment can move "ready for pickup" straight on to
+		// "OnTheWay" in the same save; the shopper hears about both.
+		notifyCustomerOrderTransition(updatedOrder, previousStatus).catch((e) =>
+			console.error("Order status notification failed:", e),
+		);
 
 		const ras = { updatedOrder, autoAssignment };
 
