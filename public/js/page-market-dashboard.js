@@ -12769,8 +12769,8 @@
 								: `$${promo.discountValue}`;
 							
 							const typeDisplay = promo.isFromOwnCompany 
-								? '<span class="status-badge status-active">Own Company</span>' 
-								: '<span class="status-badge mdx-272">Other Company</span>';
+								? '<span class="status-badge status-active">Normal</span>' 
+								: '<span class="status-badge mdx-272">One-time</span>';
 							
 							const tr = document.createElement("tr");
 							tr.innerHTML = `

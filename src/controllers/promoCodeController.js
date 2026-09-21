@@ -1,5 +1,6 @@
 const PromoCode = require("../models/PromoCode");
 const MarketPromoCode = require("../models/MarketPromoCode");
+const Market = require("../models/Market");
 const User = require("../models/User");
 const Order = require("../models/Order");
 const { t } = require("../utils/translations");
@@ -17,6 +18,47 @@ const hasCustomerUsedPromo = async (userId, { promoCodeId, marketPromoCodeId }) 
 	return Boolean(await Order.exists(query));
 };
 exports.hasCustomerUsedPromo = hasCustomerUsedPromo;
+
+// A code that exists but belongs to a different store (or is switched off)
+// used to come back as the generic "Invalid or inactive promo code", which
+// reads as "promo codes are broken" when an admin tests a market's code on
+// a main-store cart (or the other way round). Explain what actually happened.
+const marketName = async (id) => {
+	try {
+		const m = await Market.findById(id).select("name").lean();
+		return (m && m.name) || "another store";
+	} catch {
+		return "another store";
+	}
+};
+
+const explainPromoMiss = async (upperCode, cartMarket) => {
+	const generic = "Invalid or inactive promo code";
+	const [adminCode, marketCodes] = await Promise.all([
+		PromoCode.findOne({ code: upperCode }).select("isActive").lean(),
+		MarketPromoCode.find({ code: upperCode }).select("market isActive").lean(),
+	]);
+
+	if (cartMarket) {
+		const own = marketCodes.find((c) => String(c.market) === String(cartMarket));
+		if (own && !own.isActive) return "This promo code is inactive";
+		if (adminCode) {
+			return `This promo code belongs to the main store and cannot be used on a ${await marketName(cartMarket)} order`;
+		}
+		const other = marketCodes[0];
+		if (other) {
+			return `This promo code belongs to ${await marketName(other.market)} and only works on orders from that store`;
+		}
+		return generic;
+	}
+
+	if (adminCode && !adminCode.isActive) return "This promo code is inactive";
+	const other = marketCodes[0];
+	if (other) {
+		return `This promo code belongs to ${await marketName(other.market)} and only works on orders from that store`;
+	}
+	return generic;
+};
 
 // @desc    Get all promo codes (public - without code)
 // @route   GET /api/promocodes/public
@@ -45,7 +87,8 @@ exports.validatePromoCode = async (req, res) => {
 			return sendError(res, 400, "Promo code is required");
 		}
 
-		const upperCode = code.toUpperCase();
+		// Trim: mobile keyboards love a trailing space after autocomplete.
+		const upperCode = String(code).trim().toUpperCase();
 		const total = Number(orderTotal) || 0;
 
 		// The cart can only contain items from a single source: one specific
@@ -60,7 +103,7 @@ exports.validatePromoCode = async (req, res) => {
 			});
 
 			if (!marketPromo) {
-				return sendError(res, 404, "Invalid or inactive promo code");
+				return sendError(res, 404, await explainPromoMiss(upperCode, market));
 			}
 
 			const now = new Date();
@@ -129,7 +172,7 @@ exports.validatePromoCode = async (req, res) => {
 		});
 
 		if (!promoCode) {
-			return sendError(res, 404, "Invalid or inactive promo code");
+			return sendError(res, 404, await explainPromoMiss(upperCode, null));
 		}
 
 		if (promoCode.isFromOwnCompany === false) {
