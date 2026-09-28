@@ -473,7 +473,11 @@
 			// ───────── Driver deliveries (rider / market_driver) ─────────
 			// The backend automatically scopes /api/orders to the logged-in driver's
 			// own assigned orders, so we just ask for the ones still in progress.
+			// The list response already carries everything the detail dialogs need
+			// (customer + address pin, items with their products, totals, payment,
+			// notes, store), so the dialogs render from it without another request.
 			let __deliveriesSyncInterval = null;
+			let __deliveryOrders = {}; // order id -> order, from the last list load
 			function startDeliveriesAutoSync() {
 				if (__deliveriesSyncInterval) clearInterval(__deliveriesSyncInterval);
 				// Poll periodically so reassignments made elsewhere show up on their
@@ -488,10 +492,13 @@
 			}
 
 			async function loadMyDeliveries() {
-				const tbody = document.getElementById("deliveries-table-body");
-				if (!tbody) return;
-				tbody.innerHTML =
-					'<tr><td colspan="6" class="prx-14">Loading…</td></tr>';
+				const list = document.getElementById("deliveries-list");
+				if (!list) return;
+				// Only show the placeholder on a first/empty load: the 20s auto-sync
+				// must not blank the cards the driver is looking at.
+				if (!list.querySelector(".dlv-card")) {
+					list.innerHTML = '<div class="dlv-empty">Loading…</div>';
+				}
 				try {
 					const res = await fetch(
 						`${API_BASE_URL}/orders?status=${encodeURIComponent(
@@ -505,49 +512,419 @@
 						}
 					);
 					if (!res.ok) {
-						tbody.innerHTML =
-							'<tr><td colspan="6" class="prx-33">Failed to load deliveries.</td></tr>';
+						list.innerHTML =
+							'<div class="dlv-empty error">Failed to load deliveries.</div>';
 						return;
 					}
 					const data = await res.json();
 					renderDeliveries((data.data && data.data.orders) || []);
 				} catch (e) {
-					tbody.innerHTML =
-						'<tr><td colspan="6" class="prx-33">Error loading deliveries.</td></tr>';
+					list.innerHTML =
+						'<div class="dlv-empty error">Error loading deliveries.</div>';
 				}
 			}
 
+			// Order data is typed by customers (names, street, notes), so every
+			// value is escaped before it goes into markup.
+			function __esc(value) {
+				return String(value == null ? "" : value).replace(
+					/[&<>"']/g,
+					(ch) =>
+						({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]
+				);
+			}
+			function __num(value) {
+				const n = Number(value);
+				return isFinite(n) ? n : 0;
+			}
+			function __money(value) {
+				return `$${__num(value).toFixed(2)}`;
+			}
+			function __dateTime(value) {
+				if (!value) return "";
+				const d = new Date(value);
+				if (isNaN(d.getTime())) return "";
+				return d.toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+			}
+			const __STATUS_LABELS = {
+				OnTheWay: "On the way",
+				"ready for pickup": "Ready for pickup",
+				delivered: "Delivered",
+				cancelled: "Cancelled",
+				pending: "Pending",
+				confirmed: "Confirmed",
+				processing: "Processing",
+			};
+			function __statusBadge(status) {
+				const value = status || "pending";
+				const label = __STATUS_LABELS[value] || value;
+				const cls = String(value).toLowerCase().replace(/\s+/g, "-");
+				return `<span class="status-badge ${__esc(cls)}">${__esc(label)}</span>`;
+			}
+			const __PAYMENT_LABELS = {
+				cash: "Cash on delivery",
+				card: "Card",
+				online: "Online",
+				wallet: "Wallet",
+			};
+			function __paymentLabel(method) {
+				return __PAYMENT_LABELS[method] || (method ? String(method) : "Cash on delivery");
+			}
+
+			// Where the customer is: their exact map pin when the order has one,
+			// otherwise the typed address (street is sometimes just the city name
+			// repeated, so that duplicate is dropped).
+			function __customerPlace(order) {
+				const addr = (order.customer && order.customer.address) || {};
+				const loc = addr.location || {};
+				const lat = Number(loc.latitude);
+				const lng = Number(loc.longitude);
+				const hasPin =
+					loc.latitude != null &&
+					loc.longitude != null &&
+					isFinite(lat) &&
+					isFinite(lng) &&
+					!(lat === 0 && lng === 0);
+				const city = String(addr.city || "").trim();
+				let street = String(addr.street || "").trim();
+				if (street && city && street.toLowerCase() === city.toLowerCase()) street = "";
+				const text = [street, city].filter(Boolean).join(", ");
+				return { hasPin, lat, lng, street, city, text };
+			}
+			function __mapLinks(place) {
+				const query = place.hasPin
+					? `${place.lat},${place.lng}`
+					: place.text
+					? `${place.text}, Lebanon`
+					: "";
+				if (!query) return null;
+				const q = encodeURIComponent(query);
+				return {
+					embed: `https://maps.google.com/maps?q=${q}&z=${place.hasPin ? 16 : 14}&hl=en&output=embed`,
+					open: `https://www.google.com/maps/search/?api=1&query=${q}`,
+					directions: `https://www.google.com/maps/dir/?api=1&destination=${q}&travelmode=driving`,
+				};
+			}
+			// wa.me needs the full international number without "+". Lebanese
+			// numbers are often stored locally ("03 123 456", "70123456").
+			function __whatsappNumber(phone) {
+				let digits = String(phone || "").replace(/\D/g, "");
+				if (!digits) return "";
+				if (digits.startsWith("00")) digits = digits.slice(2);
+				else if (digits.startsWith("0")) digits = "961" + digits.slice(1);
+				else if (digits.length <= 8) digits = "961" + digits;
+				return digits;
+			}
+			function __initials(name) {
+				const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+				if (!parts.length) return "?";
+				return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+			}
+			function __itemCount(order) {
+				const n = Array.isArray(order.items) ? order.items.length : 0;
+				return `${n} item${n !== 1 ? "s" : ""}`;
+			}
+
 			function renderDeliveries(orders) {
-				const tbody = document.getElementById("deliveries-table-body");
-				if (!tbody) return;
+				const list = document.getElementById("deliveries-list");
+				if (!list) return;
+				__deliveryOrders = {};
+				orders.forEach((o) => {
+					if (o && o._id) __deliveryOrders[o._id] = o;
+				});
 				if (!orders.length) {
-					tbody.innerHTML =
-						'<tr><td colspan="6" class="prx-14">No orders assigned to you right now.</td></tr>';
+					list.innerHTML =
+						'<div class="dlv-empty">No orders assigned to you right now.</div>';
 					return;
 				}
-				tbody.innerHTML = orders
+				list.innerHTML = orders
 					.map((o) => {
-						const customer = (o.customer && o.customer.name) || "N/A";
-						const itemCount = (o.items && o.items.length) || 0;
-						const total = (o.total || 0).toFixed(2);
-						const status = o.status || "pending";
-						const action =
-							status === "OnTheWay"
-								? `<button class="btn prx-34" onclick="markDelivered('${o._id}')"><i data-lucide=check></i> Mark Delivered</button>`
-								: '<span class="prx-3">—</span>';
+						const id = __esc(o._id);
+						const customer = o.customer || {};
+						const place = __customerPlace(o);
+						const deliverBtn =
+							o.status === "OnTheWay"
+								? `<button type="button" class="btn btn-primary btn-sm" onclick="markDelivered('${id}')"><i data-lucide=check></i> Mark delivered</button>`
+								: "";
 						return `
-							<tr>
-								<td class="prx-35"><strong>${o.orderNumber}</strong></td>
-								<td class="prx-35">${customer}</td>
-								<td class="prx-35">${itemCount} item${
-							itemCount !== 1 ? "s" : ""
-						}</td>
-								<td class="prx-35">$${total}</td>
-								<td class="prx-35">${status}</td>
-								<td class="prx-35">${action}</td>
-							</tr>`;
+							<article class="dlv-card">
+								<div class="dlv-card-head">
+									<span class="dlv-order-no">${__esc(o.orderNumber || "Order")}</span>
+									${__statusBadge(o.status)}
+								</div>
+								<div class="dlv-card-customer"><i data-lucide=user-round></i> ${__esc(customer.name || "Customer")}</div>
+								<div class="dlv-card-meta">
+									${place.city ? `<span><i data-lucide=map-pin></i> ${__esc(place.city)}</span>` : ""}
+									<span><i data-lucide=shopping-bag></i> ${__itemCount(o)}</span>
+									<span><i data-lucide=wallet></i> ${__money(o.total)} · ${__esc(__paymentLabel(o.paymentMethod))}</span>
+								</div>
+								<div class="dlv-actions">
+									<button type="button" class="btn btn-secondary btn-sm" onclick="openOrderDetails('${id}')"><i data-lucide=receipt></i> Order details</button>
+									<button type="button" class="btn btn-secondary btn-sm" onclick="openClientDetails('${id}')"><i data-lucide=user-round></i> Client details</button>
+									${deliverBtn}
+								</div>
+							</article>`;
 					})
 					.join("");
+			}
+
+			// ───────── Order / client detail dialogs ─────────
+			function __openDeliveryModal(id) {
+				["order-details-modal", "client-details-modal"].forEach((other) => {
+					if (other !== id) {
+						const el = document.getElementById(other);
+						if (el) el.classList.remove("show");
+					}
+				});
+				const modal = document.getElementById(id);
+				if (!modal) return;
+				modal.classList.add("show");
+				document.body.classList.add("modal-open");
+				const content = modal.querySelector(".modal-content");
+				if (content) content.scrollTop = 0;
+			}
+			function closeDeliveryModal(id) {
+				const modal = document.getElementById(id);
+				if (modal) modal.classList.remove("show");
+				if (!document.querySelector(".dlv-modal.show")) {
+					document.body.classList.remove("modal-open");
+				}
+				// Stop the embedded map from staying alive in the background.
+				if (id === "client-details-modal") {
+					const body = document.getElementById("client-details-body");
+					if (body) body.innerHTML = "";
+				}
+			}
+
+			function openOrderDetails(orderId) {
+				const o = __deliveryOrders[orderId];
+				if (!o) {
+					showMessage("This order is no longer assigned to you.", "error");
+					return;
+				}
+				const id = __esc(o._id);
+				const customer = o.customer || {};
+				const place = __customerPlace(o);
+				const items = Array.isArray(o.items) ? o.items : [];
+				const storeName =
+					o.market && typeof o.market === "object" && o.market.name
+						? o.market.name
+						: "Freshly LB";
+
+				document.getElementById("order-details-title").textContent =
+					o.orderNumber || "Order details";
+				document.getElementById("order-details-sub").innerHTML = `${__statusBadge(
+					o.status
+				)} <span>Placed ${__esc(__dateTime(o.createdAt) || "—")}</span>`;
+
+				const facts = [
+					["Store", storeName],
+					["Payment", __paymentLabel(o.paymentMethod)],
+					["Payment status", null, __statusBadge(o.paymentStatus || "pending")],
+					["Delivery time", __dateTime(o.deliveryTime)],
+					["Shelf", o.shelfNumber],
+					["Assigned to you", __dateTime(o.riderAssignedAt)],
+					["Out for delivery", __dateTime(o.deliveryStartedAt)],
+				]
+					.filter(([, text, html]) => html || (text != null && String(text).trim() !== ""))
+					.map(
+						([label, text, html]) =>
+							`<div><dt>${__esc(label)}</dt><dd>${html || __esc(text)}</dd></div>`
+					)
+					.join("");
+
+				const itemsHtml = items.length
+					? items
+							.map((item) => {
+								const p = item.product && typeof item.product === "object" ? item.product : {};
+								const qty = __num(item.quantity) || 1;
+								const line = isFinite(Number(item.totalPrice))
+									? __num(item.totalPrice)
+									: __num(p.price) * qty;
+								const img = p.picture
+									? `<img class="dlv-item-img" src="${__esc(p.picture)}" alt="" loading="lazy" />`
+									: `<div class="dlv-item-img"><i data-lucide=package></i></div>`;
+								const sub = [p.weight, `${__money(line / qty)} each`]
+									.filter(Boolean)
+									.map(__esc)
+									.join(" · ");
+								return `
+									<div class="dlv-item">
+										${img}
+										<div class="dlv-item-info">
+											<div class="dlv-item-name">${__esc(p.name || "Product unavailable")}</div>
+											<div class="dlv-item-sub">${sub}</div>
+										</div>
+										<div class="dlv-item-qty">× ${qty}</div>
+										<div class="dlv-item-total">${__money(line)}</div>
+									</div>`;
+							})
+							.join("")
+					: '<div class="dlv-item"><div class="dlv-item-info dlv-item-sub">No items on this order.</div></div>';
+
+				const totalRows = [
+					["Subtotal", o.subtotal, true],
+					["Delivery", o.delivery, true],
+					["Fees", o.fees, __num(o.fees) > 0],
+					["Discount", -__num(o.discount), __num(o.discount) > 0],
+				]
+					.filter(([, , show]) => show)
+					.map(
+						([label, value]) =>
+							`<div class="dlv-total-row"><span>${label}</span><span>${
+								__num(value) < 0 ? "−" + __money(-__num(value)) : __money(value)
+							}</span></div>`
+					)
+					.join("");
+
+				let collect = "";
+				if (o.paymentStatus === "paid") {
+					collect = `<div class="dlv-collect paid"><i data-lucide=circle-check></i> Already paid — nothing to collect.</div>`;
+				} else if (!o.paymentMethod || o.paymentMethod === "cash") {
+					collect = `<div class="dlv-collect"><i data-lucide=banknote></i> Collect ${__money(
+						o.total
+					)} in cash on delivery.</div>`;
+				}
+
+				document.getElementById("order-details-body").innerHTML = `
+					<section class="dlv-section">
+						<h4 class="dlv-section-title">Summary</h4>
+						<dl class="dlv-kv">${facts}</dl>
+					</section>
+					<section class="dlv-section">
+						<h4 class="dlv-section-title">Client</h4>
+						<div class="dlv-client-strip">
+							<div class="dlv-avatar sm">${__esc(__initials(customer.name))}</div>
+							<div class="dlv-client-strip-info">
+								<div class="dlv-item-name">${__esc(customer.name || "Customer")}</div>
+								<div class="dlv-item-sub">${__esc(
+									[customer.phoneNumber, place.text].filter(Boolean).join(" · ") || "No contact details"
+								)}</div>
+							</div>
+							<button type="button" class="btn btn-secondary btn-sm" onclick="openClientDetails('${id}')"><i data-lucide=user-round></i> View</button>
+						</div>
+					</section>
+					<section class="dlv-section">
+						<h4 class="dlv-section-title">Items (${items.length})</h4>
+						<div class="dlv-items">${itemsHtml}</div>
+						<div class="dlv-totals">
+							${totalRows}
+							<div class="dlv-total-row grand"><span>Total</span><span>${__money(o.total)}</span></div>
+						</div>
+						${collect}
+					</section>
+					${
+						o.notes && String(o.notes).trim()
+							? `<section class="dlv-section">
+									<h4 class="dlv-section-title">Notes from the client</h4>
+									<div class="dlv-note">${__esc(o.notes)}</div>
+								</section>`
+							: ""
+					}`;
+
+				document.getElementById("order-details-footer").innerHTML = `
+					<button type="button" class="btn btn-secondary" onclick="closeDeliveryModal('order-details-modal')">Close</button>
+					<button type="button" class="btn btn-secondary" onclick="openClientDetails('${id}')"><i data-lucide=user-round></i> Client details</button>
+					${
+						o.status === "OnTheWay"
+							? `<button type="button" class="btn btn-primary" onclick="markDelivered('${id}')"><i data-lucide=check></i> Mark delivered</button>`
+							: ""
+					}`;
+
+				__openDeliveryModal("order-details-modal");
+			}
+
+			function openClientDetails(orderId) {
+				const o = __deliveryOrders[orderId];
+				if (!o) {
+					showMessage("This order is no longer assigned to you.", "error");
+					return;
+				}
+				const id = __esc(o._id);
+				const customer = o.customer || {};
+				const place = __customerPlace(o);
+				const links = __mapLinks(place);
+				const phone = String(customer.phoneNumber || "").trim();
+				const email = String(customer.email || "").trim();
+				const wa = __whatsappNumber(phone);
+
+				document.getElementById("client-details-avatar").textContent = __initials(customer.name);
+				document.getElementById("client-details-title").textContent =
+					customer.name || "Client details";
+				document.getElementById("client-details-sub").textContent = `Order ${
+					o.orderNumber || ""
+				}`.trim();
+
+				const contact = [
+					phone
+						? `<a class="btn btn-secondary" href="tel:${__esc(phone.replace(/[^\d+]/g, ""))}"><i data-lucide=phone></i> Call</a>`
+						: "",
+					wa
+						? `<a class="btn btn-secondary" href="https://wa.me/${wa}" target="_blank" rel="noopener"><i data-lucide=message-circle></i> WhatsApp</a>`
+						: "",
+					email
+						? `<a class="btn btn-secondary" href="mailto:${__esc(email)}"><i data-lucide=mail></i> Email</a>`
+						: "",
+				]
+					.filter(Boolean)
+					.join("");
+
+				const facts = [
+					["Phone", phone || "Not provided"],
+					["Email", email || "Not provided"],
+					["City", place.city || "Not provided"],
+					["Street / address", place.street || "Not provided"],
+					[
+						"Map pin",
+						place.hasPin
+							? `${place.lat.toFixed(5)}, ${place.lng.toFixed(5)}`
+							: "No exact pin on this order",
+					],
+				]
+					.map(
+						([label, value]) =>
+							`<div><dt>${__esc(label)}</dt><dd>${__esc(value)}</dd></div>`
+					)
+					.join("");
+
+				const map = links
+					? `
+						<div class="dlv-map">
+							<iframe src="${__esc(links.embed)}" title="Client location" loading="lazy" referrerpolicy="no-referrer-when-downgrade" tabindex="-1"></iframe>
+							<a class="dlv-map-link" href="${__esc(links.open)}" target="_blank" rel="noopener" aria-label="Open the client's location in Google Maps">
+								<span class="dlv-map-chip"><i data-lucide=external-link></i> Open in Google Maps</span>
+							</a>
+						</div>
+						<div class="dlv-map-note">${
+							place.hasPin
+								? "Exact pin the client set in the app. Tap the map to open it in Google Maps."
+								: "Approximate — this order has no map pin, so the map is based on the typed address."
+						}</div>
+						<div class="dlv-map-actions">
+							<a class="btn btn-primary" href="${__esc(links.directions)}" target="_blank" rel="noopener"><i data-lucide=navigation></i> Directions</a>
+							<a class="btn btn-secondary" href="${__esc(links.open)}" target="_blank" rel="noopener"><i data-lucide=map></i> Open in Google Maps</a>
+						</div>`
+					: `
+						<div class="dlv-map">
+							<div class="dlv-map-empty"><i data-lucide=map-pin-off></i> No location on file for this client.</div>
+						</div>`;
+
+				document.getElementById("client-details-body").innerHTML = `
+					${contact ? `<section class="dlv-section"><div class="dlv-contact">${contact}</div></section>` : ""}
+					<section class="dlv-section">
+						<h4 class="dlv-section-title">Contact &amp; address</h4>
+						<dl class="dlv-kv">${facts}</dl>
+					</section>
+					<section class="dlv-section">
+						<h4 class="dlv-section-title">Location</h4>
+						${map}
+					</section>`;
+
+				document.getElementById("client-details-footer").innerHTML = `
+					<button type="button" class="btn btn-secondary" onclick="closeDeliveryModal('client-details-modal')">Close</button>
+					<button type="button" class="btn btn-secondary" onclick="openOrderDetails('${id}')"><i data-lucide=receipt></i> Order details</button>`;
+
+				__openDeliveryModal("client-details-modal");
 			}
 
 			async function markDelivered(orderId) {
@@ -564,6 +941,8 @@
 					const result = await res.json().catch(() => ({}));
 					if (res.ok) {
 						showMessage("Order marked as delivered.", "success");
+						closeDeliveryModal("order-details-modal");
+						closeDeliveryModal("client-details-modal");
 						loadMyDeliveries();
 					} else {
 						showMessage(formatApiError(result, "Failed to update order."), "error");
@@ -619,9 +998,17 @@
 			document.addEventListener("click", (e) => {
 				const modal = document.getElementById("settings-modal");
 				if (modal && e.target === modal) closeSettingsModal();
+				// Same for the order / client detail dialogs.
+				if (e.target && e.target.classList && e.target.classList.contains("dlv-modal")) {
+					closeDeliveryModal(e.target.id);
+				}
 			});
 			document.addEventListener("keydown", (e) => {
-				if (e.key === "Escape") closeSettingsModal();
+				if (e.key !== "Escape") return;
+				closeSettingsModal();
+				document
+					.querySelectorAll(".dlv-modal.show")
+					.forEach((m) => closeDeliveryModal(m.id));
 			});
 
 			// Load profile when page loads

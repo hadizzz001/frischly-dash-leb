@@ -10,7 +10,7 @@
 			<link rel="stylesheet" href="css/profile-extracted.css" />
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-		<link rel="stylesheet" href="css/admin.css?v=1" />
+		<link rel="stylesheet" href="css/admin.css?v=2" />
 		<script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
 		<script src="js/icons.js?v=1"></script>
 </head>
@@ -104,8 +104,10 @@
 					<div class="profile-section" id="my-deliveries-section" style="display: none">
 						<h3><i data-lucide=package></i> My Deliveries</h3>
 						<p class="prx-7">
-							Orders assigned to you. Tap
-							<strong>Mark Delivered</strong> once you drop one off.
+							Orders assigned to you. Open <strong>Order details</strong> for
+							the items and amount to collect, <strong>Client details</strong>
+							for the customer's contact and map, and tap
+							<strong>Mark delivered</strong> once you drop one off.
 						</p>
 						<div class="prx-8">
 							<button
@@ -117,26 +119,8 @@
 								<i data-lucide=refresh-cw></i> Refresh
 							</button>
 						</div>
-						<div class="prx-10">
-							<table class="prx-11">
-								<thead>
-									<tr class="prx-12">
-										<th class="prx-13">Order #</th>
-										<th class="prx-13">Customer</th>
-										<th class="prx-13">Items</th>
-										<th class="prx-13">Total</th>
-										<th class="prx-13">Status</th>
-										<th class="prx-13">Action</th>
-									</tr>
-								</thead>
-								<tbody id="deliveries-table-body">
-									<tr>
-										<td colspan="6" class="prx-14">
-											Loading…
-										</td>
-									</tr>
-								</tbody>
-							</table>
+						<div id="deliveries-list" class="dlv-list">
+							<div class="dlv-empty">Loading…</div>
 						</div>
 					</div>
 
@@ -207,10 +191,71 @@
 			</div>
 		</div>
 
+		<!--
+		  Driver-only detail dialogs, opened from each delivery card. Filled by
+		  page-profile.js from the order already loaded for the list.
+		-->
+		<div
+			id="order-details-modal"
+			class="modal dlv-modal"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="order-details-title"
+		>
+			<div class="modal-content">
+				<div class="modal-header">
+					<div class="dlv-modal-title">
+						<h2 id="order-details-title">Order details</h2>
+						<div class="dlv-modal-sub" id="order-details-sub"></div>
+					</div>
+					<button
+						type="button"
+						class="modal-close"
+						onclick="closeDeliveryModal('order-details-modal')"
+						aria-label="Close"
+					>
+						&times;
+					</button>
+				</div>
+				<div class="modal-body" id="order-details-body"></div>
+				<div class="modal-footer" id="order-details-footer"></div>
+			</div>
+		</div>
+
+		<div
+			id="client-details-modal"
+			class="modal dlv-modal"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="client-details-title"
+		>
+			<div class="modal-content">
+				<div class="modal-header">
+					<div class="dlv-client-head">
+						<div class="dlv-avatar" id="client-details-avatar"></div>
+						<div class="dlv-modal-title">
+							<h2 id="client-details-title">Client details</h2>
+							<div class="dlv-modal-sub" id="client-details-sub"></div>
+						</div>
+					</div>
+					<button
+						type="button"
+						class="modal-close"
+						onclick="closeDeliveryModal('client-details-modal')"
+						aria-label="Close"
+					>
+						&times;
+					</button>
+				</div>
+				<div class="modal-body" id="client-details-body"></div>
+				<div class="modal-footer" id="client-details-footer"></div>
+			</div>
+		</div>
+
 		<!-- Global Config -->
 		<script src="js/config.js"></script>
 		<script src="js/lebanese-cities.js"></script>
 
-		<script src="js/page-profile.js"></script>
+		<script src="js/page-profile.js?v=2"></script>
 	</body>
 </html>

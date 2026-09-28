@@ -266,31 +266,24 @@
 				}
 			}
 
-			/* ===== Gold (Markets Management) theme for driver deliveries ===== */
+			/* Phones: the 40px desktop gutters left the driver's delivery cards
+			   (and every profile row) squeezed into a narrow strip. */
+			@media (max-width: 520px) {
+				body {
+					padding: 10px;
+				}
+				.header {
+					padding: 24px 16px;
+				}
+				.content {
+					padding: 20px 14px;
+				}
+			}
+
+			/* ===== Gold (Markets Management) accent for profile section titles ===== */
 			.profile-section h3 {
 				border-bottom-color: #f59e0b !important;
 			}
-			#my-deliveries-section table {
-				border: 2px solid #f59e0b;
-				border-radius: 10px;
-				overflow: hidden;
-			}
-			#my-deliveries-section thead tr {
-				background: #f59e0b !important;
-			}
-			#my-deliveries-section thead th {
-				background: #f59e0b !important;
-				color: #000000 !important;
-				border-bottom: 2px solid #000000 !important;
-				font-weight: 700;
-			}
-			#my-deliveries-section tbody tr:nth-child(even) td {
-				background: #fffaf0;
-			}
-			#my-deliveries-section tbody tr:hover td {
-				background: rgba(245, 158, 11, 0.18);
-			}
-
 .prx-1 { display: none; }
 .prx-2 { display:none; }
 .prx-3 { color:#888; }

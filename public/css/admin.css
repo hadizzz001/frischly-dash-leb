@@ -1137,6 +1137,194 @@ body.auth-page > .auth-card,
 .price-tag { font-weight: 600; color: var(--text); }
 .star { color: var(--accent); }
 
+/* --------------------------------------------------------------------------
+   Driver deliveries (profile.html): delivery cards + order / client dialogs
+   -------------------------------------------------------------------------- */
+.status-badge.ready-for-pickup { background: var(--info-soft) !important; color: #1e40af !important; }
+
+.dlv-list { display: flex; flex-direction: column; gap: 12px; }
+.dlv-empty {
+	padding: 28px 16px;
+	text-align: center;
+	color: var(--muted);
+	border: 1px dashed var(--border-strong);
+	border-radius: var(--r);
+	background: var(--bg);
+}
+.dlv-empty.error { color: var(--danger); border-color: #fecaca; }
+.dlv-card {
+	background: var(--bg);
+	border: 1px solid var(--border);
+	border-radius: var(--r);
+	padding: 14px 16px;
+	box-shadow: var(--shadow-sm);
+}
+/* The deliveries list is the driver's whole screen: no frame around the cards. */
+#my-deliveries-section { border: 0 !important; background: transparent !important; }
+.dlv-card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.dlv-order-no { font-size: 14px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dlv-card-customer { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-weight: 500; color: var(--text); }
+.dlv-card-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; font-size: 13px; color: var(--muted); }
+.dlv-card-meta span { display: inline-flex; align-items: center; gap: 5px; }
+.dlv-card-customer svg.lucide, .dlv-card-meta svg.lucide { width: 14px; height: 14px; flex: 0 0 auto; }
+.dlv-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.dlv-actions .btn { margin: 0; flex: 1 1 auto; }
+
+/* Dialogs */
+.dlv-modal .modal-content { max-width: 640px; width: calc(100% - 32px); }
+.dlv-modal .modal-header { align-items: flex-start; }
+.dlv-modal .btn { margin: 0; }
+.dlv-modal-title { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.dlv-modal-title h2 { overflow-wrap: anywhere; }
+.dlv-modal-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); }
+.dlv-section + .dlv-section { margin-top: 20px; }
+.dlv-section-title {
+	margin: 0 0 8px;
+	font-size: 11.5px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--muted);
+}
+.dlv-kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; margin: 0; }
+.dlv-kv > div { min-width: 0; }
+.dlv-kv dt { font-size: 12px; color: var(--muted); }
+.dlv-kv dd { margin: 2px 0 0; font-weight: 500; color: var(--text); overflow-wrap: anywhere; }
+
+.dlv-items { border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+.dlv-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; }
+.dlv-item + .dlv-item { border-top: 1px solid var(--border); }
+.dlv-item-img {
+	flex: 0 0 44px;
+	width: 44px;
+	height: 44px;
+	border-radius: var(--r-sm);
+	background: var(--surface);
+	object-fit: contain;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--disabled);
+}
+.dlv-item-info { flex: 1; min-width: 0; }
+.dlv-item-name { font-weight: 500; color: var(--text); overflow-wrap: anywhere; }
+.dlv-item-sub { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.dlv-item-qty { font-weight: 600; color: var(--text-2); white-space: nowrap; }
+.dlv-item-total { min-width: 64px; text-align: right; font-weight: 600; color: var(--text); white-space: nowrap; }
+.dlv-totals { margin-top: 12px; }
+.dlv-total-row { display: flex; justify-content: space-between; padding: 3px 0; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.dlv-total-row.grand { margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 15px; font-weight: 700; color: var(--text); }
+.dlv-collect {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-top: 12px;
+	padding: 12px 14px;
+	border-radius: var(--r);
+	background: var(--warning-soft);
+	color: #92400e;
+	font-weight: 600;
+}
+.dlv-collect.paid { background: var(--success-soft); color: #166534; }
+.dlv-collect svg.lucide { width: 18px; height: 18px; flex: 0 0 auto; }
+.dlv-note {
+	padding: 12px 14px;
+	border: 1px solid var(--border);
+	border-radius: var(--r);
+	background: var(--surface);
+	color: var(--text);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+/* Client */
+.dlv-client-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.dlv-avatar {
+	flex: 0 0 44px;
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	background: var(--accent-soft);
+	color: var(--accent-dark);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 16px;
+	font-weight: 700;
+}
+.dlv-avatar.sm { flex-basis: 36px; width: 36px; height: 36px; font-size: 13px; }
+.dlv-client-strip {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 12px;
+	border: 1px solid var(--border);
+	border-radius: var(--r);
+}
+.dlv-client-strip-info { flex: 1; min-width: 0; }
+.dlv-contact { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.dlv-contact .btn { width: 100%; }
+.dlv-map {
+	position: relative;
+	height: 280px;
+	border: 1px solid var(--border);
+	border-radius: var(--r);
+	overflow: hidden;
+	background: var(--surface);
+}
+/* The whole preview is one link to Google Maps: the iframe itself takes no
+   input, so a tap never gets swallowed by map panning. */
+.dlv-map iframe { display: block; width: 100%; height: 100%; border: 0; pointer-events: none; }
+.dlv-map-link { position: absolute; inset: 0; display: block; cursor: pointer; }
+.dlv-map-chip {
+	position: absolute;
+	right: 10px;
+	bottom: 10px;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 7px 12px;
+	border: 1px solid var(--border-strong);
+	border-radius: 999px;
+	background: var(--bg);
+	box-shadow: var(--shadow);
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--text);
+	transition: background 0.12s ease, border-color 0.12s ease;
+}
+.dlv-map-chip svg.lucide { width: 14px; height: 14px; }
+.dlv-map-link:hover .dlv-map-chip, .dlv-map-link:focus-visible .dlv-map-chip {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: var(--on-accent);
+}
+.dlv-map-link:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.dlv-map-empty {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 16px;
+	text-align: center;
+	color: var(--muted);
+}
+.dlv-map-note { margin-top: 8px; font-size: 12px; color: var(--muted); }
+.dlv-map-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.dlv-map-actions .btn { flex: 1 1 160px; }
+
+@media (max-width: 768px) {
+	.dlv-modal .modal-footer { flex-wrap: wrap; }
+	.dlv-modal .modal-footer .btn { flex: 1 1 140px; }
+}
+@media (max-width: 480px) {
+	.dlv-kv { grid-template-columns: 1fr; }
+	.dlv-map { height: 240px; }
+	.dlv-item { gap: 10px; }
+}
+
 /* Print: hide chrome */
 @media print {
 	.sidebar, .menu-toggle, .section-actions, .toolbar, .btn, .toast { display: none !important; }
