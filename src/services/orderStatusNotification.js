@@ -1,9 +1,8 @@
-const { Expo } = require("expo-server-sdk");
-const admin = require("firebase-admin");
 const User = require("../models/User");
 const Rider = require("../models/Rider");
 const Market = require("../models/Market");
-const sendExpoNotification = require("./expoNotification");
+const NotificationService = require("./notifications");
+const { pushTokensOf } = require("./pushTokens");
 
 // Display name of the main (non-market) store — orders with no `market`.
 const MAIN_STORE_NAME = "FreshlyLB";
@@ -79,12 +78,12 @@ async function findCustomer(order) {
 	const userId =
 		order?.customer?._id || order?.customer?.id || idOf(order?.createdBy);
 	if (userId) {
-		const user = await User.findById(userId).select("name fcmToken");
+		const user = await User.findById(userId).select("name fcmToken pushTokens");
 		if (user) return user;
 	}
 	const email = order?.customer?.email;
 	if (!email) return null;
-	return User.findOne({ email: String(email).toLowerCase() }).select("name fcmToken");
+	return User.findOne({ email: String(email).toLowerCase() }).select("name fcmToken pushTokens");
 }
 
 // Name lookups are decoration: if either fails the push still goes out with
@@ -136,7 +135,7 @@ async function notifyCustomerOrderStatus(order, status) {
 
 		const user = await findCustomer(order);
 		if (!user) return { success: false, reason: "no_customer" };
-		if (!user.fcmToken) return { success: false, reason: "no_token" };
+		if (pushTokensOf(user).length === 0) return { success: false, reason: "no_token" };
 
 		const [store, driver] = await Promise.all([
 			storeName(order),
@@ -154,43 +153,10 @@ async function notifyCustomerOrderStatus(order, status) {
 			route: `/track/${order._id}`,
 		};
 
-		// The mobile app registers an Expo push token (ExponentPushToken[...]).
-		// Use Expo's push service for those; fall back to raw FCM for any
-		// genuine FCM device tokens.
-		if (Expo.isExpoPushToken(user.fcmToken)) {
-			const sentToken = user.fcmToken;
-			return await sendExpoNotification(sentToken, title, body, data, {
-				// A token Expo no longer knows (app reinstalled, device wiped)
-				// will never work again: drop it so the app re-registers on
-				// its next launch instead of every push failing quietly.
-				onDeliveryError: (code) => {
-					if (code !== "DeviceNotRegistered") return;
-					User.updateOne(
-						{ _id: user._id, fcmToken: sentToken },
-						{ $set: { fcmToken: null } },
-					).catch((e) =>
-						console.error("❌ Could not clear stale push token:", e.message),
-					);
-				},
-			});
-		}
-
-		try {
-			const response = await admin.messaging().send({
-				token: user.fcmToken,
-				notification: { title, body },
-				data: Object.fromEntries(
-					Object.entries(data).map(([k, v]) => [k, String(v)]),
-				),
-			});
-			return { success: true, messageId: response };
-		} catch (fcmErr) {
-			console.error(
-				"❌ Error sending order-status FCM notification:",
-				fcmErr.message,
-			);
-			return { success: false, error: fcmErr.message };
-		}
+		// Every device the shopper is signed in on (iPhone, Android phone, …),
+		// through Expo for the app's ExponentPushToken[...] and Firebase for any
+		// raw FCM token. Dead tokens are dropped from the account on the way.
+		return await NotificationService.deliver([user], title, body, data, "customer");
 	} catch (error) {
 		console.error("❌ notifyCustomerOrderStatus failed:", error.message);
 		return { success: false, error: error.message };

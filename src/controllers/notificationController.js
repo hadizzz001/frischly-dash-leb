@@ -1,4 +1,5 @@
 const NotificationService = require("../services/notifications");
+const { withPushToken } = require("../services/pushTokens");
 const User = require("../models/User");
 const NotificationCampaign = require("../models/NotificationCampaign");
 const { sendSuccess, sendError, sendResponse, sendServerError } = require("../utils/apiResponse");
@@ -18,7 +19,7 @@ exports.updateFcmToken = async (req, res) => {
 			}`
 		);
 
-		if (!fcmToken) {
+		if (!fcmToken || typeof fcmToken !== "string") {
 			console.log(`❌ FCM Token Update Failed - No token provided`);
 			return sendError(res, 400, "FCM token is required");
 		}
@@ -56,13 +57,16 @@ exports.updateFcmToken = async (req, res) => {
 };
 
 /**
- * Remove user's FCM token
+ * Remove user's FCM token. Current apps send the signing-out device's token in
+ * the body so the account's other devices stay subscribed; without one (older
+ * builds) every device of the account is removed.
  */
 exports.removeFcmToken = async (req, res) => {
 	try {
 		const userId = req.user.id;
+		const fcmToken = typeof req.body?.fcmToken === "string" ? req.body.fcmToken : undefined;
 
-		await NotificationService.removeUserToken(userId);
+		await NotificationService.removeUserToken(userId, fcmToken);
 
 		const ras2 = {};
 		sendResponse(res, 200, true, "FCM token removed successfully", ras2);
@@ -195,13 +199,10 @@ exports.sendToRole = async (req, res) => {
 exports.getStats = async (req, res) => {
 	try {
 		const totalUsers = await User.countDocuments({ isActive: true });
-		const usersWithTokens = await User.countDocuments({
-			fcmToken: { $ne: null },
-			isActive: true,
-		});
+		const usersWithTokens = await User.countDocuments(withPushToken({ isActive: true }));
 
 		const roleStats = await User.aggregate([
-			{ $match: { isActive: true, fcmToken: { $ne: null } } },
+			{ $match: withPushToken({ isActive: true }) },
 			{ $group: { _id: "$role", count: { $sum: 1 } } },
 		]);
 

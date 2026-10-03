@@ -1,42 +1,128 @@
 const admin = require("firebase-admin");
-const User = require("../models/User");
 const { Expo } = require("expo-server-sdk");
-const expo = new Expo();
+const User = require("../models/User");
+const { sendExpoPushes } = require("./expoNotification");
+const {
+	withPushToken,
+	pushTokensOf,
+	addPushToken,
+	removePushToken,
+	clearPushTokens,
+	dropPushToken,
+} = require("./pushTokens");
+
+// FCM accepts at most 500 messages per sendEach call.
+const FCM_BATCH_SIZE = 500;
+
+// FCM rejects data payloads with non-string values.
+const stringValues = (data) =>
+	Object.fromEntries(
+		Object.entries(data).map(([k, v]) => [k, typeof v === "string" ? v : JSON.stringify(v)]),
+	);
+
+// A token Expo no longer knows (app uninstalled, phone wiped) will never work
+// again: forget it so the account only keeps devices that can still receive.
+function forgetDeadToken(token, code) {
+	if (code !== "DeviceNotRegistered") return;
+	dropPushToken(token).catch((e) => console.error("❌ Could not clear stale push token:", e.message));
+}
 
 class NotificationService {
 	/**
-	 * Send notification to a single user
+	 * Push to every device of every given user. Expo push tokens (both mobile
+	 * apps register ExponentPushToken[...]) go through Expo; anything else is a
+	 * raw FCM registration token and goes through Firebase.
+	 *
+	 * Never throws — each channel reports its own outcome.
+	 *
+	 * @param {Array<object>} users - User documents (need _id, fcmToken, pushTokens)
+	 * @param {string} title
+	 * @param {string} body
+	 * @param {object} [data] - Payload for the app. `channelId` is lifted out and
+	 *   used as the Android notification channel (the scanner app's ringing
+	 *   "new orders" channel); every other key is delivered to the app.
+	 * @param {string} [audience] - Who these users are, for the log line.
+	 */
+	async deliver(users, title, body, data = {}, audience = "users") {
+		const { channelId, ...payload } = data || {};
+		const expoMessages = [];
+		const fcmMessages = [];
+		for (const user of users) {
+			const userData = { ...payload, userId: user._id.toString() };
+			for (const token of pushTokensOf(user)) {
+				if (Expo.isExpoPushToken(token)) {
+					expoMessages.push({ to: token, title, body, data: userData, ...(channelId ? { channelId } : {}) });
+				} else {
+					fcmMessages.push({ token, notification: { title, body }, data: stringValues(userData) });
+				}
+			}
+		}
+
+		const [firebase, expo] = await Promise.all([
+			this.sendFcmMessages(fcmMessages),
+			this.sendExpoMessages(expoMessages),
+		]);
+
+		console.log(
+			`📤 Notified ${users.length} ${audience} on ${fcmMessages.length + expoMessages.length} devices ` +
+				`(Firebase ${firebase.totalSent}/${fcmMessages.length}, Expo ${expo.totalSent}/${expoMessages.length} accepted)`,
+		);
+
+		return {
+			success: true,
+			totalSent: users.length,
+			devices: fcmMessages.length + expoMessages.length,
+			firebase,
+			expo,
+			responses: [...firebase.responses, ...expo.results],
+			tickets: expo.tickets,
+		};
+	}
+
+	async sendFcmMessages(messages) {
+		if (messages.length === 0) return { success: true, totalSent: 0, responses: [] };
+		try {
+			const responses = [];
+			for (let i = 0; i < messages.length; i += FCM_BATCH_SIZE) {
+				const response = await admin.messaging().sendEach(messages.slice(i, i + FCM_BATCH_SIZE));
+				responses.push(...response.responses);
+			}
+			return { success: true, totalSent: responses.filter((r) => r.success).length, responses };
+		} catch (error) {
+			console.error("❌ Firebase: Failed to send notifications:", error.message);
+			return {
+				success: false,
+				error: error.message,
+				totalSent: 0,
+				responses: messages.map(() => ({ success: false, error: error.message })),
+			};
+		}
+	}
+
+	async sendExpoMessages(messages) {
+		if (messages.length === 0) return { success: true, totalSent: 0, tickets: [], results: [] };
+		const results = await sendExpoPushes(messages, { onDeliveryError: forgetDeadToken });
+		return {
+			success: results.some((r) => r.success),
+			totalSent: results.filter((r) => r.success).length,
+			tickets: results.map((r) => r.ticket).filter(Boolean),
+			results,
+		};
+	}
+
+	/**
+	 * Send notification to a single user (every device they're signed in on)
 	 * @param {string} userId - User ID
 	 * @param {string} title - Notification title
 	 * @param {string} body - Notification body
 	 * @param {object} data - Additional data payload
 	 */
 	async sendToUser(userId, title, body, data = {}) {
-		try {
-			const user = await User.findById(userId);
-			if (!user || !user.fcmToken) {
-				throw new Error("User not found or FCM token not available");
-			}
-
-			const message = {
-				token: user.fcmToken,
-				notification: {
-					title,
-					body,
-				},
-				data: {
-					...data,
-					userId: userId.toString(),
-				},
-			};
-
-			const response = await admin.messaging().send(message);
-			console.log("✅ Notification sent successfully:", response);
-			return { success: true, messageId: response };
-		} catch (error) {
-			console.error("❌ Error sending notification to user:", error);
-			throw error;
+		const user = await User.findById(userId);
+		if (!user || pushTokensOf(user).length === 0) {
+			throw new Error("User not found or FCM token not available");
 		}
+		return this.deliver([user], title, body, data, "user");
 	}
 
 	/**
@@ -47,196 +133,25 @@ class NotificationService {
 	 * @param {object} data - Additional data payload
 	 */
 	async sendToUsers(userIds, title, body, data = {}) {
-		try {
-			const users = await User.find({
-				_id: { $in: userIds },
-				fcmToken: { $ne: null },
-			});
-			if (users.length === 0) {
-				throw new Error("No users found with FCM tokens");
-			}
-
-			// Expo apps (the scannn warehouse/Zebra scanner app registers an
-			// ExponentPushToken[...] in `fcmToken`, exactly like the customer
-			// app) can't be reached through admin.messaging() — route those
-			// through Expo Push instead, mirroring sendToRole() below. Everything
-			// else is a raw FCM registration token and goes through Firebase.
-			const expoUsers = users.filter((user) => Expo.isExpoPushToken(user.fcmToken));
-			const fcmUsers = users.filter((user) => !Expo.isExpoPushToken(user.fcmToken));
-
-			const responses = [];
-			if (fcmUsers.length > 0) {
-				const messages = fcmUsers.map((user) => ({
-					token: user.fcmToken,
-					notification: {
-						title,
-						body,
-					},
-					data: {
-						...data,
-						userId: user._id.toString(),
-					},
-				}));
-				const response = await admin.messaging().sendEach(messages);
-				responses.push(...response.responses);
-			}
-
-			let tickets = [];
-			if (expoUsers.length > 0) {
-				// `channelId` lets the receiving app post the notification on its
-				// own high-importance channel (ringtone, vibration, LED) — the
-				// scanner app uses it for its "new order" alert.
-				const { channelId, ...payload } = data;
-				const expoMessages = expoUsers.map((user) => ({
-					to: user.fcmToken,
-					sound: "default",
-					priority: "high",
-					...(channelId ? { channelId } : {}),
-					title,
-					body,
-					data: { ...payload, userId: user._id.toString() },
-				}));
-				for (const chunk of expo.chunkPushNotifications(expoMessages)) {
-					const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-					tickets.push(...ticketChunk);
-				}
-			}
-
-			console.log(
-				`✅ Notifications sent to ${users.length} users (${fcmUsers.length} via Firebase, ${expoUsers.length} via Expo)`
-			);
-			return { success: true, responses, tickets };
-		} catch (error) {
-			console.error("❌ Error sending notifications to users:", error);
-			throw error;
+		const users = await User.find(withPushToken({ _id: { $in: userIds } }));
+		if (users.length === 0) {
+			throw new Error("No users found with FCM tokens");
 		}
+		return this.deliver(users, title, body, data, "users");
 	}
 
 	/**
-	 * Send notification to all users with FCM tokens
+	 * Send notification to all active customers with a device registered
 	 * @param {string} title - Notification title
 	 * @param {string} body - Notification body
 	 * @param {object} data - Additional data payload
 	 */
 	async sendToAllUsers(title, body, data = {}) {
-		try {
-			const users = await User.find({
-				fcmToken: { $ne: null },
-				isActive: true,
-				role: "customer",
-			});
-			if (users.length === 0) {
-				throw new Error("No active customers found with FCM tokens");
-			}
-
-			console.log(
-				`📤 Sending notifications to ${users.length} customers via Firebase & Expo...`
-			);
-
-			// Send through both Firebase and Expo simultaneously
-			const [firebaseResult, expoResult] = await Promise.allSettled([
-				// Firebase FCM
-				(async () => {
-					try {
-						const messages = users.map((user) => ({
-							token: user.fcmToken,
-							notification: { title, body },
-							data: { ...data, userId: user._id.toString() },
-						}));
-
-						// Send in batches of 500 (FCM limit)
-						const batchSize = 500;
-						const results = [];
-
-						for (let i = 0; i < messages.length; i += batchSize) {
-							const batch = messages.slice(i, i + batchSize);
-							const response = await admin.messaging().sendEach(batch);
-							results.push(...response.responses);
-						}
-
-						const successCount = results.filter((r) => r.success).length;
-						console.log(
-							`✅ Firebase: Sent to ${successCount}/${users.length} customers`
-						);
-						return {
-							success: true,
-							totalSent: successCount,
-							responses: results,
-						};
-					} catch (error) {
-						console.error(
-							"❌ Firebase: Failed to send notifications:",
-							error.message
-						);
-						return { success: false, error: error.message };
-					}
-				})(),
-
-				// Expo Push Notifications
-				(async () => {
-					try {
-						const expoMessages = users
-							.filter((user) => Expo.isExpoPushToken(user.fcmToken))
-							.map((user) => ({
-								to: user.fcmToken,
-								sound: "default",
-								title,
-								body,
-								data: { ...data, userId: user._id.toString() },
-							}));
-
-						if (expoMessages.length === 0) {
-							console.log("⚠️  Expo: No valid Expo push tokens found");
-							return { success: true, totalSent: 0, tickets: [] };
-						}
-
-						// Send in chunks (Expo recommends batches of 100)
-						const chunks = expo.chunkPushNotifications(expoMessages);
-						const tickets = [];
-
-						for (const chunk of chunks) {
-							const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-							tickets.push(...ticketChunk);
-						}
-
-						console.log(`✅ Expo: Sent to ${expoMessages.length} customers`);
-						return { success: true, totalSent: expoMessages.length, tickets };
-					} catch (error) {
-						console.error(
-							"❌ Expo: Failed to send notifications:",
-							error.message
-						);
-						return { success: false, error: error.message };
-					}
-				})(),
-			]);
-
-			// Combine results
-			const firebaseData =
-				firebaseResult.status === "fulfilled"
-					? firebaseResult.value
-					: { success: false };
-			const expoData =
-				expoResult.status === "fulfilled"
-					? expoResult.value
-					: { success: false };
-
-			console.log("\n📊 Notification Results:");
-			console.log(
-				`Firebase: ${firebaseData.success ? "✅ Success" : "❌ Failed"}`
-			);
-			console.log(`Expo: ${expoData.success ? "✅ Success" : "❌ Failed"}\n`);
-
-			return {
-				success: true,
-				totalSent: users.length,
-				firebase: firebaseData,
-				expo: expoData,
-			};
-		} catch (error) {
-			console.error("❌ Error sending notifications to all users:", error);
-			throw error;
+		const users = await User.find(withPushToken({ isActive: true, role: "customer" }));
+		if (users.length === 0) {
+			throw new Error("No active customers found with FCM tokens");
 		}
+		return this.deliver(users, title, body, data, "customers");
 	}
 
 	/**
@@ -247,118 +162,11 @@ class NotificationService {
 	 * @param {object} data - Additional data payload
 	 */
 	async sendToRole(role, title, body, data = {}) {
-		try {
-			const users = await User.find({
-				role,
-				fcmToken: { $ne: null },
-				isActive: true,
-			});
-			if (users.length === 0) {
-				throw new Error(`No active ${role}s found with FCM tokens`);
-			}
-
-			console.log(
-				`📤 Sending notifications to ${users.length} ${role}s via Firebase & Expo...`
-			);
-
-			// Send through both Firebase and Expo simultaneously
-			const [firebaseResult, expoResult] = await Promise.allSettled([
-				// Firebase FCM
-				(async () => {
-					try {
-						const messages = users.map((user) => ({
-							token: user.fcmToken,
-							notification: { title, body },
-							data: { ...data, userId: user._id.toString() },
-						}));
-
-						const response = await admin.messaging().sendEach(messages);
-						const successCount = response.responses.filter(
-							(r) => r.success
-						).length;
-						console.log(
-							`✅ Firebase: Sent to ${successCount}/${users.length} ${role}s`
-						);
-						return {
-							success: true,
-							totalSent: successCount,
-							responses: response.responses,
-						};
-					} catch (error) {
-						console.error(
-							`❌ Firebase: Failed to send to ${role}s:`,
-							error.message
-						);
-						return { success: false, error: error.message };
-					}
-				})(),
-
-				// Expo Push Notifications
-				(async () => {
-					try {
-						const expoMessages = users
-							.filter((user) => Expo.isExpoPushToken(user.fcmToken))
-							.map((user) => ({
-								to: user.fcmToken,
-								sound: "default",
-								title,
-								body,
-								data: { ...data, userId: user._id.toString() },
-							}));
-
-						if (expoMessages.length === 0) {
-							console.log(
-								`⚠️  Expo: No valid Expo push tokens found for ${role}s`
-							);
-							return { success: true, totalSent: 0, tickets: [] };
-						}
-
-						const chunks = expo.chunkPushNotifications(expoMessages);
-						const tickets = [];
-
-						for (const chunk of chunks) {
-							const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-							tickets.push(...ticketChunk);
-						}
-
-						console.log(`✅ Expo: Sent to ${expoMessages.length} ${role}s`);
-						return { success: true, totalSent: expoMessages.length, tickets };
-					} catch (error) {
-						console.error(
-							`❌ Expo: Failed to send to ${role}s:`,
-							error.message
-						);
-						return { success: false, error: error.message };
-					}
-				})(),
-			]);
-
-			// Combine results
-			const firebaseData =
-				firebaseResult.status === "fulfilled"
-					? firebaseResult.value
-					: { success: false };
-			const expoData =
-				expoResult.status === "fulfilled"
-					? expoResult.value
-					: { success: false };
-
-			console.log("\n📊 Notification Results:");
-			console.log(
-				`Firebase: ${firebaseData.success ? "✅ Success" : "❌ Failed"}`
-			);
-			console.log(`Expo: ${expoData.success ? "✅ Success" : "❌ Failed"}\n`);
-
-			return {
-				success: true,
-				totalSent: users.length,
-				firebase: firebaseData,
-				expo: expoData,
-			};
-		} catch (error) {
-			console.error(`❌ Error sending notifications to ${role}s:`, error);
-			throw error;
+		const users = await User.find(withPushToken({ role, isActive: true }));
+		if (users.length === 0) {
+			throw new Error(`No active ${role}s found with FCM tokens`);
 		}
+		return this.deliver(users, title, body, data, `${role}s`);
 	}
 
 	/**
@@ -374,147 +182,51 @@ class NotificationService {
 	 * @param {object} data - Additional data payload
 	 */
 	async sendToMarketCustomers(marketId, title, body, data = {}) {
-		try {
-			const Order = require("../models/Order");
-			const customerEmails = await Order.distinct("customer.email", {
-				market: marketId,
-			});
-			if (!customerEmails || customerEmails.length === 0) {
-				throw new Error("No customers found for this market");
-			}
-
-			const users = await User.find({
-				email: { $in: customerEmails },
-				role: "customer",
-				fcmToken: { $ne: null },
-				isActive: true,
-			});
-			if (users.length === 0) {
-				throw new Error("No active customers of this market have FCM tokens");
-			}
-
-			console.log(
-				`📤 Sending notifications to ${users.length} customers of market ${marketId} via Firebase & Expo...`
-			);
-
-			// Send through both Firebase and Expo simultaneously (mirrors
-			// sendToAllUsers above — kept in sync intentionally).
-			const [firebaseResult, expoResult] = await Promise.allSettled([
-				(async () => {
-					try {
-						const messages = users.map((user) => ({
-							token: user.fcmToken,
-							notification: { title, body },
-							data: { ...data, userId: user._id.toString() },
-						}));
-
-						const batchSize = 500;
-						const results = [];
-						for (let i = 0; i < messages.length; i += batchSize) {
-							const batch = messages.slice(i, i + batchSize);
-							const response = await admin.messaging().sendEach(batch);
-							results.push(...response.responses);
-						}
-
-						const successCount = results.filter((r) => r.success).length;
-						console.log(
-							`✅ Firebase: Sent to ${successCount}/${users.length} market customers`
-						);
-						return { success: true, totalSent: successCount, responses: results };
-					} catch (error) {
-						console.error(
-							"❌ Firebase: Failed to send to market customers:",
-							error.message
-						);
-						return { success: false, error: error.message };
-					}
-				})(),
-
-				(async () => {
-					try {
-						const expoMessages = users
-							.filter((user) => Expo.isExpoPushToken(user.fcmToken))
-							.map((user) => ({
-								to: user.fcmToken,
-								sound: "default",
-								title,
-								body,
-								data: { ...data, userId: user._id.toString() },
-							}));
-
-						if (expoMessages.length === 0) {
-							console.log("⚠️  Expo: No valid Expo push tokens found for market customers");
-							return { success: true, totalSent: 0, tickets: [] };
-						}
-
-						const chunks = expo.chunkPushNotifications(expoMessages);
-						const tickets = [];
-						for (const chunk of chunks) {
-							const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-							tickets.push(...ticketChunk);
-						}
-
-						console.log(`✅ Expo: Sent to ${expoMessages.length} market customers`);
-						return { success: true, totalSent: expoMessages.length, tickets };
-					} catch (error) {
-						console.error("❌ Expo: Failed to send to market customers:", error.message);
-						return { success: false, error: error.message };
-					}
-				})(),
-			]);
-
-			const firebaseData =
-				firebaseResult.status === "fulfilled" ? firebaseResult.value : { success: false };
-			const expoData =
-				expoResult.status === "fulfilled" ? expoResult.value : { success: false };
-
-			console.log("\n📊 Market Notification Results:");
-			console.log(`Firebase: ${firebaseData.success ? "✅ Success" : "❌ Failed"}`);
-			console.log(`Expo: ${expoData.success ? "✅ Success" : "❌ Failed"}\n`);
-
-			return {
-				success: true,
-				totalSent: users.length,
-				firebase: firebaseData,
-				expo: expoData,
-			};
-		} catch (error) {
-			console.error("❌ Error sending notifications to market customers:", error);
-			throw error;
+		const Order = require("../models/Order");
+		const customerEmails = await Order.distinct("customer.email", {
+			market: marketId,
+		});
+		if (!customerEmails || customerEmails.length === 0) {
+			throw new Error("No customers found for this market");
 		}
+
+		const users = await User.find(
+			withPushToken({ email: { $in: customerEmails }, role: "customer", isActive: true }),
+		);
+		if (users.length === 0) {
+			throw new Error("No active customers of this market have FCM tokens");
+		}
+		return this.deliver(users, title, body, data, `customers of market ${marketId}`);
 	}
 
 	/**
-	 * Update user's FCM token
+	 * Register a device's push token for a user (added to their devices)
 	 * @param {string} userId - User ID
-	 * @param {string} fcmToken - FCM token
+	 * @param {string} fcmToken - Expo push token or FCM token
 	 */
 	async updateUserToken(userId, fcmToken) {
-		try {
-			const user = await User.findByIdAndUpdate(userId, { fcmToken });
-			console.log(
-				`✅ FCM token updated for user ${user ? user.email : userId}`
-			);
-			return { success: true };
-		} catch (error) {
-			console.error("❌ Error updating FCM token:", error);
-			throw error;
-		}
+		const user = await addPushToken(userId, fcmToken);
+		console.log(
+			`✅ Push token registered for user ${userId} (${user ? pushTokensOf(user).length : 0} device(s))`,
+		);
+		return { success: true };
 	}
 
 	/**
-	 * Remove user's FCM token
+	 * Remove a user's push token — just that device's when `fcmToken` is given
+	 * (current apps send it on logout), every device otherwise (older builds).
 	 * @param {string} userId - User ID
+	 * @param {string} [fcmToken] - The signing-out device's token
 	 */
-	async removeUserToken(userId) {
-		try {
-			await User.findByIdAndUpdate(userId, { fcmToken: null });
-			console.log(`✅ FCM token removed for user ${userId}`);
-			return { success: true };
-		} catch (error) {
-			console.error("❌ Error removing FCM token:", error);
-			throw error;
+	async removeUserToken(userId, fcmToken) {
+		if (fcmToken) {
+			await removePushToken(userId, fcmToken);
+			console.log(`✅ Push token of one device removed for user ${userId}`);
+		} else {
+			await clearPushTokens(userId);
+			console.log(`✅ All push tokens removed for user ${userId}`);
 		}
+		return { success: true };
 	}
 }
 

@@ -16,6 +16,7 @@ const {
 	refundProcessedEmail,
 } = require("../utils/emailTemplates");
 const NotificationService = require("../services/notifications");
+const { withPushToken } = require("../services/pushTokens");
 const {
 	notifyCustomerOrderStatus,
 	notifyCustomerOrderTransition,
@@ -1032,31 +1033,34 @@ exports.createOrder = async (req, res) => {
 			// Don't fail the order creation if email fails
 		}
 
-		// Send FCM notification to all staff users
+		// Push the new order to the scanner app: every main-store staff member,
+		// plus the order's own market staff when it's a market order (they work
+		// from /market-admin/orders and would otherwise never hear about it).
 		console.log("Sending FCM notification to staff...");
 		try {
-			const staffUsers = await User.find({
-				role: "staff",
-				fcmToken: { $ne: null },
-				isActive: true,
-			});
+			const staffRoles = [{ role: "staff" }];
+			if (populatedOrder.market) {
+				staffRoles.push({ role: "market_staff", market: populatedOrder.market._id || populatedOrder.market });
+			}
+			const staffUsers = await User.find(withPushToken({ isActive: true, $or: staffRoles }));
 			console.log("Staff users found:", staffUsers.length);
 
 			if (staffUsers.length > 0) {
-				const staffUserIds = staffUsers.map((user) => user._id.toString());
-				await NotificationService.sendToUsers(
-					staffUserIds,
+				await NotificationService.deliver(
+					staffUsers,
 					"New Order Created",
 					`Order #${populatedOrder.orderNumber || populatedOrder._id} has been placed by ${populatedOrder.customer.name}`,
 					// Data payload (all strings — FCM requires it) so the scanner
 					// app can deep-link straight into the order and post the
-					// alert on its ringing "new-orders" channel.
+					// alert on its ringing "new-orders-v2" channel
+					// (NEW_ORDER_CHANNEL_ID in scannn's new-order-alerts.ts).
 					{
 						type: "new_order",
 						orderId: populatedOrder._id.toString(),
 						orderNumber: String(populatedOrder.orderNumber || ""),
-						channelId: "new-orders-v1",
+						channelId: "new-orders-v2",
 					},
+					"staff",
 				);
 				console.log(
 					`✅ FCM notification sent to ${staffUsers.length} staff users for order ${populatedOrder._id}`,

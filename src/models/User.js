@@ -246,9 +246,16 @@ const userSchema = new mongoose.Schema(
 		lockUntil: {
 			type: Date,
 		},
+		// Most recently registered device. Kept for older code paths; pushes go
+		// to every device in `pushTokens` (see src/services/pushTokens.js).
 		fcmToken: {
 			type: String,
 			default: null,
+		},
+		// Expo/FCM push token of every device the account is signed in on.
+		pushTokens: {
+			type: [String],
+			default: undefined,
 		},
 		usedPromoCodes: [
 			{
